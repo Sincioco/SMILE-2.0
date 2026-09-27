@@ -1,0 +1,8653 @@
+{
+  "scene": "NC.Castle.M01",
+  "source": "D:\\Projects\\Sin-Star-I-Assets\\Neris-Castle\\source\\neris-castle-M01-r002.blend",
+  "objects": [
+    {
+      "name": "NC.Site.Foundation.Main",
+      "owner": "site",
+      "role": "foundation",
+      "type": "MESH",
+      "location": [
+        0,
+        2.200000047683716,
+        -2.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -56,
+          56
+        ],
+        [
+          -63.60000228881836,
+          68
+        ],
+        [
+          -5,
+          0
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Site.Foundation.SouthWest",
+      "owner": "site",
+      "role": "foundation",
+      "type": "MESH",
+      "location": [
+        -30.649999618530273,
+        -65.80000305175781,
+        -2.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -56,
+          -5.299999237060547
+        ],
+        [
+          -68,
+          -63.60000228881836
+        ],
+        [
+          -5,
+          0
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Site.Foundation.SouthEast",
+      "owner": "site",
+      "role": "foundation",
+      "type": "MESH",
+      "location": [
+        30.649999618530273,
+        -65.80000305175781,
+        -2.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          5.299999237060547,
+          56
+        ],
+        [
+          -68,
+          -63.60000228881836
+        ],
+        [
+          -5,
+          0
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Site.Foundation.BridgeSeat",
+      "owner": "site",
+      "role": "bridge seat placeholder",
+      "type": "MESH",
+      "location": [
+        0,
+        -65.80000305175781,
+        -2.799999952316284
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -5.300000190734863,
+          5.300000190734863
+        ],
+        [
+          -68,
+          -63.60000228881836
+        ],
+        [
+          -5,
+          -0.5999999046325684
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Site.Approach.Main",
+      "owner": "site",
+      "role": "approach",
+      "type": "MESH",
+      "location": [
+        0,
+        -90.05000305175781,
+        -2.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -8,
+          8
+        ],
+        [
+          -96,
+          -84.10000610351562
+        ],
+        [
+          -5,
+          0
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Site.Approach.West",
+      "owner": "site",
+      "role": "approach",
+      "type": "MESH",
+      "location": [
+        -6.650000095367432,
+        -83.05000305175781,
+        -2.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -8,
+          -5.300000190734863
+        ],
+        [
+          -84.10000610351562,
+          -82
+        ],
+        [
+          -5,
+          0
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Site.Approach.East",
+      "owner": "site",
+      "role": "approach",
+      "type": "MESH",
+      "location": [
+        6.650000095367432,
+        -83.05000305175781,
+        -2.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          5.300000190734863,
+          8
+        ],
+        [
+          -84.10000610351562,
+          -82
+        ],
+        [
+          -5,
+          0
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Site.Approach.BridgeSeat",
+      "owner": "site",
+      "role": "bridge seat placeholder",
+      "type": "MESH",
+      "location": [
+        0,
+        -83.05000305175781,
+        -2.799999952316284
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -5.300000190734863,
+          5.300000190734863
+        ],
+        [
+          -84.10000610351562,
+          -82
+        ],
+        [
+          -5,
+          -0.5999999046325684
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Site.Moat.Water",
+      "owner": "site",
+      "role": "continuous perimeter moat water",
+      "type": "MESH",
+      "location": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -70,
+          70
+        ],
+        [
+          -82,
+          82
+        ],
+        [
+          -2,
+          -2
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 4
+    },
+    {
+      "name": "NC.Site.Moat.Bed",
+      "owner": "site",
+      "role": "continuous perimeter moat bed",
+      "type": "MESH",
+      "location": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -70,
+          70
+        ],
+        [
+          -82,
+          82
+        ],
+        [
+          -5,
+          -5
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 4
+    },
+    {
+      "name": "NC.Fortifications.Wall.West",
+      "owner": "fortifications",
+      "role": "curtain wall",
+      "type": "MESH",
+      "location": [
+        -50.5,
+        0,
+        6
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -52,
+          -49
+        ],
+        [
+          -64,
+          64
+        ],
+        [
+          0,
+          12
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.West.01",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -50.5,
+        -63,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -52,
+          -49
+        ],
+        [
+          -64,
+          -62
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.West.02",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -50.5,
+        -59,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -52,
+          -49
+        ],
+        [
+          -60,
+          -58
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.West.03",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -50.5,
+        -55,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -52,
+          -49
+        ],
+        [
+          -56,
+          -54
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.West.04",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -50.5,
+        -51,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -52,
+          -49
+        ],
+        [
+          -52,
+          -50
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.West.05",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -50.5,
+        -47,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -52,
+          -49
+        ],
+        [
+          -48,
+          -46
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.West.06",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -50.5,
+        -43,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -52,
+          -49
+        ],
+        [
+          -44,
+          -42
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.West.07",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -50.5,
+        -39,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -52,
+          -49
+        ],
+        [
+          -40,
+          -38
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.West.08",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -50.5,
+        -35,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -52,
+          -49
+        ],
+        [
+          -36,
+          -34
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.West.09",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -50.5,
+        -31,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -52,
+          -49
+        ],
+        [
+          -32,
+          -30
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.West.10",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -50.5,
+        -27,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -52,
+          -49
+        ],
+        [
+          -28,
+          -26
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.West.11",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -50.5,
+        -23,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -52,
+          -49
+        ],
+        [
+          -24,
+          -22
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.West.12",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -50.5,
+        -19,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -52,
+          -49
+        ],
+        [
+          -20,
+          -18
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.West.13",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -50.5,
+        -15,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -52,
+          -49
+        ],
+        [
+          -16,
+          -14
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.West.14",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -50.5,
+        -11,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -52,
+          -49
+        ],
+        [
+          -12,
+          -10
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.West.15",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -50.5,
+        -7,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -52,
+          -49
+        ],
+        [
+          -8,
+          -6
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.West.16",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -50.5,
+        -3,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -52,
+          -49
+        ],
+        [
+          -4,
+          -2
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.West.17",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -50.5,
+        1,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -52,
+          -49
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.West.18",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -50.5,
+        5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -52,
+          -49
+        ],
+        [
+          4,
+          6
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.West.19",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -50.5,
+        9,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -52,
+          -49
+        ],
+        [
+          8,
+          10
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.West.20",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -50.5,
+        13,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -52,
+          -49
+        ],
+        [
+          12,
+          14
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.West.21",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -50.5,
+        17,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -52,
+          -49
+        ],
+        [
+          16,
+          18
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.West.22",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -50.5,
+        21,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -52,
+          -49
+        ],
+        [
+          20,
+          22
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.West.23",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -50.5,
+        25,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -52,
+          -49
+        ],
+        [
+          24,
+          26
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.West.24",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -50.5,
+        29,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -52,
+          -49
+        ],
+        [
+          28,
+          30
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.West.25",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -50.5,
+        33,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -52,
+          -49
+        ],
+        [
+          32,
+          34
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.West.26",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -50.5,
+        37,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -52,
+          -49
+        ],
+        [
+          36,
+          38
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.West.27",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -50.5,
+        41,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -52,
+          -49
+        ],
+        [
+          40,
+          42
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.West.28",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -50.5,
+        45,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -52,
+          -49
+        ],
+        [
+          44,
+          46
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.West.29",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -50.5,
+        49,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -52,
+          -49
+        ],
+        [
+          48,
+          50
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.West.30",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -50.5,
+        53,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -52,
+          -49
+        ],
+        [
+          52,
+          54
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.West.31",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -50.5,
+        57,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -52,
+          -49
+        ],
+        [
+          56,
+          58
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.West.32",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -50.5,
+        61,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -52,
+          -49
+        ],
+        [
+          60,
+          62
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Wall.East",
+      "owner": "fortifications",
+      "role": "curtain wall",
+      "type": "MESH",
+      "location": [
+        50.5,
+        0,
+        6
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          49,
+          52
+        ],
+        [
+          -64,
+          64
+        ],
+        [
+          0,
+          12
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.East.01",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        50.5,
+        -63,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          49,
+          52
+        ],
+        [
+          -64,
+          -62
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.East.02",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        50.5,
+        -59,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          49,
+          52
+        ],
+        [
+          -60,
+          -58
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.East.03",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        50.5,
+        -55,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          49,
+          52
+        ],
+        [
+          -56,
+          -54
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.East.04",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        50.5,
+        -51,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          49,
+          52
+        ],
+        [
+          -52,
+          -50
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.East.05",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        50.5,
+        -47,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          49,
+          52
+        ],
+        [
+          -48,
+          -46
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.East.06",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        50.5,
+        -43,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          49,
+          52
+        ],
+        [
+          -44,
+          -42
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.East.07",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        50.5,
+        -39,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          49,
+          52
+        ],
+        [
+          -40,
+          -38
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.East.08",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        50.5,
+        -35,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          49,
+          52
+        ],
+        [
+          -36,
+          -34
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.East.09",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        50.5,
+        -31,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          49,
+          52
+        ],
+        [
+          -32,
+          -30
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.East.10",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        50.5,
+        -27,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          49,
+          52
+        ],
+        [
+          -28,
+          -26
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.East.11",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        50.5,
+        -23,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          49,
+          52
+        ],
+        [
+          -24,
+          -22
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.East.12",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        50.5,
+        -19,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          49,
+          52
+        ],
+        [
+          -20,
+          -18
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.East.13",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        50.5,
+        -15,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          49,
+          52
+        ],
+        [
+          -16,
+          -14
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.East.14",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        50.5,
+        -11,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          49,
+          52
+        ],
+        [
+          -12,
+          -10
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.East.15",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        50.5,
+        -7,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          49,
+          52
+        ],
+        [
+          -8,
+          -6
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.East.16",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        50.5,
+        -3,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          49,
+          52
+        ],
+        [
+          -4,
+          -2
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.East.17",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        50.5,
+        1,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          49,
+          52
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.East.18",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        50.5,
+        5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          49,
+          52
+        ],
+        [
+          4,
+          6
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.East.19",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        50.5,
+        9,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          49,
+          52
+        ],
+        [
+          8,
+          10
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.East.20",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        50.5,
+        13,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          49,
+          52
+        ],
+        [
+          12,
+          14
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.East.21",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        50.5,
+        17,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          49,
+          52
+        ],
+        [
+          16,
+          18
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.East.22",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        50.5,
+        21,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          49,
+          52
+        ],
+        [
+          20,
+          22
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.East.23",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        50.5,
+        25,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          49,
+          52
+        ],
+        [
+          24,
+          26
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.East.24",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        50.5,
+        29,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          49,
+          52
+        ],
+        [
+          28,
+          30
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.East.25",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        50.5,
+        33,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          49,
+          52
+        ],
+        [
+          32,
+          34
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.East.26",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        50.5,
+        37,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          49,
+          52
+        ],
+        [
+          36,
+          38
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.East.27",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        50.5,
+        41,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          49,
+          52
+        ],
+        [
+          40,
+          42
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.East.28",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        50.5,
+        45,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          49,
+          52
+        ],
+        [
+          44,
+          46
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.East.29",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        50.5,
+        49,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          49,
+          52
+        ],
+        [
+          48,
+          50
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.East.30",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        50.5,
+        53,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          49,
+          52
+        ],
+        [
+          52,
+          54
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.East.31",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        50.5,
+        57,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          49,
+          52
+        ],
+        [
+          56,
+          58
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.East.32",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        50.5,
+        61,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          49,
+          52
+        ],
+        [
+          60,
+          62
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Wall.North",
+      "owner": "fortifications",
+      "role": "curtain wall",
+      "type": "MESH",
+      "location": [
+        0,
+        62.5,
+        6
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -49,
+          49
+        ],
+        [
+          61,
+          64
+        ],
+        [
+          0,
+          12
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.North.01",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -48,
+        62.5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -49,
+          -47
+        ],
+        [
+          61,
+          64
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.North.02",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -44.08000183105469,
+        62.5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -45.08000183105469,
+          -43.08000183105469
+        ],
+        [
+          61,
+          64
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.North.03",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -40.15999984741211,
+        62.5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -41.15999984741211,
+          -39.15999984741211
+        ],
+        [
+          61,
+          64
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.North.04",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -36.2400016784668,
+        62.5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -37.2400016784668,
+          -35.2400016784668
+        ],
+        [
+          61,
+          64
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.North.05",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -32.31999969482422,
+        62.5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -33.31999969482422,
+          -31.31999969482422
+        ],
+        [
+          61,
+          64
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.North.06",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -28.399999618530273,
+        62.5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -29.399999618530273,
+          -27.399999618530273
+        ],
+        [
+          61,
+          64
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.North.07",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -24.479999542236328,
+        62.5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -25.479999542236328,
+          -23.479999542236328
+        ],
+        [
+          61,
+          64
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.North.08",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -20.559999465942383,
+        62.5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -21.559999465942383,
+          -19.559999465942383
+        ],
+        [
+          61,
+          64
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.North.09",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -16.639999389648438,
+        62.5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -17.639999389648438,
+          -15.639999389648438
+        ],
+        [
+          61,
+          64
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.North.10",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -12.720000267028809,
+        62.5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -13.720000267028809,
+          -11.720000267028809
+        ],
+        [
+          61,
+          64
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.North.11",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -8.800000190734863,
+        62.5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -9.800000190734863,
+          -7.800000190734863
+        ],
+        [
+          61,
+          64
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.North.12",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -4.880000114440918,
+        62.5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -5.880000114440918,
+          -3.880000114440918
+        ],
+        [
+          61,
+          64
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.North.13",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -0.9599999785423279,
+        62.5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -1.9600000381469727,
+          0.04000002145767212
+        ],
+        [
+          61,
+          64
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.North.14",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        2.9600000381469727,
+        62.5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          1.9600000381469727,
+          3.9600000381469727
+        ],
+        [
+          61,
+          64
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.North.15",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        6.880000114440918,
+        62.5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          5.880000114440918,
+          7.880000114440918
+        ],
+        [
+          61,
+          64
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.North.16",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        10.800000190734863,
+        62.5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          9.800000190734863,
+          11.800000190734863
+        ],
+        [
+          61,
+          64
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.North.17",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        14.720000267028809,
+        62.5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          13.720000267028809,
+          15.720000267028809
+        ],
+        [
+          61,
+          64
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.North.18",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        18.639999389648438,
+        62.5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          17.639999389648438,
+          19.639999389648438
+        ],
+        [
+          61,
+          64
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.North.19",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        22.559999465942383,
+        62.5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          21.559999465942383,
+          23.559999465942383
+        ],
+        [
+          61,
+          64
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.North.20",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        26.479999542236328,
+        62.5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          25.479999542236328,
+          27.479999542236328
+        ],
+        [
+          61,
+          64
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.North.21",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        30.399999618530273,
+        62.5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          29.399999618530273,
+          31.399999618530273
+        ],
+        [
+          61,
+          64
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.North.22",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        34.31999969482422,
+        62.5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          33.31999969482422,
+          35.31999969482422
+        ],
+        [
+          61,
+          64
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.North.23",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        38.2400016784668,
+        62.5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          37.2400016784668,
+          39.2400016784668
+        ],
+        [
+          61,
+          64
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.North.24",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        42.15999984741211,
+        62.5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          41.15999984741211,
+          43.15999984741211
+        ],
+        [
+          61,
+          64
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.North.25",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        46.08000183105469,
+        62.5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          45.08000183105469,
+          47.08000183105469
+        ],
+        [
+          61,
+          64
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Wall.SouthWest",
+      "owner": "fortifications",
+      "role": "curtain wall",
+      "type": "MESH",
+      "location": [
+        -32,
+        -62.5,
+        6
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -49,
+          -15
+        ],
+        [
+          -64,
+          -61
+        ],
+        [
+          0,
+          12
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.SouthWest.01",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -48,
+        -62.5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -49,
+          -47
+        ],
+        [
+          -64,
+          -61
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.SouthWest.02",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -44.22222137451172,
+        -62.5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -45.22222137451172,
+          -43.22222137451172
+        ],
+        [
+          -64,
+          -61
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.SouthWest.03",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -40.44444274902344,
+        -62.5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -41.44444274902344,
+          -39.44444274902344
+        ],
+        [
+          -64,
+          -61
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.SouthWest.04",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -36.66666793823242,
+        -62.5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -37.66666793823242,
+          -35.66666793823242
+        ],
+        [
+          -64,
+          -61
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.SouthWest.05",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -32.88888931274414,
+        -62.5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -33.88888931274414,
+          -31.88888931274414
+        ],
+        [
+          -64,
+          -61
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.SouthWest.06",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -29.11111068725586,
+        -62.5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -30.11111068725586,
+          -28.11111068725586
+        ],
+        [
+          -64,
+          -61
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.SouthWest.07",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -25.33333396911621,
+        -62.5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -26.33333396911621,
+          -24.33333396911621
+        ],
+        [
+          -64,
+          -61
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.SouthWest.08",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -21.55555534362793,
+        -62.5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -22.55555534362793,
+          -20.55555534362793
+        ],
+        [
+          -64,
+          -61
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.SouthWest.09",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        -17.77777862548828,
+        -62.5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -18.77777862548828,
+          -16.77777862548828
+        ],
+        [
+          -64,
+          -61
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Wall.SouthEast",
+      "owner": "fortifications",
+      "role": "curtain wall",
+      "type": "MESH",
+      "location": [
+        32,
+        -62.5,
+        6
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          15,
+          49
+        ],
+        [
+          -64,
+          -61
+        ],
+        [
+          0,
+          12
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.SouthEast.01",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        16,
+        -62.5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          15,
+          17
+        ],
+        [
+          -64,
+          -61
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.SouthEast.02",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        19.77777862548828,
+        -62.5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          18.77777862548828,
+          20.77777862548828
+        ],
+        [
+          -64,
+          -61
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.SouthEast.03",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        23.55555534362793,
+        -62.5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          22.55555534362793,
+          24.55555534362793
+        ],
+        [
+          -64,
+          -61
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.SouthEast.04",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        27.33333396911621,
+        -62.5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          26.33333396911621,
+          28.33333396911621
+        ],
+        [
+          -64,
+          -61
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.SouthEast.05",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        31.11111068725586,
+        -62.5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          30.11111068725586,
+          32.11111068725586
+        ],
+        [
+          -64,
+          -61
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.SouthEast.06",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        34.88888931274414,
+        -62.5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          33.88888931274414,
+          35.88888931274414
+        ],
+        [
+          -64,
+          -61
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.SouthEast.07",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        38.66666793823242,
+        -62.5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          37.66666793823242,
+          39.66666793823242
+        ],
+        [
+          -64,
+          -61
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.SouthEast.08",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        42.44444274902344,
+        -62.5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          41.44444274902344,
+          43.44444274902344
+        ],
+        [
+          -64,
+          -61
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Merlon.SouthEast.09",
+      "owner": "fortifications",
+      "role": "coarse battlement",
+      "type": "MESH",
+      "location": [
+        46.22222137451172,
+        -62.5,
+        13
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          45.22222137451172,
+          47.22222137451172
+        ],
+        [
+          -64,
+          -61
+        ],
+        [
+          12,
+          14
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Fortifications.Corner.SW.Shaft",
+      "owner": "fortifications",
+      "role": "corner tower shaft",
+      "type": "MESH",
+      "location": [
+        -48,
+        -60,
+        12
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -54,
+          -42
+        ],
+        [
+          -66,
+          -54
+        ],
+        [
+          0,
+          24
+        ]
+      ],
+      "vertices": 64,
+      "polygons": 34
+    },
+    {
+      "name": "NC.Fortifications.Corner.SW.Roof",
+      "owner": "fortifications",
+      "role": "massing",
+      "type": "MESH",
+      "location": [
+        -48,
+        -60,
+        28.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -54.720001220703125,
+          -41.279998779296875
+        ],
+        [
+          -66.72000122070312,
+          -53.279998779296875
+        ],
+        [
+          24,
+          33
+        ]
+      ],
+      "vertices": 64,
+      "polygons": 34
+    },
+    {
+      "name": "NC.Fortifications.Corner.SW.Crystal",
+      "owner": "fortifications",
+      "role": "crystal placeholder",
+      "type": "MESH",
+      "location": [
+        -48,
+        -60,
+        35
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -48.736122131347656,
+          -47.263877868652344
+        ],
+        [
+          -60.849998474121094,
+          -59.150001525878906
+        ],
+        [
+          33,
+          37
+        ]
+      ],
+      "vertices": 7,
+      "polygons": 7
+    },
+    {
+      "name": "NC.Fortifications.Corner.SE.Shaft",
+      "owner": "fortifications",
+      "role": "corner tower shaft",
+      "type": "MESH",
+      "location": [
+        48,
+        -60,
+        12
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          42,
+          54
+        ],
+        [
+          -66,
+          -54
+        ],
+        [
+          0,
+          24
+        ]
+      ],
+      "vertices": 64,
+      "polygons": 34
+    },
+    {
+      "name": "NC.Fortifications.Corner.SE.Roof",
+      "owner": "fortifications",
+      "role": "massing",
+      "type": "MESH",
+      "location": [
+        48,
+        -60,
+        28.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          41.279998779296875,
+          54.720001220703125
+        ],
+        [
+          -66.72000122070312,
+          -53.279998779296875
+        ],
+        [
+          24,
+          33
+        ]
+      ],
+      "vertices": 64,
+      "polygons": 34
+    },
+    {
+      "name": "NC.Fortifications.Corner.SE.Crystal",
+      "owner": "fortifications",
+      "role": "crystal placeholder",
+      "type": "MESH",
+      "location": [
+        48,
+        -60,
+        35
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          47.263877868652344,
+          48.736122131347656
+        ],
+        [
+          -60.849998474121094,
+          -59.150001525878906
+        ],
+        [
+          33,
+          37
+        ]
+      ],
+      "vertices": 7,
+      "polygons": 7
+    },
+    {
+      "name": "NC.Fortifications.Corner.NW.Shaft",
+      "owner": "fortifications",
+      "role": "corner tower shaft",
+      "type": "MESH",
+      "location": [
+        -48,
+        60,
+        12
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -54,
+          -42
+        ],
+        [
+          54,
+          66
+        ],
+        [
+          0,
+          24
+        ]
+      ],
+      "vertices": 64,
+      "polygons": 34
+    },
+    {
+      "name": "NC.Fortifications.Corner.NW.Roof",
+      "owner": "fortifications",
+      "role": "massing",
+      "type": "MESH",
+      "location": [
+        -48,
+        60,
+        28.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -54.720001220703125,
+          -41.279998779296875
+        ],
+        [
+          53.279998779296875,
+          66.72000122070312
+        ],
+        [
+          24,
+          33
+        ]
+      ],
+      "vertices": 64,
+      "polygons": 34
+    },
+    {
+      "name": "NC.Fortifications.Corner.NW.Crystal",
+      "owner": "fortifications",
+      "role": "crystal placeholder",
+      "type": "MESH",
+      "location": [
+        -48,
+        60,
+        35
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -48.736122131347656,
+          -47.263877868652344
+        ],
+        [
+          59.150001525878906,
+          60.849998474121094
+        ],
+        [
+          33,
+          37
+        ]
+      ],
+      "vertices": 7,
+      "polygons": 7
+    },
+    {
+      "name": "NC.Fortifications.Corner.NE.Shaft",
+      "owner": "fortifications",
+      "role": "corner tower shaft",
+      "type": "MESH",
+      "location": [
+        48,
+        60,
+        12
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          42,
+          54
+        ],
+        [
+          54,
+          66
+        ],
+        [
+          0,
+          24
+        ]
+      ],
+      "vertices": 64,
+      "polygons": 34
+    },
+    {
+      "name": "NC.Fortifications.Corner.NE.Roof",
+      "owner": "fortifications",
+      "role": "massing",
+      "type": "MESH",
+      "location": [
+        48,
+        60,
+        28.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          41.279998779296875,
+          54.720001220703125
+        ],
+        [
+          53.279998779296875,
+          66.72000122070312
+        ],
+        [
+          24,
+          33
+        ]
+      ],
+      "vertices": 64,
+      "polygons": 34
+    },
+    {
+      "name": "NC.Fortifications.Corner.NE.Crystal",
+      "owner": "fortifications",
+      "role": "crystal placeholder",
+      "type": "MESH",
+      "location": [
+        48,
+        60,
+        35
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          47.263877868652344,
+          48.736122131347656
+        ],
+        [
+          59.150001525878906,
+          60.849998474121094
+        ],
+        [
+          33,
+          37
+        ]
+      ],
+      "vertices": 7,
+      "polygons": 7
+    },
+    {
+      "name": "NC.Gatehouse.Jamb.West",
+      "owner": "gatehouse",
+      "role": "gateway jamb",
+      "type": "MESH",
+      "location": [
+        -10.5,
+        -57,
+        10
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -15,
+          -6
+        ],
+        [
+          -64,
+          -50
+        ],
+        [
+          0,
+          20
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Gatehouse.Jamb.East",
+      "owner": "gatehouse",
+      "role": "gateway jamb",
+      "type": "MESH",
+      "location": [
+        10.5,
+        -57,
+        10
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          6,
+          15
+        ],
+        [
+          -64,
+          -50
+        ],
+        [
+          0,
+          20
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Gatehouse.Arch.Massing",
+      "owner": "gatehouse",
+      "role": "straight-sided pointed arch placeholder; M02 curves and closing recess pending",
+      "type": "MESH",
+      "location": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -6,
+          6
+        ],
+        [
+          -63.599998474121094,
+          -50
+        ],
+        [
+          11,
+          20
+        ]
+      ],
+      "vertices": 10,
+      "polygons": 7
+    },
+    {
+      "name": "NC.Gatehouse.Roof",
+      "owner": "gatehouse",
+      "role": "massing",
+      "type": "MESH",
+      "location": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -15,
+          15
+        ],
+        [
+          -64,
+          -50
+        ],
+        [
+          20,
+          26
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Gatehouse.Tower.West.Shaft",
+      "owner": "gatehouse",
+      "role": "massing",
+      "type": "MESH",
+      "location": [
+        -19,
+        -58,
+        10
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -24,
+          -14
+        ],
+        [
+          -63,
+          -53
+        ],
+        [
+          0,
+          20
+        ]
+      ],
+      "vertices": 64,
+      "polygons": 34
+    },
+    {
+      "name": "NC.Gatehouse.Tower.West.Roof",
+      "owner": "gatehouse",
+      "role": "massing",
+      "type": "MESH",
+      "location": [
+        -19,
+        -58,
+        24
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -24.600000381469727,
+          -13.399999618530273
+        ],
+        [
+          -63.599998474121094,
+          -52.400001525878906
+        ],
+        [
+          20,
+          28
+        ]
+      ],
+      "vertices": 64,
+      "polygons": 34
+    },
+    {
+      "name": "NC.Gatehouse.Tower.West.Crystal",
+      "owner": "gatehouse",
+      "role": "massing",
+      "type": "MESH",
+      "location": [
+        -19,
+        -58,
+        30
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -19.606218338012695,
+          -18.393781661987305
+        ],
+        [
+          -58.70000076293945,
+          -57.29999923706055
+        ],
+        [
+          28,
+          32
+        ]
+      ],
+      "vertices": 7,
+      "polygons": 7
+    },
+    {
+      "name": "NC.Gatehouse.Tower.East.Shaft",
+      "owner": "gatehouse",
+      "role": "massing",
+      "type": "MESH",
+      "location": [
+        19,
+        -58,
+        10
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          14,
+          24
+        ],
+        [
+          -63,
+          -53
+        ],
+        [
+          0,
+          20
+        ]
+      ],
+      "vertices": 64,
+      "polygons": 34
+    },
+    {
+      "name": "NC.Gatehouse.Tower.East.Roof",
+      "owner": "gatehouse",
+      "role": "massing",
+      "type": "MESH",
+      "location": [
+        19,
+        -58,
+        24
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          13.399999618530273,
+          24.600000381469727
+        ],
+        [
+          -63.599998474121094,
+          -52.400001525878906
+        ],
+        [
+          20,
+          28
+        ]
+      ],
+      "vertices": 64,
+      "polygons": 34
+    },
+    {
+      "name": "NC.Gatehouse.Tower.East.Crystal",
+      "owner": "gatehouse",
+      "role": "massing",
+      "type": "MESH",
+      "location": [
+        19,
+        -58,
+        30
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          18.393781661987305,
+          19.606218338012695
+        ],
+        [
+          -58.70000076293945,
+          -57.29999923706055
+        ],
+        [
+          28,
+          32
+        ]
+      ],
+      "vertices": 7,
+      "polygons": 7
+    },
+    {
+      "name": "NC.Bridge.Pivot",
+      "owner": "bridge",
+      "role": "movable leaf hinge",
+      "type": "EMPTY",
+      "location": [
+        0,
+        -64,
+        -0.25
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          0,
+          0
+        ],
+        [
+          -64,
+          -64
+        ],
+        [
+          -0.25,
+          -0.25
+        ]
+      ],
+      "vertices": 0,
+      "polygons": 0
+    },
+    {
+      "name": "NC.Bridge.Leaf.Main",
+      "owner": "bridge",
+      "role": "drawbridge leaf placeholder",
+      "type": "MESH",
+      "location": [
+        0,
+        -10,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": "NC.Bridge.Pivot",
+      "bounds": [
+        [
+          -5,
+          5
+        ],
+        [
+          -84,
+          -64
+        ],
+        [
+          -0.5,
+          0
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Palace.Keep.Main",
+      "owner": "palace",
+      "role": "main keep",
+      "type": "MESH",
+      "location": [
+        0,
+        34.5,
+        17.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -16,
+          16
+        ],
+        [
+          17,
+          52
+        ],
+        [
+          3,
+          32
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Palace.Keep.Front.West",
+      "owner": "palace",
+      "role": "keep entrance side",
+      "type": "MESH",
+      "location": [
+        -9.5,
+        15.5,
+        17.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -16,
+          -3
+        ],
+        [
+          14,
+          17
+        ],
+        [
+          3,
+          32
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Palace.Keep.Front.East",
+      "owner": "palace",
+      "role": "keep entrance side",
+      "type": "MESH",
+      "location": [
+        9.5,
+        15.5,
+        17.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          3,
+          16
+        ],
+        [
+          14,
+          17
+        ],
+        [
+          3,
+          32
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Palace.Keep.EntranceLintel",
+      "owner": "palace",
+      "role": "entrance placeholder",
+      "type": "MESH",
+      "location": [
+        0,
+        15.5,
+        22.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -3,
+          3
+        ],
+        [
+          14,
+          17
+        ],
+        [
+          13,
+          32
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Palace.Wing.West",
+      "owner": "palace",
+      "role": "palace wing",
+      "type": "MESH",
+      "location": [
+        -28.5,
+        33,
+        10.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -40,
+          -17
+        ],
+        [
+          16,
+          50
+        ],
+        [
+          3,
+          18
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Palace.Wing.West.Roof",
+      "owner": "palace",
+      "role": "massing",
+      "type": "MESH",
+      "location": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -40,
+          -17
+        ],
+        [
+          16,
+          50
+        ],
+        [
+          18,
+          23
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Palace.Wing.East",
+      "owner": "palace",
+      "role": "palace wing",
+      "type": "MESH",
+      "location": [
+        28.5,
+        33,
+        10.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          17,
+          40
+        ],
+        [
+          16,
+          50
+        ],
+        [
+          3,
+          18
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Palace.Wing.East.Roof",
+      "owner": "palace",
+      "role": "massing",
+      "type": "MESH",
+      "location": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          17,
+          40
+        ],
+        [
+          16,
+          50
+        ],
+        [
+          18,
+          23
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Palace.RearGallery",
+      "owner": "palace",
+      "role": "rear gallery",
+      "type": "MESH",
+      "location": [
+        0,
+        53.5,
+        9.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -40,
+          40
+        ],
+        [
+          50,
+          57
+        ],
+        [
+          3,
+          16
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Palace.RearGallery.Roof",
+      "owner": "palace",
+      "role": "massing",
+      "type": "MESH",
+      "location": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -40,
+          40
+        ],
+        [
+          50,
+          57
+        ],
+        [
+          16,
+          20
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Palace.Drum",
+      "owner": "palace",
+      "role": "dome drum",
+      "type": "MESH",
+      "location": [
+        0,
+        34,
+        35
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -13,
+          13
+        ],
+        [
+          21,
+          47
+        ],
+        [
+          32,
+          38
+        ]
+      ],
+      "vertices": 128,
+      "polygons": 66
+    },
+    {
+      "name": "NC.Palace.Dome",
+      "owner": "palace",
+      "role": "curved central dome",
+      "type": "MESH",
+      "location": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -13,
+          13
+        ],
+        [
+          21,
+          47
+        ],
+        [
+          38,
+          51
+        ]
+      ],
+      "vertices": 1025,
+      "polygons": 1025
+    },
+    {
+      "name": "NC.Palace.Crystal.Main",
+      "owner": "palace",
+      "role": "highest crystal placeholder",
+      "type": "MESH",
+      "location": [
+        0,
+        34,
+        55.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -1.5588456392288208,
+          1.5588456392288208
+        ],
+        [
+          32.20000076293945,
+          35.79999923706055
+        ],
+        [
+          51,
+          60
+        ]
+      ],
+      "vertices": 7,
+      "polygons": 7
+    },
+    {
+      "name": "NC.Palace.Turret.Front.West.Shaft",
+      "owner": "palace",
+      "role": "subordinate turret shaft",
+      "type": "MESH",
+      "location": [
+        -18,
+        18,
+        17
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -21,
+          -15
+        ],
+        [
+          15,
+          21
+        ],
+        [
+          3,
+          31
+        ]
+      ],
+      "vertices": 64,
+      "polygons": 34
+    },
+    {
+      "name": "NC.Palace.Turret.Front.West.Roof",
+      "owner": "palace",
+      "role": "massing",
+      "type": "MESH",
+      "location": [
+        -18,
+        18,
+        35.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -21.360000610351562,
+          -14.640000343322754
+        ],
+        [
+          14.640000343322754,
+          21.360000610351562
+        ],
+        [
+          31,
+          40
+        ]
+      ],
+      "vertices": 64,
+      "polygons": 34
+    },
+    {
+      "name": "NC.Palace.Turret.Front.West.Crystal",
+      "owner": "palace",
+      "role": "massing",
+      "type": "MESH",
+      "location": [
+        -18,
+        18,
+        41.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -18.476314544677734,
+          -17.523685455322266
+        ],
+        [
+          17.450000762939453,
+          18.549999237060547
+        ],
+        [
+          40,
+          43
+        ]
+      ],
+      "vertices": 7,
+      "polygons": 7
+    },
+    {
+      "name": "NC.Palace.Turret.Front.East.Shaft",
+      "owner": "palace",
+      "role": "subordinate turret shaft",
+      "type": "MESH",
+      "location": [
+        18,
+        18,
+        17
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          15,
+          21
+        ],
+        [
+          15,
+          21
+        ],
+        [
+          3,
+          31
+        ]
+      ],
+      "vertices": 64,
+      "polygons": 34
+    },
+    {
+      "name": "NC.Palace.Turret.Front.East.Roof",
+      "owner": "palace",
+      "role": "massing",
+      "type": "MESH",
+      "location": [
+        18,
+        18,
+        35.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          14.640000343322754,
+          21.360000610351562
+        ],
+        [
+          14.640000343322754,
+          21.360000610351562
+        ],
+        [
+          31,
+          40
+        ]
+      ],
+      "vertices": 64,
+      "polygons": 34
+    },
+    {
+      "name": "NC.Palace.Turret.Front.East.Crystal",
+      "owner": "palace",
+      "role": "massing",
+      "type": "MESH",
+      "location": [
+        18,
+        18,
+        41.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          17.523685455322266,
+          18.476314544677734
+        ],
+        [
+          17.450000762939453,
+          18.549999237060547
+        ],
+        [
+          40,
+          43
+        ]
+      ],
+      "vertices": 7,
+      "polygons": 7
+    },
+    {
+      "name": "NC.Palace.Turret.Rear.West.Shaft",
+      "owner": "palace",
+      "role": "subordinate turret shaft",
+      "type": "MESH",
+      "location": [
+        -18,
+        48,
+        20
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -21,
+          -15
+        ],
+        [
+          45,
+          51
+        ],
+        [
+          3,
+          37
+        ]
+      ],
+      "vertices": 64,
+      "polygons": 34
+    },
+    {
+      "name": "NC.Palace.Turret.Rear.West.Roof",
+      "owner": "palace",
+      "role": "massing",
+      "type": "MESH",
+      "location": [
+        -18,
+        48,
+        41.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -21.360000610351562,
+          -14.640000343322754
+        ],
+        [
+          44.63999938964844,
+          51.36000061035156
+        ],
+        [
+          37,
+          46
+        ]
+      ],
+      "vertices": 64,
+      "polygons": 34
+    },
+    {
+      "name": "NC.Palace.Turret.Rear.West.Crystal",
+      "owner": "palace",
+      "role": "massing",
+      "type": "MESH",
+      "location": [
+        -18,
+        48,
+        47.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -18.476314544677734,
+          -17.523685455322266
+        ],
+        [
+          47.45000076293945,
+          48.54999923706055
+        ],
+        [
+          46,
+          49
+        ]
+      ],
+      "vertices": 7,
+      "polygons": 7
+    },
+    {
+      "name": "NC.Palace.Turret.Rear.East.Shaft",
+      "owner": "palace",
+      "role": "subordinate turret shaft",
+      "type": "MESH",
+      "location": [
+        18,
+        48,
+        20
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          15,
+          21
+        ],
+        [
+          45,
+          51
+        ],
+        [
+          3,
+          37
+        ]
+      ],
+      "vertices": 64,
+      "polygons": 34
+    },
+    {
+      "name": "NC.Palace.Turret.Rear.East.Roof",
+      "owner": "palace",
+      "role": "massing",
+      "type": "MESH",
+      "location": [
+        18,
+        48,
+        41.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          14.640000343322754,
+          21.360000610351562
+        ],
+        [
+          44.63999938964844,
+          51.36000061035156
+        ],
+        [
+          37,
+          46
+        ]
+      ],
+      "vertices": 64,
+      "polygons": 34
+    },
+    {
+      "name": "NC.Palace.Turret.Rear.East.Crystal",
+      "owner": "palace",
+      "role": "massing",
+      "type": "MESH",
+      "location": [
+        18,
+        48,
+        47.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          17.523685455322266,
+          18.476314544677734
+        ],
+        [
+          47.45000076293945,
+          48.54999923706055
+        ],
+        [
+          46,
+          49
+        ]
+      ],
+      "vertices": 7,
+      "polygons": 7
+    },
+    {
+      "name": "NC.Courtyard.Paving",
+      "owner": "courtyard",
+      "role": "forecourt paving; 2 cm render separation from foundation",
+      "type": "MESH",
+      "location": [
+        0,
+        -19,
+        -0.03999999910593033
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -40,
+          40
+        ],
+        [
+          -46,
+          8
+        ],
+        [
+          -0.09999999403953552,
+          0.019999999552965164
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.GateConnector",
+      "owner": "courtyard",
+      "role": "gate to forecourt connector",
+      "type": "MESH",
+      "location": [
+        0,
+        -48,
+        -0.03999999910593033
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -6,
+          6
+        ],
+        [
+          -50,
+          -46
+        ],
+        [
+          -0.09999999403953552,
+          0.019999999552965164
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Terrace",
+      "owner": "courtyard",
+      "role": "palace terrace",
+      "type": "MESH",
+      "location": [
+        0,
+        35.5,
+        1.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -42,
+          42
+        ],
+        [
+          14,
+          57
+        ],
+        [
+          0,
+          3
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Stair.01",
+      "owner": "courtyard",
+      "role": "stair",
+      "type": "MESH",
+      "location": [
+        0,
+        2.299999952316284,
+        0.07500000298023224
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -7,
+          7
+        ],
+        [
+          2,
+          2.5999999046325684
+        ],
+        [
+          0,
+          0.15000000596046448
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Stair.02",
+      "owner": "courtyard",
+      "role": "stair",
+      "type": "MESH",
+      "location": [
+        0,
+        2.9000000953674316,
+        0.15000000596046448
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -7,
+          7
+        ],
+        [
+          2.6000001430511475,
+          3.200000047683716
+        ],
+        [
+          0,
+          0.30000001192092896
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Stair.03",
+      "owner": "courtyard",
+      "role": "stair",
+      "type": "MESH",
+      "location": [
+        0,
+        3.5,
+        0.22499999403953552
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -7,
+          7
+        ],
+        [
+          3.200000047683716,
+          3.799999952316284
+        ],
+        [
+          0,
+          0.44999998807907104
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Stair.04",
+      "owner": "courtyard",
+      "role": "stair",
+      "type": "MESH",
+      "location": [
+        0,
+        4.099999904632568,
+        0.30000001192092896
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -7,
+          7
+        ],
+        [
+          3.799999952316284,
+          4.400000095367432
+        ],
+        [
+          0,
+          0.6000000238418579
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Stair.05",
+      "owner": "courtyard",
+      "role": "stair",
+      "type": "MESH",
+      "location": [
+        0,
+        4.699999809265137,
+        0.375
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -7,
+          7
+        ],
+        [
+          4.399999618530273,
+          5
+        ],
+        [
+          0,
+          0.75
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Stair.06",
+      "owner": "courtyard",
+      "role": "stair",
+      "type": "MESH",
+      "location": [
+        0,
+        5.300000190734863,
+        0.44999998807907104
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -7,
+          7
+        ],
+        [
+          5,
+          5.600000381469727
+        ],
+        [
+          0,
+          0.8999999761581421
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Stair.07",
+      "owner": "courtyard",
+      "role": "stair",
+      "type": "MESH",
+      "location": [
+        0,
+        5.900000095367432,
+        0.5249999761581421
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -7,
+          7
+        ],
+        [
+          5.599999904632568,
+          6.200000286102295
+        ],
+        [
+          0,
+          1.0499999523162842
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Stair.08",
+      "owner": "courtyard",
+      "role": "stair",
+      "type": "MESH",
+      "location": [
+        0,
+        6.5,
+        0.6000000238418579
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -7,
+          7
+        ],
+        [
+          6.199999809265137,
+          6.800000190734863
+        ],
+        [
+          0,
+          1.2000000476837158
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Stair.09",
+      "owner": "courtyard",
+      "role": "stair",
+      "type": "MESH",
+      "location": [
+        0,
+        7.099999904632568,
+        0.675000011920929
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -7,
+          7
+        ],
+        [
+          6.799999713897705,
+          7.400000095367432
+        ],
+        [
+          0,
+          1.350000023841858
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Stair.10",
+      "owner": "courtyard",
+      "role": "stair",
+      "type": "MESH",
+      "location": [
+        0,
+        7.699999809265137,
+        0.75
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -7,
+          7
+        ],
+        [
+          7.399999618530273,
+          8
+        ],
+        [
+          0,
+          1.5
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Stair.11",
+      "owner": "courtyard",
+      "role": "stair",
+      "type": "MESH",
+      "location": [
+        0,
+        8.300000190734863,
+        0.824999988079071
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -7,
+          7
+        ],
+        [
+          8,
+          8.600000381469727
+        ],
+        [
+          0,
+          1.649999976158142
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Stair.12",
+      "owner": "courtyard",
+      "role": "stair",
+      "type": "MESH",
+      "location": [
+        0,
+        8.899999618530273,
+        0.8999999761581421
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -7,
+          7
+        ],
+        [
+          8.59999942779541,
+          9.199999809265137
+        ],
+        [
+          0,
+          1.7999999523162842
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Stair.13",
+      "owner": "courtyard",
+      "role": "stair",
+      "type": "MESH",
+      "location": [
+        0,
+        9.5,
+        0.9750000238418579
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -7,
+          7
+        ],
+        [
+          9.199999809265137,
+          9.800000190734863
+        ],
+        [
+          0,
+          1.9500000476837158
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Stair.14",
+      "owner": "courtyard",
+      "role": "stair",
+      "type": "MESH",
+      "location": [
+        0,
+        10.100000381469727,
+        1.0499999523162842
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -7,
+          7
+        ],
+        [
+          9.800000190734863,
+          10.40000057220459
+        ],
+        [
+          0,
+          2.0999999046325684
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Stair.15",
+      "owner": "courtyard",
+      "role": "stair",
+      "type": "MESH",
+      "location": [
+        0,
+        10.699999809265137,
+        1.125
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -7,
+          7
+        ],
+        [
+          10.399999618530273,
+          11
+        ],
+        [
+          0,
+          2.25
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Stair.16",
+      "owner": "courtyard",
+      "role": "stair",
+      "type": "MESH",
+      "location": [
+        0,
+        11.300000190734863,
+        1.2000000476837158
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -7,
+          7
+        ],
+        [
+          11,
+          11.600000381469727
+        ],
+        [
+          0,
+          2.4000000953674316
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Stair.17",
+      "owner": "courtyard",
+      "role": "stair",
+      "type": "MESH",
+      "location": [
+        0,
+        11.899999618530273,
+        1.274999976158142
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -7,
+          7
+        ],
+        [
+          11.59999942779541,
+          12.199999809265137
+        ],
+        [
+          0,
+          2.549999952316284
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Stair.18",
+      "owner": "courtyard",
+      "role": "stair",
+      "type": "MESH",
+      "location": [
+        0,
+        12.5,
+        1.350000023841858
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -7,
+          7
+        ],
+        [
+          12.199999809265137,
+          12.800000190734863
+        ],
+        [
+          0,
+          2.700000047683716
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Stair.19",
+      "owner": "courtyard",
+      "role": "stair",
+      "type": "MESH",
+      "location": [
+        0,
+        13.100000381469727,
+        1.4249999523162842
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -7,
+          7
+        ],
+        [
+          12.800000190734863,
+          13.40000057220459
+        ],
+        [
+          0,
+          2.8499999046325684
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Stair.20",
+      "owner": "courtyard",
+      "role": "stair",
+      "type": "MESH",
+      "location": [
+        0,
+        13.699999809265137,
+        1.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -7,
+          7
+        ],
+        [
+          13.399999618530273,
+          14
+        ],
+        [
+          0,
+          3
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Fountain.Basin",
+      "owner": "courtyard",
+      "role": "fountain placeholder",
+      "type": "MESH",
+      "location": [
+        0,
+        -18,
+        0.5099999904632568
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -6,
+          6
+        ],
+        [
+          -24,
+          -12
+        ],
+        [
+          0.019999980926513672,
+          1
+        ]
+      ],
+      "vertices": 96,
+      "polygons": 50
+    },
+    {
+      "name": "NC.Courtyard.Fountain.Water",
+      "owner": "courtyard",
+      "role": "fountain water placeholder",
+      "type": "MESH",
+      "location": [
+        0,
+        -18,
+        1.0049999952316284
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -5.599999904632568,
+          5.599999904632568
+        ],
+        [
+          -23.600000381469727,
+          -12.399999618530273
+        ],
+        [
+          0.9900000095367432,
+          1.0199999809265137
+        ]
+      ],
+      "vertices": 96,
+      "polygons": 50
+    },
+    {
+      "name": "NC.Courtyard.Fountain.Crystal",
+      "owner": "courtyard",
+      "role": "fountain crystal placeholder",
+      "type": "MESH",
+      "location": [
+        0,
+        -18,
+        5.510000228881836
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -1.169134259223938,
+          1.169134259223938
+        ],
+        [
+          -19.350000381469727,
+          -16.649999618530273
+        ],
+        [
+          1.0200004577636719,
+          10
+        ]
+      ],
+      "vertices": 7,
+      "polygons": 7
+    },
+    {
+      "name": "NC.Courtyard.Colonnade.West.Roof",
+      "owner": "courtyard",
+      "role": "low colonnade roof placeholder",
+      "type": "MESH",
+      "location": [
+        -39.5,
+        -16,
+        8.25
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -43,
+          -36
+        ],
+        [
+          -40,
+          8
+        ],
+        [
+          8,
+          8.5
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Colonnade.West.Pier.0.0",
+      "owner": "courtyard",
+      "role": "colonnade pier placeholder",
+      "type": "MESH",
+      "location": [
+        -42.5,
+        -39.5,
+        4
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -42.900001525878906,
+          -42.099998474121094
+        ],
+        [
+          -39.900001525878906,
+          -39.099998474121094
+        ],
+        [
+          0,
+          8
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Colonnade.West.Pier.0.1",
+      "owner": "courtyard",
+      "role": "colonnade pier placeholder",
+      "type": "MESH",
+      "location": [
+        -36.5,
+        -39.5,
+        4
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -36.900001525878906,
+          -36.099998474121094
+        ],
+        [
+          -39.900001525878906,
+          -39.099998474121094
+        ],
+        [
+          0,
+          8
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Colonnade.West.Pier.1.0",
+      "owner": "courtyard",
+      "role": "colonnade pier placeholder",
+      "type": "MESH",
+      "location": [
+        -42.5,
+        -31.66666603088379,
+        4
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -42.900001525878906,
+          -42.099998474121094
+        ],
+        [
+          -32.06666564941406,
+          -31.266666412353516
+        ],
+        [
+          0,
+          8
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Colonnade.West.Pier.1.1",
+      "owner": "courtyard",
+      "role": "colonnade pier placeholder",
+      "type": "MESH",
+      "location": [
+        -36.5,
+        -31.66666603088379,
+        4
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -36.900001525878906,
+          -36.099998474121094
+        ],
+        [
+          -32.06666564941406,
+          -31.266666412353516
+        ],
+        [
+          0,
+          8
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Colonnade.West.Pier.2.0",
+      "owner": "courtyard",
+      "role": "colonnade pier placeholder",
+      "type": "MESH",
+      "location": [
+        -42.5,
+        -23.83333396911621,
+        4
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -42.900001525878906,
+          -42.099998474121094
+        ],
+        [
+          -24.233333587646484,
+          -23.433334350585938
+        ],
+        [
+          0,
+          8
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Colonnade.West.Pier.2.1",
+      "owner": "courtyard",
+      "role": "colonnade pier placeholder",
+      "type": "MESH",
+      "location": [
+        -36.5,
+        -23.83333396911621,
+        4
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -36.900001525878906,
+          -36.099998474121094
+        ],
+        [
+          -24.233333587646484,
+          -23.433334350585938
+        ],
+        [
+          0,
+          8
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Colonnade.West.Pier.3.0",
+      "owner": "courtyard",
+      "role": "colonnade pier placeholder",
+      "type": "MESH",
+      "location": [
+        -42.5,
+        -16,
+        4
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -42.900001525878906,
+          -42.099998474121094
+        ],
+        [
+          -16.399999618530273,
+          -15.600000381469727
+        ],
+        [
+          0,
+          8
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Colonnade.West.Pier.3.1",
+      "owner": "courtyard",
+      "role": "colonnade pier placeholder",
+      "type": "MESH",
+      "location": [
+        -36.5,
+        -16,
+        4
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -36.900001525878906,
+          -36.099998474121094
+        ],
+        [
+          -16.399999618530273,
+          -15.600000381469727
+        ],
+        [
+          0,
+          8
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Colonnade.West.Pier.4.0",
+      "owner": "courtyard",
+      "role": "colonnade pier placeholder",
+      "type": "MESH",
+      "location": [
+        -42.5,
+        -8.166666984558105,
+        4
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -42.900001525878906,
+          -42.099998474121094
+        ],
+        [
+          -8.566666603088379,
+          -7.766666889190674
+        ],
+        [
+          0,
+          8
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Colonnade.West.Pier.4.1",
+      "owner": "courtyard",
+      "role": "colonnade pier placeholder",
+      "type": "MESH",
+      "location": [
+        -36.5,
+        -8.166666984558105,
+        4
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -36.900001525878906,
+          -36.099998474121094
+        ],
+        [
+          -8.566666603088379,
+          -7.766666889190674
+        ],
+        [
+          0,
+          8
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Colonnade.West.Pier.5.0",
+      "owner": "courtyard",
+      "role": "colonnade pier placeholder",
+      "type": "MESH",
+      "location": [
+        -42.5,
+        -0.3333333432674408,
+        4
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -42.900001525878906,
+          -42.099998474121094
+        ],
+        [
+          -0.7333333492279053,
+          0.06666666269302368
+        ],
+        [
+          0,
+          8
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Colonnade.West.Pier.5.1",
+      "owner": "courtyard",
+      "role": "colonnade pier placeholder",
+      "type": "MESH",
+      "location": [
+        -36.5,
+        -0.3333333432674408,
+        4
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -36.900001525878906,
+          -36.099998474121094
+        ],
+        [
+          -0.7333333492279053,
+          0.06666666269302368
+        ],
+        [
+          0,
+          8
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Colonnade.West.Pier.6.0",
+      "owner": "courtyard",
+      "role": "colonnade pier placeholder",
+      "type": "MESH",
+      "location": [
+        -42.5,
+        7.5,
+        4
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -42.900001525878906,
+          -42.099998474121094
+        ],
+        [
+          7.099999904632568,
+          7.900000095367432
+        ],
+        [
+          0,
+          8
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Colonnade.West.Pier.6.1",
+      "owner": "courtyard",
+      "role": "colonnade pier placeholder",
+      "type": "MESH",
+      "location": [
+        -36.5,
+        7.5,
+        4
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -36.900001525878906,
+          -36.099998474121094
+        ],
+        [
+          7.099999904632568,
+          7.900000095367432
+        ],
+        [
+          0,
+          8
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Colonnade.East.Roof",
+      "owner": "courtyard",
+      "role": "low colonnade roof placeholder",
+      "type": "MESH",
+      "location": [
+        39.5,
+        -16,
+        8.25
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          36,
+          43
+        ],
+        [
+          -40,
+          8
+        ],
+        [
+          8,
+          8.5
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Colonnade.East.Pier.0.0",
+      "owner": "courtyard",
+      "role": "colonnade pier placeholder",
+      "type": "MESH",
+      "location": [
+        36.5,
+        -39.5,
+        4
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          36.099998474121094,
+          36.900001525878906
+        ],
+        [
+          -39.900001525878906,
+          -39.099998474121094
+        ],
+        [
+          0,
+          8
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Colonnade.East.Pier.0.1",
+      "owner": "courtyard",
+      "role": "colonnade pier placeholder",
+      "type": "MESH",
+      "location": [
+        42.5,
+        -39.5,
+        4
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          42.099998474121094,
+          42.900001525878906
+        ],
+        [
+          -39.900001525878906,
+          -39.099998474121094
+        ],
+        [
+          0,
+          8
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Colonnade.East.Pier.1.0",
+      "owner": "courtyard",
+      "role": "colonnade pier placeholder",
+      "type": "MESH",
+      "location": [
+        36.5,
+        -31.66666603088379,
+        4
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          36.099998474121094,
+          36.900001525878906
+        ],
+        [
+          -32.06666564941406,
+          -31.266666412353516
+        ],
+        [
+          0,
+          8
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Colonnade.East.Pier.1.1",
+      "owner": "courtyard",
+      "role": "colonnade pier placeholder",
+      "type": "MESH",
+      "location": [
+        42.5,
+        -31.66666603088379,
+        4
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          42.099998474121094,
+          42.900001525878906
+        ],
+        [
+          -32.06666564941406,
+          -31.266666412353516
+        ],
+        [
+          0,
+          8
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Colonnade.East.Pier.2.0",
+      "owner": "courtyard",
+      "role": "colonnade pier placeholder",
+      "type": "MESH",
+      "location": [
+        36.5,
+        -23.83333396911621,
+        4
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          36.099998474121094,
+          36.900001525878906
+        ],
+        [
+          -24.233333587646484,
+          -23.433334350585938
+        ],
+        [
+          0,
+          8
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Colonnade.East.Pier.2.1",
+      "owner": "courtyard",
+      "role": "colonnade pier placeholder",
+      "type": "MESH",
+      "location": [
+        42.5,
+        -23.83333396911621,
+        4
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          42.099998474121094,
+          42.900001525878906
+        ],
+        [
+          -24.233333587646484,
+          -23.433334350585938
+        ],
+        [
+          0,
+          8
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Colonnade.East.Pier.3.0",
+      "owner": "courtyard",
+      "role": "colonnade pier placeholder",
+      "type": "MESH",
+      "location": [
+        36.5,
+        -16,
+        4
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          36.099998474121094,
+          36.900001525878906
+        ],
+        [
+          -16.399999618530273,
+          -15.600000381469727
+        ],
+        [
+          0,
+          8
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Colonnade.East.Pier.3.1",
+      "owner": "courtyard",
+      "role": "colonnade pier placeholder",
+      "type": "MESH",
+      "location": [
+        42.5,
+        -16,
+        4
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          42.099998474121094,
+          42.900001525878906
+        ],
+        [
+          -16.399999618530273,
+          -15.600000381469727
+        ],
+        [
+          0,
+          8
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Colonnade.East.Pier.4.0",
+      "owner": "courtyard",
+      "role": "colonnade pier placeholder",
+      "type": "MESH",
+      "location": [
+        36.5,
+        -8.166666984558105,
+        4
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          36.099998474121094,
+          36.900001525878906
+        ],
+        [
+          -8.566666603088379,
+          -7.766666889190674
+        ],
+        [
+          0,
+          8
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Colonnade.East.Pier.4.1",
+      "owner": "courtyard",
+      "role": "colonnade pier placeholder",
+      "type": "MESH",
+      "location": [
+        42.5,
+        -8.166666984558105,
+        4
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          42.099998474121094,
+          42.900001525878906
+        ],
+        [
+          -8.566666603088379,
+          -7.766666889190674
+        ],
+        [
+          0,
+          8
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Colonnade.East.Pier.5.0",
+      "owner": "courtyard",
+      "role": "colonnade pier placeholder",
+      "type": "MESH",
+      "location": [
+        36.5,
+        -0.3333333432674408,
+        4
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          36.099998474121094,
+          36.900001525878906
+        ],
+        [
+          -0.7333333492279053,
+          0.06666666269302368
+        ],
+        [
+          0,
+          8
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Colonnade.East.Pier.5.1",
+      "owner": "courtyard",
+      "role": "colonnade pier placeholder",
+      "type": "MESH",
+      "location": [
+        42.5,
+        -0.3333333432674408,
+        4
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          42.099998474121094,
+          42.900001525878906
+        ],
+        [
+          -0.7333333492279053,
+          0.06666666269302368
+        ],
+        [
+          0,
+          8
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Colonnade.East.Pier.6.0",
+      "owner": "courtyard",
+      "role": "colonnade pier placeholder",
+      "type": "MESH",
+      "location": [
+        36.5,
+        7.5,
+        4
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          36.099998474121094,
+          36.900001525878906
+        ],
+        [
+          7.099999904632568,
+          7.900000095367432
+        ],
+        [
+          0,
+          8
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Courtyard.Colonnade.East.Pier.6.1",
+      "owner": "courtyard",
+      "role": "colonnade pier placeholder",
+      "type": "MESH",
+      "location": [
+        42.5,
+        7.5,
+        4
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          42.099998474121094,
+          42.900001525878906
+        ],
+        [
+          7.099999904632568,
+          7.900000095367432
+        ],
+        [
+          0,
+          8
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.CAM.Front",
+      "owner": "review",
+      "role": "fixed review camera",
+      "type": "CAMERA",
+      "location": [
+        0,
+        -240,
+        24
+      ],
+      "rotation": [
+        1.5707964897155762,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          0,
+          0
+        ],
+        [
+          -240,
+          -240
+        ],
+        [
+          24,
+          24
+        ]
+      ],
+      "vertices": 0,
+      "polygons": 0
+    },
+    {
+      "name": "NC.CAM.Back",
+      "owner": "review",
+      "role": "fixed review camera",
+      "type": "CAMERA",
+      "location": [
+        0,
+        240,
+        24
+      ],
+      "rotation": [
+        -1.570796251296997,
+        3.141592502593994,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          0,
+          0
+        ],
+        [
+          240,
+          240
+        ],
+        [
+          24,
+          24
+        ]
+      ],
+      "vertices": 0,
+      "polygons": 0
+    },
+    {
+      "name": "NC.CAM.Left",
+      "owner": "review",
+      "role": "fixed review camera",
+      "type": "CAMERA",
+      "location": [
+        -240,
+        0,
+        24
+      ],
+      "rotation": [
+        1.5707963705062866,
+        0,
+        -1.5707963705062866
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -240,
+          -240
+        ],
+        [
+          0,
+          0
+        ],
+        [
+          24,
+          24
+        ]
+      ],
+      "vertices": 0,
+      "polygons": 0
+    },
+    {
+      "name": "NC.CAM.Right",
+      "owner": "review",
+      "role": "fixed review camera",
+      "type": "CAMERA",
+      "location": [
+        240,
+        0,
+        24
+      ],
+      "rotation": [
+        1.5707963705062866,
+        0,
+        1.5707963705062866
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          240,
+          240
+        ],
+        [
+          0,
+          0
+        ],
+        [
+          24,
+          24
+        ]
+      ],
+      "vertices": 0,
+      "polygons": 0
+    },
+    {
+      "name": "NC.CAM.Top",
+      "owner": "review",
+      "role": "fixed review camera",
+      "type": "CAMERA",
+      "location": [
+        0,
+        0,
+        260
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ],
+        [
+          260,
+          260
+        ]
+      ],
+      "vertices": 0,
+      "polygons": 0
+    },
+    {
+      "name": "NC.CAM.HeroFront",
+      "owner": "review",
+      "role": "fixed review camera",
+      "type": "CAMERA",
+      "location": [
+        0,
+        -230,
+        120
+      ],
+      "rotation": [
+        1.1680054664611816,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          0,
+          0
+        ],
+        [
+          -230,
+          -230
+        ],
+        [
+          120,
+          120
+        ]
+      ],
+      "vertices": 0,
+      "polygons": 0
+    },
+    {
+      "name": "NC.CAM.HeroThreeQuarter",
+      "owner": "review",
+      "role": "fixed review camera",
+      "type": "CAMERA",
+      "location": [
+        165,
+        -240,
+        150
+      ],
+      "rotation": [
+        1.1567177772521973,
+        -4.4360696449530224e-8,
+        0.6022874116897583
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          165,
+          165
+        ],
+        [
+          -240,
+          -240
+        ],
+        [
+          150,
+          150
+        ]
+      ],
+      "vertices": 0,
+      "polygons": 0
+    },
+    {
+      "name": "NC.CAM.Courtyard",
+      "owner": "review",
+      "role": "fixed review camera",
+      "type": "CAMERA",
+      "location": [
+        0,
+        -46,
+        1.649999976158142
+      ],
+      "rotation": [
+        1.8055531978607178,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          0,
+          0
+        ],
+        [
+          -46,
+          -46
+        ],
+        [
+          1.649999976158142,
+          1.649999976158142
+        ]
+      ],
+      "vertices": 0,
+      "polygons": 0
+    },
+    {
+      "name": "NC.CAM.GateDetail",
+      "owner": "review",
+      "role": "fixed review camera",
+      "type": "CAMERA",
+      "location": [
+        22,
+        -95,
+        15
+      ],
+      "rotation": [
+        1.4030601978302002,
+        -4.056882474401391e-8,
+        0.5611634850502014
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          22,
+          22
+        ],
+        [
+          -95,
+          -95
+        ],
+        [
+          15,
+          15
+        ]
+      ],
+      "vertices": 0,
+      "polygons": 0
+    },
+    {
+      "name": "NC.Review.Light.Sun",
+      "owner": "review",
+      "role": "neutral review light",
+      "type": "LIGHT",
+      "location": [
+        -90,
+        -130,
+        180
+      ],
+      "rotation": [
+        0.7491885423660278,
+        -4.068089864972535e-9,
+        -0.6055446863174438
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -90,
+          -90
+        ],
+        [
+          -130,
+          -130
+        ],
+        [
+          180,
+          180
+        ]
+      ],
+      "vertices": 0,
+      "polygons": 0
+    },
+    {
+      "name": "NC.Review.Light.Fill",
+      "owner": "review",
+      "role": "neutral review light",
+      "type": "LIGHT",
+      "location": [
+        90,
+        -60,
+        130
+      ],
+      "rotation": [
+        0.7335813641548157,
+        4.8007535724536865e-9,
+        0.982793927192688
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          90,
+          90
+        ],
+        [
+          -60,
+          -60
+        ],
+        [
+          130,
+          130
+        ]
+      ],
+      "vertices": 0,
+      "polygons": 0
+    },
+    {
+      "name": "NC.Review.Light.Rim",
+      "owner": "review",
+      "role": "neutral review light",
+      "type": "LIGHT",
+      "location": [
+        -60,
+        100,
+        150
+      ],
+      "rotation": [
+        0.6945374608039856,
+        4.476978787693042e-9,
+        -2.601173162460327
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -60,
+          -60
+        ],
+        [
+          100,
+          100
+        ],
+        [
+          150,
+          150
+        ]
+      ],
+      "vertices": 0,
+      "polygons": 0
+    },
+    {
+      "name": "NC.Review.ScaleProxy.LegL",
+      "owner": "review",
+      "role": "1.85 m scale proxy",
+      "type": "MESH",
+      "location": [
+        -8.114999771118164,
+        -65,
+        0.42500001192092896
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -8.199999809265137,
+          -8.029999732971191
+        ],
+        [
+          -65.12999725341797,
+          -64.87000274658203
+        ],
+        [
+          0,
+          0.8500000238418579
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Review.ScaleProxy.LegR",
+      "owner": "review",
+      "role": "1.85 m scale proxy",
+      "type": "MESH",
+      "location": [
+        -7.885000228881836,
+        -65,
+        0.42500001192092896
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -7.970000267028809,
+          -7.800000190734863
+        ],
+        [
+          -65.12999725341797,
+          -64.87000274658203
+        ],
+        [
+          0,
+          0.8500000238418579
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Review.ScaleProxy.Torso",
+      "owner": "review",
+      "role": "1.85 m scale proxy",
+      "type": "MESH",
+      "location": [
+        -8,
+        -65,
+        1.1749999523162842
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -8.260000228881836,
+          -7.739999771118164
+        ],
+        [
+          -65.16000366210938,
+          -64.83999633789062
+        ],
+        [
+          0.8499999642372131,
+          1.5
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Review.ScaleProxy.Head",
+      "owner": "review",
+      "role": "1.85 m scale proxy",
+      "type": "MESH",
+      "location": [
+        -8,
+        -65,
+        1.7000000476837158
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          -8.149999618530273,
+          -7.849999904632568
+        ],
+        [
+          -65.1500015258789,
+          -64.8499984741211
+        ],
+        [
+          1.5500000715255737,
+          1.850000023841858
+        ]
+      ],
+      "vertices": 8,
+      "polygons": 6
+    },
+    {
+      "name": "NC.Review.Reference.Castle",
+      "owner": "review",
+      "role": "packed source reference, not rendered evidence",
+      "type": "EMPTY",
+      "location": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ]
+      ],
+      "vertices": 0,
+      "polygons": 0
+    },
+    {
+      "name": "NC.Review.Reference.Flag",
+      "owner": "review",
+      "role": "packed source reference, not rendered evidence",
+      "type": "EMPTY",
+      "location": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ]
+      ],
+      "vertices": 0,
+      "polygons": 0
+    },
+    {
+      "name": "NC.Review.Reference.Plan",
+      "owner": "review",
+      "role": "packed source reference, not rendered evidence",
+      "type": "EMPTY",
+      "location": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ]
+      ],
+      "vertices": 0,
+      "polygons": 0
+    },
+    {
+      "name": "NC.Review.Reference.Elevations",
+      "owner": "review",
+      "role": "packed source reference, not rendered evidence",
+      "type": "EMPTY",
+      "location": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "parent": null,
+      "bounds": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ]
+      ],
+      "vertices": 0,
+      "polygons": 0
+    }
+  ],
+  "cameras": [
+    {
+      "name": "NC.CAM.Front",
+      "projection": "ORTHO",
+      "frame": [
+        [
+          100,
+          56.25,
+          -1
+        ],
+        [
+          100,
+          -56.25,
+          -1
+        ],
+        [
+          -100,
+          -56.25,
+          -1
+        ],
+        [
+          -100,
+          56.25,
+          -1
+        ]
+      ],
+      "world_width": 200,
+      "world_height": 112.5,
+      "projected_20m_pixels": 204.800048828125,
+      "location": [
+        0,
+        -240,
+        24
+      ],
+      "rotation": [
+        1.5707964897155762,
+        0,
+        0
+      ],
+      "resolution": [
+        2048,
+        1152
+      ],
+      "lens_mm": 50,
+      "shift_y": 0
+    },
+    {
+      "name": "NC.CAM.Back",
+      "projection": "ORTHO",
+      "frame": [
+        [
+          100,
+          56.25,
+          -1
+        ],
+        [
+          100,
+          -56.25,
+          -1
+        ],
+        [
+          -100,
+          -56.25,
+          -1
+        ],
+        [
+          -100,
+          56.25,
+          -1
+        ]
+      ],
+      "world_width": 200,
+      "world_height": 112.5,
+      "projected_20m_pixels": 204.800048828125,
+      "location": [
+        0,
+        240,
+        24
+      ],
+      "rotation": [
+        -1.570796251296997,
+        3.141592502593994,
+        0
+      ],
+      "resolution": [
+        2048,
+        1152
+      ],
+      "lens_mm": 50,
+      "shift_y": 0
+    },
+    {
+      "name": "NC.CAM.Left",
+      "projection": "ORTHO",
+      "frame": [
+        [
+          100,
+          56.25,
+          -1
+        ],
+        [
+          100,
+          -56.25,
+          -1
+        ],
+        [
+          -100,
+          -56.25,
+          -1
+        ],
+        [
+          -100,
+          56.25,
+          -1
+        ]
+      ],
+      "world_width": 200,
+      "world_height": 112.5,
+      "projected_20m_pixels": 204.800048828125,
+      "location": [
+        -240,
+        0,
+        24
+      ],
+      "rotation": [
+        1.5707963705062866,
+        0,
+        -1.5707963705062866
+      ],
+      "resolution": [
+        2048,
+        1152
+      ],
+      "lens_mm": 50,
+      "shift_y": 0
+    },
+    {
+      "name": "NC.CAM.Right",
+      "projection": "ORTHO",
+      "frame": [
+        [
+          100,
+          56.25,
+          -1
+        ],
+        [
+          100,
+          -56.25,
+          -1
+        ],
+        [
+          -100,
+          -56.25,
+          -1
+        ],
+        [
+          -100,
+          56.25,
+          -1
+        ]
+      ],
+      "world_width": 200,
+      "world_height": 112.5,
+      "projected_20m_pixels": 204.800048828125,
+      "location": [
+        240,
+        0,
+        24
+      ],
+      "rotation": [
+        1.5707963705062866,
+        0,
+        1.5707963705062866
+      ],
+      "resolution": [
+        2048,
+        1152
+      ],
+      "lens_mm": 50,
+      "shift_y": 0
+    },
+    {
+      "name": "NC.CAM.Top",
+      "projection": "ORTHO",
+      "frame": [
+        [
+          100,
+          100,
+          -1
+        ],
+        [
+          100,
+          -100,
+          -1
+        ],
+        [
+          -100,
+          -100,
+          -1
+        ],
+        [
+          -100,
+          100,
+          -1
+        ]
+      ],
+      "world_width": 200,
+      "world_height": 200,
+      "projected_20m_pixels": 204.800048828125,
+      "location": [
+        0,
+        0,
+        260
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "resolution": [
+        2048,
+        2048
+      ],
+      "lens_mm": 50,
+      "shift_y": 0
+    },
+    {
+      "name": "NC.CAM.HeroFront",
+      "projection": "PERSP",
+      "frame": [
+        [
+          0.5,
+          0.1912499964237213,
+          -0.8888888955116272
+        ],
+        [
+          0.5,
+          -0.3712500035762787,
+          -0.8888888955116272
+        ],
+        [
+          -0.5,
+          -0.3712500035762787,
+          -0.8888888955116272
+        ],
+        [
+          -0.5,
+          0.1912499964237213,
+          -0.8888888955116272
+        ]
+      ],
+      "world_width": 1,
+      "world_height": 0.5625,
+      "projected_20m_pixels": 455.1112365722656,
+      "location": [
+        0,
+        -230,
+        120
+      ],
+      "rotation": [
+        1.1680054664611816,
+        0,
+        0
+      ],
+      "resolution": [
+        2560,
+        1440
+      ],
+      "lens_mm": 32,
+      "shift_y": -0.09000000357627869
+    },
+    {
+      "name": "NC.CAM.HeroThreeQuarter",
+      "projection": "PERSP",
+      "frame": [
+        [
+          0.5,
+          0.20125000178813934,
+          -1.1111111640930176
+        ],
+        [
+          0.5,
+          -0.36124998331069946,
+          -1.1111111640930176
+        ],
+        [
+          -0.5,
+          -0.36124998331069946,
+          -1.1111111640930176
+        ],
+        [
+          -0.5,
+          0.20125000178813934,
+          -1.1111111640930176
+        ]
+      ],
+      "world_width": 1,
+      "world_height": 0.5624999850988388,
+      "projected_20m_pixels": 568.8889312744141,
+      "location": [
+        165,
+        -240,
+        150
+      ],
+      "rotation": [
+        1.1567177772521973,
+        -4.4360696449530224e-8,
+        0.6022874116897583
+      ],
+      "resolution": [
+        2560,
+        1440
+      ],
+      "lens_mm": 40,
+      "shift_y": -0.07999999821186066
+    },
+    {
+      "name": "NC.CAM.Courtyard",
+      "projection": "PERSP",
+      "frame": [
+        [
+          0.5,
+          0.28125,
+          -0.6666666865348816
+        ],
+        [
+          0.5,
+          -0.28125,
+          -0.6666666865348816
+        ],
+        [
+          -0.5,
+          -0.28125,
+          -0.6666666865348816
+        ],
+        [
+          -0.5,
+          0.28125,
+          -0.6666666865348816
+        ]
+      ],
+      "world_width": 1,
+      "world_height": 0.5625,
+      "projected_20m_pixels": 341.33331298828125,
+      "location": [
+        0,
+        -46,
+        1.649999976158142
+      ],
+      "rotation": [
+        1.8055531978607178,
+        0,
+        0
+      ],
+      "resolution": [
+        2560,
+        1440
+      ],
+      "lens_mm": 24,
+      "shift_y": 0
+    },
+    {
+      "name": "NC.CAM.GateDetail",
+      "projection": "PERSP",
+      "frame": [
+        [
+          0.5,
+          0.28125,
+          -0.9722222089767456
+        ],
+        [
+          0.5,
+          -0.28125,
+          -0.9722222089767456
+        ],
+        [
+          -0.5,
+          -0.28125,
+          -0.9722222089767456
+        ],
+        [
+          -0.5,
+          0.28125,
+          -0.9722222089767456
+        ]
+      ],
+      "world_width": 1,
+      "world_height": 0.5625,
+      "projected_20m_pixels": 497.7775573730469,
+      "location": [
+        22,
+        -95,
+        15
+      ],
+      "rotation": [
+        1.4030601978302002,
+        -4.056882474401391e-8,
+        0.5611634850502014
+      ],
+      "resolution": [
+        2560,
+        1440
+      ],
+      "lens_mm": 35,
+      "shift_y": 0
+    }
+  ],
+  "gateway_rays": [
+    {
+      "x": -5.9,
+      "hit": false,
+      "object": null
+    },
+    {
+      "x": 0,
+      "hit": false,
+      "object": null
+    },
+    {
+      "x": 5.9,
+      "hit": false,
+      "object": null
+    }
+  ],
+  "moat_mesh": {
+    "vertices": [
+      [
+        -70,
+        -82,
+        -2
+      ],
+      [
+        70,
+        -82,
+        -2
+      ],
+      [
+        70,
+        82,
+        -2
+      ],
+      [
+        -70,
+        82,
+        -2
+      ],
+      [
+        -56,
+        -68,
+        -2
+      ],
+      [
+        56,
+        -68,
+        -2
+      ],
+      [
+        56,
+        68,
+        -2
+      ],
+      [
+        -56,
+        68,
+        -2
+      ]
+    ],
+    "faces": [
+      [
+        0,
+        1,
+        5,
+        4
+      ],
+      [
+        1,
+        2,
+        6,
+        5
+      ],
+      [
+        2,
+        3,
+        7,
+        6
+      ],
+      [
+        3,
+        0,
+        4,
+        7
+      ]
+    ]
+  },
+  "bridge_owner_rerun_preserved_others": true,
+  "r002_preserved_unaffected_objects": 242
+}

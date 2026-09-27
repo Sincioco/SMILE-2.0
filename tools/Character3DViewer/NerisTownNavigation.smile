@@ -10,6 +10,7 @@ Import Smile.Tools.NerisTownSite As Site
 Import Smile.Tools.NerisTownEntranceNavigation As Entries
 Import Smile.Tools.NerisTownEntrancesData As DoorData
 Import Smile.Tools.TownDocumentNavigation As Edited
+Import Smile.Tools.NerisCastleRoute As Castle
 
 Public Function CanStand(X As Double, Z As Double) As Boolean
 
@@ -17,6 +18,12 @@ Public Function CanStand(X As Double, Z As Double) As Boolean
 
     Dim Index As Number
     Dim Tree As Layout.Placement
+
+    If Castle.Contains(X, Z) Then
+        ReturnValue = Castle.CanStand(X, Z)
+
+        Return ReturnValue
+    End If
 
     If Edited.Active() Then
         ReturnValue = Edited.CanStand(X, Z)
@@ -59,6 +66,12 @@ Public Function GroundHeight(X As Double, Z As Double) As Double
     Dim Result As Double
     Dim Door As Number
     Dim Item As DoorData.Door
+
+    If Castle.Contains(X, Z) Then
+        Result = Castle.GroundHeight(X, Z)
+
+        Return Result
+    End If
 
     If Edited.Active() Then
         Result = Edited.GroundHeight(X, Z)

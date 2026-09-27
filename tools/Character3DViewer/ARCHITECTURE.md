@@ -1531,3 +1531,42 @@ and verifies the ground-level Tab shot retains its original near clipping plane.
 An isolated negative control using the old fixed near plane fails that exact
 bridge assertion. The corrected native fixture passes; overview orbit, pan and
 closer zoom inspection show distinct Royal/HQ bridge surfaces.
+
+### Provisional Neris Castle M01 comparison
+
+Sin explicitly requested an unapproved M01 blockout beside the two existing castles,
+with an automatic party-proximity drawbridge. The native-only comparison is separate
+from the immutable catalog and editable document. No save schema or fingerprint changes.
+
+- NerisCastlePreview owns four display objects, two models and cleanup; it adds no ground mesh.
+- NerisCastleRoute owns fixed comparison placement, route heights/collision and occupancy.
+- ProximityDrawbridge is a pure reusable motion state: 3-second travel, 2.5-second clear delay.
+- NerisTown coordinates lifetime/update/draw and an approach inspection button.
+- NerisTownNavigation delegates only points inside the comparison's owned footprint.
+- NerisTownTests and NerisTownSceneTests cover route/motion and actual native mesh transforms.
+
+Dependencies run from the scene and navigation into the comparison owners, then into
+shared Precision3D/PartyTrail3D; none point back into NerisTown or the host. Existing
+party/calibration owners remain unchanged. The source asset package is
+`games/SinStarI/SourceAssets/Towns/Neris/NerisCastleM01V1`; its JavaScript preparation
+validates part layout and the UV islands authored in disposable Blender export staging. It uses
+installed Node built-ins, without packages or downloads. Build.ps1 only invokes it.
+
+The new owners stay below 250 lines each. Scene growth is limited to coordination and
+the preview button; no threshold, baseline, exclusion or dependency exception changes.
+M02 and later modeling, Studio and Web adoption remain held.
+
+The front ground and main road use normal native terrain cells in a versioned
+town document. Existing TownSurfaceRenderer and TownDocumentNavigation own their
+appearance and collision. The added ground mesh was removed after it overlapped
+the existing road and visibly flickered. No duplicate ground surface remains.
+All existing road cells, assemblies, lighting and catalog identity are preserved.
+The previous live town records were backed up before applying the terrain-only
+revision while the Viewer was closed. The rectangular west land retains a moat.
+The visit action handles its header hit box separately from viewport blocking,
+while respecting editor/modal capture. NativeProgram is unchanged.
+
+The native fixture exposed insufficient bridge depth separation in the unedited
+overview. NerisTownCamera changes one coefficient from 0.05 to 0.1, retaining the
+25-unit close-view minimum. The existing nine-depth regression and ground-level
+clip check both pass. No threshold or baseline was relaxed.

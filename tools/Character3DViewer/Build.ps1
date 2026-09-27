@@ -33,6 +33,9 @@ if ($Studio) {
 $nativeBattleSources = @(
     'NativeViewerHost.smile',
     'NerisTown.smile',
+    'NerisCastlePreview.smile',
+    'NerisCastleRoute.smile',
+    'ProximityDrawbridge.smile',
     'TownDocument.smile',
     'TownPicking.smile',
     'TownEditorPanel.smile',
@@ -311,6 +314,8 @@ if ($Target -in @('Native', 'All')) {
         Copy-Item -LiteralPath $file.FullName -Destination $townMirror -Force
     }
     $partyMirror = Join-Path $townMirror 'Party'
+    & node (Join-Path $repositoryRoot 'games\SinStarI\SourceAssets\Towns\Neris\NerisCastleM01V1\prepare-native.mjs')
+    if ($LASTEXITCODE -ne 0) { throw 'Neris Castle preview preparation failed.' }
     $null = New-Item -ItemType Directory -Path $partyMirror -Force
     foreach ($entry in @(
         @('Arin', 'Paladin\ArinV57', 'ArinV57.sm3d.json'),

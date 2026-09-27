@@ -23,6 +23,8 @@ Import Smile.Tools.NerisTownLayout As Layout
 Import Smile.Tools.NerisTownEntrances As Doors
 Import Smile.Tools.NerisTownEntrancesData As DoorData
 Import Smile.Tools.NerisTownInspectionTests As InspectionTests
+Import Smile.Tools.NerisCastlePreview As Castle
+Import Smile.Tools.NerisCastleRoute As CastleRoute
 
 Dim Value As Town.State
 Dim Leader As P.Vector3
@@ -195,6 +197,7 @@ If Value.Ready Then
         "Water Captures And Refracts The Town Scene")
     Call CheckDoors(Value)
     Call CheckLeaderCycle(Value)
+    Call CheckCastleRender(Value)
 
     Show Screen
 
@@ -634,5 +637,49 @@ Sub Check(Condition As Boolean, Label As Text)
         Failures = Failures + 1
         Print "FAIL " + Label
     End If
+
+End Sub
+
+Sub CheckCastleRender(ByRef Value As Town.State)
+
+    Dim Pose As P.Transform3D
+    Dim Step As Number
+    Dim Ok As Boolean
+
+    Ok = Castle.Create(Value.Comparison)
+
+    Call Check(Ok And Value.Comparison.ObjectCount = 4, "West Castle Loads Three Static Parts And Hinged Leaf")
+    Call Town.Draw(Value)
+
+    Ok = P.TryTransform(Value.Comparison.Objects[Value.Comparison.Leaf], Pose)
+
+    Call Check(Ok And Pose.Rotation.X = 90.0, "Native Bridge Mesh Starts Upright At Its Real Hinge")
+    Call Check(Abs(Pose.Position.X - CastleRoute.ORIGIN_X) < 0.001 And
+        Abs(Pose.Position.Y - 18.87) < 0.001 And Abs(Pose.Position.Z + 1940.0) < 0.001,
+        "Native Hinge Retains Measured Placement And Scale")
+    Call Party.Teleport(Value.People, P.Vector(CastleRoute.ORIGIN_X, CastleRoute.DECK_Y, -2410.0))
+
+    For Step = 1 To 30
+        Call CastleRoute.Update(Value.People.Path, Value.People.MemberCount, 100)
+    End For
+
+    Call Town.Draw(Value)
+
+    Ok = P.TryTransform(Value.Comparison.Objects[Value.Comparison.Leaf], Pose)
+
+    Call Check(Ok And Pose.Rotation.X = 0.0 And Not Value.Failed,
+        "Actual Party Approach Draws The Fully Lowered Native Leaf")
+    Call Party.Teleport(Value.People, P.Vector(0.0, 23.12, -2780.0))
+
+    For Step = 1 To 55
+        Call CastleRoute.Update(Value.People.Path, Value.People.MemberCount, 100)
+    End For
+
+    Call Town.Draw(Value)
+
+    Ok = P.TryTransform(Value.Comparison.Objects[Value.Comparison.Leaf], Pose)
+
+    Call Check(Ok And Pose.Rotation.X = 90.0 And Not Value.Failed,
+        "Actual Party Departure Draws The Raised Native Leaf")
 
 End Sub

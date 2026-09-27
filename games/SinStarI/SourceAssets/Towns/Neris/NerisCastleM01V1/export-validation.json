@@ -1,0 +1,46 @@
+{
+  "reimported": [
+    {
+      "kind": "castle",
+      "bounds_blender": [
+        [
+          -70,
+          70
+        ],
+        [
+          -82,
+          82
+        ],
+        [
+          -5,
+          60
+        ]
+      ],
+      "meshes": 4,
+      "triangles": 7490,
+      "all_meshes_have_uv": true
+    },
+    {
+      "kind": "drawbridge",
+      "bounds_blender": [
+        [
+          -5,
+          5
+        ],
+        [
+          -20,
+          0
+        ],
+        [
+          -0.25,
+          0.25
+        ]
+      ],
+      "meshes": 1,
+      "triangles": 12,
+      "all_meshes_have_uv": true
+    }
+  ],
+  "original_source_objects": 243,
+  "stage_removed": true
+}

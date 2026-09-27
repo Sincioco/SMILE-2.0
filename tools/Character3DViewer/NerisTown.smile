@@ -22,9 +22,12 @@ Import Smile.Tools.NerisTownCamera As Drone
 Import Smile.Tools.NerisTownCameraPanel As CameraPanel
 Import Smile.Tools.NerisTownEntrances As Entrances
 Import Smile.Tools.TownEditorSession As Authoring
+Import Smile.Tools.NerisCastlePreview As Castle
+Import Smile.Tools.NerisCastleRoute As CastleRoute
 
 Public Type State
     Town As Assets.State
+    Comparison As Castle.State
     People As Party.State
     View As Arena.State
     Look As Appearance.State
@@ -111,9 +114,13 @@ Public Sub LoadNext(ByRef Value As State)
 
     Ok = True
 
+    If Value.Edited And Text_Slice(Authoring.TownName(), 0, 10) = "Neris Town" Then
+        Ok = Castle.Create(Value.Comparison) And Ok
+    End If
+
     If Not Value.View.Ready Then
         Value.View = Arena.Create(11000, 10000, 6.0)
-        Ok = TownMap.Create(Value.Map)
+        Ok = TownMap.Create(Value.Map) And Ok
     End If
 
     Value.View.MinimumDistance = 80.0
@@ -184,6 +191,26 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean)
             Blocked Or CameraPanel.Hovered() Or Value.Panel.DragRow > 0)
 
         Blocked = Blocked Or Authoring.CameraBlocked(CameraPanel.Hovered() Or Value.Panel.DragRow > 0)
+    End If
+
+    If (CastleRoute.Active() And Not Authoring.Editing() And Not Authoring.CameraBlocked() And
+        Pointer_Pressed(POINTER_PRIMARY) And Pointer_X() >= 770 And Pointer_X() < 920 And
+        Pointer_Y() >= 10 And Pointer_Y() < 39) Then
+
+        Call Party.Teleport(Value.People, P.Vector(CastleRoute.ORIGIN_X,
+            CastleRoute.DECK_Y, -2410.0))
+        Call Drone.ArrivalFrame(Value.Flight, Value.View, Value.BaseCamera,
+            Value.People.Path.Positions[0])
+
+        Value.Follow = True
+        Value.Cinematic = False
+        Value.PartyControl = True
+        Value.InputActive = True
+        Value.IdleTime = 0
+        Value.IdleOrbit = False
+
+        Return
+
     End If
 
     If Key = KEY_1 And Authoring.Editing() Then
@@ -527,6 +554,10 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
 
     Leader = Value.People.Path.Positions[0]
 
+    If CastleRoute.Active() Then
+        Call CastleRoute.Update(Value.People.Path, Value.People.MemberCount, Elapsed)
+    End If
+
     Call OnMovement(Value, M.Length(Direction) > 0.001)
 
     If Value.PartyControl And M.Length(Direction) > 0.001 Then
@@ -682,6 +713,7 @@ Public Sub Draw(ByRef Value As State)
 
         End If
 
+        Ok = Castle.Draw(Value.Comparison) And Ok
         Ok = Scene.EndScene() And Ok
 
     End If
@@ -706,6 +738,11 @@ Public Sub Overlay(ByRef Value As State)
     End If
 
     Draw Text "F: Floor   G: Grid   B: Background   M: Map   Ctrl+F: Drone   R: Walk / Run" At 18, Window_Height() - 26 Size 14 Color WHITE
+
+    If CastleRoute.Active() And Not Authoring.Editing() Then
+        Fill Rectangle 770, 10, 150, 29, RGB(20, 90, 108)
+        Draw Text "Visit West Castle" At 780, 17 Size 14 Color WHITE
+    End If
 
     Call CameraPanel.Draw(Value.Panel, Value.View, Value.Cinematic,
         Value.PartyControl, Value.Flight.Enabled And Not Value.Flight.Suspended)
@@ -752,6 +789,8 @@ Public Sub Overlay(ByRef Value As State)
 End Sub
 
 Public Sub Destroy(ByRef Value As State)
+
+    Call Castle.Destroy(Value.Comparison)
 
     If Value.Edited Then
         Call Authoring.Release()

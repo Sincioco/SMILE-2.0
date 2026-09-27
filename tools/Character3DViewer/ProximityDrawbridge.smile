@@ -1,0 +1,63 @@
+''' Reusable hinge motion: occupancy holds the bridge down; absence closes after a delay.
+Module Smile.Tools.ProximityDrawbridge
+
+Option Explicit
+
+Public Type State
+    Angle As Double
+    ClearTime As Number
+End Type
+
+Public Sub Reset(ByRef Value As State)
+
+    Value.Angle = 90.0
+    Value.ClearTime = 0
+
+End Sub
+
+Public Sub Update(ByRef Value As State, Occupied As Boolean, Elapsed As Number)
+
+    Dim StepTime As Number
+    Dim Target As Double
+    Dim Distance As Double
+
+    StepTime = Max(0, Min(100, Elapsed))
+    Target = 0.0
+
+    If Occupied Then
+        Value.ClearTime = 0
+    Else
+        Value.ClearTime = Min(2500, Value.ClearTime + StepTime)
+    End If
+
+    If Not Occupied And Value.ClearTime >= 2500 Then
+        Target = 90.0
+    End If
+
+    ' A closed bridge stays closed until its first visitor arrives.
+
+    If Not Occupied And Value.Angle = 90.0 Then
+        Target = 90.0
+    End If
+
+    Distance = ToDouble(StepTime) * 0.03
+
+    If Value.Angle < Target Then
+        Value.Angle = Min(Target, Value.Angle + Distance)
+    Else
+        Value.Angle = Max(Target, Value.Angle - Distance)
+    End If
+
+End Sub
+
+Public Function Passable(Value As State) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Value.Angle <= 0.001
+
+    Return Result
+
+End Function
+
+End Module

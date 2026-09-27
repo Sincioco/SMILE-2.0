@@ -6,6 +6,7 @@ Import Smile.Simple3D.PartyTrail3D As Trail
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PrecisionMath3D As M
 Import Smile.Tools.NerisTownNavigation As Navigation
+Import Smile.Tools.NerisCastleRoute As Castle
 
 Dim Path As Trail.State
 Dim Leader As P.Vector3
@@ -123,6 +124,8 @@ End For
 
 Call Check(Position.Z > -881.0 And Position.Y > 40.0, "Party Climbs City Hall Stairs To Its Door")
 
+Call CheckCastle()
+
 If Failures = 0 Then
     Print "PASS Neris Town Routes"
 Else
@@ -135,5 +138,76 @@ Sub Check(Condition As Boolean, Label As Text)
         Failures = Failures + 1
         Print "FAIL " + Label
     End If
+
+End Sub
+
+Sub CheckCastle()
+
+    Dim Visitors As Trail.State
+    Dim Step As Number
+    Dim Point As P.Vector3
+
+    Call Castle.Enable(True)
+    Call Trail.Reset(Visitors, P.Vector(0.0, 23.12, -2780.0), 4, 22.0)
+    Call Castle.Update(Visitors, 4, 100)
+    Call Check(Castle.Angle() = 90.0, "West Bridge Starts Raised Without Visitors")
+    Call Check(Not Navigation.CanStand(-3650.0, -2142.0), "Raised West Bridge Blocks Crossing")
+
+    Visitors.Positions[0] = P.Vector(-3650.0, Castle.DECK_Y, -2410.0)
+
+    For Step = 1 To 15
+        Call Castle.Update(Visitors, 4, 100)
+    End For
+
+    Call Check(Abs(Castle.Angle() - 45.0) < 0.001, "Approach Lowers Bridge Smoothly Halfway")
+    Call Check(Not Navigation.CanStand(-3650.0, -2142.0), "Moving Bridge Does Not Admit Crossing")
+
+    For Step = 1 To 15
+        Call Castle.Update(Visitors, 4, 100)
+    End For
+
+    Call Check(Castle.Angle() = 0.0, "Approach Fully Lowers Bridge")
+    Call Check(Navigation.CanStand(-3650.0, -2142.0), "Lowered Bridge Admits Party")
+
+    Point = Navigation.Move(P.Vector(-3650.0, Castle.DECK_Y, -2280.0), 0.0, 765.0)
+
+    Call Check(Point.Z > -1646.0, "Party Crosses Landing Bridge And Twelve Metre Gateway")
+    Call Check(Not Navigation.CanStand(-3000.0, -1900.0), "Moat Beside Bridge Stays Impassable")
+    Call Check(Not Navigation.CanStand(-3650.0, -1156.0), "Fountain Is A Solid Obstacle")
+
+    Visitors.Positions[0] = P.Vector(0.0, 23.12, -2780.0)
+    Visitors.Positions[3] = P.Vector(-3480.0, Castle.DECK_Y, -850.0)
+
+    For Step = 1 To 60
+        Call Castle.Update(Visitors, 4, 100)
+    End For
+
+    Call Check(Castle.Angle() = 0.0, "Last Follower Inside Keeps Bridge Down")
+
+    Visitors.Positions[3] = Visitors.Positions[0]
+
+    For Step = 1 To 24
+        Call Castle.Update(Visitors, 4, 100)
+    End For
+
+    Call Check(Castle.Angle() = 0.0, "Bridge Waits Before Closing After Everyone Leaves")
+
+    For Step = 1 To 31
+        Call Castle.Update(Visitors, 4, 100)
+    End For
+
+    Call Check(Castle.Angle() = 90.0, "Bridge Rises Automatically After Departure")
+    Call Check(Not Navigation.CanStand(-3650.0, -2142.0), "Closed Bridge Restores Collision")
+
+    Point = Navigation.Move(P.Vector(-3650.0, Castle.DECK_Y, -816.0), 0.0, 241.0)
+
+    Call Check(Point.Z > -576.0 And Abs(Point.Y - Castle.DECK_Y - 51.0) < 0.001,
+        "Twenty Stairs Lead Into Palace Entrance Recess")
+
+    Call Check(Not Castle.Contains(-3650.0, -2780.0),
+        "Normal Town Terrain Owns The Front Ground And Road")
+
+    Call Castle.Enable(False)
+    Call Check(Not Castle.Contains(-3650.0, -850.0), "Leaving Preview Releases Its Navigation")
 
 End Sub

@@ -1266,3 +1266,20 @@ Grid + Markers. Guides stay anchored to the town while you inspect it. They are
 temporary and never enter Viewer/Blender saves. Opening another town clears them.
 See the [town-authoring contract](../../docs/architecture/town-authoring.md) for
 ownership, limits, save behavior and validation.
+
+### Provisional west-side castle
+
+Neris Town and its named copies show the measured M01 castle west of town, alongside
+Royal Castle and Old Castle. Its source dimensions remain unapproved. Click
+**Visit West Castle** outside Edit Town to move the party onto the approach.
+The actual hinged drawbridge lowers near any party member, stays down while anyone
+is on the approach or inside, and rises after all leave. Wait for it to finish
+lowering before crossing. The courtyard fountain and unfinished palace interior
+are solid; the stairs reach the palace entrance recess. Right-click returns to
+the town overview.
+
+This is a fixed preview assembly, not an editable catalog tile. The normal ground
+and main road are editable terrain cells in the current Neris Town. Its prior
+working records were backed up; portable terrain revisions and all earlier Blender
+town exports are preserved. Package/evidence and native ownership
+are documented in [NerisCastleM01V1](../../games/SinStarI/SourceAssets/Towns/Neris/NerisCastleM01V1/README.md).

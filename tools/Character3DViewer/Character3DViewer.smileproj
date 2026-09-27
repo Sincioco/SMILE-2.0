@@ -15,6 +15,9 @@
     <SmileSource Include="NativeProgram.smile" StartupOnly="true" />
     <SmileSource Include="NativeViewerHost.smile" />
     <SmileSource Include="NerisTown.smile" />
+    <SmileSource Include="NerisCastlePreview.smile" />
+    <SmileSource Include="NerisCastleRoute.smile" />
+    <SmileSource Include="ProximityDrawbridge.smile" />
     <SmileSource Include="TownDocument.smile" />
     <SmileSource Include="TownPicking.smile" />
     <SmileSource Include="TownEditorPanel.smile" />
@@ -435,5 +438,7 @@
     <Asset Include="Assets\Neris\Neris-Grass-Color.png" />
     <Asset Include="Assets\Neris\Neris-Paving.png" />
     <Asset Include="Assets\Neris\Town-Palette.png" />
+    <Model3DAsset Include="BuildAssets\Neris\M01\castle.glb" Descriptor="BuildAssets\Neris\M01\Castle.sm3d.json" LogicalPath="Assets/Neris/M01/Castle.sm3d" Profile="Static" Identity="sin-star-i.neris-castle.m01-r003" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\M01\drawbridge.glb" Descriptor="BuildAssets\Neris\M01\Castle.sm3d.json" LogicalPath="Assets/Neris/M01/Drawbridge.sm3d" Profile="Static" Identity="sin-star-i.neris-castle.m01-r003.bridge" ProductionState="Prototype" />
   </ItemGroup>
 </SmileProject>

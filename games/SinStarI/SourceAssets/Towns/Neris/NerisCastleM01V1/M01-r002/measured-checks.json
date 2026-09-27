@@ -1,0 +1,468 @@
+{
+  "milestone": "M01",
+  "status": "passed",
+  "tests": [
+    {
+      "name": "Keep bound 0/0",
+      "passed": true,
+      "actual": -16,
+      "expected": -16
+    },
+    {
+      "name": "Keep bound 0/1",
+      "passed": true,
+      "actual": 16,
+      "expected": 16
+    },
+    {
+      "name": "Keep bound 1/0",
+      "passed": true,
+      "actual": 14,
+      "expected": 14
+    },
+    {
+      "name": "Keep bound 1/1",
+      "passed": true,
+      "actual": 52,
+      "expected": 52
+    },
+    {
+      "name": "Keep bound 2/0",
+      "passed": true,
+      "actual": 3,
+      "expected": 3
+    },
+    {
+      "name": "Keep bound 2/1",
+      "passed": true,
+      "actual": 32,
+      "expected": 32
+    },
+    {
+      "name": "Four corner shafts",
+      "passed": true,
+      "actual": 4,
+      "expected": 4
+    },
+    {
+      "name": "SW center 0",
+      "passed": true,
+      "actual": -48,
+      "expected": -48
+    },
+    {
+      "name": "SW center 1",
+      "passed": true,
+      "actual": -60,
+      "expected": -60
+    },
+    {
+      "name": "SE center 0",
+      "passed": true,
+      "actual": 48,
+      "expected": 48
+    },
+    {
+      "name": "SE center 1",
+      "passed": true,
+      "actual": -60,
+      "expected": -60
+    },
+    {
+      "name": "NW center 0",
+      "passed": true,
+      "actual": -48,
+      "expected": -48
+    },
+    {
+      "name": "NW center 1",
+      "passed": true,
+      "actual": 60,
+      "expected": 60
+    },
+    {
+      "name": "NE center 0",
+      "passed": true,
+      "actual": 48,
+      "expected": 48
+    },
+    {
+      "name": "NE center 1",
+      "passed": true,
+      "actual": 60,
+      "expected": 60
+    },
+    {
+      "name": "Tower-inclusive width",
+      "passed": true,
+      "actual": 108,
+      "expected": 108
+    },
+    {
+      "name": "Tower-inclusive depth",
+      "passed": true,
+      "actual": 132,
+      "expected": 132
+    },
+    {
+      "name": "Gate clear width",
+      "passed": true,
+      "actual": 12,
+      "expected": 12
+    },
+    {
+      "name": "Actual gate passage ray samples open",
+      "passed": true,
+      "actual": [
+        {
+          "x": -5.9,
+          "hit": false,
+          "object": null
+        },
+        {
+          "x": 0,
+          "hit": false,
+          "object": null
+        },
+        {
+          "x": 5.9,
+          "hit": false,
+          "object": null
+        }
+      ],
+      "expected": "No hit at x=-5.9, 0, 5.9; z=1 through gate"
+    },
+    {
+      "name": "Bridge pivot 0",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "name": "Bridge pivot 1",
+      "passed": true,
+      "actual": -64,
+      "expected": -64
+    },
+    {
+      "name": "Bridge pivot 2",
+      "passed": true,
+      "actual": -0.25,
+      "expected": -0.25
+    },
+    {
+      "name": "Bridge width",
+      "passed": true,
+      "actual": 10,
+      "expected": 10
+    },
+    {
+      "name": "Bridge length",
+      "passed": true,
+      "actual": 20,
+      "expected": 20
+    },
+    {
+      "name": "Bridge top",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "name": "Bridge south tip",
+      "passed": true,
+      "actual": -84,
+      "expected": -84
+    },
+    {
+      "name": "Bridge leaf parent",
+      "passed": true,
+      "actual": "NC.Bridge.Pivot",
+      "expected": "NC.Bridge.Pivot"
+    },
+    {
+      "name": "Water level",
+      "passed": true,
+      "actual": -2,
+      "expected": -2
+    },
+    {
+      "name": "Moat is one ring with four connected sides",
+      "passed": true,
+      "actual": [
+        [
+          0,
+          1,
+          5,
+          4
+        ],
+        [
+          1,
+          2,
+          6,
+          5
+        ],
+        [
+          2,
+          3,
+          7,
+          6
+        ],
+        [
+          3,
+          0,
+          4,
+          7
+        ]
+      ],
+      "expected": "One connected four-face ring"
+    },
+    {
+      "name": "Highest crystal",
+      "passed": true,
+      "actual": 60,
+      "expected": 60
+    },
+    {
+      "name": "Twenty stairs",
+      "passed": true,
+      "actual": 20,
+      "expected": 20
+    },
+    {
+      "name": "Stair rise",
+      "passed": true,
+      "actual": 3,
+      "expected": 3
+    },
+    {
+      "name": "Courtyard width",
+      "passed": true,
+      "actual": 80,
+      "expected": 80
+    },
+    {
+      "name": "Courtyard depth",
+      "passed": true,
+      "actual": 54,
+      "expected": 54
+    },
+    {
+      "name": "Courtyard paving height",
+      "passed": true,
+      "actual": 0.019999999552965164,
+      "expected": 0
+    },
+    {
+      "name": "Gate then courtyard then palace",
+      "passed": true,
+      "actual": [
+        -50,
+        -46,
+        8,
+        14
+      ],
+      "expected": "Increasing northward sequence"
+    },
+    {
+      "name": "Human proxy height",
+      "passed": true,
+      "actual": 1.850000023841858,
+      "expected": 1.85
+    },
+    {
+      "name": "NC.CAM.Front frame width",
+      "passed": true,
+      "actual": 200,
+      "expected": 200
+    },
+    {
+      "name": "NC.CAM.Front frame height",
+      "passed": true,
+      "actual": 112.5,
+      "expected": 112.5
+    },
+    {
+      "name": "NC.CAM.Front projected 20 m ruler pixels",
+      "passed": true,
+      "actual": 204.800048828125,
+      "expected": 204.8
+    },
+    {
+      "name": "NC.CAM.Back frame width",
+      "passed": true,
+      "actual": 200,
+      "expected": 200
+    },
+    {
+      "name": "NC.CAM.Back frame height",
+      "passed": true,
+      "actual": 112.5,
+      "expected": 112.5
+    },
+    {
+      "name": "NC.CAM.Back projected 20 m ruler pixels",
+      "passed": true,
+      "actual": 204.800048828125,
+      "expected": 204.8
+    },
+    {
+      "name": "NC.CAM.Left frame width",
+      "passed": true,
+      "actual": 200,
+      "expected": 200
+    },
+    {
+      "name": "NC.CAM.Left frame height",
+      "passed": true,
+      "actual": 112.5,
+      "expected": 112.5
+    },
+    {
+      "name": "NC.CAM.Left projected 20 m ruler pixels",
+      "passed": true,
+      "actual": 204.800048828125,
+      "expected": 204.8
+    },
+    {
+      "name": "NC.CAM.Right frame width",
+      "passed": true,
+      "actual": 200,
+      "expected": 200
+    },
+    {
+      "name": "NC.CAM.Right frame height",
+      "passed": true,
+      "actual": 112.5,
+      "expected": 112.5
+    },
+    {
+      "name": "NC.CAM.Right projected 20 m ruler pixels",
+      "passed": true,
+      "actual": 204.800048828125,
+      "expected": 204.8
+    },
+    {
+      "name": "NC.CAM.Top frame width",
+      "passed": true,
+      "actual": 200,
+      "expected": 200
+    },
+    {
+      "name": "NC.CAM.Top frame height",
+      "passed": true,
+      "actual": 200,
+      "expected": 200
+    },
+    {
+      "name": "NC.CAM.Top projected 20 m ruler pixels",
+      "passed": true,
+      "actual": 204.800048828125,
+      "expected": 204.8
+    },
+    {
+      "name": "All objects have owners",
+      "passed": true,
+      "actual": 247,
+      "expected": "Every object tagged"
+    },
+    {
+      "name": "Stable IDs without automatic duplicate suffixes",
+      "passed": true,
+      "actual": [],
+      "expected": []
+    },
+    {
+      "name": "Bridge-only rebuild preserves all other owners",
+      "passed": true,
+      "actual": true,
+      "expected": true
+    },
+    {
+      "name": "front render dimensions",
+      "passed": true,
+      "actual": [
+        2048,
+        1152
+      ],
+      "expected": [
+        2048,
+        1152
+      ]
+    },
+    {
+      "name": "back render dimensions",
+      "passed": true,
+      "actual": [
+        2048,
+        1152
+      ],
+      "expected": [
+        2048,
+        1152
+      ]
+    },
+    {
+      "name": "left render dimensions",
+      "passed": true,
+      "actual": [
+        2048,
+        1152
+      ],
+      "expected": [
+        2048,
+        1152
+      ]
+    },
+    {
+      "name": "right render dimensions",
+      "passed": true,
+      "actual": [
+        2048,
+        1152
+      ],
+      "expected": [
+        2048,
+        1152
+      ]
+    },
+    {
+      "name": "top render dimensions",
+      "passed": true,
+      "actual": [
+        2048,
+        2048
+      ],
+      "expected": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "name": "hero-front render dimensions",
+      "passed": true,
+      "actual": [
+        2560,
+        1440
+      ],
+      "expected": [
+        2560,
+        1440
+      ]
+    },
+    {
+      "name": "hero-three-quarter render dimensions",
+      "passed": true,
+      "actual": [
+        2560,
+        1440
+      ],
+      "expected": [
+        2560,
+        1440
+      ]
+    }
+  ],
+  "approval": "awaiting-user-review",
+  "scope": "Provisional blockout only; detailed bridge collision poses, facade finish and final export are later stages."
+}

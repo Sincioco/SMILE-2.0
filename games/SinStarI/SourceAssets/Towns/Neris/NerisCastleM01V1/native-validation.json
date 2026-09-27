@@ -1,0 +1,120 @@
+{
+  "status": "passed",
+  "sourceRevision": "M01-r003",
+  "sourceApproval": "awaiting-user-review",
+  "nativeBuild": "Release DirectX built and launched successfully",
+  "tests": [
+    {
+      "name": "M00 preflight",
+      "result": "passed"
+    },
+    {
+      "name": "M01 measured checks",
+      "result": "passed",
+      "count": 62
+    },
+    {
+      "name": "Geometric bridge sweep",
+      "result": "passed",
+      "poses": 91
+    },
+    {
+      "name": "Native Neris routes, scene, calibration and cleanup",
+      "result": "passed",
+      "log": "NativePreview/neris-town.log"
+    },
+    {
+      "name": "Native hardening",
+      "result": "passed",
+      "graphicsPointerAudioChecks": 58,
+      "webSkipped": true
+    },
+    {
+      "name": "Town editor foundations",
+      "result": "passed",
+      "renderingSkipped": true
+    },
+    {
+      "name": "SMILE formatting",
+      "result": "passed",
+      "files": 8
+    },
+    {
+      "name": "Existing roads, assemblies and lighting preserved",
+      "result": "passed"
+    },
+    {
+      "name": "Main road continuous to bridge tip; west land to rectangular boundary",
+      "result": "passed"
+    }
+  ],
+  "userAcceptance": [
+    "Sin confirmed the bridge lowered on approach and raised on departure.",
+    "After final normal-terrain correction Sin again said: ok the draw bridge worked."
+  ],
+  "visualEvidence": [
+    "NativePreview/bridge-approach-final.png",
+    "NativePreview/road-and-bridge-raised-final.png"
+  ],
+  "terrain": {
+    "name": "Neris Town",
+    "fingerprint": "a0be1e73b6bd14876474e016d063eb257fd031c2de7ad2a332cbac25d8541d9d",
+    "cols": 421,
+    "rows": 414,
+    "size": 20,
+    "input": "D:/Projects/Sin-Star-I-Assets/Neris-Castle/native-integration/backups/town-before-terrain.town",
+    "output": "D:/Projects/Sin-Star-I-Assets/Neris-Castle/native-integration/Neris-Town-Castle-Approach-r002.town",
+    "inputSha256": "c9da4fe68e13e2850914cb1d7f8b49791bbbf6cf17b76500068a5136199a9453",
+    "outputSha256": "3ef998e2a87e76e1547fb356eff68744838a28b1fb51d6134a7bd88c9aba49bb",
+    "groundAdded": 19459,
+    "roadAdded": 1080,
+    "originalRoadsPreserved": true,
+    "nonTerrainBytesPreserved": true,
+    "grassHeight": 20.9,
+    "roadHeight": 23.12,
+    "castleDeckHeight": 23.12,
+    "castleOrigin": {
+      "x": -3650,
+      "y": 23.12,
+      "z": -852
+    },
+    "bridgeTip": {
+      "x": -3650,
+      "y": 23.12,
+      "z": -2280
+    },
+    "landBounds": {
+      "x": [
+        -4900,
+        2750
+      ],
+      "z": [
+        -3550,
+        3550
+      ]
+    },
+    "note": "West land extends to the rectangular map edges. Castle moat, town canals, all assemblies, lighting, catalog identity and existing roads are preserved.",
+    "appliedTo": [
+      "TownEditor.PermanentNeris",
+      "TownEditor.Working",
+      "TownEditor.Recovery.Neris Town"
+    ],
+    "applicationWasClosed": true,
+    "roadContinuity": true,
+    "westLandContinuousToMapEdges": true,
+    "assembliesPreserved": 362
+  },
+  "fixes": [
+    "Removed four external stone landing objects from Blender r003.",
+    "Removed the overlapping native grass overlay that caused road flicker.",
+    "Replaced the raised patch with real town ground cells at Y20.9 and one main road at Y23.12.",
+    "Lowered native castle placement to road level; the bridge tip aligns with terrain edge Z-2280.",
+    "Corrected Visit West Castle header input and preserved editor/modal blocking.",
+    "Increased the existing overview depth-precision coefficient; the unchanged nine-depth and close-camera checks pass."
+  ],
+  "limitations": [
+    "M01 dimensions remain proposed; no facade or later milestone approval.",
+    "Castle is a fixed native preview assembly; the terrain is editable normal town terrain.",
+    "Native minimap represents terrain and catalog assemblies; the provisional castle is not yet a catalog tile."
+  ]
+}

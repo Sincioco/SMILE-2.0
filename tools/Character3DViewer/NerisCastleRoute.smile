@@ -1,0 +1,143 @@
+''' Placement and bounded walkable route for the provisional west-side castle.
+Module Smile.Tools.NerisCastleRoute
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PartyTrail3D As Trail
+Import Smile.Tools.ProximityDrawbridge As Bridge
+
+Public Const ORIGIN_X = -3650.0
+Public Const ORIGIN_Z = -852.0
+Public Const SCALE = 17.0
+Public Const DECK_Y = 23.12
+
+Private Dim Enabled As Boolean
+Private Dim Motion As Bridge.State
+
+Public Sub Enable(Value As Boolean)
+
+    Enabled = Value
+
+    Call Bridge.Reset(Motion)
+
+End Sub
+
+Public Function Active() As Boolean
+
+    Return Enabled
+
+End Function
+
+Public Function Angle() As Double
+
+    Dim ReturnValue As Double
+
+    ReturnValue = Motion.Angle
+
+    Return ReturnValue
+
+End Function
+
+Public Function LocalPoint(X As Double, Z As Double) As P.Vector3
+
+    Dim Result As P.Vector3
+
+    Result = P.Vector((X - ORIGIN_X) / SCALE, 0.0, (Z - ORIGIN_Z) / SCALE)
+
+    Return Result
+
+End Function
+
+Public Function Contains(X As Double, Z As Double) As Boolean
+
+    Dim Point As P.Vector3
+    Dim Result As Boolean
+
+    Point = LocalPoint(X, Z)
+    Result = Enabled And Abs(Point.X) <= 70.0 And Point.Z >= -84.0 And Point.Z <= 82.0
+
+    Return Result
+
+End Function
+
+Public Function OccupiedBy(X As Double, Z As Double) As Boolean
+
+    Dim Point As P.Vector3
+    Dim Result As Boolean
+
+    Point = LocalPoint(X, Z)
+    Result = ((Abs(Point.X) <= 56.0 And Point.Z >= -84.0 And Point.Z <= 68.0) Or
+        (Abs(Point.X) <= 25.0 And Point.Z >= -115.0 And Point.Z < -80.0))
+
+    Return Result
+
+End Function
+
+Public Sub Update(ByRef Path As Trail.State, ActorCount As Number, Elapsed As Number)
+
+    Dim Index As Number
+    Dim Occupied As Boolean
+
+    For Index = 0 To Min(ActorCount, 5) - 1
+        Occupied = Occupied Or OccupiedBy(Path.Positions[Index].X, Path.Positions[Index].Z)
+    End For
+
+    Call Bridge.Update(Motion, Occupied, Elapsed)
+
+End Sub
+
+Public Function CanStand(X As Double, Z As Double) As Boolean
+
+    Dim Point As P.Vector3
+    Dim Result As Boolean
+
+    Point = LocalPoint(X, Z)
+
+    If Point.Z >= -84.0 And Point.Z < -64.0 Then
+
+        Result = Abs(Point.X) <= 4.8 And Bridge.Passable(Motion)
+
+    Else If Point.Z >= -64.0 And Point.Z < -50.0 Then
+
+        Result = Abs(Point.X) <= 5.5
+
+    Else If Point.Z >= -50.0 And Point.Z < 14.0 Then
+
+        Result = Abs(Point.X) <= 35.0
+
+        If Point.X * Point.X + (Point.Z + 18.0) * (Point.Z + 18.0) < 39.0625 Then
+            Result = False
+        End If
+
+    Else If Point.Z >= 14.0 And Point.Z <= 16.8 Then
+
+        Result = Abs(Point.X) <= 2.8
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Function GroundHeight(X As Double, Z As Double) As Double
+
+    Dim Point As P.Vector3
+    Dim Result As Double
+
+    Result = DECK_Y
+    Point = LocalPoint(X, Z)
+
+    If Point.Z >= 2.0 And Point.Z < 14.0 And Abs(Point.X) <= 7.0 Then
+        Result = DECK_Y + Min(20.0, Floor((Point.Z - 2.0) / 0.6) + 1.0) * 0.15 * SCALE
+    Else If Point.Z >= 14.0 Then
+        Result = DECK_Y + 3.0 * SCALE
+    Else If Point.Z >= -46.0 Then
+        Result = DECK_Y + 0.02 * SCALE
+    End If
+
+    Return Result
+
+End Function
+
+End Module

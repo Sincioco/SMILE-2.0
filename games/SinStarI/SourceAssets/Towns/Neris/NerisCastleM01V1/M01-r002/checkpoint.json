@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "milestone": "M01",
+  "revision": "r002",
+  "status": "awaiting-user-review",
+  "source_blend": "D:/Projects/Sin-Star-I-Assets/Neris-Castle/source/neris-castle-M01-r002.blend",
+  "source_sha256": "3fe4280dfa3ef09c9d2d1ddb30cfc589bdf5339e0a63ff78bad69a8578665f75",
+  "specification_id": "neris-castle-proposal-v1",
+  "specification_sha256": "5e2892d8c826f2499980acc9bf62e7ff59f0b7c017c4d38df71a7ac381aa607c",
+  "camera_spec_sha256": "53eb9bd0454d99e262bfd52d2c69bcf6d701ba5ad68f62a3bbdc7657d6c3c414",
+  "changed_owners": [
+    "gatehouse",
+    "site",
+    "review",
+    "preview export"
+  ],
+  "tests": [
+    {
+      "name": "M00 save/reopen/render/cleanup",
+      "result": "passed"
+    },
+    {
+      "name": "M01 measured checks",
+      "result": "passed",
+      "count": 62,
+      "record": "D:/Projects/Sin-Star-I-Assets/Neris-Castle/checkpoints/M01-r002/measured-checks.json"
+    },
+    {
+      "name": "Seven actual renders visually inspected",
+      "result": "passed",
+      "notes": "One dome dominant; gate to courtyard to keep sequence; side views show depth; back is same keep, no second courtyard."
+    },
+    {
+      "name": "91 actual mesh bridge poses",
+      "result": "passed",
+      "record": "bridge-sweep.json",
+      "notes": "No surface intersections; 0.15 m closed arch clearance; no rigid-body simulation claim."
+    },
+    {
+      "name": "GLB reimport",
+      "result": "passed",
+      "notes": "4 static meshes 7538 triangles; separate pivot-local bridge 12 triangles; exact source bounds; source scene preserved."
+    }
+  ],
+  "images": [
+    {
+      "path": "D:/Projects/Sin-Star-I-Assets/Neris-Castle/checkpoints/M01-r002/back.png",
+      "sha256": "f994641088697ce03413965edd6eaced113a544dc0a08ad2955d72994575737f"
+    },
+    {
+      "path": "D:/Projects/Sin-Star-I-Assets/Neris-Castle/checkpoints/M01-r002/bridge-0.png",
+      "sha256": "6395f699a2d37852bc0b58e605c4c2bf978c8abf9d119c73ae6c58b430651504"
+    },
+    {
+      "path": "D:/Projects/Sin-Star-I-Assets/Neris-Castle/checkpoints/M01-r002/bridge-45.png",
+      "sha256": "abd9c1c76bed5875e6aa2b455979db849845bea46a893cfca379c66b63b49c03"
+    },
+    {
+      "path": "D:/Projects/Sin-Star-I-Assets/Neris-Castle/checkpoints/M01-r002/bridge-90.png",
+      "sha256": "37186f1353af68aaabcede7c1f730de4a733ca0cd937079a37be2d85c37cf068"
+    },
+    {
+      "path": "D:/Projects/Sin-Star-I-Assets/Neris-Castle/checkpoints/M01-r002/contact-sheet.png",
+      "sha256": "fcc8bd8cbe15705c6564e00bf2e2a8c2eebd7d7964d5abacf4152b23ffeff40c"
+    },
+    {
+      "path": "D:/Projects/Sin-Star-I-Assets/Neris-Castle/checkpoints/M01-r002/front.png",
+      "sha256": "c21701e71c68f7eb939baea2f9e75f3f4df56ced11c52b3aefcbc107bb325c40"
+    },
+    {
+      "path": "D:/Projects/Sin-Star-I-Assets/Neris-Castle/checkpoints/M01-r002/hero-front.png",
+      "sha256": "072b82493a2c675c9ee326006a71b75c15bc600a7cb2254d92ddf9007a7ceec6"
+    },
+    {
+      "path": "D:/Projects/Sin-Star-I-Assets/Neris-Castle/checkpoints/M01-r002/hero-three-quarter.png",
+      "sha256": "135606f2ed86f8a501260dccd125b93b0a918edcd21b37cdb0bc3baa7b4b72e2"
+    },
+    {
+      "path": "D:/Projects/Sin-Star-I-Assets/Neris-Castle/checkpoints/M01-r002/left.png",
+      "sha256": "3e13cb14d5df7d4985edadbc34e1ec2638ee8853489d2d0cb8dd5561f8220329"
+    },
+    {
+      "path": "D:/Projects/Sin-Star-I-Assets/Neris-Castle/checkpoints/M01-r002/right.png",
+      "sha256": "656ddb3420dfbf8ab5397611a745d71ad81e47a9b7f431cff0e3309a9c2b2b91"
+    },
+    {
+      "path": "D:/Projects/Sin-Star-I-Assets/Neris-Castle/checkpoints/M01-r002/top.png",
+      "sha256": "688a817c72071606b7bfbe8c2ba058ec097f227551a7716904b6f7c4521371ad"
+    }
+  ],
+  "deviations": [
+    {
+      "id": "D01",
+      "note": "Exact 108 x 132 m shaft footprint, 140 x 164 m moat and 60 m peak are proposed dimensions, not recovered measurements."
+    },
+    {
+      "id": "D02",
+      "note": "Single rear gallery and northern keep replace inconsistent concept rear interpretation."
+    },
+    {
+      "id": "D03",
+      "note": "Hero Front lens 32 mm, shift_y -0.09; Hero Three Quarter 40 mm, shift_y -0.08. Locations/targets unchanged. This fits entire asset; preliminary 45 mm crop rejected."
+    },
+    {
+      "id": "D04",
+      "note": "Forecourt paving +0.02 m prevents coplanar render flicker; within 0.05 m placement tolerance."
+    },
+    {
+      "id": "D05",
+      "note": "All roofs, crystals, gateway and fountain remain massing placeholders; no windows/heraldry/chains. User separately requested working native bridge; arch face and hinge recess adjusted 0.4m for motion clearance. Canonical footprint and camera set unchanged."
+    }
+  ],
+  "approval": {
+    "state": "awaiting-user-review",
+    "user_response_reference": null,
+    "approved_revision": null
+  },
+  "next_allowed_action": "M01 review/revisions only; later user separately requested provisional native west-side comparison, automatic party-proximity drawbridge, all-unstaged commit/push and livestream shutdown. This is not blanket M02-M06 approval.",
+  "commit": "No asset-workspace repository created; later user authorized committing all unstaged SMILE repository work.",
+  "preview_exports": {
+    "scope": "User-authorized provisional native comparison, not M06 final approval",
+    "folder": "D:/Projects/Sin-Star-I-Assets/Neris-Castle/exports/M01-r002"
+  }
+}
