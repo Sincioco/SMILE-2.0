@@ -99,7 +99,8 @@ Public Function GestureActive() As Boolean
 
     Dim Result As Boolean
 
-    Result = Controls.Selected.Dragging Or Controls.Rubber Or Controls.Anchored Or World.Active()
+    Result = (Controls.Selected.Dragging Or Controls.Rubber Or Controls.Anchored Or
+        Controls.Ui.SunSlider.DragOwner > 0 Or World.Active())
 
     Return Result
 
@@ -109,7 +110,8 @@ Public Function CameraBlocked(Optional CameraControl As Boolean = False) As Bool
 
     Dim Result As Boolean
 
-    Result = (World.Active() Or (Controls.Enabled And (Panel.Hovered() Or Pointer_Y() < 126 Or
+    Result = (World.Active() Or Controls.Ui.SunSlider.DragOwner > 0 Or
+        (Controls.Enabled And (Panel.Hovered() Or Pointer_Y() < 126 Or
         (Not CameraControl And ((Editor.CapturesMap(Controls) And Not Key_Held(KEY_SHIFT) And
         Pointer_Held(POINTER_PRIMARY)) Or GestureActive())))))
 
@@ -372,6 +374,24 @@ Public Sub Input(View As P.Camera3D, Key As Number, Blocked As Boolean)
 
     End If
 
+    If Controls.Ui.SunSlider.DragOwner > 0 Then
+
+        If Key = KEY_TAB Then
+
+            Call Editor.Cancel(Controls, Town)
+
+            Controls.Enabled = False
+
+            Return
+
+        End If
+
+        Action = Editor.Input(Controls, Town, View, Key, Blocked)
+
+        Return
+
+    End If
+
     If Tabs.Input(OpenTabs, Town) Then
 
         TeleportPending = True
@@ -415,7 +435,7 @@ Public Sub Update(Leader As P.Vector3, Elapsed As Number)
 
         Ok = Lighting.Apply(Town.Light)
 
-        If Ground.LiveRevision = Town.Surface.Revision Then
+        If Ground.LiveRevision = Town.Surface.Revision And Controls.Ui.SunSlider.DragOwner = 0 Then
             Call Navigation.Rebuild(Town)
         End If
 

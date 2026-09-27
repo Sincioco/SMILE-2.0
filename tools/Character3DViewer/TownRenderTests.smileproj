@@ -13,6 +13,7 @@
     <SmileSource Include="TownHistory.smile" />
     <SmileSource Include="TownPicking.smile" />
     <SmileSource Include="TownEditorPanel.smile" />
+    <SmileSource Include="TownSunControls.smile" />
     <SmileSource Include="TownEditor.smile" />
     <SmileSource Include="TownCatalogData.smile" />
     <SmileSource Include="TownCatalogFeatures.smile" />
@@ -73,5 +74,6 @@
     <Asset Include="Assets\Neris\Neris-Paving.png" />
     <Asset Include="Assets\Neris\Town-Palette.png" />
     <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
+    <SmileProjectReference Include="..\..\libraries\Smile.UI\Smile.UI.smilelibproj" />
   </ItemGroup>
 </SmileProject>

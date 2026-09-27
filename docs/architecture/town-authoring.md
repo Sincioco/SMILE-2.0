@@ -44,6 +44,20 @@ from Viewer saves, recovery files and Blender exports. Up to 128 guides are kept
 Sun exposes RGB, intensity, ambient strength, azimuth, elevation, day/night presets
 and shadow toggle through the existing Scene3D light/shadow owner. Neris buildings
 and trees submit geometry to the same shadow pass.
+The seven numeric Sun controls use draggable tracks with live previews and a
+one-unit wheel adjustment. Release commits one undo step; Esc cancels a drag.
+Active slider capture prevents camera gestures even after leaving the panel.
+Raising Ambient lightens dark shadows; native edge diffusion uses a 5x5 weighted
+shadow filter independently of that contrast setting.
+Grass, courtyard lawn and paving use the same PBR lighting response. Flat terrain
+receives scenery shadows but does not cast into the town-sized shadow map: its
+self-shadow sampling previously produced curved bands that looked like a grass
+texture pattern. Building/tree/bridge-rail casters remain enabled.
+`TownDocument.Light` is part of the existing town payload, including RGB, intensity,
+ambient, both direction angles and the Shadows toggle. Viewer files and version
+copies retain that payload; Blender writes it into its embedded town document
+and creates the corresponding Sun/world light. Reopening either format restores
+the town's authored settings, independently of other town tabs.
 
 ## Ownership and state
 
@@ -55,6 +69,7 @@ and trees submit geometry to the same shadow pass.
 | `TownSelection`, `TownPicking`, `TownEditor` | Category selection, cancelable group gestures, projection and commands |
 | `TownGuides`, `TownHistory` | Caller-owned temporary construction drawing/snapping and bounded edit snapshots; no persistence |
 | `TownEditorPanel` | Palette/control hit rectangles, one thumbnail atlas and progress; no persistence |
+| `TownSunControls` | Sun row values/ranges, slider presentation and cancelable live preview using shared UI drag capture |
 | `TownCatalogRenderer`, `TownSurfaceRenderer`, `TownAttachments`, `TownLighting` | Shared-template submission, incremental surfaces, door/water attachments and light application |
 | `TownGeometry`, `TownDocumentNavigation` | Template transforms and a committed movement/camera snapshot |
 | `TownDocumentMap` | Cached edited minimap, labels and current leader position |
@@ -78,6 +93,10 @@ Catalog export creates 358 initial instances, 35 templates, 337 parts and 30 mod
 plus 14 reused Old Castle models. Template GLBs are shared, never copied per tree
 or placed house. Blender XYZ maps to native XZY at ten units/metre and height +21.
 Original dimensions, calibrations and character asset identities are preserved.
+The Decor palette exposes 11 choices: repeated fountain and crystal-circle copies
+are hidden by generated presentation metadata. Their template IDs, geometry,
+catalog fingerprint, placed items and saved-file formats remain unchanged. The
+two distinct lettered signs are labeled Civic Plaza Sign and Market Walk Sign.
 
 The native renderer admits 512 meshes and 4,096 submissions; measured catalog demand
 is 2,081 submissions before surfaces/attachments/actors. The nine-bit mesh slot

@@ -18,6 +18,7 @@
     <SmileSource Include="TownDocument.smile" />
     <SmileSource Include="TownPicking.smile" />
     <SmileSource Include="TownEditorPanel.smile" />
+    <SmileSource Include="TownSunControls.smile" />
     <SmileSource Include="TownEditor.smile" />
     <SmileSource Include="TownLibrary.smile" />
     <SmileSource Include="TownDocumentMap.smile" />

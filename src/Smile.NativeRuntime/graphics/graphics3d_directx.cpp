@@ -5067,10 +5067,12 @@ static int smile_3d_create_pipeline(void)
         "if(animation.x>1.5)s=modelBones[(uint)i.j.x]*i.w.x+modelBones[(uint)i.j.y]*i.w.y+modelBones[(uint)i.j.z]*i.w.z+modelBones[(uint)i.j.w]*i.w.w;"
         "else s=bones[(uint)i.j.x]*i.w.x+bones[(uint)i.j.y]*i.w.y+bones[(uint)i.j.z]*i.w.z+bones[(uint)i.j.w]*i.w.w;"
         "p=mul(p,s);n=mul(float4(n,0),s).xyz;}float4 world=mul(p,model);o.p=mul(p,mvp);o.n=normalize(mul(float4(n,0),model).xyz);o.uv=i.uv;o.world=world.xyz;o.sp=mul(p,shadowMvp);return o;}";
+    // Both material paths use a 5x5 tent-weighted comparison filter at 1.5 texel
+    // spacing: a gradual penumbra without frame-varying noise or extra resources.
     static const char* pixel_source =
         "cbuffer C:register(b0){row_major float4x4 model;row_major float4x4 mvp;float4 tint;float4 material;float4 animation;row_major float4x4 shadowMvp;float4 shadow;float4 output;float4 shadowLight;float4 reflection;float4 reflectionViewport;row_major float4x4 bones[32];}"
         "Texture2D baseTexture:register(t0);SamplerState baseSampler:register(s0);Texture2D reflectionTexture:register(t4);SamplerState reflectionSampler:register(s4);Texture2D shadowMap:register(t5);SamplerComparisonState shadowSampler:register(s5);"
-        "float ShadowValue(float4 p,float3 world,float3 n){if(shadow.x<.5||p.w<=0)return 1;float3 q=p.xyz/p.w;float2 uv=float2(q.x*.5+.5,-q.y*.5+.5);if(any(uv<0)||any(uv>1)||q.z<0||q.z>1)return 1;float3 L=shadowLight.w>1.5?normalize(shadowLight.xyz-world):normalize(shadowLight.xyz);float bias=output.y+output.z*(1-saturate(dot(normalize(n),L)));float sum=0;[unroll]for(int y=-1;y<=1;++y)[unroll]for(int x=-1;x<=1;++x)sum+=shadowMap.SampleCmpLevelZero(shadowSampler,uv+float2(x,y)*shadow.w,q.z-bias);return sum/9;}"
+        "float ShadowValue(float4 p,float3 world,float3 n){if(shadow.x<.5||p.w<=0)return 1;float3 q=p.xyz/p.w;float2 uv=float2(q.x*.5+.5,-q.y*.5+.5);if(any(uv<0)||any(uv>1)||q.z<0||q.z>1)return 1;float3 L=shadowLight.w>1.5?normalize(shadowLight.xyz-world):normalize(shadowLight.xyz);float bias=output.y+output.z*(1-saturate(dot(normalize(n),L)));float sum=0;[unroll]for(int y=-2;y<=2;++y)[unroll]for(int x=-2;x<=2;++x){float weight=(3-abs(x))*(3-abs(y));sum+=weight*shadowMap.SampleCmpLevelZero(shadowSampler,uv+float2(x,y)*(shadow.w*1.5),q.z-bias);}return sum/81;}"
         "float3 ToLinear(float3 c){return lerp(c/12.92,pow((c+.055)/1.055,2.4),step(.04045,c));}"
         "float4 main(float4 p:SV_POSITION,float3 n:NORMAL,float2 uv:TEXCOORD0,float3 world:TEXCOORD1,float4 sp:TEXCOORD2):SV_TARGET{if(reflection.x>.5&&world.y<reflection.y+.01)discard;"
         "float4 base=tint;if(material.x>.5){float4 sample=baseTexture.Sample(baseSampler,uv);"
@@ -5111,7 +5113,7 @@ static int smile_3d_create_pipeline(void)
         "float3 f0=lerp(float3(.04,.04,.04),base,metal);float3 fresnel=F(f0,vh);float geometry=G1(nv,rough)*G1(nl,rough);"
         "float3 spec=D(nh,rough)*geometry*fresnel/max(4*nv*nl,.0001);float3 kd=(1-fresnel)*(1-metal);"
         "return (kd*base/PI+spec)*radiance*nl;}"
-        "float ShadowValue(float4 p,float3 N,float3 L){if(shadow.x<.5||p.w<=0)return 1;float3 q=p.xyz/p.w;float2 uv=float2(q.x*.5+.5,-q.y*.5+.5);if(any(uv<0)||any(uv>1)||q.z<0||q.z>1)return 1;float bias=output.y+output.z*(1-saturate(dot(N,L)));float sum=0;[unroll]for(int y=-1;y<=1;++y)[unroll]for(int x=-1;x<=1;++x)sum+=shadowMap.SampleCmpLevelZero(shadowSampler,uv+float2(x,y)*shadow.w,q.z-bias);return sum/9;}"
+        "float ShadowValue(float4 p,float3 N,float3 L){if(shadow.x<.5||p.w<=0)return 1;float3 q=p.xyz/p.w;float2 uv=float2(q.x*.5+.5,-q.y*.5+.5);if(any(uv<0)||any(uv>1)||q.z<0||q.z>1)return 1;float bias=output.y+output.z*(1-saturate(dot(N,L)));float sum=0;[unroll]for(int y=-2;y<=2;++y)[unroll]for(int x=-2;x<=2;++x){float weight=(3-abs(x))*(3-abs(y));sum+=weight*shadowMap.SampleCmpLevelZero(shadowSampler,uv+float2(x,y)*(shadow.w*1.5),q.z-bias);}return sum/81;}"
         "float3 ApplyLdrOutputTransfer(float3 c){float3 low=c*12.92;float3 high=1.055*pow(max(c,0),1.0/2.4)-.055;return lerp(low,high,step(.0031308,c));}"
         "float4 main(float4 p:SV_POSITION,float3 world:TEXCOORD1,float3 inputNormal:NORMAL,float4 inputTangent:TANGENT,float2 uv:TEXCOORD0,float4 sp:TEXCOORD2,bool front:SV_IsFrontFace):SV_TARGET{if(reflection.x>.5&&world.y<reflection.y+.01)discard;"
         "float4 sampled=textureFlags.x>.5?baseTexture.Sample(baseSampler,uv):float4(1,1,1,1);float4 base=baseFactor*objectColor*sampled;"

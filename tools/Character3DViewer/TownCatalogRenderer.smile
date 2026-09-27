@@ -27,16 +27,21 @@ Public Sub LoadNext(ByRef Value As State)
     Dim Path As Text
     Dim Name As Text
     Dim Ok As Boolean
+    Dim EmptyTexture As Core.Texture3D
 
     If Value.Failed Or Value.Loaded >= Catalog.CHUNK_COUNT + 14 Then
         Return
     End If
 
     If Value.Loaded = 0 Then
-        ' Simple materials decode color themselves; Data keeps encoded pixels with filtered mipmaps.
+
+        ' Courtyard grass follows the same editable sun as terrain and paving.
         Value.Grass = G.LoadTexture3DEx("Assets/Neris/Neris-Grass-Color.png",
-            G.TEXTURE_USAGE_DATA, G.TEXTURE_FILTER_ANISOTROPIC, G.TEXTURE_WRAP_REPEAT, 16)
-        Value.Lawn = G.CreateMaterial3D(Value.Grass, 0, 255, 255, 255, 100, False, 0, 0)
+            G.TEXTURE_USAGE_COLOR, G.TEXTURE_FILTER_ANISOTROPIC, G.TEXTURE_WRAP_REPEAT, 16)
+        Value.Lawn = G.CreatePbrMaterial3D(Value.Grass, EmptyTexture,
+            EmptyTexture, EmptyTexture, G.MATERIAL_ALPHA_OPAQUE, True)
+        Ok = G.SetPbrMaterialFactors3D(Value.Lawn, 255, 255, 255, 100, 0, 100, 0, 100)
+
     End If
 
     Chunk = Value.Loaded
@@ -65,6 +70,7 @@ Public Sub LoadNext(ByRef Value As State)
 
             If Catalog.IsLawnPart(Value.Loaded * 16 + Part) Then
                 Ok = G.SetObjectMaterial3D(Value.Objects[Value.Loaded * 16 + Part], Value.Lawn) And Ok
+                Ok = G.SetObjectShadowsChecked3D(Value.Objects[Value.Loaded * 16 + Part], False, True) And Ok
             End If
 
             Value.ObjectCount = Value.ObjectCount + 1

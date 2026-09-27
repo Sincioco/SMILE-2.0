@@ -81,6 +81,9 @@ Ok = Terrain.Create(Ground)
 
 Call Check(Ground.Textures[0].MipLevels > 1 And Ground.Textures[1].MipLevels > 1 And
     Assets.Grass.MipLevels > 1, "Grass And Paving Filter Distant Repetitions")
+Call Check(Ground.Materials[1].Kind = G.MATERIAL_KIND_PBR And
+    Assets.Lawn.Kind = G.MATERIAL_KIND_PBR And Ground.Materials[1].RoughnessPercent = 100,
+    "Terrain And Courtyard Grass Follow The Sun And Ambient Like Paving")
 Call Check(Ground.Materials[3].Kind = G.MATERIAL_KIND_PBR And
     Ground.Materials[3].RoughnessPercent = 38 And Ground.Materials[3].MetallicPercent = 0,
     "Paving Uses A Soft Nonmetallic Stone Sheen")
@@ -103,6 +106,17 @@ Do
 Loop Until Ground.Stage = 0 Or Ground.Failed Or Frames >= 200
 
 Call Check(Ground.Stage = 0 And Not Ground.Failed, "Complete Initial Terrain Builds")
+
+For Index = 0 To Ground.ObjectCount - 1
+
+    If (Ground.Objects[Index].MaterialHandle = Ground.Materials[1].Handle Or
+        Ground.Objects[Index].MaterialHandle = Ground.Materials[3].Handle) Then
+        Call Check(Not Ground.Objects[Index].CastsShadow And Ground.Objects[Index].ReceivesShadow,
+            "Grass And Paving Receive Scenery Shadows Without Self Shadow Bands")
+    End If
+
+End For
+
 Call Navigation.Rebuild(Town)
 Call Check(Navigation.CanStand(0.0, -2780.0), "Arrival Road Remains Walkable")
 Call Check(Not Navigation.CanStand(-580.0, -2000.0), "Canal Remains Impassable")

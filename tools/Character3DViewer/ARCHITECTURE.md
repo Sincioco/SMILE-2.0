@@ -1,5 +1,37 @@
 # Character Viewer Architecture
 
+## September 28 Decor palette and Sun sliders
+
+Generated catalog metadata curates palette visibility without altering template
+identity, assets or saved documents. TownEditor and TownEditorPanel use the same
+visibility flag for initial selection, page bounds and cards. Ten repeated Decor
+entries are hidden; differently lettered signs retain separate readable labels.
+
+TownSunControls owns the seven numeric Sun sliders and their preview snapshot,
+using shared UI.UpdateSlider for drag capture and release. TownEditor owns undo
+commit/cancellation, and TownEditorSession applies live lighting while avoiding
+navigation rebuilds during a slider drag. The controls need no runtime extension,
+catalog migration, bootstrap growth, dependency or architecture exception.
+The native session fixture checks palette pagination/retained geometry and Sun
+preview, cancellation, undo/redo and clamped endpoints.
+TownSurfaceRenderer and TownCatalogRenderer use matte PBR lawn materials so grass
+responds to the document's sun/ambient just like paving. Flat surface batches and
+catalog lawn parts receive shadows without casting onto themselves; rail batches
+and scenery still cast. A native comparison isolated the reported curved bands
+to terrain self-shadowing, and the render fixture protects the material/caster
+contracts. Shadow edge diffusion stays in the existing native renderer's simple
+and PBR filters (5x5 tent weights, 1.5 texel spacing), with no new public API,
+resource, document field or texture. Web adoption remains held.
+
+Changed owner sizes: Sun controls 210 lines (new cohesive gesture owner), Editor
+591 (down from 611), Panel 380 (down from 398), Session 660 (up from 640), surface
+renderer 531 (up from 524), catalog renderer 144 (up from 138). Catalog data grows
+by 36 lines of generated metadata; the native renderer grows by two comment lines.
+No limits or baselines change. Validation: Town foundations/routes/rendering/session,
+native Viewer hardening (including 58 graphics/input/audio checks), style gate,
+Release build and installed VSIX payload verification pass. The grass A/B preview
+isolated self-shadowing and showed scenery shadows crossing paving.
+
 ## September 28 native town file and appearance changes
 
 `TownEditorSession` coordinates the existing document/render lifecycle and delegates

@@ -13,6 +13,16 @@ ROOT = Path(__file__).resolve().parents[1]
 REPO = ROOT.parents[5]
 OUTPUT = REPO / 'tools/Character3DViewer'
 
+# Curate the immutable catalog's repeated placements only in the palette. Keep
+# every template ID/geometry/fingerprint for existing towns and Blender exports.
+# These copies have the same design (sub-millimetre export rounding); the original
+# fountain also has a historical water-roughness difference, not a separate prop.
+PALETTE_COPIES = {f'group:{name}.{index:03}'
+                  for name in ('Fountain Water', 'Wayfarer Plaza')
+                  for index in range(1, 6)}
+PALETTE_LABELS = {'group:Wayfinding Post': 'Civic Plaza Sign',
+                  'group:Wayfinding Post.002': 'Market Walk Sign'}
+
 
 def number(value):
     return f'{value:.6f}'
@@ -52,6 +62,7 @@ def generate(catalog):
               f'Public Const TEMPLATE_COUNT = {len(catalog["templates"])}',
               f'Public Const INITIAL_ITEMS = {len(catalog["instances"])}', '',
               'Public Type Template', '    Label As Text', '    Category As Number',
+              '    PaletteVisible As Boolean',
               '    Low As P.Vector3', '    High As P.Vector3',
               '    PartCount As Number', '    Parts[32] As Number',
               '    SolidCount As Number', '    CameraCount As Number', '    StepCount As Number',
@@ -67,8 +78,9 @@ def generate(catalog):
         low, high = template['bounds']
         category = 1 if template['category'] == 'building' else 3
         lines += [f'        Case {template["id"]}',
-                  f'            Result.Label = {quoted(template["label"])}',
+                  f'            Result.Label = {quoted(PALETTE_LABELS.get(template["source"], template["label"]))}',
                   f'            Result.Category = {category}',
+                  f'            Result.PaletteVisible = {template["source"] not in PALETTE_COPIES}',
                   f'            Result.Low = {vector((low[0]*10,low[2]*10,low[1]*10))}',
                   f'            Result.High = {vector((high[0]*10,high[2]*10,high[1]*10))}',
                   f'            Result.PartCount = {len(parts)}',

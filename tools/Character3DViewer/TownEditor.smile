@@ -14,6 +14,7 @@ Import Smile.Tools.TownPicking As Picking
 Import Smile.Tools.TownEditorPanel As Panel
 Import Smile.Tools.TownGuides As Guides
 Import Smile.Tools.TownHistory As History
+Import Smile.Tools.TownSunControls As Sun
 
 Public Type State
     Ui As Panel.State
@@ -55,6 +56,7 @@ End Function
 Public Sub Cancel(ByRef Value As State, ByRef Town As Document.State)
 
     Call Selection.EndDrag(Value.Selected, Town, True)
+    Call Sun.Cancel(Value.Ui.SunSlider, Town)
 
     Value.Rubber = False
     Value.Anchored = False
@@ -73,40 +75,6 @@ Public Sub ResetDocument(ByRef Value As State, ByRef Town As Document.State)
 
     Call Guides.ClearMarkers(Value.Guide.Ink)
     Call ResetHistory(Value, Town)
-
-End Sub
-
-Private Sub ChangeLight(ByRef Town As Document.State, Action As Number)
-
-    Dim Amount As Number
-    Dim Row As Number
-
-    Amount = 5
-
-    If Action Mod 2 = 0 Then
-        Amount = -5
-    End If
-
-    Row = (Action - 200) / 2
-
-    Select Case Row
-        Case 0
-            Town.Light.RedValue = Max(0, Min(255, Town.Light.RedValue + Amount))
-        Case 1
-            Town.Light.GreenValue = Max(0, Min(255, Town.Light.GreenValue + Amount))
-        Case 2
-            Town.Light.BlueValue = Max(0, Min(255, Town.Light.BlueValue + Amount))
-        Case 3
-            Town.Light.Intensity = Max(0, Min(1000, Town.Light.Intensity + Amount * 2))
-        Case 4
-            Town.Light.Ambient = Max(0, Min(100, Town.Light.Ambient + Amount))
-        Case 5
-            Town.Light.Azimuth = Town.Light.Azimuth + ToDouble(Amount)
-        Case 6
-            Town.Light.Elevation = Max(-85.0, Min(85.0, Town.Light.Elevation + ToDouble(Amount)))
-    End Select
-
-    Town.Revision = Town.Revision + 1
 
 End Sub
 
@@ -147,7 +115,7 @@ Public Function Command(ByRef Value As State, ByRef Town As Document.State, Acti
 
             Shape = Catalog.TemplateAt(Index)
 
-            If Shape.Category = Action Then
+            If Shape.Category = Action And Shape.PaletteVisible Then
                 Value.Ui.Template = Index
                 Exit For
             End If
@@ -170,7 +138,7 @@ Public Function Command(ByRef Value As State, ByRef Town As Document.State, Acti
 
             Shape = Catalog.TemplateAt(Index)
 
-            If Shape.Category = Value.Ui.Category Then
+            If Shape.Category = Value.Ui.Category And Shape.PaletteVisible Then
                 Matching = Matching + 1
             End If
 
@@ -271,10 +239,6 @@ Public Function Command(ByRef Value As State, ByRef Town As Document.State, Acti
 
         Value.Ui.Template = Action - 100
         Value.Ui.Tool = 11
-
-    Else If Action >= 200 And Action <= 213 Then
-
-        Call ChangeLight(Town, Action)
 
     Else If Action = 220 Then
 
@@ -402,6 +366,22 @@ Public Function Input(ByRef Value As State, ByRef Town As Document.State,
     End If
 
     Call History.Ensure(Value.HistoryState, Town, Value.Guide.Ink)
+
+    If Value.Ui.Section = 1 Or Value.Ui.SunSlider.DragOwner > 0 Then
+
+        Index = Sun.Input(Value.Ui.SunSlider, Town, Panel.LeftEdge() + 10, Key, Blocked)
+
+        If Index > 0 Then
+
+            If Index = 2 Then
+                Call History.Record(Value.HistoryState, Town, Value.Guide.Ink)
+            End If
+
+            Return 0
+
+        End If
+
+    End If
 
     If Not Blocked Then
         Action = Command(Value, Town, Panel.Input(Value.Ui))

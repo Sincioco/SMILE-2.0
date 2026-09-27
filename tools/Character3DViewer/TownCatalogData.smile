@@ -14,6 +14,7 @@ Public Const INITIAL_ITEMS = 358
 Public Type Template
     Label As Text
     Category As Number
+    PaletteVisible As Boolean
     Low As P.Vector3
     High As P.Vector3
     PartCount As Number
@@ -33,6 +34,7 @@ Public Function TemplateAt(Index As Number) As Template
         Case 0
             Result.Label = "Courtyard Cottage"
             Result.Category = 1
+            Result.PaletteVisible = True
             Result.Low = P.Vector(-41.969995, -0.000000, -43.050041)
             Result.High = P.Vector(41.969881, 71.400003, 36.969895)
             Result.PartCount = 14
@@ -59,6 +61,7 @@ Public Function TemplateAt(Index As Number) As Template
         Case 1
             Result.Label = "Family House"
             Result.Category = 1
+            Result.PaletteVisible = True
             Result.Low = P.Vector(-48.970118, -0.000000, -48.049927)
             Result.High = P.Vector(48.970003, 95.400000, 41.970015)
             Result.PartCount = 14
@@ -85,6 +88,7 @@ Public Function TemplateAt(Index As Number) As Template
         Case 2
             Result.Label = "Garden Pavilion"
             Result.Category = 1
+            Result.PaletteVisible = True
             Result.Low = P.Vector(-39.199834, -0.000000, -47.049966)
             Result.High = P.Vector(39.200022, 89.000006, 39.199901)
             Result.PartCount = 17
@@ -114,6 +118,7 @@ Public Function TemplateAt(Index As Number) As Template
         Case 3
             Result.Label = "Estate House"
             Result.Category = 1
+            Result.PaletteVisible = True
             Result.Low = P.Vector(-89.799986, -0.000000, -80.999928)
             Result.High = P.Vector(89.800005, 177.539997, 65.699949)
             Result.PartCount = 15
@@ -141,6 +146,7 @@ Public Function TemplateAt(Index As Number) As Template
         Case 4
             Result.Label = "Middle Class House"
             Result.Category = 1
+            Result.PaletteVisible = True
             Result.Low = P.Vector(-55.699997, -0.000000, -65.999875)
             Result.High = P.Vector(55.699873, 132.659998, 50.699997)
             Result.PartCount = 14
@@ -167,6 +173,7 @@ Public Function TemplateAt(Index As Number) As Template
         Case 5
             Result.Label = "Small House"
             Result.Category = 1
+            Result.PaletteVisible = True
             Result.Low = P.Vector(-45.699987, -0.000000, -56.000047)
             Result.High = P.Vector(45.700035, 116.000004, 40.699978)
             Result.PartCount = 14
@@ -193,6 +200,7 @@ Public Function TemplateAt(Index As Number) As Template
         Case 6
             Result.Label = "Old Castle"
             Result.Category = 1
+            Result.PaletteVisible = True
             Result.Low = P.Vector(-4.371949, 0.851746, -4.903260)
             Result.High = P.Vector(4.355775, 8.114929, 4.830323)
             Result.PartCount = 28
@@ -233,6 +241,7 @@ Public Function TemplateAt(Index As Number) As Template
         Case 7
             Result.Label = "Military HQ"
             Result.Category = 1
+            Result.PaletteVisible = True
             Result.Low = P.Vector(-390.000000, -2.000000, -350.000000)
             Result.High = P.Vector(390.000000, 318.459988, 350.000000)
             Result.PartCount = 15
@@ -260,6 +269,7 @@ Public Function TemplateAt(Index As Number) As Template
         Case 8
             Result.Label = "Armor Shop"
             Result.Category = 1
+            Result.PaletteVisible = True
             Result.Low = P.Vector(-66.550112, -0.050000, -56.299996)
             Result.High = P.Vector(67.299948, 122.299995, 52.600112)
             Result.PartCount = 22
@@ -294,6 +304,7 @@ Public Function TemplateAt(Index As Number) As Template
         Case 9
             Result.Label = "City Hall"
             Result.Category = 1
+            Result.PaletteVisible = True
             Result.Low = P.Vector(-111.999998, 0.000000, -92.400017)
             Result.High = P.Vector(111.999998, 189.400005, 81.499996)
             Result.PartCount = 22
@@ -328,6 +339,7 @@ Public Function TemplateAt(Index As Number) As Template
         Case 10
             Result.Label = "Comm Tower"
             Result.Category = 1
+            Result.PaletteVisible = True
             Result.Low = P.Vector(-65.527458, 0.000000, -59.600000)
             Result.High = P.Vector(65.527458, 250.000000, 56.873755)
             Result.PartCount = 15
@@ -355,6 +367,7 @@ Public Function TemplateAt(Index As Number) As Template
         Case 11
             Result.Label = "Item Shop"
             Result.Category = 1
+            Result.PaletteVisible = True
             Result.Low = P.Vector(-66.550112, 0.000000, -56.300020)
             Result.High = P.Vector(66.550007, 122.299995, 52.082524)
             Result.PartCount = 23
@@ -390,6 +403,7 @@ Public Function TemplateAt(Index As Number) As Template
         Case 12
             Result.Label = "Weapon Shop"
             Result.Category = 1
+            Result.PaletteVisible = True
             Result.Low = P.Vector(-66.550112, -0.050000, -56.300044)
             Result.High = P.Vector(66.550007, 122.299995, 52.100039)
             Result.PartCount = 22
@@ -424,6 +438,7 @@ Public Function TemplateAt(Index As Number) As Template
         Case 13
             Result.Label = "Royal Castle"
             Result.Category = 1
+            Result.PaletteVisible = True
             Result.Low = P.Vector(-386.448555, -14.060316, -547.999992)
             Result.High = P.Vector(386.448555, 588.650017, 320.000000)
             Result.PartCount = 20
@@ -456,6 +471,7 @@ Public Function TemplateAt(Index As Number) As Template
         Case 14
             Result.Label = "Bench"
             Result.Category = 3
+            Result.PaletteVisible = True
             Result.Low = P.Vector(-11.499904, 0.000000, -3.100034)
             Result.High = P.Vector(11.500095, 12.500000, 3.899942)
             Result.PartCount = 3
@@ -471,6 +487,7 @@ Public Function TemplateAt(Index As Number) As Template
         Case 15
             Result.Label = "Crystal Lamp"
             Result.Category = 3
+            Result.PaletteVisible = True
             Result.Low = P.Vector(-3.599904, 0.000000, -3.600021)
             Result.High = P.Vector(3.600096, 44.570785, 3.599980)
             Result.PartCount = 3
@@ -486,6 +503,7 @@ Public Function TemplateAt(Index As Number) As Template
         Case 16
             Result.Label = "Flower Planter"
             Result.Category = 3
+            Result.PaletteVisible = True
             Result.Low = P.Vector(-15.000000, 0.300000, -15.000000)
             Result.High = P.Vector(15.000000, 11.253076, 15.000000)
             Result.PartCount = 8
@@ -506,6 +524,7 @@ Public Function TemplateAt(Index As Number) As Template
         Case 17
             Result.Label = "Market Stall"
             Result.Category = 3
+            Result.PaletteVisible = True
             Result.Low = P.Vector(-20.400000, 0.000000, -12.673093)
             Result.High = P.Vector(20.400000, 31.860609, 12.673093)
             Result.PartCount = 8
@@ -526,6 +545,7 @@ Public Function TemplateAt(Index As Number) As Template
         Case 18
             Result.Label = "Leafy Tree"
             Result.Category = 3
+            Result.PaletteVisible = True
             Result.Low = P.Vector(-26.059792, -0.411583, -29.044349)
             Result.High = P.Vector(29.240658, 56.127005, 28.645635)
             Result.PartCount = 4
@@ -542,6 +562,7 @@ Public Function TemplateAt(Index As Number) As Template
         Case 19
             Result.Label = "Slender Tree"
             Result.Category = 3
+            Result.PaletteVisible = True
             Result.Low = P.Vector(-27.225800, -0.411583, -27.990031)
             Result.High = P.Vector(28.298943, 56.180882, 26.659205)
             Result.PartCount = 4
@@ -558,6 +579,7 @@ Public Function TemplateAt(Index As Number) As Template
         Case 20
             Result.Label = "Fountain"
             Result.Category = 3
+            Result.PaletteVisible = True
             Result.Low = P.Vector(-50.000000, 0.000000, -50.000000)
             Result.High = P.Vector(50.000000, 43.000002, 50.000000)
             Result.PartCount = 6
@@ -576,6 +598,7 @@ Public Function TemplateAt(Index As Number) As Template
         Case 21
             Result.Label = "Fountain"
             Result.Category = 3
+            Result.PaletteVisible = False
             Result.Low = P.Vector(-50.000000, 0.000000, -50.000000)
             Result.High = P.Vector(50.000000, 43.000002, 50.000000)
             Result.PartCount = 6
@@ -594,6 +617,7 @@ Public Function TemplateAt(Index As Number) As Template
         Case 22
             Result.Label = "Fountain"
             Result.Category = 3
+            Result.PaletteVisible = False
             Result.Low = P.Vector(-50.000000, 0.000000, -50.000000)
             Result.High = P.Vector(50.000000, 43.000002, 50.000000)
             Result.PartCount = 6
@@ -612,6 +636,7 @@ Public Function TemplateAt(Index As Number) As Template
         Case 23
             Result.Label = "Fountain"
             Result.Category = 3
+            Result.PaletteVisible = False
             Result.Low = P.Vector(-50.000000, 0.000000, -50.000000)
             Result.High = P.Vector(50.000000, 43.000002, 50.000000)
             Result.PartCount = 6
@@ -630,6 +655,7 @@ Public Function TemplateAt(Index As Number) As Template
         Case 24
             Result.Label = "Fountain"
             Result.Category = 3
+            Result.PaletteVisible = False
             Result.Low = P.Vector(-50.000000, 0.000000, -50.000000)
             Result.High = P.Vector(50.000000, 43.000002, 50.000000)
             Result.PartCount = 6
@@ -648,6 +674,7 @@ Public Function TemplateAt(Index As Number) As Template
         Case 25
             Result.Label = "Fountain"
             Result.Category = 3
+            Result.PaletteVisible = False
             Result.Low = P.Vector(-50.000000, 0.000000, -50.000000)
             Result.High = P.Vector(50.000000, 43.000002, 50.000000)
             Result.PartCount = 6
@@ -666,6 +693,7 @@ Public Function TemplateAt(Index As Number) As Template
         Case 26
             Result.Label = "Kingdom Sign"
             Result.Category = 3
+            Result.PaletteVisible = True
             Result.Low = P.Vector(-85.123997, -0.400000, -7.300000)
             Result.High = P.Vector(85.123997, 82.250004, 7.300000)
             Result.PartCount = 8
@@ -686,6 +714,7 @@ Public Function TemplateAt(Index As Number) As Template
         Case 27
             Result.Label = "Crystal Circle"
             Result.Category = 3
+            Result.PaletteVisible = True
             Result.Low = P.Vector(-46.999998, 0.700000, -46.999998)
             Result.High = P.Vector(46.999998, 34.500000, 46.999998)
             Result.PartCount = 5
@@ -703,6 +732,7 @@ Public Function TemplateAt(Index As Number) As Template
         Case 28
             Result.Label = "Crystal Circle"
             Result.Category = 3
+            Result.PaletteVisible = False
             Result.Low = P.Vector(-46.999998, 0.700000, -46.999998)
             Result.High = P.Vector(46.999998, 34.500000, 46.999998)
             Result.PartCount = 5
@@ -720,6 +750,7 @@ Public Function TemplateAt(Index As Number) As Template
         Case 29
             Result.Label = "Crystal Circle"
             Result.Category = 3
+            Result.PaletteVisible = False
             Result.Low = P.Vector(-46.999998, 0.700000, -46.999998)
             Result.High = P.Vector(46.999998, 34.500000, 46.999998)
             Result.PartCount = 5
@@ -737,6 +768,7 @@ Public Function TemplateAt(Index As Number) As Template
         Case 30
             Result.Label = "Crystal Circle"
             Result.Category = 3
+            Result.PaletteVisible = False
             Result.Low = P.Vector(-46.999998, 0.700000, -46.999998)
             Result.High = P.Vector(46.999998, 34.500000, 46.999998)
             Result.PartCount = 5
@@ -754,6 +786,7 @@ Public Function TemplateAt(Index As Number) As Template
         Case 31
             Result.Label = "Crystal Circle"
             Result.Category = 3
+            Result.PaletteVisible = False
             Result.Low = P.Vector(-46.999998, 0.700000, -46.999998)
             Result.High = P.Vector(46.999998, 34.500000, 46.999998)
             Result.PartCount = 5
@@ -771,6 +804,7 @@ Public Function TemplateAt(Index As Number) As Template
         Case 32
             Result.Label = "Crystal Circle"
             Result.Category = 3
+            Result.PaletteVisible = False
             Result.Low = P.Vector(-46.999998, 0.700000, -46.999998)
             Result.High = P.Vector(46.999998, 34.500000, 46.999998)
             Result.PartCount = 5
@@ -786,8 +820,9 @@ Public Function TemplateAt(Index As Number) As Template
             Result.Parts[4] = 445
 
         Case 33
-            Result.Label = "Wayfinding Sign"
+            Result.Label = "Civic Plaza Sign"
             Result.Category = 3
+            Result.PaletteVisible = True
             Result.Low = P.Vector(-13.000000, 0.000000, -1.080061)
             Result.High = P.Vector(13.000000, 30.000000, 1.000000)
             Result.PartCount = 3
@@ -801,8 +836,9 @@ Public Function TemplateAt(Index As Number) As Template
             Result.Parts[2] = 184
 
         Case 34
-            Result.Label = "Wayfinding Sign"
+            Result.Label = "Market Walk Sign"
             Result.Category = 3
+            Result.PaletteVisible = True
             Result.Low = P.Vector(-13.000000, 0.000000, -1.080061)
             Result.High = P.Vector(13.000000, 30.000000, 1.000000)
             Result.PartCount = 3

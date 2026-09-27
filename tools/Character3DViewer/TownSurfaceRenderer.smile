@@ -49,15 +49,17 @@ Public Function Create(ByRef Value As State) As Boolean
     Dim EmptyTexture As Core.Texture3D
     Dim Ok As Boolean
 
-    ' Simple grass decodes color itself; PBR paving uses the color texture's sRGB decode.
+    ' Both ground surfaces share the document sun, ambient and shadow response.
     Value.Textures[0] = G.LoadTexture3DEx("Assets/Neris/Neris-Grass-Color.png",
-        G.TEXTURE_USAGE_DATA, G.TEXTURE_FILTER_ANISOTROPIC, G.TEXTURE_WRAP_REPEAT, 16)
+        G.TEXTURE_USAGE_COLOR, G.TEXTURE_FILTER_ANISOTROPIC, G.TEXTURE_WRAP_REPEAT, 16)
     Value.Textures[1] = G.LoadTexture3DEx("Assets/Neris/Neris-Paving.png",
         G.TEXTURE_USAGE_COLOR, G.TEXTURE_FILTER_ANISOTROPIC, G.TEXTURE_WRAP_REPEAT, 16)
-    Value.Materials[1] = G.CreateMaterial3D(Value.Textures[0], 0, 255, 255, 255, 100, False, 0, 0)
+    Value.Materials[1] = G.CreatePbrMaterial3D(Value.Textures[0], EmptyTexture,
+        EmptyTexture, EmptyTexture, G.MATERIAL_ALPHA_OPAQUE, True)
     Value.Materials[3] = G.CreatePbrMaterial3D(Value.Textures[1], EmptyTexture,
         EmptyTexture, EmptyTexture, G.MATERIAL_ALPHA_OPAQUE, True)
     Ok = G.SetPbrMaterialFactors3D(Value.Materials[3], 255, 255, 255, 100, 0, 38, 0, 100)
+    Ok = G.SetPbrMaterialFactors3D(Value.Materials[1], 255, 255, 255, 100, 0, 100, 0, 100) And Ok
     Value.Materials[4] = G.CreateMaterial3D(EmptyTexture, 0, 220, 214, 188, 100, False, 0, 0)
     Value.Materials[5] = G.CreateMaterial3D(EmptyTexture, 0, 175, 136, 66, 100, False, 0, 0)
     Value.Materials[6] = G.CreateMaterial3D(EmptyTexture, 0, 35, 78, 139, 100, False, 0, 0)
@@ -399,6 +401,11 @@ Private Sub UploadNext(ByRef Value As State)
             Value.NextObjects[Value.NextCount] = G.CreateObjectFromMesh3D(Mesh)
             Ok = G.SetObjectMaterial3D(Value.NextObjects[Value.NextCount], Value.Materials[Value.Kind]) And Ok
             Ok = G.SetObjectCullMode3D(Value.NextObjects[Value.NextCount], G.OBJECT_CULL_NONE) And Ok
+
+            ' Flat terrain receives scenery shadows. Casting onto itself creates
+            ' moving PCF bands across the town-sized shadow map; rails still cast.
+            Ok = G.SetObjectShadowsChecked3D(Value.NextObjects[Value.NextCount],
+                Value.Kind = 4 Or Value.Kind = 5, True) And Ok
             Value.NextCount = Value.NextCount + 1
 
         End If

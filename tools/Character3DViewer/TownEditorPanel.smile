@@ -6,6 +6,7 @@ Option Explicit
 Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownCatalogData As Catalog
 Import Smile.Tools.TownGuides As Guides
+Import Smile.Tools.TownSunControls As Sun
 
 Public Type Control
     X As Number
@@ -34,6 +35,7 @@ Public Type State
     RecentLabels[10] As Text
     RecentCount As Number
     CanRedo As Boolean
+    SunSlider As Sun.State
 End Type
 
 Public Function NumberLabel(Value As Number) As Text
@@ -212,7 +214,7 @@ Private Sub Library(ByRef Value As State, X As Number)
 
             Shape = Catalog.TemplateAt(Index)
 
-            If Shape.Category = Value.Category Then
+            If Shape.Category = Value.Category And Shape.PaletteVisible Then
 
                 If Matching >= Value.Page * Rows And Row < Rows Then
 
@@ -241,20 +243,6 @@ Private Sub Library(ByRef Value As State, X As Number)
         Call Button(Value, 34, X, 340 + (Rows / 2) * 93, 283, "Duplicate Selected (Ctrl+D)")
 
     End If
-
-End Sub
-
-Private Sub LightRow(ByRef Value As State, X As Number, Row As Number, Label As Text, Setting As Number)
-
-    Dim Y As Number
-
-    Y = 212 + Row * Min(32, Max(16, (Window_Height() - 537) / 7))
-    Draw Text Label At X, Y + 6 Size 14 Color WHITE
-
-    Call Button(Value, 200 + Row * 2, X + 170, Y, 30, "-")
-    Call Button(Value, 201 + Row * 2, X + 252, Y, 30, "+")
-
-    Draw Text NumberLabel(Setting) At X + 207, Y + 6 Size 14 Color RGB(70, 225, 220)
 
 End Sub
 
@@ -320,13 +308,7 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State,
 
     Else If Value.Section = 1 Then
 
-        Call LightRow(Value, X, 0, "Sun Red", Town.Light.RedValue)
-        Call LightRow(Value, X, 1, "Sun Green", Town.Light.GreenValue)
-        Call LightRow(Value, X, 2, "Sun Blue", Town.Light.BlueValue)
-        Call LightRow(Value, X, 3, "Intensity %", Town.Light.Intensity)
-        Call LightRow(Value, X, 4, "Ambient %", Town.Light.Ambient)
-        Call LightRow(Value, X, 5, "Azimuth", ToNumber(Town.Light.Azimuth))
-        Call LightRow(Value, X, 6, "Elevation", ToNumber(Town.Light.Elevation))
+        Call Sun.Draw(Town.Light, X)
         Call Button(Value, 220, X, LightBottom, 283, "Shadows", Town.Light.Shadows)
         Call Button(Value, 221, X, LightBottom + 32, 139, "Day")
         Call Button(Value, 222, X + 144, LightBottom + 32, 139, "Night")

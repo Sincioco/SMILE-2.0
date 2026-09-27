@@ -36,6 +36,7 @@ $nativeBattleSources = @(
     'TownDocument.smile',
     'TownPicking.smile',
     'TownEditorPanel.smile',
+    'TownSunControls.smile',
     'TownEditor.smile',
     'TownLibrary.smile',
     'TownDocumentMap.smile',

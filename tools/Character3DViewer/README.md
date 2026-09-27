@@ -1189,13 +1189,23 @@ For roads/water choose **Surfaces**, a material, then **Line** or **Rectangle**;
 click the first and second corners/endpoints. Width is metres. **Erase** restores
 grass in the marked rectangle. Water uses clean shorelines without narrow trim;
 road across water creates a bridge. **Sun** exposes color, intensity, ambient light,
-azimuth/elevation, shadows and day/night presets.
+azimuth/elevation, shadows and day/night presets. Drag a Sun slider like H Orbit;
+wheel over it for one-unit steps. A drag becomes one undo step on release, and Esc
+cancels its preview. Increase Ambient to make shadows lighter; native shadow edges
+use a wider, smoothly weighted filter for a more diffused appearance. Grass and
+paving both follow these Sun settings and receive scenery shadows. Flat terrain
+does not cast onto itself, avoiding the curved grass bands.
+Sun color, intensity, ambient, azimuth, elevation and the Shadows toggle belong
+to each town. Viewer saves, saved versions and Blender exports preserve them;
+opening that town restores its Sun settings.
 
 ### Town tabs, file dialogs and versions
 
 Click the active **Buildings**, **Surfaces** or **Decor** category again to select
 none. The palette shows **Pan Mode**, and left-drag pans. Building/decor tiles show
-previews of the actual models. Press **1** while editing for a north-up overhead
+previews of the actual models. Decor has one card per repeated design; existing
+placed copies remain intact. Differently lettered signs keep separate names.
+Press **1** while editing for a north-up overhead
 view; wheel zoom, pan and orbit remain available. This is a near-vertical perspective
 view, not a separate orthographic renderer.
 

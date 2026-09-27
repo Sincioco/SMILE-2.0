@@ -10,6 +10,9 @@ Import Smile.Tools.TownEditor As Commands
 Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownTabs As Tabs
 Import Smile.Tools.TownCatalogData As Catalog
+Import Smile.Tools.TownEditorPanel As Panel
+Import Smile.Tools.TownSunControls As Sun
+Import Smile.Tools.TownHistory As History
 Import Smile.Simple3D.Graphics3D As G
 
 Dim Value As Town.State
@@ -32,6 +35,7 @@ Action = Commands.Command(Controls, Draft, 3)
 Shape = Catalog.TemplateAt(Controls.Ui.Template)
 
 Call Check(Shape.Category = 3, "Changing Category Selects A Matching Placement Template")
+Call CheckDecorPalette()
 
 Action = Commands.Command(Controls, Draft, 3)
 
@@ -49,6 +53,7 @@ Action = Commands.Command(Controls, Draft, 2)
 
 Call Check(Controls.Ui.Category = 0 And Controls.Ui.Tool = 0,
     "Surfaces Toggle Off And Cancel The Paint Tool")
+Call CheckSunGesture()
 
 Ok = Editor.Available()
 
@@ -155,5 +160,103 @@ Sub Check(Condition As Boolean, Label As Text)
         Print "FAIL " + Label
         Failures = Failures + 1
     End If
+
+End Sub
+
+Sub CheckDecorPalette()
+
+    Dim Seen[35] As Number
+    Dim Page As Number
+    Dim Slot As Number
+    Dim VisibleCount As Number
+    Dim Item As Number
+    Dim Entry As Catalog.Template
+    Dim Command As Number
+
+    For Page = 0 To 10 / Panel.PaletteRows()
+
+        Call Panel.Draw(Controls.Ui, Draft, Controls.Guide, 0)
+
+        For Slot = 0 To Controls.Ui.ControlCount - 1
+
+            Item = Controls.Ui.Controls[Slot].Action - 100
+
+            If Item >= 0 And Item < Catalog.TEMPLATE_COUNT Then
+                Seen[Item] = Seen[Item] + 1
+                VisibleCount = VisibleCount + 1
+            End If
+
+        End For
+
+        Command = Commands.Command(Controls, Draft, 21)
+    End For
+
+    Call Check(VisibleCount = 11 And Seen[20] = 1 And Seen[27] = 1,
+        "Decor Pages Contain One Fountain And One Crystal Circle")
+    Call Check(Controls.Ui.Page = 10 / Panel.PaletteRows(),
+        "Next Stops At The Last Consolidated Decor Page")
+
+    For Item = 14 To Catalog.TEMPLATE_COUNT - 1
+        Entry = Catalog.TemplateAt(Item)
+
+        Call Check((Entry.PaletteVisible And Seen[Item] = 1) Or
+            (Not Entry.PaletteVisible And Seen[Item] = 0), "Palette Visibility Matches Clickable Entries")
+        Call Check(Entry.PartCount > 0, "Hidden Copies Retain Existing Town Geometry")
+    End For
+
+    Entry = Catalog.TemplateAt(33)
+
+    Call Check(Entry.Label = "Civic Plaza Sign" And Seen[33] = 1, "Civic Sign Keeps Its Own Lettering")
+
+    Entry = Catalog.TemplateAt(34)
+
+    Call Check(Entry.Label = "Market Walk Sign" And Seen[34] = 1, "Market Sign Keeps Its Own Lettering")
+    Call Panel.Release(Controls.Ui)
+
+End Sub
+
+Sub CheckSunGesture()
+
+    Dim Step As Number
+    Dim Before As Number
+    Dim Command As Number
+
+    Call Document.DefaultSun(Draft.Light)
+    Call Commands.ResetHistory(Controls, Draft)
+
+    Controls.Ui.SunSlider.Original = Draft.Light
+    Controls.Ui.SunSlider.Revision = Draft.Revision
+    Controls.Ui.SunSlider.DragOwner = 5
+
+    For Step = 40 To 65
+        Call Sun.SetValue(Draft, 4, Step)
+    End For
+
+    Call Check(Draft.Light.Ambient = 65 And History.UndoCount(Controls.HistoryState) = 0,
+        "Sun Drag Previews Without Filling Undo History")
+    Call Commands.Cancel(Controls, Draft)
+    Call Check(Draft.Light.Ambient = 38 And Controls.Ui.SunSlider.DragOwner = 0,
+        "Cancel Restores The Original Sun Settings")
+    Call Sun.SetValue(Draft, 4, 65)
+    Call History.Record(Controls.HistoryState, Draft, Controls.Guide.Ink)
+
+    Command = Commands.Command(Controls, Draft, 32)
+
+    Call Check(Draft.Light.Ambient = 38, "One Undo Restores Sun Before Drag")
+
+    Command = Commands.Command(Controls, Draft, 33)
+
+    Call Check(Draft.Light.Ambient = 65, "Redo Restores The Final Sun Value")
+    Call Sun.SetValue(Draft, 5, 360)
+
+    Before = Draft.Revision
+
+    Call Sun.SetValue(Draft, 5, 360)
+    Call Check(Sun.Reading(Draft.Light, 5) = 360 And Draft.Revision = Before,
+        "Holding Azimuth Endpoint Does Not Continuously Revise The Town")
+    Call Sun.SetValue(Draft, 6, -100)
+    Call Sun.SetValue(Draft, 3, 2000)
+    Call Check(Draft.Light.Elevation = -85.0 And Draft.Light.Intensity = 1000,
+        "Sun Sliders Clamp To Supported Settings")
 
 End Sub
