@@ -6,14 +6,18 @@ struct SmileWaterTextureBinding3D
 {
     ID3D11DeviceContext* context;
     SmileWaterTextureBinding3D(ID3D11DeviceContext* value,
-        ID3D11ShaderResourceView* texture, ID3D11SamplerState* sampler) : context(value)
+        ID3D11ShaderResourceView* texture, ID3D11SamplerState* sampler,
+        ID3D11ShaderResourceView* shadow, ID3D11SamplerState* shadow_sampler) : context(value)
     {
+        context->PSSetShaderResources(5, 1, &shadow);
+        context->PSSetSamplers(5, 1, &shadow_sampler);
         context->PSSetShaderResources(7, 1, &texture);
         context->PSSetSamplers(7, 1, &sampler);
     }
     ~SmileWaterTextureBinding3D()
     {
         ID3D11ShaderResourceView* empty = 0;
+        context->PSSetShaderResources(5, 1, &empty);
         context->PSSetShaderResources(7, 1, &empty);
     }
 };
@@ -21,6 +25,30 @@ struct SmileWaterTextureBinding3D
 static const char smile_water_surface_hlsl[] = R"water(
 Texture2D waterScene : register(t7);
 SamplerState waterSampler : register(s7);
+Texture2D waterShadowMap : register(t5);
+SamplerComparisonState waterShadowSampler : register(s5);
+
+// Use the same sun shadow projection and tent filter as opaque receivers.
+// Sky reflections remain visible in shade; only direct surface light is occluded.
+float WaterShadowVisibility(float3 world, float3 normal, float3 light)
+{
+    if (waterShadow.x < .5) return 1;
+    float4 projected = mul(float4(world, 1), waterShadowMvp);
+    if (projected.w <= 0) return 1;
+    float3 q = projected.xyz / projected.w;
+    float2 uv = float2(q.x*.5+.5, .5-q.y*.5);
+    if (any(uv < 0) || any(uv > 1) || q.z < 0 || q.z > 1) return 1;
+    float bias = waterShadow.z + waterShadow.w*(1-saturate(dot(normal, light)));
+    float sum = 0;
+    [unroll] for (int y = -2; y <= 2; ++y)
+        [unroll] for (int x = -2; x <= 2; ++x)
+        {
+            float weight = (3-abs(x))*(3-abs(y));
+            sum += weight*waterShadowMap.SampleCmpLevelZero(waterShadowSampler,
+                uv+float2(x,y)*(waterShadow.y*1.5), q.z-bias);
+        }
+    return sum/81;
+}
 
 float3 WaterEnvironment(float3 reflected)
 {
@@ -104,7 +132,11 @@ float4 ShadeWater(float4 pixel, float2 uv, float4 base, float3 world, float3 sur
     float k = (roughness+1)*(roughness+1)/8;
     float geometry = facing/(facing*(1-k)+k) * nl/(nl*(1-k)+k);
     float specular = distribution*geometry*(.0204+.9796*pow(1-vh,5)) / max(4*facing*nl,.0001);
-    float3 highlight = min(specular, 12) * nl * waterLightColor.rgb * waterLightColor.w;
+    float visibility = WaterShadowVisibility(world, normal, light);
+    float ambientShare = waterAmbient.w /
+        max(waterAmbient.w + waterLightColor.w * max(nl, .15), .0001);
+    float illumination = lerp(ambientShare, 1, visibility);
+    float3 highlight = min(specular, 12) * nl * waterLightColor.rgb * waterLightColor.w * visibility;
 
     float2 screen = pixel.xy / target.xy;
     float2 bend = float2(dot(normal,cameraRight.xyz), -dot(normal,cameraUp.xyz)) * .012;
@@ -133,8 +165,8 @@ float4 ShadeWater(float4 pixel, float2 uv, float4 base, float3 world, float3 sur
     // Water absorbs its transmitted color; reflected buildings retain their own color.
     // Rough surfaces soften the reflection instead of becoming a mirror-like floor.
     float reflectedAmount = fresnel * (1 - roughness * .65);
-    float3 result = lerp(transmission * ToLinear(saturate(base.rgb)), reflection, reflectedAmount) + highlight;
-    result = lerp(result, float3(.72,.83,.85), foam);
+    float3 result = lerp(transmission * ToLinear(saturate(base.rgb)) * illumination, reflection, reflectedAmount) + highlight;
+    result = lerp(result, float3(.72,.83,.85) * illumination, foam);
     float opacity = saturate(base.a * (1.15 + fresnel*.45 + foam*.5));
     if (atlasOutput.z < .5) result = pow(saturate(result), 1.0/2.2);
     return float4(result, opacity);

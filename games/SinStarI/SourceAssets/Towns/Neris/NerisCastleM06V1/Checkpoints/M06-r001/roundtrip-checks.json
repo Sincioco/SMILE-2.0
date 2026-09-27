@@ -1,0 +1,45 @@
+{
+  "status": "ok",
+  "result": {
+    "scene": "NC.Roundtrip.M06-r001",
+    "meshes": 36,
+    "bounds": [
+      [
+        -70,
+        70
+      ],
+      [
+        -84,
+        82
+      ],
+      [
+        -5,
+        60
+      ]
+    ],
+    "hinge": [
+      0,
+      -64,
+      -0.25
+    ],
+    "bridge_children": [
+      "NC.Export.Bridge.BridgeTimber.001",
+      "NC.Export.Bridge.DarkIron.001",
+      "NC.Export.Bridge.RoyalGold.001"
+    ],
+    "materials": [
+      "NC.MAT.BannerTeal.001",
+      "NC.MAT.BridgeTimber.001",
+      "NC.MAT.CrystalBlue.001",
+      "NC.MAT.DarkIron.001",
+      "NC.MAT.Foliage.001",
+      "NC.MAT.IvoryStone.001",
+      "NC.MAT.Masonry.001",
+      "NC.MAT.Moat.001",
+      "NC.MAT.RoyalGold.001",
+      "NC.MAT.TealRoof.001",
+      "NC.MAT.WarmWindow.001"
+    ]
+  },
+  "stdout": "03:29:11 | INFO: Data are loaded, start creating Blender stuff\n03:29:11 | INFO: Blender create Mesh node NC.Export.Bridge.BridgeTimber\n03:29:11 | INFO: Blender create Mesh node NC.Export.Bridge.DarkIron\n03:29:11 | INFO: Blender create Mesh node NC.Export.Bridge.RoyalGold\n03:29:11 | INFO: Blender create Mesh node NC.Export.Courtyard.CrystalBlue\n03:29:11 | INFO: Blender create Mesh node NC.Export.Courtyard.DarkIron\n03:29:11 | INFO: Blender create Mesh node NC.Export.Courtyard.Foliage\n03:29:11 | INFO: Blender create Mesh node NC.Export.Courtyard.IvoryStone\n03:29:11 | INFO: Blender create Mesh node NC.Export.Courtyard.Moat\n03:29:11 | INFO: Blender create Mesh node NC.Export.Courtyard.RoyalGold\n03:29:12 | INFO: Blender create Mesh node NC.Export.Courtyard.TealRoof\n03:29:12 | INFO: Blender create Mesh node NC.Export.Fortifications.BannerTeal\n03:29:12 | INFO: Blender create Mesh node NC.Export.Fortifications.CrystalBlue\n03:29:12 | INFO: Blender create Mesh node NC.Export.Fortifications.DarkIron\n03:29:12 | INFO: Blender create Mesh node NC.Export.Fortifications.IvoryStone\n03:29:12 | INFO: Blender create Mesh node NC.Export.Fortifications.Masonry\n03:29:12 | INFO: Blender create Mesh node NC.Export.Fortifications.RoyalGold\n03:29:12 | INFO: Blender create Mesh node NC.Export.Fortifications.TealRoof\n03:29:12 | INFO: Blender create Mesh node NC.Export.Fortifications.WarmWindow\n03:29:12 | INFO: Blender create Mesh node NC.Export.Gatehouse.BannerTeal\n03:29:12 | INFO: Blender create Mesh node NC.Export.Gatehouse.CrystalBlue\n03:29:12 | INFO: Blender create Mesh node NC.Export.Gatehouse.DarkIron\n03:29:12 | INFO: Blender create Mesh node NC.Export.Gatehouse.IvoryStone\n03:29:12 | INFO: Blender create Mesh node NC.Export.Gatehouse.Masonry\n03:29:12 | INFO: Blender create Mesh node NC.Export.Gatehouse.RoyalGold\n03:29:12 | INFO: Blender create Mesh node NC.Export.Gatehouse.TealRoof\n03:29:12 | INFO: Blender create Mesh node NC.Export.Gatehouse.WarmWindow\n03:29:12 | INFO: Blender create Mesh node NC.Export.Palace.BannerTeal\n03:29:12 | INFO: Blender create Mesh node NC.Export.Palace.CrystalBlue\n03:29:12 | INFO: Blender create Mesh node NC.Export.Palace.DarkIron\n03:29:12 | INFO: Blender create Mesh node NC.Export.Palace.IvoryStone\n03:29:12 | INFO: Blender create Mesh node NC.Export.Palace.Masonry\n03:29:12 | INFO: Blender create Mesh node NC.Export.Palace.RoyalGold\n03:29:12 | INFO: Blender create Mesh node NC.Export.Palace.TealRoof\n03:29:12 | INFO: Blender create Mesh node NC.Export.Palace.WarmWindow\n03:29:12 | INFO: Blender create Mesh node NC.Export.Site.IvoryStone\n03:29:12 | INFO: Blender create Mesh node NC.Export.Site.Moat\n03:29:12 | INFO: glTF import finished in 0.98s\n"
+}

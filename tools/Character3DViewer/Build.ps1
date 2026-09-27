@@ -314,7 +314,7 @@ if ($Target -in @('Native', 'All')) {
         Copy-Item -LiteralPath $file.FullName -Destination $townMirror -Force
     }
     $partyMirror = Join-Path $townMirror 'Party'
-    & node (Join-Path $repositoryRoot 'games\SinStarI\SourceAssets\Towns\Neris\NerisCastleM01V1\prepare-native.mjs')
+    & node (Join-Path $repositoryRoot 'games\SinStarI\SourceAssets\Towns\Neris\NerisCastleM06V1\prepare-native.mjs')
     if ($LASTEXITCODE -ne 0) { throw 'Neris Castle preview preparation failed.' }
     $null = New-Item -ItemType Directory -Path $partyMirror -Force
     foreach ($entry in @(

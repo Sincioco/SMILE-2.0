@@ -224,7 +224,8 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean)
         Pointer_Held(POINTER_PRIMARY) Or Pointer_Held(POINTER_MIDDLE) Or
         Pointer_Held(POINTER_SECONDARY))
 
-    PanelAction = CameraPanel.Input(Value.Panel, Value.View, Value.BaseCamera, Blocked)
+    PanelAction = CameraPanel.Input(Value.Panel, Value.View, Value.BaseCamera, Blocked,
+        Drone.GroundShot(Value.Flight, Value.PartyControl))
     Blocked = Blocked Or CameraPanel.Hovered() Or Value.Panel.DragRow > 0
 
     If PanelAction = 1 Then
@@ -615,7 +616,8 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
             Value.People.Members[0].Yaw, Party.IsMoving(Value.People), Elapsed)
     End If
 
-    Call Drone.Compose(Value.Flight, Value.View, Value.BaseCamera, Value.Follow, Elapsed)
+    Call Drone.Compose(Value.Flight, Value.View, Value.BaseCamera, Value.Follow, Elapsed,
+        Drone.GroundShot(Value.Flight, Value.PartyControl))
 
 End Sub
 
@@ -745,7 +747,8 @@ Public Sub Overlay(ByRef Value As State)
     End If
 
     Call CameraPanel.Draw(Value.Panel, Value.View, Value.Cinematic,
-        Value.PartyControl, Value.Flight.Enabled And Not Value.Flight.Suspended)
+        Value.PartyControl, Value.Flight.Enabled And Not Value.Flight.Suspended,
+        Drone.GroundShot(Value.Flight, Value.PartyControl))
 
     If Value.Ready Then
 

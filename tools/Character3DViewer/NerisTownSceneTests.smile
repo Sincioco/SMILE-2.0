@@ -642,21 +642,36 @@ End Sub
 
 Sub CheckCastleRender(ByRef Value As Town.State)
 
+    Dim Part As Number
     Dim Pose As P.Transform3D
     Dim Step As Number
     Dim Ok As Boolean
 
+    ' This fixture uses all 51 legacy static chunks. The live editor uses its
+    ' catalog owner instead; release the legacy copies before the castle check
+    ' to avoid testing an unsupported duplicate town beyond the 64-model pool.
+
+    Call Assets.Destroy(Value.Town)
+
     Ok = Castle.Create(Value.Comparison)
 
-    Call Check(Ok And Value.Comparison.ObjectCount = 4, "West Castle Loads Three Static Parts And Hinged Leaf")
+    Print "Castle Parts " + Calibration.NumberText(Value.Comparison.ObjectCount)
+    Print "Castle Moving Parts " + Calibration.NumberText(Value.Comparison.LeafCount)
+
+    Call Check(Ok And Value.Comparison.ObjectCount = 42 And Value.Comparison.LeafCount = 3,
+        "Detailed West Castle Loads 39 Static Parts And Three Hinged Material Parts")
     Call Town.Draw(Value)
 
-    Ok = P.TryTransform(Value.Comparison.Objects[Value.Comparison.Leaf], Pose)
+    For Part = Value.Comparison.Leaf To Value.Comparison.Leaf + Value.Comparison.LeafCount - 1
 
-    Call Check(Ok And Pose.Rotation.X = 90.0, "Native Bridge Mesh Starts Upright At Its Real Hinge")
-    Call Check(Abs(Pose.Position.X - CastleRoute.ORIGIN_X) < 0.001 And
-        Abs(Pose.Position.Y - 18.87) < 0.001 And Abs(Pose.Position.Z + 1940.0) < 0.001,
-        "Native Hinge Retains Measured Placement And Scale")
+        Ok = P.TryTransform(Value.Comparison.Objects[Part], Pose)
+
+        Call Check(Ok And Pose.Rotation.X = 90.0, "Native Bridge Mesh Starts Upright At Its Real Hinge")
+        Call Check(Abs(Pose.Position.X - CastleRoute.ORIGIN_X) < 0.001 And
+            Abs(Pose.Position.Y - 18.87) < 0.001 And Abs(Pose.Position.Z + 1940.0) < 0.001,
+            "Native Hinge Retains Measured Placement And Scale")
+    End For
+
     Call Party.Teleport(Value.People, P.Vector(CastleRoute.ORIGIN_X, CastleRoute.DECK_Y, -2410.0))
 
     For Step = 1 To 30
@@ -665,10 +680,13 @@ Sub CheckCastleRender(ByRef Value As Town.State)
 
     Call Town.Draw(Value)
 
-    Ok = P.TryTransform(Value.Comparison.Objects[Value.Comparison.Leaf], Pose)
+    For Part = Value.Comparison.Leaf To Value.Comparison.Leaf + Value.Comparison.LeafCount - 1
+        Ok = P.TryTransform(Value.Comparison.Objects[Part], Pose)
 
-    Call Check(Ok And Pose.Rotation.X = 0.0 And Not Value.Failed,
-        "Actual Party Approach Draws The Fully Lowered Native Leaf")
+        Call Check(Ok And Pose.Rotation.X = 0.0 And Not Value.Failed,
+            "Actual Party Approach Draws The Fully Lowered Native Leaf")
+    End For
+
     Call Party.Teleport(Value.People, P.Vector(0.0, 23.12, -2780.0))
 
     For Step = 1 To 55
@@ -677,9 +695,11 @@ Sub CheckCastleRender(ByRef Value As Town.State)
 
     Call Town.Draw(Value)
 
-    Ok = P.TryTransform(Value.Comparison.Objects[Value.Comparison.Leaf], Pose)
+    For Part = Value.Comparison.Leaf To Value.Comparison.Leaf + Value.Comparison.LeafCount - 1
+        Ok = P.TryTransform(Value.Comparison.Objects[Part], Pose)
 
-    Call Check(Ok And Pose.Rotation.X = 90.0 And Not Value.Failed,
-        "Actual Party Departure Draws The Raised Native Leaf")
+        Call Check(Ok And Pose.Rotation.X = 90.0 And Not Value.Failed,
+            "Actual Party Departure Draws The Raised Native Leaf")
+    End For
 
 End Sub

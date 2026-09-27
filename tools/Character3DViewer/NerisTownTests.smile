@@ -201,11 +201,18 @@ Sub CheckCastle()
 
     Point = Navigation.Move(P.Vector(-3650.0, Castle.DECK_Y, -816.0), 0.0, 241.0)
 
-    Call Check(Point.Z > -576.0 And Abs(Point.Y - Castle.DECK_Y - 51.0) < 0.001,
-        "Twenty Stairs Lead Into Palace Entrance Recess")
+    Call Check(Point.Z >= -614.0 And Point.Z <= -608.9 And
+        Abs(Point.Y - Castle.DECK_Y - 51.0) < 0.001,
+        "Twenty Stairs Reach The Closed Palace Threshold Without Walking Through Its Door")
 
     Call Check(Not Castle.Contains(-3650.0, -2780.0),
         "Normal Town Terrain Owns The Front Ground And Road")
+
+    Call Check(Not Castle.CanStand(Castle.ORIGIN_X + 26.0 * Castle.SCALE,
+        Castle.ORIGIN_Z - 32.0 * Castle.SCALE), "Courtyard Planter Has Solid Footprint")
+    Call Check(Castle.CanStand(Castle.ORIGIN_X, Castle.ORIGIN_Z + 14.2 * Castle.SCALE) And
+        Not Castle.CanStand(Castle.ORIGIN_X, Castle.ORIGIN_Z + 14.6 * Castle.SCALE),
+        "Closed Palace Door Ends The Exterior Route")
 
     Call Castle.Enable(False)
     Call Check(Not Castle.Contains(-3650.0, -850.0), "Leaving Preview Releases Its Navigation")

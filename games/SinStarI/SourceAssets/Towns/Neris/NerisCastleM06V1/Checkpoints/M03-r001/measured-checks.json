@@ -1,0 +1,122 @@
+{
+  "status": "ok",
+  "result": {
+    "triangles_by_owner": {
+      "Site": 64,
+      "Fortifications": 50304,
+      "Gatehouse": 7856,
+      "Bridge": 820,
+      "Palace": 132569,
+      "Courtyard": 1022
+    },
+    "total_evaluated_triangles": 192635,
+    "bounds_by_owner": {
+      "Site": [
+        [
+          -70,
+          70
+        ],
+        [
+          -82,
+          82
+        ],
+        [
+          -5,
+          0
+        ]
+      ],
+      "Fortifications": [
+        [
+          -54.79623794555664,
+          54.79623794555664
+        ],
+        [
+          -66.79623413085938,
+          66.79623413085938
+        ],
+        [
+          0,
+          37
+        ]
+      ],
+      "Gatehouse": [
+        [
+          -24.600000381469727,
+          24.600000381469727
+        ],
+        [
+          -64.27999877929688,
+          -49.54999923706055
+        ],
+        [
+          0,
+          32
+        ]
+      ],
+      "Bridge": [
+        [
+          -5.199999809265137,
+          5.199999809265137
+        ],
+        [
+          -84,
+          -63.81999969482422
+        ],
+        [
+          -0.5,
+          0.0599999874830246
+        ]
+      ],
+      "Palace": [
+        [
+          -40.41999816894531,
+          40.42000198364258
+        ],
+        [
+          13.280000686645508,
+          57.42000198364258
+        ],
+        [
+          2.820000171661377,
+          60
+        ]
+      ],
+      "Courtyard": [
+        [
+          -43,
+          43
+        ],
+        [
+          -50,
+          57
+        ],
+        [
+          -0.09999999403953552,
+          10
+        ]
+      ]
+    },
+    "independent_owners_unchanged": {
+      "Site": true,
+      "Gatehouse": true,
+      "Bridge": true,
+      "Courtyard": true
+    },
+    "prototype_rebuild_no_duplicate": true,
+    "dome_segments": 64,
+    "dome_profile_intervals": 16,
+    "fixed_cameras_retained": true,
+    "main_portal_width_height_recess": [
+      6,
+      10,
+      0.6
+    ],
+    "main_window_width_height_recess": [
+      7,
+      14.5,
+      0.3
+    ],
+    "window_panes": 78
+  },
+  "stdout": "Info: Saved as \"neris-castle-M03-r001.blend\"\n"
+}

@@ -1,0 +1,52 @@
+{
+  "meshes": 43,
+  "bounds": [
+    [
+      -70,
+      70
+    ],
+    [
+      -84,
+      82
+    ],
+    [
+      -5,
+      60
+    ]
+  ],
+  "poses": [
+    {
+      "angle": 0,
+      "tip": [
+        0,
+        -84,
+        -0.25
+      ],
+      "error": 0,
+      "moving_parts": 3
+    },
+    {
+      "angle": 45,
+      "tip": [
+        0,
+        -78.14213562011719,
+        13.892135620117188
+      ],
+      "error": 0,
+      "moving_parts": 3
+    },
+    {
+      "angle": 90,
+      "tip": [
+        0,
+        -64,
+        19.75
+      ],
+      "error": 0,
+      "moving_parts": 3
+    }
+  ],
+  "camera_views": 7,
+  "source_triangles": 251729,
+  "export_triangles": 251250
+}

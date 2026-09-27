@@ -265,7 +265,8 @@ End Sub
 
 ''' Follow the unzoomed shot first. Direct zoom must never enter the slow drone solver.
 Public Sub Compose(ByRef Value As State, ByRef View As Arena.State,
-    Base As P.Camera3D, Following As Boolean, Elapsed As Number)
+    Base As P.Camera3D, Following As Boolean, Elapsed As Number,
+    Optional LowShot As Boolean = False)
 
     Dim Resolved As P.Camera3D
     Dim Lift As Double
@@ -279,7 +280,7 @@ Public Sub Compose(ByRef Value As State, ByRef View As Arena.State,
         Resolved = Resolve(Value, Base, Elapsed)
     End If
 
-    Call Constrain(View, Resolved)
+    Call Constrain(View, Resolved, LowShot)
 
     ' Apply town ground clearance once, translating both eye and target to retain pitch.
     FloorVisible = View.FloorVisible
@@ -298,7 +299,33 @@ Public Sub Compose(ByRef Value As State, ByRef View As Arena.State,
 
 End Sub
 
-Private Sub Constrain(ByRef View As Arena.State, Base As P.Camera3D)
+''' Following a party center is also used by inspection orbit; it is not party control.
+Public Function GroundShot(Value As State, PartyControl As Boolean) As Boolean
+
+    Dim Result As Boolean
+
+    Result = PartyControl Or (Value.Arrival And Not Value.Suspended)
+
+    Return Result
+
+End Function
+
+''' Inspection stays above its target; the party shot retains its low horizon.
+Public Function MinimumPitch(LowShot As Boolean) As Double
+
+    Dim ReturnValue As Double
+
+    If LowShot Then
+        ReturnValue = -20.0
+
+        Return ReturnValue
+    End If
+
+    Return 8.0
+
+End Function
+
+Private Sub Constrain(ByRef View As Arena.State, Base As P.Camera3D, LowShot As Boolean)
 
     Dim Offset As P.Vector3
     Dim BasePitch As Double
@@ -308,7 +335,7 @@ Private Sub Constrain(ByRef View As Arena.State, Base As P.Camera3D)
     Offset = M.Subtract(Base.Position, Base.Target)
     BasePitch = Atan2(Offset.Y, Sqrt(Offset.X * Offset.X + Offset.Z * Offset.Z))
     Pitch = Clamp(BasePitch + M.Radians(View.Controls.OrbitPitch),
-        M.Radians(-20.0), Max(M.Radians(80.0), View.MaximumPitch))
+        M.Radians(MinimumPitch(LowShot)), Max(M.Radians(80.0), View.MaximumPitch))
     View.Controls.OrbitPitch = M.Degrees(Pitch - BasePitch)
     MinimumPan = (25.0 - Base.Target.Y) / Cos(Pitch)
     View.Controls.PanY = Max(MinimumPan, View.Controls.PanY)

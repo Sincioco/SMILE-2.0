@@ -48,7 +48,9 @@ Town entry opens centered behind Arin through the Kingdom of Neris sign. After
 20 seconds without keyboard or mouse activity, inspection orbit starts. Any input
 stops that automatic orbit and restarts the idle countdown. Party control still
 requires Tab.
-The V Orbit slider spans the full -20 to 80 degree elevation range.
+The V Orbit slider spans 8 to 80 degrees in inspection. Party control and the initial
+arrival shot retain -20 to 80 degrees. Orbiting around the party is inspection,
+so it cannot aim up into the sky at maximum zoom.
 The minimap shows the selected
 leader's name and X/Y/Z, **Old Castle** and **Comm Tower** labels. Movement fades
 it to 80%, with a ten-second hold after stopping; M explicitly overrides visibility.
@@ -65,7 +67,8 @@ clips and calibration; the chosen leader becomes visible immediately.
 The fixed 32-degree lens uses distance zoom (80-18,000 native units). Normal drone
 following stays low, slightly looking up toward the horizon, with slow translation
 and turning. Royal/HQ grounds and doorway approaches use a close trailing view;
-upward stair height raises its aim. Manual elevation allows -20 to 80 degrees.
+upward stair height raises its aim. Inspection elevation stays above its target;
+party control retains the low horizon range.
 Explicit Tab framing bypasses the slow follow solver during its one-second ease.
 Elevated views increase the near clipping distance with camera height to retain
 depth precision between bridge paving and its support deck. Ground-level and

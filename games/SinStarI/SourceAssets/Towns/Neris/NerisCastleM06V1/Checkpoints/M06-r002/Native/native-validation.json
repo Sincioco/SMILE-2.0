@@ -1,0 +1,33 @@
+{
+  "date": "2026-09-28",
+  "revision": "M06-r002",
+  "viewerExecutable": "D:/SMILE 2.0/tools/Character3DViewer/bin/Release/Character3DViewer.exe",
+  "sourceModels": 9,
+  "staticParts": 39,
+  "movingParts": 3,
+  "liveVisualChecks": [
+    "Detailed exterior, full castle crown and bridge visible together",
+    "Existing castles, rectangular land, roads and normal-height approach preserved",
+    "Visit West Castle automatically lowered the detailed leaf for Arin",
+    "Water receives castle shadows in the current native town",
+    "Party-to-inspection transition clamps vertical orbit to 8 degrees",
+    "Vertical slider, zoom out/in, left-drag pan and Fit exercised"
+  ],
+  "automatedChecks": {
+    "bridgeSweepPoses": 91,
+    "routeCrossSections": 422,
+    "portableGLB": "finite accessors, valid indices, embedded textures, pivot/axis/bounds; zero degenerate UV triangles",
+    "nativeCooking": "8 static chunks and 3-part leaf; full Model3DAsset pipeline succeeded",
+    "town": "Routes and Scene pass, including 42 objects/3 moving parts and party approach/departure",
+    "water": "WARP actual-shader shadow off/on, unoccluded stability and SRV release pass; Water Lab zero failures",
+    "hardening": "49 calibration checks and 58 native graphics/input/audio checks pass; Web deliberately skipped",
+    "style": "9 changed SMILE files pass",
+    "vsix": "2.0.64 built/installed; 35 installed payload hashes verified"
+  },
+  "limits": [
+    "No separate raw-glTF viewer or Khronos validator used",
+    "Native fixture checks simulated slow/moderate orbit, pan, zoom and reset; live UI checks do not claim a manually injected middle-button drag",
+    "Dimensions and artistic parity remain unapproved",
+    "Blender window remained minimized; source camera framing saved and actual Viewer displayed at x473/y0, 1440x1025"
+  ]
+}

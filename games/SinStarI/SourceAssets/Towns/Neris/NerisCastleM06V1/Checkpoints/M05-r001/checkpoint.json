@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "milestone": "M05",
+  "revision": "r001",
+  "status": "evidence-complete",
+  "source_blend": "D:/Projects/Sin-Star-I-Assets/Neris-Castle/source/neris-castle-M05-r001.blend",
+  "source_sha256": "94dd0957182a64585756acc08863111b502c638cf03d26efdc3acbc537f7e159",
+  "specification_id": "neris-castle-proposal-v1",
+  "specification_sha256": "5e2892d8c826f2499980acc9bf62e7ff59f0b7c017c4d38df71a7ac381aa607c",
+  "camera_spec_sha256": "53eb9bd0454d99e262bfd52d2c69bcf6d701ba5ad68f62a3bbdc7657d6c3c414",
+  "changed_owners": [
+    "Materials",
+    "Palace",
+    "Gatehouse",
+    "Fortifications",
+    "Courtyard",
+    "Bridge hardware"
+  ],
+  "tests": [
+    {
+      "record": "bridge-sweep.json"
+    },
+    {
+      "record": "measured-checks.json"
+    },
+    {
+      "record": "route-checks.json"
+    }
+  ],
+  "images": [
+    "back.png",
+    "banner-detail.png",
+    "contact-sheet.png",
+    "courtyard-raised.png",
+    "dome-detail.png",
+    "entrance-detail.png",
+    "front.png",
+    "gate-detail.png",
+    "hero-front.png",
+    "hero-three-quarter.png",
+    "left.png",
+    "right.png",
+    "top.png",
+    "tower-detail.png"
+  ],
+  "deviations": [
+    "Dimensions remain proposed; explicit dimension approval was not inferred.",
+    "User requested autonomous continuation through detail and native integration.",
+    "No palace interiors; the route ends at the closed exterior door."
+  ],
+  "approval": {
+    "state": "not-explicitly-approved",
+    "user_response_reference": "keep working autonomously. Don’t wait for me to approve or review anything.",
+    "approved_revision": null
+  },
+  "next_allowed_action": "Complete the authorized exterior/native delivery; do not start interiors or another asset."
+}

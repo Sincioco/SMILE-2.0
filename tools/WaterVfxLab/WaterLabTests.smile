@@ -34,7 +34,7 @@ Lab.Orbit = False
 Do
 
     Call Check(Lab.Ready)
-    Call Check(Lab.Background.Ready)
+    Call Check(Lab.Backgrounds.Landscape.Ready)
     Call Check(Lab.Floor.ReflectionsEnabled)
     Call Check(Lab.SpeedPercent = 200)
 
@@ -244,10 +244,10 @@ Sub CheckKael(ByRef Value As Scene.State)
 
     Call Scene.Update(Value, 0)
     Call Check(Value.Frame.Realistic)
-    Call UI.Update(Value, KEY_F)
+    Call UI.Update(Value, KEY_E)
     Call Scene.Update(Value, 0)
     Call Check(Not Value.Frame.Realistic And Value.Time = 1500 And Value.Paused)
-    Call UI.Update(Value, KEY_F)
+    Call UI.Update(Value, KEY_E)
     Call Scene.Update(Value, 0)
     Call Check(Value.Frame.Realistic And Value.Time = 1500)
 
@@ -620,7 +620,7 @@ Sub CheckBackgrounds(ByRef Value As Scene.State)
     TextureCount = G.LiveTextureCount3D()
     SavedTime = Value.Time
 
-    Call Check(Value.BackgroundIndex = 3 And Value.TitleBackground.Ready)
+    Call Check(Value.BackgroundIndex = 3 And Value.Backgrounds.Title.Ready)
 
     For Index = 1 To 5
 

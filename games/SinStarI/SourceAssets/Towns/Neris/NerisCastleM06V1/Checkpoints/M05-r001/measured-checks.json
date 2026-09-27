@@ -1,0 +1,58 @@
+{
+  "status": "ok",
+  "result": {
+    "owners": {
+      "Site": {
+        "objects": 6,
+        "triangles": 64
+      },
+      "Fortifications": {
+        "objects": 511,
+        "triangles": 67626
+      },
+      "Gatehouse": {
+        "objects": 176,
+        "triangles": 25808
+      },
+      "Bridge": {
+        "objects": 53,
+        "triangles": 880
+      },
+      "Palace": {
+        "objects": 766,
+        "triangles": 136887
+      },
+      "Courtyard": {
+        "objects": 480,
+        "triangles": 20464
+      }
+    },
+    "total_triangles": 251729,
+    "materials": [
+      "NC.MAT.BannerTeal",
+      "NC.MAT.BridgeTimber",
+      "NC.MAT.CrystalBlue",
+      "NC.MAT.DarkIron",
+      "NC.MAT.Foliage",
+      "NC.MAT.IvoryStone",
+      "NC.MAT.Masonry",
+      "NC.MAT.Moat",
+      "NC.MAT.RoyalGold",
+      "NC.MAT.TealRoof",
+      "NC.MAT.WarmWindow"
+    ],
+    "material_count": 11,
+    "source_texture_dimensions": [
+      1024,
+      1024
+    ],
+    "estimated_rgba8_texture_mip_residency_mib": 5.333333,
+    "source": "D:\\Projects\\Sin-Star-I-Assets\\Neris-Castle\\source\\neris-castle-M05-r001.blend",
+    "emission_strength": 0,
+    "bloom": "not used",
+    "geometry_budget": 350000,
+    "triangle_review_stop": 500000,
+    "textures_portable": true
+  },
+  "stdout": "Info: Saved as \"neris-castle-M05-r001.blend\"\n"
+}

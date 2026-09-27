@@ -1,0 +1,761 @@
+{
+  "algorithm": "SHA-256",
+  "revision": "M06-r002",
+  "files": [
+    {
+      "path": "Automation/contact-sheet.mjs",
+      "bytes": 6448,
+      "sha256": "901f109b15f1c8168ddc8ed5ebb51b69e6f2b70f9ce4d52d721425d33fab68f6",
+      "normalizedSha256": "901f109b15f1c8168ddc8ed5ebb51b69e6f2b70f9ce4d52d721425d33fab68f6"
+    },
+    {
+      "path": "Automation/m02-entry.mjs",
+      "bytes": 3100,
+      "sha256": "c0dce72870471e0b153a7d1bb036ccbe71d45358231fb8612b65106ac4dd18b8",
+      "normalizedSha256": "c0dce72870471e0b153a7d1bb036ccbe71d45358231fb8612b65106ac4dd18b8"
+    },
+    {
+      "path": "Automation/m03-facade.mjs",
+      "bytes": 7812,
+      "sha256": "349c67c08b5e15622c3bb0651c52ef96eaab545867ac53eae3475ff243fc2a35",
+      "normalizedSha256": "349c67c08b5e15622c3bb0651c52ef96eaab545867ac53eae3475ff243fc2a35"
+    },
+    {
+      "path": "Automation/m03-towers.mjs",
+      "bytes": 4253,
+      "sha256": "e793ca2b95912ec16198d496a73e80e2bd99ee2c787be7118b45033dd5fc15a3",
+      "normalizedSha256": "e793ca2b95912ec16198d496a73e80e2bd99ee2c787be7118b45033dd5fc15a3"
+    },
+    {
+      "path": "Automation/m04-courtyard.mjs",
+      "bytes": 5625,
+      "sha256": "246878d2de9883c5295d4475a1e0e476d185571b6b4bd4cd61a6e57d6c3b21b0",
+      "normalizedSha256": "246878d2de9883c5295d4475a1e0e476d185571b6b4bd4cd61a6e57d6c3b21b0"
+    },
+    {
+      "path": "Automation/m05-heraldry.mjs",
+      "bytes": 5350,
+      "sha256": "14d6909f02d175a24955e601a33897624b9c2b529653e56feb920da5c6ee339a",
+      "normalizedSha256": "14d6909f02d175a24955e601a33897624b9c2b529653e56feb920da5c6ee339a"
+    },
+    {
+      "path": "Automation/m05-materials.mjs",
+      "bytes": 4561,
+      "sha256": "640c52cc926fc7db69c6348825745b1311faa65d7f3130a4c09188b734133c63",
+      "normalizedSha256": "640c52cc926fc7db69c6348825745b1311faa65d7f3130a4c09188b734133c63"
+    },
+    {
+      "path": "Automation/m05-ornament.mjs",
+      "bytes": 3912,
+      "sha256": "f818ea696f51727827e57c9f3559e5c73f52f8fc20f839f61b8161d90b909db4",
+      "normalizedSha256": "f818ea696f51727827e57c9f3559e5c73f52f8fc20f839f61b8161d90b909db4"
+    },
+    {
+      "path": "Automation/m06-export.mjs",
+      "bytes": 4922,
+      "sha256": "51556937e5c3233e0d1b4ccb3f66224a7ebed73bf81fca157b8184312da7aea0",
+      "normalizedSha256": "51556937e5c3233e0d1b4ccb3f66224a7ebed73bf81fca157b8184312da7aea0"
+    },
+    {
+      "path": "Automation/m06-native.mjs",
+      "bytes": 3931,
+      "sha256": "11f7778c33fe50049d6ceb3f73b0e938aa52a4c86ef253f731b0d4d7eff5c8d0",
+      "normalizedSha256": "11f7778c33fe50049d6ceb3f73b0e938aa52a4c86ef253f731b0d4d7eff5c8d0"
+    },
+    {
+      "path": "Automation/masonry-texture.mjs",
+      "bytes": 1653,
+      "sha256": "e00b3e675c4e5f3828cc509176cf839a16cb833d062df10162dda7868db567ed",
+      "normalizedSha256": "e00b3e675c4e5f3828cc509176cf839a16cb833d062df10162dda7868db567ed"
+    },
+    {
+      "path": "Automation/model-primitives.mjs",
+      "bytes": 4974,
+      "sha256": "4954dd4794ed521a5e538121e64244bddaa310ef2ef8e52a87518886fbb27fbd",
+      "normalizedSha256": "4954dd4794ed521a5e538121e64244bddaa310ef2ef8e52a87518886fbb27fbd"
+    },
+    {
+      "path": "Automation/prepare-town-ground.mjs",
+      "bytes": 3981,
+      "sha256": "aed7cb4cbd97b3c30f2f4ee2a0c12ba6a157a9d755a9fedef2b3ecc8fbfa0aab",
+      "normalizedSha256": "aed7cb4cbd97b3c30f2f4ee2a0c12ba6a157a9d755a9fedef2b3ecc8fbfa0aab"
+    },
+    {
+      "path": "Automation/README.md",
+      "bytes": 1760,
+      "sha256": "ab78a9da3516cbb9635b7f2f09465f46e1241e9bfa26e29a85447f2e9f583165",
+      "normalizedSha256": "ab78a9da3516cbb9635b7f2f09465f46e1241e9bfa26e29a85447f2e9f583165"
+    },
+    {
+      "path": "Automation/validate-m01.mjs",
+      "bytes": 5858,
+      "sha256": "60f6a6cd223f4494de00773d9f8bb7e4bb9ab9f7b927e3e73fbd3fba91273f47",
+      "normalizedSha256": "60f6a6cd223f4494de00773d9f8bb7e4bb9ab9f7b927e3e73fbd3fba91273f47"
+    },
+    {
+      "path": "Automation/validate-m06.mjs",
+      "bytes": 4294,
+      "sha256": "f312e95cfe58678c6e6cc015c0a08e2499abbed6a8819518c18229068b1569cd",
+      "normalizedSha256": "f312e95cfe58678c6e6cc015c0a08e2499abbed6a8819518c18229068b1569cd"
+    },
+    {
+      "path": "castle.glb",
+      "bytes": 24930680,
+      "sha256": "cb1a61c079dd260fc46cb97f149b2c31c8bcdfe0fbf36584e23215f66cc513bf"
+    },
+    {
+      "path": "Castle.sm3d.json",
+      "bytes": 14,
+      "sha256": "50208d78350a7a160dec59a82df1499b6ca7da33e54c5eb11c97e342118e68bb",
+      "normalizedSha256": "50208d78350a7a160dec59a82df1499b6ca7da33e54c5eb11c97e342118e68bb"
+    },
+    {
+      "path": "Checkpoints/M02-r001/checkpoint.json",
+      "bytes": 1369,
+      "sha256": "85165c344a47ed601ef4f945545b5c97dcd81fd7de504b6562d29c8c249b4ebf",
+      "normalizedSha256": "85165c344a47ed601ef4f945545b5c97dcd81fd7de504b6562d29c8c249b4ebf"
+    },
+    {
+      "path": "Checkpoints/M02-r001/checkpoint.md",
+      "bytes": 816,
+      "sha256": "f7dbdd75055ea220b06ef1e1dc877d36409335f8533513daec787eee3d4aac1b",
+      "normalizedSha256": "f7dbdd75055ea220b06ef1e1dc877d36409335f8533513daec787eee3d4aac1b"
+    },
+    {
+      "path": "Checkpoints/M02-r001/front.png",
+      "bytes": 838764,
+      "sha256": "b79e26e2102b012bcc032d917da04dfddcb663aef259e942acadcf118ccd931d"
+    },
+    {
+      "path": "Checkpoints/M02-r001/gate-0.png",
+      "bytes": 1009728,
+      "sha256": "34f5f411bdd449caf6ebcf69ae99e655a850ea8b7c636ef888b86a2d53ed187f"
+    },
+    {
+      "path": "Checkpoints/M02-r001/gate-45.png",
+      "bytes": 993244,
+      "sha256": "ac6f5cbb7bf5b0e92044a86e8e1a0dd829de726b7aa4074a0fd87be59399ae4a"
+    },
+    {
+      "path": "Checkpoints/M02-r001/gate-90.png",
+      "bytes": 953896,
+      "sha256": "5f03b27c411ce95c0bea7410961075714e13f60daec10c9faa4a60232cabd66a"
+    },
+    {
+      "path": "Checkpoints/M02-r001/hero-three-quarter.png",
+      "bytes": 954010,
+      "sha256": "a1a277756631bfa08b311ac2401b447fe5c0f770b50d9a1f591d53a95e644b7c"
+    },
+    {
+      "path": "Checkpoints/M02-r001/measured-checks.json",
+      "bytes": 694,
+      "sha256": "12b7805a47ea0d72258770ff1dc605898d4951b76f63e8cfc1b72606214abc55",
+      "normalizedSha256": "12b7805a47ea0d72258770ff1dc605898d4951b76f63e8cfc1b72606214abc55"
+    },
+    {
+      "path": "Checkpoints/M02-r001/top.png",
+      "bytes": 1692691,
+      "sha256": "a73aa2f71ac1b6bc8631f1a7aef85b8886803733ddb0c15b2945756bb45345e6"
+    },
+    {
+      "path": "Checkpoints/M03-r001/back.png",
+      "bytes": 1786383,
+      "sha256": "e051024dc02cc8ddad18c90b7846e3c164ef2a5265c24c4d77c3611803c794d8"
+    },
+    {
+      "path": "Checkpoints/M03-r001/checkpoint.json",
+      "bytes": 1551,
+      "sha256": "bd07c51cd21faa7aa12e40804200b67acd4fbdf8c33e209979d0f5769ab62149",
+      "normalizedSha256": "bd07c51cd21faa7aa12e40804200b67acd4fbdf8c33e209979d0f5769ab62149"
+    },
+    {
+      "path": "Checkpoints/M03-r001/checkpoint.md",
+      "bytes": 1247,
+      "sha256": "ba01c2e1b13768a241eed160313d3b817d29b25a77ddb79b787f668d68d54514",
+      "normalizedSha256": "ba01c2e1b13768a241eed160313d3b817d29b25a77ddb79b787f668d68d54514"
+    },
+    {
+      "path": "Checkpoints/M03-r001/contact-sheet.png",
+      "bytes": 1542564,
+      "sha256": "89bc1b1be6a0b9abf79655e158983f8e9f805cb39522597918a7d0d66c5e410f"
+    },
+    {
+      "path": "Checkpoints/M03-r001/dome-detail.png",
+      "bytes": 1436529,
+      "sha256": "9036be9473dd08fd95c360fd1c436239d7253424095b805e3d035c383d4ba67b"
+    },
+    {
+      "path": "Checkpoints/M03-r001/entrance-clay.png",
+      "bytes": 1802248,
+      "sha256": "5a0ea2de9196447698b4a6bf6453f13cb1eb6723df149021f638d6aa401dc296"
+    },
+    {
+      "path": "Checkpoints/M03-r001/entrance-detail.png",
+      "bytes": 1879015,
+      "sha256": "dda4b5956f21908ec29c5b5b953e4d15faec15f452ba939f9a56fa1b9a0e26e9"
+    },
+    {
+      "path": "Checkpoints/M03-r001/front.png",
+      "bytes": 1806856,
+      "sha256": "3ab5f2222e7817b0619d46552d440411d221da3993d0d1cc8cd581bbea4274f4"
+    },
+    {
+      "path": "Checkpoints/M03-r001/hero-front.png",
+      "bytes": 3048832,
+      "sha256": "36de852017fcbfc36dbdf9e111f8fd72f67e8d2aca37bfc29a945fddf33efb49"
+    },
+    {
+      "path": "Checkpoints/M03-r001/hero-three-quarter.png",
+      "bytes": 3106217,
+      "sha256": "46981c9d8d47a382b7835d6e8ad62f9bd5f914657857a92b059e3cf0d0a4a069"
+    },
+    {
+      "path": "Checkpoints/M03-r001/left.png",
+      "bytes": 1786027,
+      "sha256": "1749af61cbb08add0f3712b0df05da3d46c561dd41d904e1bb6e5eef61160b8d"
+    },
+    {
+      "path": "Checkpoints/M03-r001/measured-checks.json",
+      "bytes": 2128,
+      "sha256": "731e9d0bb87a5e175fa937b428e3f96b1832818f358a50f04ddc9d00251f6d48",
+      "normalizedSha256": "731e9d0bb87a5e175fa937b428e3f96b1832818f358a50f04ddc9d00251f6d48"
+    },
+    {
+      "path": "Checkpoints/M03-r001/prototype.png",
+      "bytes": 1334835,
+      "sha256": "ebe70436dc47906cf0a76a5b1618468f339e25b7a48d1136d255d821c275b972"
+    },
+    {
+      "path": "Checkpoints/M03-r001/right.png",
+      "bytes": 1787308,
+      "sha256": "ab8b6318e3e999f5a2895575900bf9d9d1bcbff5d9e06d1478dc3c06d85ff8e1"
+    },
+    {
+      "path": "Checkpoints/M03-r001/top.png",
+      "bytes": 3582240,
+      "sha256": "d169a2eb9676e31b5254da1a847485ed3f56495fb3101ef9bfcf556ea60a8c9c"
+    },
+    {
+      "path": "Checkpoints/M03-r001/tower-detail.png",
+      "bytes": 1546188,
+      "sha256": "9b88b5e2b5e01cf9ebc1a2baf29f9149aa72274e7f192ebc15cf18842a486154"
+    },
+    {
+      "path": "Checkpoints/M04-r001/back.png",
+      "bytes": 1792392,
+      "sha256": "a8a00a16f23e39132895e6f48eff6c411d316e5e155f21f76ac6b7efe3683581"
+    },
+    {
+      "path": "Checkpoints/M04-r001/checkpoint.json",
+      "bytes": 1527,
+      "sha256": "8759202b54aa0b611e6726669041ac40ceddac45031c23732f7e8cf03cebea43",
+      "normalizedSha256": "8759202b54aa0b611e6726669041ac40ceddac45031c23732f7e8cf03cebea43"
+    },
+    {
+      "path": "Checkpoints/M04-r001/checkpoint.md",
+      "bytes": 1271,
+      "sha256": "fff42b48beaed37932e4fcc515d2399353cf5d021c1c6a134e0f31f2ff40cf49",
+      "normalizedSha256": "fff42b48beaed37932e4fcc515d2399353cf5d021c1c6a134e0f31f2ff40cf49"
+    },
+    {
+      "path": "Checkpoints/M04-r001/contact-sheet.png",
+      "bytes": 1566251,
+      "sha256": "dd037d2baf136be14751cc39343eb0760bca6320f613b59a2dc7e0ca9b2ecdf4"
+    },
+    {
+      "path": "Checkpoints/M04-r001/courtyard-eye.png",
+      "bytes": 2034354,
+      "sha256": "a319ffa424cc737d6d9909297ebd0c44c363c42f16ca768066e7adfb086ebfae"
+    },
+    {
+      "path": "Checkpoints/M04-r001/courtyard-raised.png",
+      "bytes": 1687311,
+      "sha256": "0f03355c4627a5dab3d34b8384f8636d138bc5aa25f24371fb69b2ef864ab14f"
+    },
+    {
+      "path": "Checkpoints/M04-r001/front.png",
+      "bytes": 1809919,
+      "sha256": "18c3218147087c46a8682b5ac8f59df02e97696c671e3a0907394b3b64aca07f"
+    },
+    {
+      "path": "Checkpoints/M04-r001/gate-exit-route.png",
+      "bytes": 2065898,
+      "sha256": "f862524f363a68be85545f007878c8b879a6bf10a37e04b191eaf789d16c2bfd"
+    },
+    {
+      "path": "Checkpoints/M04-r001/hero-front.png",
+      "bytes": 3074238,
+      "sha256": "dbfcc706f663093a586862dd9144dd9acce9ff80d73a944fd594eeaa74657655"
+    },
+    {
+      "path": "Checkpoints/M04-r001/hero-three-quarter.png",
+      "bytes": 3151949,
+      "sha256": "7484db7b0059c0f6843632eb9d533b3c832ebf15f2ebf397a913a5a6f3165963"
+    },
+    {
+      "path": "Checkpoints/M04-r001/left.png",
+      "bytes": 1790322,
+      "sha256": "50df4ea9790fe5a4b722e5c71539b1a2496dc477866b6fa926080aea97a03de4"
+    },
+    {
+      "path": "Checkpoints/M04-r001/right.png",
+      "bytes": 1792416,
+      "sha256": "b5c3f07b91a38246f9a8a5bcdb2eb161cc504a1fad658efaaefa846f32ef1c66"
+    },
+    {
+      "path": "Checkpoints/M04-r001/route-checks.json",
+      "bytes": 661,
+      "sha256": "466753a95e03b35e9cb7e92054f9ecf03ff4c6c65ca72f611385d747cff6f343",
+      "normalizedSha256": "466753a95e03b35e9cb7e92054f9ecf03ff4c6c65ca72f611385d747cff6f343"
+    },
+    {
+      "path": "Checkpoints/M04-r001/top.png",
+      "bytes": 3603881,
+      "sha256": "c3f3ac91268227dadb6692f812944b81e6f6f30068acbf5fa6a8a6edaf219ac1"
+    },
+    {
+      "path": "Checkpoints/M05-r001/back.png",
+      "bytes": 1837220,
+      "sha256": "70516885f29e8f6f6258cafd918e8d04a8bd4d4b4b59b8cf05bcfd0d8962a315"
+    },
+    {
+      "path": "Checkpoints/M05-r001/banner-detail.png",
+      "bytes": 1447932,
+      "sha256": "27583b2a8395e4110553b1f7627ef7c34958bfc27a4c975729de28401c1d0c9e"
+    },
+    {
+      "path": "Checkpoints/M05-r001/bridge-sweep.json",
+      "bytes": 77,
+      "sha256": "c7d52f3bafabdfb3d61c337c7e43580f81bffbecf20551d3980fe37c04db54f8",
+      "normalizedSha256": "c7d52f3bafabdfb3d61c337c7e43580f81bffbecf20551d3980fe37c04db54f8"
+    },
+    {
+      "path": "Checkpoints/M05-r001/checkpoint.json",
+      "bytes": 1736,
+      "sha256": "7dcfe5d406c7ac466090d387758cdf603ce73d26fe66ecde86f15fe9f122fbc7",
+      "normalizedSha256": "7dcfe5d406c7ac466090d387758cdf603ce73d26fe66ecde86f15fe9f122fbc7"
+    },
+    {
+      "path": "Checkpoints/M05-r001/checkpoint.md",
+      "bytes": 1644,
+      "sha256": "7a679bdbf98af3599a9fa5ebfe5774e82d9a8529e00a5b0b0f3e3318d79e4b07",
+      "normalizedSha256": "7a679bdbf98af3599a9fa5ebfe5774e82d9a8529e00a5b0b0f3e3318d79e4b07"
+    },
+    {
+      "path": "Checkpoints/M05-r001/contact-sheet.png",
+      "bytes": 1709103,
+      "sha256": "d2b8d52ed0335029d9fb96d0213f8e75d109b02b55916d1c4e4a609283802207"
+    },
+    {
+      "path": "Checkpoints/M05-r001/courtyard-raised.png",
+      "bytes": 1900420,
+      "sha256": "db53f8bcb048d5e497f69903e1ba4161ec1008671ed0d21fd2b25cfc1275ceec"
+    },
+    {
+      "path": "Checkpoints/M05-r001/dome-detail.png",
+      "bytes": 1818846,
+      "sha256": "9daed0e2d9b1235ba9e63fa62a4f5e7d47cb8b8680095eeb58efedccce0c4ee2"
+    },
+    {
+      "path": "Checkpoints/M05-r001/entrance-detail.png",
+      "bytes": 2017240,
+      "sha256": "0156cf054f49d42c699974d98daaf6554abc5b5956697e828d526e4a595e0c8b"
+    },
+    {
+      "path": "Checkpoints/M05-r001/front.png",
+      "bytes": 1868536,
+      "sha256": "85727edcf47d982977ce1776439408d647b5547b1780901c1c95be211591ef0c"
+    },
+    {
+      "path": "Checkpoints/M05-r001/gate-detail.png",
+      "bytes": 2318382,
+      "sha256": "b14af2f57611c5e52f548d5d084cfa4f367c5ae8388ee2bd24358884ad29be11"
+    },
+    {
+      "path": "Checkpoints/M05-r001/hero-front.png",
+      "bytes": 3183128,
+      "sha256": "11bde6407092b59ea0ec1d9895415095d9005e525e82f2238623533af2a2ada4"
+    },
+    {
+      "path": "Checkpoints/M05-r001/hero-three-quarter.png",
+      "bytes": 3292807,
+      "sha256": "f15e61c78fdfd4b45e5e67bc6608e33b5393edf9232d3d6c09f0490cedc6a4bf"
+    },
+    {
+      "path": "Checkpoints/M05-r001/left.png",
+      "bytes": 1831756,
+      "sha256": "7dc18ba7385bc950805bb9cecd4fb0ebe23197440a8b6640547215490f4b3bee"
+    },
+    {
+      "path": "Checkpoints/M05-r001/measured-checks.json",
+      "bytes": 1337,
+      "sha256": "6401da82f99518b643a1e30d70378a1f6b123f102835c8f31a954b76ccaff7c6",
+      "normalizedSha256": "6401da82f99518b643a1e30d70378a1f6b123f102835c8f31a954b76ccaff7c6"
+    },
+    {
+      "path": "Checkpoints/M05-r001/right.png",
+      "bytes": 1834692,
+      "sha256": "52f995b740962dfcfaf1d342c87e3f3363258c9e1b82e6fca548133fc753341d"
+    },
+    {
+      "path": "Checkpoints/M05-r001/route-checks.json",
+      "bytes": 661,
+      "sha256": "466753a95e03b35e9cb7e92054f9ecf03ff4c6c65ca72f611385d747cff6f343",
+      "normalizedSha256": "466753a95e03b35e9cb7e92054f9ecf03ff4c6c65ca72f611385d747cff6f343"
+    },
+    {
+      "path": "Checkpoints/M05-r001/top.png",
+      "bytes": 3620659,
+      "sha256": "8bace2b09a701d09f07bffdc403c4655cd594c775f8c069569357ea31204f659"
+    },
+    {
+      "path": "Checkpoints/M05-r001/tower-detail.png",
+      "bytes": 1984770,
+      "sha256": "ad51092e5ef150ceda899c5acefea3498fa52a43060f44d530fb73ebea59bf74"
+    },
+    {
+      "path": "Checkpoints/M06-r001/axis-probe.glb",
+      "bytes": 26769984,
+      "sha256": "2ed052c46d9df4ee66f08c3ac6ad34452ff7045412e197eae93a88b72582f636"
+    },
+    {
+      "path": "Checkpoints/M06-r001/back.png",
+      "bytes": 2145458,
+      "sha256": "900cddf058446ca4f61d9df78999919a53547f74e8f62bbc146447c734154c76"
+    },
+    {
+      "path": "Checkpoints/M06-r001/bridge-0.png",
+      "bytes": 1311166,
+      "sha256": "38b24a6e242041a65c60ec6bb9723cf7a37aeee5e70f28bd7f49798281c5adde"
+    },
+    {
+      "path": "Checkpoints/M06-r001/bridge-45.png",
+      "bytes": 1310131,
+      "sha256": "c7f5d496c4a1a2c96e78fac47622e019f680005fbe15df9c9e6f7b868dc87d53"
+    },
+    {
+      "path": "Checkpoints/M06-r001/bridge-90.png",
+      "bytes": 1266234,
+      "sha256": "1d9e50c6cb22d4f981247ce67159f391b55dfb21efa5c7388d493a889ba4124e"
+    },
+    {
+      "path": "Checkpoints/M06-r001/bridge-poses.json",
+      "bytes": 717,
+      "sha256": "fc4cc3c912b030114e4469ea609a9e8da44ddde4930195d7331b625c5dcd8bf0",
+      "normalizedSha256": "fc4cc3c912b030114e4469ea609a9e8da44ddde4930195d7331b625c5dcd8bf0"
+    },
+    {
+      "path": "Checkpoints/M06-r001/contact-sheet.png",
+      "bytes": 1709025,
+      "sha256": "d062bd4baea5ccdabd9d7d473f3bf930fb594e9dd6a14ae62e9c3bae1bb226ad"
+    },
+    {
+      "path": "Checkpoints/M06-r001/entrance-detail.png",
+      "bytes": 2380728,
+      "sha256": "03002962a350f1b6918ed2cd4c39efb73bece390f7a58586048497660d326161"
+    },
+    {
+      "path": "Checkpoints/M06-r001/front.png",
+      "bytes": 2174264,
+      "sha256": "3c3742bb4ab13e8c5117e46dc866d82385df91b58fbb77e67c4130711c391125"
+    },
+    {
+      "path": "Checkpoints/M06-r001/hero-front.png",
+      "bytes": 3715398,
+      "sha256": "51d695cfd9be2ced20d88a36a9fac40d92b9af0b7eb63a5944e0322145b632d7"
+    },
+    {
+      "path": "Checkpoints/M06-r001/hero-three-quarter.png",
+      "bytes": 3842990,
+      "sha256": "93a6b9511ff17d1bec74675d2266c4427a74411e7368da160553232e80b0fc4b"
+    },
+    {
+      "path": "Checkpoints/M06-r001/left.png",
+      "bytes": 2133661,
+      "sha256": "bf50153aa0f99318c592722da11d5bac2b057fde1bb5a7e3db0bf1d47aa5a5c8"
+    },
+    {
+      "path": "Checkpoints/M06-r001/right.png",
+      "bytes": 2143727,
+      "sha256": "1dd13e88b2fac7af9d5546a094825a9a6780afd9414f3383dd9ac6e41741a2a3"
+    },
+    {
+      "path": "Checkpoints/M06-r001/roundtrip-checks.json",
+      "bytes": 3545,
+      "sha256": "afd3fd4df680a53291dc09c283bba978114519d4eeb9b0e79b8466eb296c4290",
+      "normalizedSha256": "afd3fd4df680a53291dc09c283bba978114519d4eeb9b0e79b8466eb296c4290"
+    },
+    {
+      "path": "Checkpoints/M06-r001/top.png",
+      "bytes": 4263601,
+      "sha256": "ecb1f71f3a240e03cc4eb6a907c00eb271a55a55dfe8b33c350bf6d8593b3620"
+    },
+    {
+      "path": "Checkpoints/M06-r002/back.png",
+      "bytes": 2145451,
+      "sha256": "2f4e70eee5a59c9a4d0524d2f795ae845e02de66437215be0ff3c3521d8727de"
+    },
+    {
+      "path": "Checkpoints/M06-r002/bridge-0.png",
+      "bytes": 1312743,
+      "sha256": "62a9a91d7e70a8d422beaf1062cb40a493b34ced78a38abecff897c24237ce74"
+    },
+    {
+      "path": "Checkpoints/M06-r002/bridge-45.png",
+      "bytes": 1312264,
+      "sha256": "f3c43e4f8b026babaf2ff0449f3317db59baba36379da833d69c8e0c041e8cb3"
+    },
+    {
+      "path": "Checkpoints/M06-r002/bridge-90.png",
+      "bytes": 1267217,
+      "sha256": "a1d532cf5dc2503045d6d21e62e70a982df812360be73407d12a2b83cf07232d"
+    },
+    {
+      "path": "Checkpoints/M06-r002/checkpoint.json",
+      "bytes": 2964,
+      "sha256": "b51581f9dca677789e50e9c9cfb35de9ff6dee9a0caef42cfb073c269c2479f9",
+      "normalizedSha256": "b51581f9dca677789e50e9c9cfb35de9ff6dee9a0caef42cfb073c269c2479f9"
+    },
+    {
+      "path": "Checkpoints/M06-r002/checkpoint.md",
+      "bytes": 6099,
+      "sha256": "f1720156595bd0e16e7442a2ab0034c05f6dc16d9b965aacfa9ca8973ab0217c",
+      "normalizedSha256": "f1720156595bd0e16e7442a2ab0034c05f6dc16d9b965aacfa9ca8973ab0217c"
+    },
+    {
+      "path": "Checkpoints/M06-r002/contact-sheet.png",
+      "bytes": 1709268,
+      "sha256": "0619aebf1c2985a7dee121a977fa79aca90faa36c8a8cdf1f44024c10c5118bb"
+    },
+    {
+      "path": "Checkpoints/M06-r002/entrance-detail.png",
+      "bytes": 2380277,
+      "sha256": "71d5e410135f51a03b8279abc8ec203fa2828733d9e5c559cb31d6f8da4c7300"
+    },
+    {
+      "path": "Checkpoints/M06-r002/front.png",
+      "bytes": 2174565,
+      "sha256": "7ba92b9cb07954178f41fa03a0ea56de4dd30f21a55262b0ded8992e27fa079e"
+    },
+    {
+      "path": "Checkpoints/M06-r002/hero-front.png",
+      "bytes": 3715929,
+      "sha256": "1d3930681ecd45efeb6ea7cb5e2f6136128d46c5b5684d6f48faec67ef68542e"
+    },
+    {
+      "path": "Checkpoints/M06-r002/hero-three-quarter.png",
+      "bytes": 3843181,
+      "sha256": "c3f1e527f515ebb2cca4b346f79a3e288b36421e08646d525a31cdf12f550bd3"
+    },
+    {
+      "path": "Checkpoints/M06-r002/left.png",
+      "bytes": 2133660,
+      "sha256": "c0d6e8e3dc2e4339588111ca8ff9cfbd575737c63a7f9f07c9070cd3bac36fb3"
+    },
+    {
+      "path": "Checkpoints/M06-r002/Native/detailed-gate-and-lowered-bridge.png",
+      "bytes": 156375,
+      "sha256": "1a390d1908bab13485fdcf277b234f073411e56de267b78ac89ebf053cd4266c"
+    },
+    {
+      "path": "Checkpoints/M06-r002/Native/final-detailed-castle.png",
+      "bytes": 208459,
+      "sha256": "0da2cb9d7e8165fe6e98ee91e0b39648ec7ad9974843118ab7f8bee2066615a7"
+    },
+    {
+      "path": "Checkpoints/M06-r002/Native/final-inspection-minimum-pitch.png",
+      "bytes": 127867,
+      "sha256": "17ae5feb46f27f330596bf7baa84d98c31413e067a4993302cf82f7db62802f0"
+    },
+    {
+      "path": "Checkpoints/M06-r002/Native/final-town-water-shadows.png",
+      "bytes": 279942,
+      "sha256": "ebe55bbc469a78861ea91b81e6c04cffae6292a5007ad65f927779394af5b364"
+    },
+    {
+      "path": "Checkpoints/M06-r002/Native/hardening-final.log",
+      "bytes": 24028,
+      "sha256": "dbaecceeb39387ed6d8c319c249e1f6a6630f0139f6c33f8a5a6ddbc8be880cb",
+      "normalizedSha256": "7a445443e62070c6a2580d6c4f9542fc5b19febbda6cf1f93861dbce967325e6"
+    },
+    {
+      "path": "Checkpoints/M06-r002/Native/native-validation.json",
+      "bytes": 1836,
+      "sha256": "9c09cd576cd27ed1e551c0106441e14243292d18e0c083282031755659016861",
+      "normalizedSha256": "9c09cd576cd27ed1e551c0106441e14243292d18e0c083282031755659016861"
+    },
+    {
+      "path": "Checkpoints/M06-r002/Native/neris-tests-final.log",
+      "bytes": 1038,
+      "sha256": "eb486ccc59f299d70319d9b96d6c54a4c514816363d43062b5ef6afb52a5b74c",
+      "normalizedSha256": "a983f3278d49c87e2f86c9cab17f609f6ddfcd5381e2a1a4af8a39c7d4308f30"
+    },
+    {
+      "path": "Checkpoints/M06-r002/Native/runtime-build-final.log",
+      "bytes": 3682,
+      "sha256": "7ddc6ee4e41703f6322afd6c649d7848abc492bdc37db78e21fbb6d7fa0537a9",
+      "normalizedSha256": "61253d911f0e95f8898887888273a76d3730e4600464022bdc9c596f4e6d071c"
+    },
+    {
+      "path": "Checkpoints/M06-r002/Native/viewer-build-final.log",
+      "bytes": 20283,
+      "sha256": "69edd5a96aed72bc86a4d9a9590a02c92898be25630edc140c6330dc0684585d",
+      "normalizedSha256": "ecf92c9c510d56035fcb90fc6d90448aedf3c773a68311d80492343f637ba419"
+    },
+    {
+      "path": "Checkpoints/M06-r002/Native/water-tests-final.log",
+      "bytes": 872,
+      "sha256": "d56cbb9db911c482378356903d488ea8d634c3f97572e40e658d6011462bd7a5",
+      "normalizedSha256": "89bf22c145236a99ae67cba47dc14a3c8ea29966ec1347a1c2565b8ce9736ada"
+    },
+    {
+      "path": "Checkpoints/M06-r002/right.png",
+      "bytes": 2143676,
+      "sha256": "7a1100cd54e5f6f8337e144fce4371f8826d78a243d5453a8efa7c707ce4bb5a"
+    },
+    {
+      "path": "Checkpoints/M06-r002/roundtrip-checks.json",
+      "bytes": 668,
+      "sha256": "74b894611a9150efe6c17f05b3d2cb79ccc14bfe3f0c30498fe84bfd69dd89bd",
+      "normalizedSha256": "74b894611a9150efe6c17f05b3d2cb79ccc14bfe3f0c30498fe84bfd69dd89bd"
+    },
+    {
+      "path": "Checkpoints/M06-r002/top.png",
+      "bytes": 4264062,
+      "sha256": "c2da7e7f379be6ad65741303f7b33fb25fdc28eb62453b7eb643752542440927"
+    },
+    {
+      "path": "drawbridge.glb",
+      "bytes": 93144,
+      "sha256": "f07d7cac8e5f8574ce16a1ca3f679b0babf1f272e43a9cab4d049637e15cbea0"
+    },
+    {
+      "path": "export-settings.json",
+      "bytes": 2256,
+      "sha256": "af34e763b552051a1f9a7296c56e0a255738a34b7e9a5ee5b9805bf399566b77",
+      "normalizedSha256": "af34e763b552051a1f9a7296c56e0a255738a34b7e9a5ee5b9805bf399566b77"
+    },
+    {
+      "path": "Native/castle-00.glb",
+      "bytes": 2162240,
+      "sha256": "f17171d2ad352aaa3757e6f1c017438e784d7a0aa41a9de323424856f9de88e7"
+    },
+    {
+      "path": "Native/castle-01.glb",
+      "bytes": 3626456,
+      "sha256": "fb62311d110a091df4e92f21e148bf6a662d23a15a4b4402b48c02882ee8d640"
+    },
+    {
+      "path": "Native/castle-02.glb",
+      "bytes": 3309280,
+      "sha256": "7a1a4ae32aace3eedd37fe856100aad86cb4c25bbec18be67a0c3d3d059065e9"
+    },
+    {
+      "path": "Native/castle-03.glb",
+      "bytes": 2768144,
+      "sha256": "4e14449005113a4e302e5e8715c38a74aad13e2d92d76d75cfeca72dff56e459"
+    },
+    {
+      "path": "Native/castle-04.glb",
+      "bytes": 3962084,
+      "sha256": "25415434bed9e6a12a485ff4e1f531f67af56eeff2009b4b81fd542c4697c6ce"
+    },
+    {
+      "path": "Native/castle-05.glb",
+      "bytes": 3627688,
+      "sha256": "6bda12892620991bda272e060ebfb811a489c2f1cc1442a19fc967960299dc07"
+    },
+    {
+      "path": "Native/castle-06.glb",
+      "bytes": 3962084,
+      "sha256": "55fcdcd10b68a996a86148daed1a99915abb008e70974822cce8cdde7e98bbcc"
+    },
+    {
+      "path": "Native/castle-07.glb",
+      "bytes": 2155372,
+      "sha256": "3e34d6fe1199fc303a374135b3cffb45d6d1c798a5df90dbfc88dd4e31f9a485"
+    },
+    {
+      "path": "Native/native-layout.json",
+      "bytes": 3630,
+      "sha256": "921a467e8a62ce6f7e2e0121ab16987a8126f30c03a953abf1565e813ad42519",
+      "normalizedSha256": "921a467e8a62ce6f7e2e0121ab16987a8126f30c03a953abf1565e813ad42519"
+    },
+    {
+      "path": "Native/neris-ivory-courses-1024.png",
+      "bytes": 78191,
+      "sha256": "e6994700fe1f1740f4c3d165511ba511f30ffd278082b28d9e41c8ef281c9c2c"
+    },
+    {
+      "path": "neris-castle.glb",
+      "bytes": 25023208,
+      "sha256": "631cd95110ba4e75a3b25a22bc08c00f7554ad6e2334ba24b4708d7989515bc8"
+    },
+    {
+      "path": "offline-validation.json",
+      "bytes": 1176,
+      "sha256": "f49aff5ffc03c276cbf73fc22ddcdeb0e263d6b812b8789d5fc115c07059b701",
+      "normalizedSha256": "f49aff5ffc03c276cbf73fc22ddcdeb0e263d6b812b8789d5fc115c07059b701"
+    },
+    {
+      "path": "prepare-native.mjs",
+      "bytes": 2783,
+      "sha256": "e62c418810765fe9d0fb671aa1491ed733c9dcb9fafc7ad08e359658669cb382",
+      "normalizedSha256": "e62c418810765fe9d0fb671aa1491ed733c9dcb9fafc7ad08e359658669cb382"
+    },
+    {
+      "path": "README.md",
+      "bytes": 4596,
+      "sha256": "fa3fdc8bc03469ff899603c081b5e7ee32bab2413d2437b4682511f83ceb3237",
+      "normalizedSha256": "fa3fdc8bc03469ff899603c081b5e7ee32bab2413d2437b4682511f83ceb3237"
+    },
+    {
+      "path": "review-cameras.json",
+      "bytes": 3621,
+      "sha256": "53eb9bd0454d99e262bfd52d2c69bcf6d701ba5ad68f62a3bbdc7657d6c3c414",
+      "normalizedSha256": "53eb9bd0454d99e262bfd52d2c69bcf6d701ba5ad68f62a3bbdc7657d6c3c414"
+    },
+    {
+      "path": "Source/neris-castle-M02-r001.blend",
+      "bytes": 5133777,
+      "sha256": "116e5d1e5ac5753eb241d550141cd79d3143676d517adefda4930b6c661ca970"
+    },
+    {
+      "path": "Source/neris-castle-M03-r001.blend",
+      "bytes": 5609166,
+      "sha256": "33e12bac6c860046332a82a10aed2b3567d220d1072072e12d5396b66460429b"
+    },
+    {
+      "path": "Source/neris-castle-M04-r001.blend",
+      "bytes": 5750865,
+      "sha256": "2466bdc57b06325ed28a533d63c9a0ad25ccb421e251575c0c3a6a7956be6713"
+    },
+    {
+      "path": "Source/neris-castle-M05-r001.blend",
+      "bytes": 6061710,
+      "sha256": "94dd0957182a64585756acc08863111b502c638cf03d26efdc3acbc537f7e159"
+    },
+    {
+      "path": "Source/neris-castle-M06-r001.blend",
+      "bytes": 6061422,
+      "sha256": "208139621eb5d089f4b60f058e232351c19bb00d722a9e322580f1607f33200c"
+    },
+    {
+      "path": "Source/neris-castle-M06-r002.blend",
+      "bytes": 6084193,
+      "sha256": "95476203d92cae72dd6a34469d4d8eb27da9b3875a5a1706ccaff4d835a719b9"
+    },
+    {
+      "path": "specification.json",
+      "bytes": 14361,
+      "sha256": "5e2892d8c826f2499980acc9bf62e7ff59f0b7c017c4d38df71a7ac381aa607c",
+      "normalizedSha256": "5e2892d8c826f2499980acc9bf62e7ff59f0b7c017c4d38df71a7ac381aa607c"
+    },
+    {
+      "path": "Textures/neris-ivory-courses-1024.png",
+      "bytes": 78191,
+      "sha256": "e6994700fe1f1740f4c3d165511ba511f30ffd278082b28d9e41c8ef281c9c2c"
+    }
+  ],
+  "textNormalization": "For text files, normalizedSha256 hashes UTF-8 bytes with CRLF converted to LF; sha256/bytes describe the authoring copy before Git line-ending normalization."
+}

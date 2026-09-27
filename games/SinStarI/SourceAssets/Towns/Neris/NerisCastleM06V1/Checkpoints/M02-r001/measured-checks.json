@@ -1,0 +1,21 @@
+{
+  "status": "ok",
+  "result": {
+    "collision_sweep_degrees": 91,
+    "collisions": [],
+    "palace_unchanged": true,
+    "gate_width_m": 12,
+    "gate_spring_m": 11,
+    "gate_apex_m": 15,
+    "clear_deck_width_m": 9.04,
+    "minimum_hinge_foundation_clearance_m": 0.1,
+    "minimum_closed_fastener_arch_clearance_m": 0.09,
+    "dimensions_status": "proposed; autonomous continuation authorized; not explicitly approved",
+    "notes": [
+      "No outer landing block, as requested; native town ground provides landing.",
+      "No chains or portcullis.",
+      "Small top fasteners remain outside the clear route."
+    ]
+  },
+  "stdout": "Info: Saved as \"neris-castle-M02-r001.blend\"\n"
+}

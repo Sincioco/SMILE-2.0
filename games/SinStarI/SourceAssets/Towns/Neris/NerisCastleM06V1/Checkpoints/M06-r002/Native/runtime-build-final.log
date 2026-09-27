@@ -1,0 +1,82 @@
+MSBuild version 18.9.1+a81b43525 for .NET Framework
+
+  Determining projects to restore...
+  Restored D:\SMILE 2.0\src\Smile.Language\Smile.Language.csproj (in 1.25 sec).
+  Restored D:\SMILE 2.0\src\Smile.AssetTool\Smile.AssetTool.csproj (in 1.25 sec).
+  Restored D:\SMILE 2.0\src\Smile.Compiler\Smile.Compiler.csproj (in 1.25 sec).
+  4 of 7 projects are up-to-date for restore.
+MSBuild version 18.9.1+a81b43525 for .NET Framework
+
+  graphics_common.c
+  graphics_diagnostics.c
+  graphics_gdi.c
+  pointer_state.c
+  runtime.c
+  audio_focus_state.c
+  frame_clock_win32.c
+  Generating Code...
+  graphics_directx.cpp
+  graphics3d_directx.cpp
+  graphics3d_reflections.cpp
+  graphics_gdi_image.cpp
+  image_resource.cpp
+  text_prompt.cpp
+  file_picker.cpp
+  sfx_channels.cpp
+  Generating Code...
+  startup.cpp
+  double.cpp
+  music_mediaplayer.cpp
+  Smile.NativeRuntime.vcxproj -> D:\SMILE 2.0\artifacts\runtime\Smile.NativeRuntime.lib
+MSBuild version 18.9.1+a81b43525 for .NET Framework
+
+  Smile.NativeGraphicsTests.vcxproj -> D:\SMILE 2.0\artifacts\tests\Smile.NativeGraphicsTests.exe
+MSBuild version 18.9.1+a81b43525 for .NET Framework
+
+  Smile.NativeTextTests.vcxproj -> D:\SMILE 2.0\artifacts\tests\Smile.NativeTextTests.exe
+  Determining projects to restore...
+  Restored D:\SMILE 2.0\src\Smile.Language\Smile.Language.csproj (in 170 ms).
+  Restored D:\SMILE 2.0\src\Smile.AssetTool\Smile.AssetTool.csproj (in 170 ms).
+  Restored D:\SMILE 2.0\src\Smile.Compiler\Smile.Compiler.csproj (in 170 ms).
+  Smile.Language -> D:\SMILE 2.0\src\Smile.Language\bin\x64\Release\netstandard2.0\Smile.Language.dll
+  Smile.AssetTool -> D:\SMILE 2.0\src\Smile.AssetTool\bin\x64\Release\net10.0\win-x64\smileasset.dll
+  Smile.Compiler -> D:\SMILE 2.0\src\Smile.Compiler\bin\x64\Release\net10.0\win-x64\smilec.dll
+  Smile.Compiler -> D:\SMILE 2.0\artifacts\compiler\
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  Smile.AssetTool -> D:\SMILE 2.0\src\Smile.AssetTool\bin\x64\Release\net10.0\win-x64\smileasset.dll
+  Smile.AssetTool -> D:\SMILE 2.0\artifacts\assettool\
+MSBuild version 18.9.1+a81b43525 for .NET Framework
+
+  graphics_common.c
+  graphics_diagnostics.c
+  graphics_gdi.c
+  pointer_state.c
+  runtime.c
+  audio_focus_state.c
+  frame_clock_win32.c
+  Generating Code...
+  graphics_directx.cpp
+  graphics3d_directx.cpp
+  Smile.Language -> D:\SMILE 2.0\src\Smile.Language\bin\Release\netstandard2.0\Smile.Language.dll
+  graphics3d_reflections.cpp
+  graphics_gdi_image.cpp
+  Smile.ProjectTemplates -> D:\SMILE 2.0\src\Smile.VisualStudio\Templates\bin\x64\Debug\net472\Smile.ProjectTemplates.dll
+  Smile.ItemTemplates -> D:\SMILE 2.0\src\Smile.VisualStudio\Templates\Items\bin\x64\Debug\net472\Smile.ItemTemplates.dll
+  image_resource.cpp
+  text_prompt.cpp
+  Smile.AssetTool -> D:\SMILE 2.0\src\Smile.AssetTool\bin\Release\net10.0\smileasset.dll
+  file_picker.cpp
+  sfx_channels.cpp
+  Generating Code...
+  Smile.Compiler -> D:\SMILE 2.0\src\Smile.Compiler\bin\Release\net10.0\smilec.dll
+  startup.cpp
+  Smile.VisualStudio -> D:\SMILE 2.0\src\Smile.VisualStudio\bin\Release\net472\Smile.VisualStudio.dll
+  double.cpp
+  music_mediaplayer.cpp
+  Smile.VisualStudio -> D:\SMILE 2.0\src\Smile.VisualStudio\bin\Release\net472\Smile.VisualStudio.vsix
+  Smile.Tests -> D:\SMILE 2.0\src\Smile.Tests\bin\Release\net10.0\Smile.Tests.dll
+  Smile.NativeRuntime.vcxproj -> D:\SMILE 2.0\artifacts\runtime\Smile.NativeRuntime.lib
+Compiler: D:\SMILE 2.0\artifacts\compiler\smilec.exe
+Asset tool: D:\SMILE 2.0\artifacts\assettool\smileasset.exe
+VSIX: D:\SMILE 2.0\artifacts\vsix\Smile.VisualStudio.vsix

@@ -1,0 +1,25 @@
+Dependency is up to date: D:\SMILE 2.0\libraries\Smile.Simple3D\bin\Debug\Smile.Simple3D.smilelib
+Compiled D:\SMILE 2.0\tools\Character3DViewer\NerisTownTests.smileproj
+Output: D:\SMILE 2.0\artifacts\tests\neris-town\Routes.exe
+Published 0 project assets.
+Royal Entry Reached
+1840.0
+PASS Neris Town Routes
+Dependency is up to date: D:\SMILE 2.0\libraries\Smile.Simple3D\bin\Debug\Smile.Simple3D.smilelib
+Dependency is up to date: D:\SMILE 2.0\libraries\Smile.UI\bin\Debug\Smile.UI.smilelib
+Compiled D:\SMILE 2.0\tools\Character3DViewer\Character3DViewer.NerisTests.smileproj
+Output: D:\SMILE 2.0\tools\Character3DViewer\bin\Release\NerisTownSceneTests.exe
+Published 0 project assets.
+Chunks 51 Stage 3 Error 0
+Actors 4 Error 0
+Meshes 155/512
+Materials 144/512
+Load Town Geometry Ms 369
+Load Town Materials Ms 17
+Load Tripo Geometry Ms 164
+Load Tripo Materials Ms 76
+Arin Pose Keys 24
+Castle Parts 42
+Castle Moving Parts 3
+PASS Neris Town Scene
+PASS Neris native route, scene, calibration and resource acceptance.

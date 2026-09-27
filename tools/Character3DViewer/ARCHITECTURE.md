@@ -1,5 +1,44 @@
 # Character Viewer Architecture
 
+## September 28 detailed west castle and inspection/water fixes
+
+NerisCastleM06V1 owns the editable source, portable GLB, real Blender evidence,
+authored masonry texture and bounded native derivatives. NerisCastlePreview
+loads eight static model chunks and one three-part hinged leaf; NerisCastleRoute
+owns placement, planter/fountain clearance, twenty stairs and the closed palace
+threshold. ProximityDrawbridge retains the existing approach/absence timing.
+The live town document, its roads, rectangular terrain and two older castles
+remain authoritative. Native terrain replaces only the portable Site.Moat surface.
+
+The existing cooker allows 65,535 vertices per part, 131,072 vertices and 16 parts
+per model. Export copies are split at complete triangles; source geometry and
+runtime limits are unchanged. prepare-native.mjs validates hashes, part names,
+UV presence and all native counts before copying. The portable candidate remains
+one complete GLB with embedded texture. Native source textures use relative paths;
+the normal project cooker owns publication.
+
+NerisTownCamera owns the positive eight-degree inspection floor. GroundShot
+distinguishes party control/arrival from inspection that follows a party center.
+The panel consumes the same limit. Shared arena input, smoothing and zoom stay
+in their existing owners; intentional low party framing remains available.
+
+water_surface3d.h receives the existing sun shadow projection and filtered depth
+map. It attenuates direct water illumination/highlights while retaining ambient
+light and sky reflections. graphics3d_directx.cpp supplies the existing constants
+and resource binding; no new public API, render target or dependency is added.
+Spot-light shadow maps are deliberately not applied to the directional water light.
+
+Validation records live in NerisCastleM06V1/Checkpoints/M06-r002. Native water has
+an offscreen WARP regression executing the actual shader, including shadow off/on,
+unoccluded consistency and SRV release. Existing Water Lab tests were aligned with
+the shared background fields and E realism shortcut. The legacy town scene fixture
+releases its 51 static chunks before loading the new castle, because the live editor
+uses the catalog path instead. It checks all three moving bridge parts and camera
+modes; the actual live town is inspected separately with all three castles.
+
+No architecture limits, exclusions, baselines, Studio or Web scope changed.
+
+
 ## September 28 Decor palette and Sun sliders
 
 Generated catalog metadata curates palette visibility without altering template

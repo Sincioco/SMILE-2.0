@@ -1,4 +1,4 @@
-''' Placement and bounded walkable route for the provisional west-side castle.
+''' Placement and bounded walkable route for the detailed west-side castle.
 Module Smile.Tools.NerisCastleRoute
 
 Option Explicit
@@ -91,6 +91,8 @@ Public Function CanStand(X As Double, Z As Double) As Boolean
 
     Dim Point As P.Vector3
     Dim Result As Boolean
+    Dim PlanterX As Double
+    Dim PlanterZ As Double
 
     Point = LocalPoint(X, Z)
 
@@ -110,7 +112,14 @@ Public Function CanStand(X As Double, Z As Double) As Boolean
             Result = False
         End If
 
-    Else If Point.Z >= 14.0 And Point.Z <= 16.8 Then
+        PlanterX = Abs(Point.X) - 26.0
+        PlanterZ = Min(Abs(Point.Z + 32.0), Min(Abs(Point.Z + 12.0), Abs(Point.Z - 6.0)))
+
+        If PlanterX * PlanterX + PlanterZ * PlanterZ < 4.41 Then
+            Result = False
+        End If
+
+    Else If Point.Z >= 14.0 And Point.Z <= 14.3 Then
 
         Result = Abs(Point.X) <= 2.8
 

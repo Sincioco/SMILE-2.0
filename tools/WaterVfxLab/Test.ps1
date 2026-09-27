@@ -12,6 +12,10 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Water surface regression compilation failed.' }
     & artifacts\tests\WaterSurfaceTests.exe
     if ($LASTEXITCODE -ne 0) { throw 'Water surface regression failed.' }
+    & cmd.exe /d /c "call `"$waterSetup`" >nul && cl /nologo /EHsc /O2 tools\WaterVfxLab\WaterShadowTests.cpp /Foartifacts\tests\WaterShadowTests.obj /Feartifacts\tests\WaterShadowTests.exe /link d3d11.lib d3dcompiler.lib"
+    if ($LASTEXITCODE -ne 0) { throw 'Water shadow regression compilation failed.' }
+    & artifacts\tests\WaterShadowTests.exe
+    if ($LASTEXITCODE -ne 0) { throw 'Water shadow GPU regression failed.' }
 } finally { Pop-Location }
 $projectPath = Join-Path $PSScriptRoot 'WaterLabTests.generated.smileproj'
 $projectText = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'WaterVfxLab.smileproj') -Raw

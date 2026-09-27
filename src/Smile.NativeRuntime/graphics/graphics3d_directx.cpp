@@ -580,6 +580,9 @@ struct SmileVfxConstants3D
     float water_light_color[4];
     float water_parameters[4];
     float water_viewport[4];
+    SmileMatrix3D water_shadow_mvp;
+    float water_shadow[4];
+    float water_ambient[4];
 };
 
 struct SmileDepthConstants3D
@@ -5177,7 +5180,7 @@ static int smile_3d_create_pipeline(void)
         "struct I{float3 p:POSITION;float2 uv:TEXCOORD0;float4 color:COLOR0;float3 n:NORMAL;};struct O{float4 p:SV_POSITION;float2 uv:TEXCOORD0;float4 color:COLOR0;float worldY:TEXCOORD1;float3 world:TEXCOORD2;float3 normal:TEXCOORD3;};"
         "O main(I i){O o;o.p=mul(float4(i.p,1),vp);o.worldY=i.p.y;o.world=i.p;o.normal=i.n;o.uv=i.uv;o.color=i.color;return o;}";
     static const char vfx_pixel_prefix[] =
-        "cbuffer V:register(b0){row_major float4x4 vp;float4 cameraRight;float4 cameraUp;float4 atlasOutput;float4 material;float4 softDepth;float4 target;float4 distortion;float4 fireRender;float4 reflectionClip;float4 waterCamera;float4 waterLightDirection;float4 waterLightColor;float4 waterParameters;float4 waterViewport;}"
+        "cbuffer V:register(b0){row_major float4x4 vp;float4 cameraRight;float4 cameraUp;float4 atlasOutput;float4 material;float4 softDepth;float4 target;float4 distortion;float4 fireRender;float4 reflectionClip;float4 waterCamera;float4 waterLightDirection;float4 waterLightColor;float4 waterParameters;float4 waterViewport;row_major float4x4 waterShadowMvp;float4 waterShadow;float4 waterAmbient;}"
         "Texture2D effectTexture:register(t0);SamplerState effectSampler:register(s0);Texture2D sceneDepthTexture:register(t6);SamplerState sceneDepthSampler:register(s6);"
         "float3 ToLinear(float3 c){return lerp(c/12.92,pow((c+.055)/1.055,2.4),step(.04045,c));}"
         "float Linear(float z){return softDepth.z*softDepth.w/max(softDepth.w-z*(softDepth.w-softDepth.z),.000001);}";
@@ -8000,6 +8003,14 @@ static int smile_3d_draw_vfx_submission(const SmileSubmission3D* submission)
     ID3D11ShaderResourceView* water_snapshot = 0;
     if (material->vfx_shading_mode == SMILE_3D_VFX_SHADING_WATER)
     {
+        constants.water_shadow_mvp = smile_shadow_view_projection3d;
+        constants.water_shadow[0] = smile_shadow_effective3d &&
+            smile_shadow_caster3d == 1 && smile_directional_light3d.enabled ? 1.0f : 0.0f;
+        constants.water_shadow[1] = smile_shadow_resolution3d > 0
+            ? 1.0f / (float)smile_shadow_resolution3d : 0.0f;
+        constants.water_shadow[2] = smile_shadow_bias3d;
+        constants.water_shadow[3] = smile_shadow_normal_bias3d;
+        constants.water_ambient[3] = smile_ambient_intensity3d;
         constants.water_parameters[0] = 1.0f;
         constants.water_parameters[1] = material->water_roughness;
         constants.water_parameters[2] = material->water_foam;
@@ -8029,7 +8040,8 @@ static int smile_3d_draw_vfx_submission(const SmileSubmission3D* submission)
         constants.water_parameters[3] = water_snapshot ? 1.0f : 0.0f;
     }
     SmileWaterTextureBinding3D water_binding(context, water_snapshot,
-        smile_reflection_pass3d ? smile_reflections_sampler() : smile_post_sampler3d);
+        smile_reflection_pass3d ? smile_reflections_sampler() : smile_post_sampler3d,
+        constants.water_shadow[0] > .5f ? smile_shadow_shader_view3d : 0, smile_shadow_sampler3d);
     if (material->texture_handles[0] != 0)
     {
         texture = smile_3d_texture(material->texture_handles[0]);

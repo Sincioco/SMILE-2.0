@@ -1,0 +1,42 @@
+{
+  "status": "ok",
+  "result": {
+    "route_width_m": 4,
+    "proxy_height_m": 1.85,
+    "cross_section_samples": 422,
+    "sample_interval_max_m": 0.25,
+    "collisions": [],
+    "route_xy": [
+      [
+        0,
+        -83.8
+      ],
+      [
+        0,
+        -64
+      ],
+      [
+        0,
+        -49
+      ],
+      [
+        9,
+        -30
+      ],
+      [
+        9,
+        -7
+      ],
+      [
+        0,
+        2
+      ],
+      [
+        0,
+        14
+      ]
+    ],
+    "end": "Palace threshold at y14, before closed door at14.6; no explorable interior.",
+    "outside_approach": "Owned by native town terrain; source route begins on bridge."
+  }
+}

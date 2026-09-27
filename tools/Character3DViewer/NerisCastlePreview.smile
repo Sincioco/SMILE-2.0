@@ -1,4 +1,4 @@
-''' Resource owner for the M01 comparison. Does not mutate the town catalog or document.
+''' Resource owner for the detailed castle. Does not mutate the town catalog or document.
 Module Smile.Tools.NerisCastlePreview
 
 Option Explicit
@@ -7,12 +7,14 @@ Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As G
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Tools.NerisCastleRoute As Route
+Import Smile.Tools.Character3DViewerCalibration As Numbers
 
 Public Type State
-    Models[2] As Core.Model3D
-    Objects[4] As Core.Object3D
+    Models[9] As Core.Model3D
+    Objects[42] As Core.Object3D
     ObjectCount As Number
     Leaf As Number
+    LeafCount As Number
     Ready As Boolean
 End Type
 
@@ -30,41 +32,43 @@ Public Function Create(ByRef Value As State) As Boolean
 
     Ok = True
 
-    For Index = 0 To 1
+    For Index = 0 To 8
 
-        Name = "Castle"
+        Name = "Castle-0" + Numbers.NumberText(Index)
 
-        If Index = 1 Then
+        If Index = 8 Then
             Name = "Drawbridge"
         End If
 
-        Value.Models[Index] = G.LoadModelGeometry3D("Assets/Neris/M01/" + Name + ".sm3d")
+        Value.Models[Index] = G.LoadModelGeometry3D("Assets/Neris/CastleV1/" + Name + ".sm3d")
         Ok = Value.Models[Index].GeometryReady And Ok
         Ok = G.PrepareModelPbr3D(Value.Models[Index], G.TEXTURE_FILTER_ANISOTROPIC, 1, 16) And Ok
 
         For Part = 0 To Value.Models[Index].PartCount - 1
 
-            ' Frozen r003 part 2 is the moat plane. Use the live town water at the same height.
+            ' Native payload excludes Site.Moat; the town owns that water surface.
 
-            If Index = 1 Or Part <> 2 Then
+            Object = G.CreateModelPart3D(Value.Models[Index], Part)
+            Ok = Object.Handle <> 0 And Ok
+            Ok = P.SetScale(Object, Route.SCALE * 100.0, Route.SCALE * 100.0, Route.SCALE * 100.0) And Ok
 
-                Object = G.CreateModelPart3D(Value.Models[Index], Part)
-                Ok = Object.Handle <> 0 And Ok
-                Ok = P.SetScale(Object, Route.SCALE * 100.0, Route.SCALE * 100.0, Route.SCALE * 100.0) And Ok
+            If Index = 8 Then
 
-                If Index = 1 Then
+                If Part = 0 Then
                     Value.Leaf = Value.ObjectCount
-                    Ok = P.SetPosition(Object, Route.ORIGIN_X, Route.DECK_Y - 0.25 * Route.SCALE,
-                        Route.ORIGIN_Z - 64.0 * Route.SCALE) And Ok
-                Else
-                    Ok = P.SetPosition(Object, Route.ORIGIN_X, Route.DECK_Y, Route.ORIGIN_Z) And Ok
                 End If
 
-                Value.Objects[Value.ObjectCount] = Object
-                Value.ObjectCount = Value.ObjectCount + 1
+                Value.LeafCount = Value.LeafCount + 1
+                Ok = P.SetPosition(Object, Route.ORIGIN_X, Route.DECK_Y - 0.25 * Route.SCALE,
+                    Route.ORIGIN_Z - 64.0 * Route.SCALE) And Ok
+
+            Else
+                Ok = P.SetPosition(Object, Route.ORIGIN_X, Route.DECK_Y, Route.ORIGIN_Z) And Ok
 
             End If
 
+            Value.Objects[Value.ObjectCount] = Object
+            Value.ObjectCount = Value.ObjectCount + 1
         End For
     End For
 
@@ -85,7 +89,11 @@ Public Function Draw(ByRef Value As State) As Boolean
         Return True
     End If
 
-    Ok = P.SetRotation(Value.Objects[Value.Leaf], Route.Angle(), 0.0, 0.0)
+    Ok = True
+
+    For Index = Value.Leaf To Value.Leaf + Value.LeafCount - 1
+        Ok = P.SetRotation(Value.Objects[Index], Route.Angle(), 0.0, 0.0) And Ok
+    End For
 
     For Index = 0 To Value.ObjectCount - 1
         Ok = G.DrawObject3D(Value.Objects[Index]) And Ok
@@ -104,7 +112,7 @@ Public Sub Destroy(ByRef Value As State)
         Call G.DestroyObject3D(Value.Objects[Index])
     End For
 
-    For Index = 0 To 1
+    For Index = 0 To 8
         Call G.DestroyModel3D(Value.Models[Index])
     End For
 

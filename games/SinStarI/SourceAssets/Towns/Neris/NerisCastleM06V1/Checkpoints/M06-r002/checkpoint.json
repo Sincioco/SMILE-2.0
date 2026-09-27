@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "milestone": "M06",
+  "revision": "r002",
+  "status": "implemented-and-tested; artistic-acceptance-not-inferred",
+  "source_blend": "D:/Projects/Sin-Star-I-Assets/Neris-Castle/source/neris-castle-M06-r002.blend",
+  "source_sha256": "95476203d92cae72dd6a34469d4d8eb27da9b3875a5a1706ccaff4d835a719b9",
+  "specification_id": "neris-castle-proposal-v1",
+  "specification_sha256": "5e2892d8c826f2499980acc9bf62e7ff59f0b7c017c4d38df71a7ac381aa607c",
+  "camera_spec_sha256": "53eb9bd0454d99e262bfd52d2c69bcf6d701ba5ad68f62a3bbdc7657d6c3c414",
+  "changed_owners": [
+    "Export"
+  ],
+  "tests": [
+    {
+      "record": "roundtrip-checks.json"
+    },
+    {
+      "record": "Native/native-validation.json"
+    }
+  ],
+  "images": [
+    "back.png",
+    "bridge-0.png",
+    "bridge-45.png",
+    "bridge-90.png",
+    "contact-sheet.png",
+    "entrance-detail.png",
+    "front.png",
+    "hero-front.png",
+    "hero-three-quarter.png",
+    "left.png",
+    "right.png",
+    "top.png"
+  ],
+  "deviations": [
+    "Dimensions remain proposed; explicit dimension approval was not inferred.",
+    "User requested autonomous continuation through detail and native integration.",
+    "No palace interiors; the route ends at the closed exterior door.",
+    "Ornament is simplified relative to the painted concept and existing Royal castle; visual parity or pixel reconstruction is not claimed.",
+    "No automatic cloth, chain physics, bloom or palace interiors.",
+    "The Blender source viewport is framed for the whole castle, but the minimized window could not be restored through the current UI automation guard. The rebuilt Viewer is visible to the right of Codex."
+  ],
+  "approval": {
+    "state": "not-explicitly-approved",
+    "user_response_reference": "keep working autonomously. Don’t wait for me to approve or review anything.",
+    "approved_revision": null
+  },
+  "next_allowed_action": "Delivery complete under autonomous authorization. Future changes use a fresh revision and only affected owners plus real dependencies; no automatic new asset or interior milestone.",
+  "validation_levels": [
+    {
+      "level": 1,
+      "status": "passed",
+      "evidence": "../../offline-validation.json; exact GLB sizes and SHA-256 recorded"
+    },
+    {
+      "level": 2,
+      "status": "not-run",
+      "reason": "No installed offline Khronos validator located; no new tools or npm installed."
+    },
+    {
+      "level": 3,
+      "status": "passed",
+      "evidence": "roundtrip-checks.json; seven fixed-camera Blender reimport renders and bridge poses"
+    },
+    {
+      "level": 4,
+      "status": "covered-by-native-viewer",
+      "scope": "Independent of Blender via the existing SMILE cooker and native Viewer; no second raw-glTF viewer tested."
+    },
+    {
+      "level": 5,
+      "status": "passed",
+      "evidence": "Native/native-validation.json; real Viewer screenshots and native route/scene/camera/water regression logs"
+    }
+  ]
+}

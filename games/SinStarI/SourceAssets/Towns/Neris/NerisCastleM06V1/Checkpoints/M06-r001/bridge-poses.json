@@ -1,0 +1,36 @@
+{
+  "status": "ok",
+  "result": {
+    "initial_pose_test_issue": "Imported pivot used quaternion mode; Euler-only test command initially did not rotate it. Test corrected to XYZ before setting poses; export node itself is unchanged.",
+    "tested_poses": [
+      {
+        "angle": 0,
+        "tip": [
+          0,
+          -84,
+          -0.25
+        ],
+        "error_m": 0
+      },
+      {
+        "angle": 45,
+        "tip": [
+          0,
+          -78.14213562011719,
+          13.892135620117188
+        ],
+        "error_m": 0
+      },
+      {
+        "angle": 90,
+        "tip": [
+          0,
+          -64,
+          19.75
+        ],
+        "error_m": 0
+      }
+    ],
+    "source_preserved": true
+  }
+}

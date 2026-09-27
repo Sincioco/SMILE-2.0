@@ -18,8 +18,61 @@ Public Sub Run(ByRef Value As Town.State, ByRef Failures As Number)
     Call IdleOrbit(Value, Failures)
     Call WalkingCameraGesture(Value, Failures)
     Call BridgeDepthPrecision(Value, Failures)
+    Call InspectionPitch(Value, Failures)
 
     Value.Look.Time = 0
+
+End Sub
+
+Private Sub InspectionPitch(ByRef Value As Town.State, ByRef Failures As Number)
+
+    Dim Offset As P.Vector3
+    Dim Pitch As Double
+
+    Call Town.ResetOverview(Value)
+
+    Value.Cinematic = False
+    Value.Follow = False
+    Value.View.Controls.OrbitPitch = -75.0
+    Value.View.Zoom.Current = 18000.0
+    Value.View.Zoom.Target = 18000.0
+
+    Call Town.Update(Value, 0)
+
+    Offset = M.Subtract(Value.View.LiveCamera.Position, Value.View.LiveCamera.Target)
+    Pitch = M.Degrees(Atan2(Offset.Y, Sqrt(Offset.X * Offset.X + Offset.Z * Offset.Z)))
+
+    Call Check(Abs(Pitch - 8.0) < 0.01 And Value.View.LiveCamera.Target.Y < 1000.0,
+        "Inspection Cannot Lift Its Aim Into The Sky At Maximum Zoom", Failures)
+
+    Value.Follow = True
+    Value.Flight.OrbitAtParty = True
+    Value.Flight.Suspended = True
+    Value.Flight.OrbitOffset = Offset
+    Value.View.Controls.OrbitPitch = -75.0
+
+    Call Town.Update(Value, 0)
+
+    Offset = M.Subtract(Value.View.LiveCamera.Position, Value.View.LiveCamera.Target)
+    Pitch = M.Degrees(Atan2(Offset.Y, Sqrt(Offset.X * Offset.X + Offset.Z * Offset.Z)))
+
+    Call Check(Abs(Pitch - 8.0) < 0.01,
+        "Inspection Orbit Around The Party Also Rejects Sky-Facing Pitch", Failures)
+
+    Value.Follow = False
+    Value.Flight.OrbitAtParty = False
+    Value.View.Controls.OrbitPitch = 160.0
+
+    Call Town.Update(Value, 0)
+
+    Offset = M.Subtract(Value.View.LiveCamera.Position, Value.View.LiveCamera.Target)
+    Pitch = M.Degrees(Atan2(Offset.Y, Sqrt(Offset.X * Offset.X + Offset.Z * Offset.Z)))
+
+    Call Check(Pitch <= 80.01 And Pitch >= 79.99,
+        "Inspection Keeps Its Upper Orbit Bound", Failures)
+    Call Check(Drone.MinimumPitch(True) = -20.0,
+        "Party Following Retains Its Low Horizon Range", Failures)
+    Call Town.ResetOverview(Value)
 
 End Sub
 

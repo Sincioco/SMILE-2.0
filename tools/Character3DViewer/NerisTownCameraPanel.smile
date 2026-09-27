@@ -10,6 +10,7 @@ Import Smile.Simple3D.ArenaViewport3D As Arena
 Import Smile.Simple3D.ArenaCamera3D As Motion
 Import Smile.Tools.Character3DViewerCalibration As Numbers
 Import Smile.Tools.Character3DViewerTiming As Timing
+Import Smile.Tools.NerisTownCamera As Drone
 
 Public Type State
     DragRow As Number
@@ -32,7 +33,7 @@ End Function
 
 ''' 1 toggles orbit, 2 fits the town, 3 signals manual rotation; zoom preserves orbit.
 Public Function Input(ByRef Value As State, ByRef View As Arena.State,
-    Base As P.Camera3D, Blocked As Boolean) As Number
+    Base As P.Camera3D, Blocked As Boolean, Following As Boolean) As Number
 
     Dim Row As Number
     Dim Amount As Double
@@ -79,7 +80,9 @@ Public Function Input(ByRef Value As State, ByRef View As Arena.State,
             View.Controls.OrbitYaw = Amount * 360.0 - 180.0 - M.Degrees(Atan2(Offset.X, Offset.Z))
             Result = 3
         Else If Value.DragRow = 2 Then
-            View.Controls.OrbitPitch = Amount * 100.0 - 20.0 - M.Degrees(Atan2(Offset.Y, Sqrt(Offset.X * Offset.X + Offset.Z * Offset.Z)))
+            View.Controls.OrbitPitch = (Drone.MinimumPitch(Following) +
+                Amount * (80.0 - Drone.MinimumPitch(Following)) -
+                M.Degrees(Atan2(Offset.Y, Sqrt(Offset.X * Offset.X + Offset.Z * Offset.Z))))
             Result = 3
         Else
             View.Zoom.Target = ToDouble(Motion.ZOOM_IN_LIMIT) + Amount * ToDouble(Motion.ZOOM_OUT_LIMIT - Motion.ZOOM_IN_LIMIT)
@@ -111,7 +114,7 @@ Private Sub Slider(Label As Text, Row As Number, Amount As Double, Reading As Nu
 End Sub
 
 Public Sub Draw(ByRef Value As State, ByRef View As Arena.State,
-    Orbiting As Boolean, PartyControl As Boolean, DroneEnabled As Boolean)
+    Orbiting As Boolean, PartyControl As Boolean, DroneEnabled As Boolean, Following As Boolean)
 
     Dim Offset As P.Vector3
     Dim Horizontal As Double
@@ -122,7 +125,8 @@ Public Sub Draw(ByRef Value As State, ByRef View As Arena.State,
     Vertical = M.Degrees(Atan2(Offset.Y, Sqrt(Offset.X * Offset.X + Offset.Z * Offset.Z)))
 
     Call Slider("H Orbit", 1, (Horizontal + 180.0) / 360.0, ToNumber(Round(Horizontal)))
-    Call Slider("V Orbit", 2, (Vertical + 20.0) / 100.0, ToNumber(Round(Vertical)))
+    Call Slider("V Orbit", 2, (Vertical - Drone.MinimumPitch(Following)) /
+        (80.0 - Drone.MinimumPitch(Following)), ToNumber(Round(Vertical)))
     Call Slider("Zoom", 3, (View.Zoom.Target - ToDouble(Motion.ZOOM_IN_LIMIT)) / ToDouble(Motion.ZOOM_OUT_LIMIT - Motion.ZOOM_IN_LIMIT), ToNumber(Round(M.Length(Offset))))
     Call UI.DrawButton(Window_Width() - 280, Window_Height() - 38, 122, 24, "Orbit", Orbiting)
     Call UI.DrawButton(Window_Width() - 152, Window_Height() - 38, 128, 24, "Fit", False)

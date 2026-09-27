@@ -321,3 +321,15 @@ and two declarations to its header. The legacy native draw coordinator adds 24
 lines for view constants and capture delegation (10,611â†’10,635); allocation,
 failure caching and teardown stay in the reflection owner. No new source module,
 dependency cycle or review-limit exception is introduced.
+
+
+## Native water receives directional shadows
+
+The native water surface now samples the existing scene sun shadow map with the
+same tent filter as opaque receivers. Ambient fill and environment reflections
+remain visible; direct surface light, foam and sun highlights are occluded.
+No extra render target or public setting is introduced. Spot-caster shadow maps
+are excluded because this shader currently shades the directional light only.
+Test.ps1 includes WaterShadowTests.cpp, a small offscreen WARP check of the actual
+water shader with occluded/unoccluded pixels, shadows disabled and SRV release.
+Web adoption remains on hold.
