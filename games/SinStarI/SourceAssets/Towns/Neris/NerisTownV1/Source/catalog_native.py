@@ -6,6 +6,7 @@ tables contain only document data and template-to-model-part references.
 import json
 import hashlib
 import math
+import struct
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -89,6 +90,18 @@ def generate(catalog):
                   f'            Result.Category = {1 if template["category"] == "building" else 3}',
                   '            Result.Active = True', *item_fields(item, '            '), '']
     lines += ['    End Select', '', '    Return Result', '', 'End Function', '', 'End Module', '']
+    lawns = []
+    for model, chunk in enumerate(catalog['chunks']):
+        raw = (ROOT / 'Authoring' / chunk['file']).read_bytes()
+        gltf = json.loads(raw[20:20+struct.unpack_from('<I', raw, 12)[0]])
+        for part, mesh in enumerate(gltf['meshes']):
+            mat = gltf['materials'][mesh['primitives'][0]['material']]
+            if mat['name'] == 'Town Grass':
+                lawns.append(model * 16 + part)
+    lines = lines[:-2] + ['Public Function IsLawnPart(Slot As Number) As Boolean', '',
+        '    Dim Result As Boolean', '',
+        '    Result = ' + ' Or '.join('Slot = ' + str(n) for n in lawns), '',
+        '    Return Result', '', 'End Function', '', 'End Module', '']
     (OUTPUT / 'TownCatalogData.smile').write_text('\n'.join(lines), encoding='utf-8')
 
     terrain = catalog['terrain']

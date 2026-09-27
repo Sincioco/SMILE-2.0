@@ -71,6 +71,7 @@
     <Model3DAsset Include="BuildAssets\Neris\Catalog\Catalog-29.glb" Descriptor="BuildAssets\Neris\Catalog\Catalog.sm3d.json" LogicalPath="Assets\Neris\Catalog\Catalog-29.sm3d" TextureOutputDirectory="Assets\Neris\Catalog\Textures" Profile="Static" Identity="sin-star-i.town.catalog-v1" ProductionState="Prototype" />
     <Asset Include="Assets\Neris\Neris-Grass-Color.png" />
     <Asset Include="Assets\Neris\Neris-Paving.png" />
+    <Asset Include="Assets\Neris\Town-Palette.png" />
     <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
   </ItemGroup>
 </SmileProject>

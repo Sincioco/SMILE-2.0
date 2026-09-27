@@ -47,7 +47,7 @@ Public Function Create(ByRef Value As State) As Boolean
 
     Value.Material = G.CreateEffectMaterial3D(EmptyTexture, G.MATERIAL_ALPHA_BLEND, 100)
     Ok = G.SetEffectMaterial3D(Value.Material, G.MATERIAL_ALPHA_BLEND, 30, 100, 240, 100, 100) And Ok
-    Ok = G.SetEffectMaterialWater3D(Value.Material, True, 68, 0, 0, 2) And Ok
+    Ok = G.SetEffectMaterialWater3D(Value.Material, True, 45, 0, 0, 2) And Ok
     Value.Water = G.CreateRibbonBatch3D(8192, Value.Material)
     Value.Ready = Value.Water.Handle <> 0 And Ok
 
@@ -106,7 +106,7 @@ Public Sub Update(ByRef Value As State, ByRef Town As Document.State,
 
     Value.WaterPoints = 0
     Value.Clock = (Value.Clock + Max(0, Elapsed)) Mod 3600000
-    Value.Ready = G.SetEffectMaterialWater3D(Value.Material, True, 68, 0, Value.Clock / 8, 2)
+    Value.Ready = G.SetEffectMaterialWater3D(Value.Material, True, 45, 0, Value.Clock / 8, 2)
 
     For Index = 0 To Town.ItemCount - 1
 

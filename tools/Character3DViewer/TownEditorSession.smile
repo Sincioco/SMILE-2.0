@@ -16,6 +16,8 @@ Import Smile.Tools.TownLighting As Lighting
 Import Smile.Tools.TownDocumentNavigation As Navigation
 Import Smile.Tools.TownDocumentStore As Storage
 Import Smile.Tools.TownLibrary As Library
+Import Smile.Tools.TownFileJobs As Files
+Import Smile.Tools.TownTabs As Tabs
 Import Smile.Tools.TownDocumentMap As Map
 Import Smile.Simple3D.PrecisionMath3D As Math3D
 Import Smile.Tools.TownWorldEditor As World
@@ -23,7 +25,9 @@ Import Smile.Tools.TownSelection As Selection
 Import Smile.Simple3D.SurfaceGrid3D As Grid
 
 Private Dim Town As Document.State
-Private Dim PendingSave As Document.State
+Private Dim Transfers As Files.State
+Private Dim OpenTabs As Tabs.State
+Private Dim Incoming As Document.State
 Private Dim Controls As Editor.State
 Private Dim Assets As Renderer.State
 Private Dim Ground As Terrain.State
@@ -35,11 +39,6 @@ Private Dim Prepared As Boolean
 Private Dim AppliedRevision As Number
 Private Dim RecoveryRevision As Number
 Private Dim RecoveryClock As Number
-Private Dim RequestId As Number
-Private Dim RequestRevision As Number
-Private Dim RequestName As Text
-Private Dim RequestClock As Number
-Private Dim RequestElapsed As Number
 Private Dim TeleportPending As Boolean
 Private Dim LiveSurface As Grid.State
 
@@ -81,6 +80,7 @@ Public Sub BeginEditing()
 
     End If
 
+    Call Tabs.Ensure(OpenTabs, Town)
     Call Editor.Start(Controls)
 
 End Sub
@@ -109,8 +109,8 @@ Public Function CameraBlocked(Optional CameraControl As Boolean = False) As Bool
 
     Dim Result As Boolean
 
-    Result = (World.Active() Or (Controls.Enabled And (Panel.Hovered() Or
-        (Not CameraControl And ((Not Key_Held(KEY_SHIFT) And
+    Result = (World.Active() Or (Controls.Enabled And (Panel.Hovered() Or Pointer_Y() < 126 Or
+        (Not CameraControl And ((Editor.CapturesMap(Controls) And Not Key_Held(KEY_SHIFT) And
         Pointer_Held(POINTER_PRIMARY)) Or GestureActive())))))
 
     Return Result
@@ -191,68 +191,90 @@ End Function
 Private Sub FileCommand(Action As Number)
 
     Dim Name As Text
-    Dim OldName As Text
     Dim Ok As Boolean
     Dim Mode As Number
+    Dim OldName As Text
+
+    If Transfers.RequestId > 0 And Action <> 309 Then
+        Controls.Ui.Message = "A file operation is still running."
+        Return
+    End If
 
     If Ground.Stage <> 0 Then
         Controls.Ui.Message = "Finishing terrain; try saving when ready."
         Return
     End If
 
-    If Action = 300 Then
+    If Action = 300 Or Action = 301 Or Action = 302 Or Action = 307 Or Action = 310 Then
 
-        Ok = Library.SaveCurrent(Town)
-        Controls.Ui.Message = "Saved for Viewer."
-
-        If Not Ok Then
-            Controls.Ui.Message = "Save failed; your edits are retained."
-        End If
-
-    Else If Action = 301 Or Action = 302 Then
-
-        If RequestId > 0 Then
-            Controls.Ui.Message = "A Blender save is still running."
+        If (Action = 310 Or Action = 307 Or Action = 302) And OpenTabs.TabCount >= Tabs.CAPACITY Then
+            Controls.Ui.Message = "Close a town tab first (limit 8)."
             Return
         End If
 
+        Mode = Files.SAVE_VIEWER
         OldName = Town.Name
-        Mode = 1
 
-        If Action = 302 Then
+        If Action = 301 Then
 
-            Name = Text_Prompt("New Town Version", "Name the new version. The original will be kept.", Town.Name + " Version 2")
+            Mode = Files.SAVE_BLENDER
+
+        Else If Action = 310 Then
+
+            Mode = Files.OPEN_VIEWER
+
+        Else If Action = 307 Then
+
+            Mode = Files.OPEN_BLENDER
+
+        Else If Action = 302 Then
+
+            Name = Text_Prompt("Save For Viewer As", "Name the new town.", Town.Name + " Copy")
 
             If Not Document.ValidName(Name) Then
                 Return
             End If
 
-            If Storage.Exists("TownEditor.Town." + Name) Or Storage.Exists("TownEditor.Recovery." + Name) Then
-                Controls.Ui.Message = "That name already exists. Choose another."
+            If Name = "Neris Town" Or Storage.Exists("TownEditor.Town." + Name) Then
+                Controls.Ui.Message = "Choose a new, unused town name."
                 Return
             End If
 
             Town.Name = Name
-            Mode = 2
 
         End If
 
-        RequestId = Storage.QueueBlender(Town, Mode)
-        PendingSave = Town
+        Call Files.Choose(Transfers, Town, Mode)
+
         Town.Name = OldName
-        RequestRevision = Town.Revision
-        RequestName = OldName
-        RequestClock = 0
-        RequestElapsed = 0
-        Controls.Ui.Busy = RequestId > 0
-        Controls.Ui.ProgressPercent = 0
-        Controls.Ui.Message = "Saving Blender version in background..."
+        Transfers.OriginName = OldName
+        Transfers.SaveAsCopy = Action = 302 And Transfers.RequestId > 0
+        Controls.Ui.Message = Transfers.Message
 
-        If RequestId = 0 Then
-            Controls.Ui.Message = "Could not queue the Blender save."
+    Else If Action = 305 Then
+
+        Controls.Ui.Section = 4
+        Controls.Ui.RecentCount = 0
+        Ok = Files.Queue(Transfers, Town, Files.LIST_VIEWER, Town.Name)
+        Controls.Ui.Message = Transfers.Message
+
+    Else If Action >= 500 And Action < 510 Then
+
+        If Action - 500 < Transfers.RecentCount And OpenTabs.TabCount < Tabs.CAPACITY Then
+            Ok = Files.Queue(Transfers, Town, Files.OPEN_VIEWER, Transfers.RecentPaths[Action - 500])
+            Controls.Ui.Message = Transfers.Message
         End If
+
+    Else If Action = 309 Then
+
+        Ok = File_Reveal(Transfers.LastPath)
 
     Else If Action = 303 Then
+
+        If OpenTabs.TabCount >= Tabs.CAPACITY Then
+            Controls.Ui.Message = "Close a town tab first (limit 8)."
+            Return
+        End If
 
         Name = Text_Prompt("New Town / Environment", "Name the new blank environment.", "New Town")
 
@@ -268,8 +290,15 @@ Private Sub FileCommand(Action As Number)
         Ok = Library.Remember(Town)
 
         If Ok Then
-            Ok = Document.Blank(Town, Name, 128, 128, 20.0)
+
+            Ok = Document.Blank(Incoming, Name, 128, 128, 20.0)
+
+            If Ok Then
+                Ok = Tabs.Add(OpenTabs, Town, Incoming)
+            End If
+
             TeleportPending = Ok
+
         End If
 
     Else If Action = 304 Or Action = 306 Then
@@ -282,15 +311,21 @@ Private Sub FileCommand(Action As Number)
             Controls.Ui.Message = World.LastMessage()
         End If
 
-    Else If Action = 305 Then
+    Else If Action = 308 Then
 
-        Name = Text_Prompt("Open Town / Environment", "Enter the saved town or version name.", Town.Name)
+        Name = Text_Prompt("Open Recovery By Name", "Enter a previous town recovery name.", Town.Name)
 
         If Text_Length(Name) = 0 Then
             Return
         End If
 
-        Ok = Library.OpenNamed(Town, Name)
+        Incoming = Town
+        Ok = Library.OpenNamed(Incoming, Name)
+
+        If Ok Then
+            Ok = Tabs.Add(OpenTabs, Town, Incoming)
+        End If
+
         TeleportPending = Ok
         Controls.Ui.Message = "Town opened."
 
@@ -318,7 +353,13 @@ Public Sub Input(View As P.Camera3D, Key As Number, Blocked As Boolean)
 
         If Text_Length(Name) > 0 Then
 
-            Ok = Library.OpenNamed(Town, Name)
+            Incoming = Town
+            Ok = Library.OpenNamed(Incoming, Name)
+
+            If Ok Then
+                Ok = Tabs.Add(OpenTabs, Town, Incoming)
+            End If
+
             TeleportPending = Ok
 
             If Ok Then
@@ -331,13 +372,31 @@ Public Sub Input(View As P.Camera3D, Key As Number, Blocked As Boolean)
 
     End If
 
+    If Tabs.Input(OpenTabs, Town) Then
+
+        TeleportPending = True
+        Controls.Ui.Message = "Town tab opened. Right-click to close."
+
+        Call Editor.ResetDocument(Controls, Town)
+
+    End If
+
+    If Text_Length(OpenTabs.Message) > 0 Then
+        Controls.Ui.Message = OpenTabs.Message
+        OpenTabs.Message = ""
+    End If
+
+    If Pointer_Y() >= 94 And Pointer_Y() < 126 Then
+        Return
+    End If
+
     Action = Editor.Input(Controls, Town, View, Key, Blocked)
 
     If Action = 400 Or Key = KEY_TAB Then
         Call Editor.Cancel(Controls, Town)
 
         Controls.Enabled = False
-    Else If Action >= 300 And Action <= 306 Then
+    Else If Action >= 300 And Action <= 310 Or (Action >= 500 And Action < 510) Then
         Call FileCommand(Action)
     End If
 
@@ -346,7 +405,7 @@ End Sub
 Public Sub Update(Leader As P.Vector3, Elapsed As Number)
 
     Dim Ok As Boolean
-    Dim Status As Storage.BridgeStatus
+    Dim Index As Number
 
     If Not Ready Then
         Return
@@ -371,7 +430,7 @@ Public Sub Update(Leader As P.Vector3, Elapsed As Number)
 
     Call Terrain.Update(Ground, Elapsed)
 
-    Controls.Ui.Busy = Ground.Stage <> 0 Or RequestId > 0
+    Controls.Ui.Busy = Ground.Stage <> 0 Or Transfers.RequestId > 0
 
     If Ground.Stage <> 0 Then
         Controls.Ui.ProgressPercent = Ground.Row * 90 / Max(1, Town.Surface.Rows)
@@ -409,48 +468,24 @@ Public Sub Update(Leader As P.Vector3, Elapsed As Number)
 
     End If
 
-    If RequestId > 0 Then
+    If Transfers.RequestId > 0 Then
 
-        RequestClock = RequestClock + Elapsed
-        RequestElapsed = RequestElapsed + Elapsed
+        Ok = Files.Update(Transfers, Town, Elapsed)
+        Controls.Ui.Message = Transfers.Message
+        Controls.Ui.ProgressPercent = Transfers.Progress
+        Controls.Ui.RecentCount = Transfers.RecentCount
 
-        If RequestClock >= 500 Then
+        For Index = 0 To Transfers.RecentCount - 1
+            Controls.Ui.RecentLabels[Index] = Transfers.RecentLabels[Index]
+        End For
 
-            Status = Storage.ReadBridgeStatus()
-            RequestClock = 0
+        If Ok Then
 
-            If Status.RequestId <> RequestId And RequestElapsed >= 5000 Then
-                Controls.Ui.Message = "Waiting for worker; use Launch.ps1."
-            End If
+            Ok = Tabs.Add(OpenTabs, Town, Transfers.Pending)
+            TeleportPending = Ok
 
-            If Status.RequestId = RequestId Then
-
-                Controls.Ui.Message = Status.Message
-                Controls.Ui.ProgressPercent = Status.Progress
-
-                If Status.Status = 1 Then
-
-                    Ok = Library.SaveCurrent(PendingSave)
-
-                    If Town.Name = RequestName And Town.Revision = RequestRevision Then
-                        Town.Name = PendingSave.Name
-                        Town.SavedRevision = Town.Revision
-                    End If
-
-                    Ok = Library.Remember(Town) And Ok
-
-                    If Not Ok Then
-                        Controls.Ui.Message = "Blender saved; Viewer save failed."
-                    End If
-
-                    RequestId = 0
-
-                Else If Status.Status = 2 Then
-
-                    RequestId = 0
-
-                End If
-
+            If Ok Then
+                Call Editor.ResetDocument(Controls, Town)
             End If
 
         End If
@@ -473,6 +508,7 @@ End Function
 
 Public Sub Overlay(View As P.Camera3D)
 
+    Call Tabs.Draw(OpenTabs, Town)
     Call Editor.Draw(Controls, Town, View)
     Call World.Draw()
 
@@ -542,6 +578,7 @@ Public Sub Release()
         Ok = Library.Remember(Town)
     End If
 
+    Call Panel.Release(Controls.Ui)
     Call World.Close()
     Call Attachments.Destroy(Details)
     Call Terrain.Destroy(Ground)

@@ -1,0 +1,210 @@
+''' Open town documents. Only the selected document owns live renderer resources.
+Module Smile.Tools.TownTabs
+
+Option Explicit
+
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownLibrary As Library
+Import Smile.UI.Controls As UI
+
+Public Const CAPACITY = 8
+
+Public Type State
+    Documents[8] As Document.State
+    TabCount As Number
+    Active As Number
+    Message As Text
+End Type
+
+Public Sub Ensure(ByRef Value As State, ByRef Town As Document.State)
+
+    If Value.TabCount = 0 Then
+
+        Value.TabCount = 1
+        Value.Active = 0
+        Value.Documents[0] = Town
+
+    End If
+
+End Sub
+
+Public Function Add(ByRef Value As State, ByRef Town As Document.State,
+    ByRef Incoming As Document.State) As Boolean
+
+    Dim Index As Number
+    Dim Suffix As Number
+    Dim Label As Text
+    Dim Exists As Boolean
+    Dim Dirty As Boolean
+
+    Call Ensure(Value, Town)
+
+    If Value.TabCount >= CAPACITY Then
+        Value.Message = "Close a town tab first (limit 8)."
+        Return False
+    End If
+
+    Value.Documents[Value.Active] = Town
+    Label = Incoming.Name
+    Suffix = 1
+
+    Do
+
+        Exists = False
+
+        For Index = 0 To Value.TabCount - 1
+
+            If Value.Documents[Index].Name = Incoming.Name Then
+                Exists = True
+            End If
+
+        End For
+
+        If Exists Then
+            Suffix = Suffix + 1
+            ' At most seven existing tabs can collide, so the suffix is one digit.
+            Incoming.Name = Text_Slice(Label, 0, 70) + " " + Text_From_Code(48 + Suffix)
+        End If
+
+    Loop Until Not Exists
+
+    Value.Documents[Value.Active] = Town
+    Value.Active = Value.TabCount
+    Value.TabCount = Value.TabCount + 1
+    Dirty = Document.Dirty(Incoming)
+    Incoming.Revision = Town.Revision + 1
+    Incoming.SavedRevision = Incoming.Revision
+
+    If Dirty Then
+        Incoming.SavedRevision = -1
+    End If
+
+    Incoming.Surface.Revision = Incoming.Revision
+    Town = Incoming
+    Value.Documents[Value.Active] = Town
+
+    Return True
+
+End Function
+
+Public Function SelectTab(ByRef Value As State, ByRef Town As Document.State,
+    Index As Number, Close As Boolean) As Boolean
+
+    Dim Ok As Boolean
+    Dim Slot As Number
+    Dim Revision As Number
+    Dim Dirty As Boolean
+
+    If Index < 0 Or Index >= Value.TabCount Then
+        Return False
+    End If
+
+    Value.Documents[Value.Active] = Town
+    Ok = Library.Remember(Town)
+
+    If Not Ok Then
+        Value.Message = "Recovery failed; current town retained."
+        Return False
+    End If
+
+    If Close Then
+
+        If Index = 0 Then
+            Value.Message = "Neris Town is the permanent tab."
+            Return False
+        End If
+
+        Ok = Library.Remember(Value.Documents[Index])
+
+        If Not Ok Then
+            Value.Message = "Recovery failed; tab was kept open."
+            Return False
+        End If
+
+        For Slot = Index To Value.TabCount - 2
+            Value.Documents[Slot] = Value.Documents[Slot + 1]
+        End For
+
+        Value.TabCount = Value.TabCount - 1
+
+        If Index < Value.Active Then
+            Value.Active = Value.Active - 1
+            Return False
+        Else If Index > Value.Active Then
+            Return False
+        End If
+
+        Index = Min(Index, Value.TabCount - 1)
+
+    Else If Index = Value.Active Then
+
+        Return False
+
+    End If
+
+    Revision = Town.Revision + 1
+    Town = Value.Documents[Index]
+    Dirty = Document.Dirty(Town)
+    Town.Revision = Revision
+    Town.Surface.Revision = Revision
+    Town.SavedRevision = Revision
+
+    If Dirty Then
+        Town.SavedRevision = -1
+    End If
+
+    Value.Active = Index
+
+    Return True
+
+End Function
+
+Public Function Input(ByRef Value As State, ByRef Town As Document.State) As Boolean
+
+    Dim Index As Number
+    Dim Width As Number
+    Dim Changed As Boolean
+
+    If Pointer_Y() < 96 Or Pointer_Y() >= 123 Or Value.TabCount = 0 Then
+        Return False
+    End If
+
+    Width = Min(180, (Window_Width() - 20) / Value.TabCount)
+    Index = (Pointer_X() - 10) / Width
+
+    If Pointer_X() >= 10 And (Pointer_Pressed(POINTER_PRIMARY) Or Pointer_Pressed(POINTER_SECONDARY)) Then
+        Changed = SelectTab(Value, Town, Index, Pointer_Pressed(POINTER_SECONDARY))
+    End If
+
+    Return Changed
+
+End Function
+
+Public Sub Draw(ByRef Value As State, ByRef Town As Document.State)
+
+    Dim Index As Number
+    Dim Width As Number
+    Dim Label As Text
+
+    If Value.TabCount = 0 Then
+        Return
+    End If
+
+    Width = Min(180, (Window_Width() - 20) / Value.TabCount)
+    Fill Rectangle 0, 94, Window_Width(), 32, RGB(12, 23, 36)
+
+    For Index = 0 To Value.TabCount - 1
+
+        Label = Value.Documents[Index].Name
+
+        If Index = Value.Active Then
+            Label = Town.Name
+        End If
+
+        Call UI.DrawButton(10 + Index * Width, 96, Width - 4, 27,
+            Text_Slice(Label, 0, Max(8, Width / 8)), Index = Value.Active)
+    End For
+
+End Sub
+
+End Module

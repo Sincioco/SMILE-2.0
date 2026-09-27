@@ -80,6 +80,12 @@ if (-not $SkipRendering) {
     }
     $sessionProject = Join-Path $viewer 'Character3DViewer.TownSessionTests.smileproj'
     $project.Save($sessionProject)
+    # The session fixture reuses prepared native assets, including newly added UI images.
+    $images = Join-Path $viewer 'bin/Debug/Assets/Neris'
+    $null = New-Item -ItemType Directory -Path $images -Force
+    foreach ($name in @('Town-Palette.png', 'Neris-Grass-Color.png')) {
+        Copy-Item -LiteralPath (Join-Path $viewer ('Assets/Neris/' + $name)) -Destination $images -Force
+    }
     Invoke-Check $sessionProject (Join-Path $viewer 'bin\Debug\TownSessionTests.exe') 'PASS Town Editor Session'
 }
 Write-Host 'PASS Native Town Editor'

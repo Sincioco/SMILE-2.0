@@ -28,7 +28,7 @@ Public Type State
     NextObjects[32] As Core.Object3D
     Water[4] As Core.RibbonBatch3D
     NextWater[4] As Core.RibbonBatch3D
-    Materials[6] As Core.Material3D
+    Materials[7] As Core.Material3D
     Textures[2] As Core.Texture3D
     LiveRevision As Number
     PendingRevision As Number
@@ -49,15 +49,21 @@ Public Function Create(ByRef Value As State) As Boolean
     Dim EmptyTexture As Core.Texture3D
     Dim Ok As Boolean
 
-    Value.Textures[0] = G.LoadTexture3D("Assets/Neris/Neris-Grass-Color.png", 1, 1)
-    Value.Textures[1] = G.LoadTexture3D("Assets/Neris/Neris-Paving.png", 1, 1)
+    ' Simple grass decodes color itself; PBR paving uses the color texture's sRGB decode.
+    Value.Textures[0] = G.LoadTexture3DEx("Assets/Neris/Neris-Grass-Color.png",
+        G.TEXTURE_USAGE_DATA, G.TEXTURE_FILTER_ANISOTROPIC, G.TEXTURE_WRAP_REPEAT, 16)
+    Value.Textures[1] = G.LoadTexture3DEx("Assets/Neris/Neris-Paving.png",
+        G.TEXTURE_USAGE_COLOR, G.TEXTURE_FILTER_ANISOTROPIC, G.TEXTURE_WRAP_REPEAT, 16)
     Value.Materials[1] = G.CreateMaterial3D(Value.Textures[0], 0, 255, 255, 255, 100, False, 0, 0)
-    Value.Materials[3] = G.CreateMaterial3D(Value.Textures[1], 0, 255, 255, 255, 100, False, 0, 0)
+    Value.Materials[3] = G.CreatePbrMaterial3D(Value.Textures[1], EmptyTexture,
+        EmptyTexture, EmptyTexture, G.MATERIAL_ALPHA_OPAQUE, True)
+    Ok = G.SetPbrMaterialFactors3D(Value.Materials[3], 255, 255, 255, 100, 0, 38, 0, 100)
     Value.Materials[4] = G.CreateMaterial3D(EmptyTexture, 0, 220, 214, 188, 100, False, 0, 0)
     Value.Materials[5] = G.CreateMaterial3D(EmptyTexture, 0, 175, 136, 66, 100, False, 0, 0)
+    Value.Materials[6] = G.CreateMaterial3D(EmptyTexture, 0, 35, 78, 139, 100, False, 0, 0)
     Value.Materials[2] = G.CreateEffectMaterial3D(EmptyTexture, G.MATERIAL_ALPHA_BLEND, 100)
-    Ok = G.SetEffectMaterial3D(Value.Materials[2], G.MATERIAL_ALPHA_BLEND, 30, 100, 240, 100, 100)
-    Ok = G.SetEffectMaterialWater3D(Value.Materials[2], True, 68, 0, 0, 2) And Ok
+    Ok = G.SetEffectMaterial3D(Value.Materials[2], G.MATERIAL_ALPHA_BLEND, 30, 100, 240, 100, 100) And Ok
+    Ok = G.SetEffectMaterialWater3D(Value.Materials[2], True, 45, 0, 0, 2) And Ok
     Ok = (Value.Materials[1].Handle <> 0 And Value.Materials[3].Handle <> 0 And
         Value.Materials[4].Handle <> 0 And Ok)
     Value.LiveRevision = -1
@@ -137,6 +143,32 @@ Private Sub Rail(ByRef Value As State, X0 As Double, Z0 As Double,
 
 End Sub
 
+''' Close only exposed sides below the surface; never add raised shoreline trim.
+Private Sub Skirt(ByRef Value As State, Surface As Number, Neighbor As Number,
+    X0 As Double, Z0 As Double, X1 As Double, Z1 As Double, Plane As Number)
+
+    Dim Kind As Number
+    Dim Height As Double
+
+    Kind = Min(Surface, Grid.SURFACE_ROAD)
+
+    If Kind = 0 Or Kind <= Min(Neighbor, Grid.SURFACE_ROAD) Then
+        Return
+    End If
+
+    Height = 20.9
+
+    If Kind = Grid.SURFACE_ROAD Then
+        Height = 23.12
+    Else If Kind = Grid.SURFACE_WATER Then
+        Height = 21.85
+        Kind = 6
+    End If
+
+    Call AddPatch(Value, X0, Z0, X1, Z1, Kind, 20.7, Height, Plane)
+
+End Sub
+
 Private Sub ScanRow(ByRef Value As State)
 
     Dim X As Number
@@ -167,6 +199,13 @@ Private Sub ScanRow(ByRef Value As State)
 
         Loop Until X >= Pending.Columns Or Grid.ReadCell(Pending, X, Z) <> Surface
 
+        If Kind = Grid.SURFACE_WATER Then
+            ' A submerged opaque bed seals the height gap and receives building shadows.
+
+            Call AddPatch(Value, Pending.XEdges[StartX] - 1.0, Z0 - 1.0,
+                Pending.XEdges[X] + 1.0, Z1 + 1.0, 6, 20.7)
+        End If
+
         If Kind > 0 Then
             Call AddPatch(Value, Pending.XEdges[StartX], Z0, Pending.XEdges[X], Z1, Kind)
         End If
@@ -176,6 +215,13 @@ Private Sub ScanRow(ByRef Value As State)
     For X = 0 To Pending.Columns - 1
 
         Surface = Grid.ReadCell(Pending, X, Z)
+        X0 = Pending.XEdges[X]
+        X1 = Pending.XEdges[X + 1]
+
+        Call Skirt(Value, Surface, Grid.ReadCell(Pending, X - 1, Z), X0, Z0, X0, Z1, 2)
+        Call Skirt(Value, Surface, Grid.ReadCell(Pending, X + 1, Z), X1, Z1, X1, Z0, 2)
+        Call Skirt(Value, Surface, Grid.ReadCell(Pending, X, Z - 1), X1, Z0, X0, Z0, 1)
+        Call Skirt(Value, Surface, Grid.ReadCell(Pending, X, Z + 1), X0, Z1, X1, Z1, 1)
 
         If Surface = Grid.SURFACE_BRIDGE Then
 
@@ -375,7 +421,7 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
     Dim Ok As Boolean
 
     Value.Time = (Value.Time + Max(0, Elapsed)) Mod 3600000
-    Ok = G.SetEffectMaterialWater3D(Value.Materials[2], True, 68, 0, Value.Time / 8, 2)
+    Ok = G.SetEffectMaterialWater3D(Value.Materials[2], True, 45, 0, Value.Time / 8, 2)
 
     If Value.Failed Then
         Return
@@ -400,7 +446,7 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
 
         Call UploadNext(Value)
 
-        If Value.Kind > 5 And Not Value.Failed Then
+        If Value.Kind > 6 And Not Value.Failed Then
 
             For Index = 0 To 31
                 Call G.DestroyObject3D(Value.Objects[Index])
@@ -463,7 +509,7 @@ Public Sub Destroy(ByRef Value As State)
         Call G.DestroyRibbonBatch3D(Value.NextWater[Index])
     End For
 
-    For Index = 1 To 5
+    For Index = 1 To 6
         Call G.DestroyMaterial3D(Value.Materials[Index])
     End For
 

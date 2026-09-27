@@ -272,6 +272,7 @@ public enum SyntaxKind
     TextFromCodeKeyword,
     KeyShiftKeyword,
     KeyDeleteKeyword,
+    FilePickKeyword,
 }
 
 public static class SyntaxFacts
@@ -357,6 +358,7 @@ public static class SyntaxFacts
         ["File_Reveal"] = SyntaxKind.FileRevealKeyword,
         ["File_Export"] = SyntaxKind.FileExportKeyword,
         ["File_Import"] = SyntaxKind.FileImportKeyword,
+        ["File_Pick"] = SyntaxKind.FilePickKeyword,
         ["Text_Prompt"] = SyntaxKind.TextPromptKeyword,
         ["Text_From_Code"] = SyntaxKind.TextFromCodeKeyword,
         ["Key_Held"] = SyntaxKind.KeyHeldKeyword,
@@ -554,13 +556,13 @@ public static class SyntaxFacts
 
     public static bool IsKeyword(SyntaxKind kind) =>
         (kind >= SyntaxKind.DimKeyword && kind <= SyntaxKind.OptionalKeyword) ||
-        (kind >= SyntaxKind.ImageKeyword && kind <= SyntaxKind.ChannelKeyword) || kind == SyntaxKind.DoubleKeyword || (DoubleSemantics.IsIntrinsic(kind) || Renderer3DPrecisionSemantics.IsIntrinsic(kind)) || kind is SyntaxKind.TextPromptKeyword or SyntaxKind.TextFromCodeKeyword;
+        (kind >= SyntaxKind.ImageKeyword && kind <= SyntaxKind.ChannelKeyword) || kind == SyntaxKind.DoubleKeyword || (DoubleSemantics.IsIntrinsic(kind) || Renderer3DPrecisionSemantics.IsIntrinsic(kind)) || kind is SyntaxKind.TextPromptKeyword or SyntaxKind.TextFromCodeKeyword or SyntaxKind.FilePickKeyword;
 
     public static bool IsBuiltInConstant(SyntaxKind kind) =>
         kind >= SyntaxKind.NoneKeyword && kind <= SyntaxKind.DataStatusTooLargeKeyword || kind is SyntaxKind.DownKeyword or SyntaxKind.KeyShiftKeyword or SyntaxKind.KeyDeleteKeyword;
 
     public static bool IsBuiltInFunction(SyntaxKind kind) =>
-        kind >= SyntaxKind.TimerKeyword && kind <= SyntaxKind.Renderer3DTextValueKeyword || (DoubleSemantics.IsIntrinsic(kind) || Renderer3DPrecisionSemantics.IsIntrinsic(kind)) || kind is SyntaxKind.TextPromptKeyword or SyntaxKind.TextFromCodeKeyword;
+        kind >= SyntaxKind.TimerKeyword && kind <= SyntaxKind.Renderer3DTextValueKeyword || (DoubleSemantics.IsIntrinsic(kind) || Renderer3DPrecisionSemantics.IsIntrinsic(kind)) || kind is SyntaxKind.TextPromptKeyword or SyntaxKind.TextFromCodeKeyword or SyntaxKind.FilePickKeyword;
 
     public static IReadOnlyList<string> GetBuiltInFunctionParameters(SyntaxKind kind)
     {
@@ -581,6 +583,7 @@ public static class SyntaxFacts
             SyntaxKind.TextWidthKeyword or SyntaxKind.TextHeightKeyword => TextSizeParameters,
             SyntaxKind.WindowTitleKeyword or SyntaxKind.FileRevealKeyword => TextParameter,
             SyntaxKind.FileExportKeyword => new[] { "fileName", "contents" },
+            SyntaxKind.FilePickKeyword => new[] { "saving", "title", "extension", "suggestedName" },
             SyntaxKind.TextPromptKeyword => new[] { "title", "message", "initialValue" },
             SyntaxKind.TextFromCodeKeyword => ValueParameter,
             SyntaxKind.TextLengthKeyword => TextParameter,

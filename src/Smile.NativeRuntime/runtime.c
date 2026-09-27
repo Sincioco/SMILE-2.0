@@ -1970,6 +1970,12 @@ static int smile_file_dialog(WCHAR* path, int capacity, int exporting)
     return result;
 }
 
+extern void* smile_file_pick_window(HWND, long long, void*, void*, void*);
+void* smile_file_pick(long long saving, void* title, void* extension, void* suggested)
+{
+    return smile_file_pick_window(smile_window, saving, title, extension, suggested);
+}
+
 extern void* smile_text_prompt_window(HWND, void*, void*, void*);
 void* smile_text_prompt(void* title, void* message, void* initial)
 {

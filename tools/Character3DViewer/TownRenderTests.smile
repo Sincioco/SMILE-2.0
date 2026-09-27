@@ -78,8 +78,18 @@ End For
 Call Check(Not Assets.Failed, "Catalog Loads Within Resource Limits")
 
 Ok = Terrain.Create(Ground)
+
+Call Check(Ground.Textures[0].MipLevels > 1 And Ground.Textures[1].MipLevels > 1 And
+    Assets.Grass.MipLevels > 1, "Grass And Paving Filter Distant Repetitions")
+Call Check(Ground.Materials[3].Kind = G.MATERIAL_KIND_PBR And
+    Ground.Materials[3].RoughnessPercent = 38 And Ground.Materials[3].MetallicPercent = 0,
+    "Paving Uses A Soft Nonmetallic Stone Sheen")
+
 Ok = Attachments.Create(Doors) And Ok
 Ok = Lighting.Apply(Town.Light) And Ok
+
+Call Check(G.LightValue3D(G.LIGHT_QUERY_DIRECTIONAL, 0, 3) > 0,
+    "Town Sun And Its Shadow Camera Stay Above The Ground")
 
 Call Check(Ok, "Surface, Light And Door Resources")
 Call Terrain.BeginBuild(Ground, Town.Surface)
@@ -218,12 +228,13 @@ Do
 
 Loop Until Ground.Stage = 0 Or Ground.Failed Or Frames >= 200
 
-Call Check(Ok And Not Ground.Failed And Ground.ObjectCount = 2 And Ground.WaterCount = 1,
-    "Bare Shore Has No Shimmering Trim Geometry")
+Call Check(Ok And Not Ground.Failed And Ground.ObjectCount = 3 And Ground.WaterCount = 1,
+    "Bare Shore Has A Submerged Bed And No Shimmering Trim")
 Call Terrain.Destroy(Ground)
 Call Check(G.LiveMeshCount3D() = 0 And G.LiveObjectCount3D() = 0 And
     G.LiveMaterialCount3D() = 0 And G.LiveModelCount3D() = 0,
     "Catalog Resources Release Cleanly")
+Call Panel.Release(Controls.Ui)
 Call Scene.Shutdown()
 
 If Failures = 0 Then

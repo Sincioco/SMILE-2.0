@@ -8,6 +8,19 @@ var tests = new TestContext();
 DoubleTests.Register(tests);
 Renderer3DPrecisionTests.Register(tests);
 
+Run("Native path picker has a typed path-only contract", () =>
+{
+    const string source = "Game Window \"Files\"\nDim Path As Text\nPath = File_Pick(True, \"Save Town\", \"town\", \"Neris.town\")\n";
+    var analysis = Analyze(source);
+    Equal(false, analysis.HasErrors);
+    Equal(true, Analyze("Print File_Pick(True, \"Open\", \"blend\", \"\")\n").HasErrors);
+    Equal(true, Analyze("Game Window \"Files\"\nPrint File_Pick(1, \"Save\", \"town\", \"X\")\n").HasErrors);
+    Equal(true, Analyze("Game Window \"Files\"\nPrint File_Pick(True, \"Save\")\n").HasErrors);
+    Equal(true, new MasmEmitter(analysis, SmileGraphicsBackend.DirectX, true, false).Emit()
+        .Contains("call smile_file_pick", StringComparison.Ordinal));
+    Equal(true, new WebEmitter(analysis).Emit().Contains("smile.filePick(", StringComparison.Ordinal));
+});
+
 Run("Missing GraphicsBackend defaults to Auto", () =>
 {
     var options = Parse("<PropertyGroup />");

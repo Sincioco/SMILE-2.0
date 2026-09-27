@@ -10,6 +10,8 @@ Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownCatalogData As Catalog
 
 Public Type State
+    Lawn As Core.Material3D
+    Grass As Core.Texture3D
     Models[48] As Core.Model3D
     Objects[768] As Core.Object3D
     Loaded As Number
@@ -28,6 +30,13 @@ Public Sub LoadNext(ByRef Value As State)
 
     If Value.Failed Or Value.Loaded >= Catalog.CHUNK_COUNT + 14 Then
         Return
+    End If
+
+    If Value.Loaded = 0 Then
+        ' Simple materials decode color themselves; Data keeps encoded pixels with filtered mipmaps.
+        Value.Grass = G.LoadTexture3DEx("Assets/Neris/Neris-Grass-Color.png",
+            G.TEXTURE_USAGE_DATA, G.TEXTURE_FILTER_ANISOTROPIC, G.TEXTURE_WRAP_REPEAT, 16)
+        Value.Lawn = G.CreateMaterial3D(Value.Grass, 0, 255, 255, 255, 100, False, 0, 0)
     End If
 
     Chunk = Value.Loaded
@@ -50,8 +59,14 @@ Public Sub LoadNext(ByRef Value As State)
     If Ok Then
 
         For Part = 0 To Value.Models[Value.Loaded].PartCount - 1
+
             Value.Objects[Value.Loaded * 16 + Part] = G.CreateModelPart3D(Value.Models[Value.Loaded], Part)
             Ok = Value.Objects[Value.Loaded * 16 + Part].Handle <> 0 And Ok
+
+            If Catalog.IsLawnPart(Value.Loaded * 16 + Part) Then
+                Ok = G.SetObjectMaterial3D(Value.Objects[Value.Loaded * 16 + Part], Value.Lawn) And Ok
+            End If
+
             Value.ObjectCount = Value.ObjectCount + 1
         End For
 
@@ -110,6 +125,9 @@ Public Sub Destroy(ByRef Value As State)
     For Index = 0 To 47
         Call G.DestroyModel3D(Value.Models[Index])
     End For
+
+    Call G.DestroyMaterial3D(Value.Lawn)
+    Call G.DestroyTexture3D(Value.Grass)
 
     Value.Loaded = 0
     Value.ObjectCount = 0

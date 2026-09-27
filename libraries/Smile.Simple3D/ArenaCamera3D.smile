@@ -154,7 +154,7 @@ End Sub
 
 ''' Viewer shot policy: world-up orbit, pole limits and pan in the live camera basis.
 Public Function ComposeOrbit(Base As P.Camera3D, Controls As Camera.Controls,
-    Optional MinimumFov As Double = 18.0) As P.Camera3D
+    Optional MinimumFov As Double = 18.0, Optional MaximumPitch As Double = 1.48) As P.Camera3D
 
     Dim Result As P.Camera3D
     Dim Offset As P.Vector3
@@ -172,7 +172,7 @@ Public Function ComposeOrbit(Base As P.Camera3D, Controls As Camera.Controls,
     Distance = Max(0.01, M.Length(Offset))
     Horizontal = Sqrt(Offset.X * Offset.X + Offset.Z * Offset.Z)
     Yaw = Atan2(Offset.X, Offset.Z) - M.Radians(Controls.OrbitYaw)
-    Pitch = Clamp(Atan2(Offset.Y, Horizontal) + M.Radians(Controls.OrbitPitch), -1.48, 1.48)
+    Pitch = Clamp(Atan2(Offset.Y, Horizontal) + M.Radians(Controls.OrbitPitch), -1.48, Clamp(MaximumPitch, 1.48, 1.57062))
     Offset = P.Vector(Sin(Yaw) * Cos(Pitch) * Distance,
         Sin(Pitch) * Distance, Cos(Yaw) * Cos(Pitch) * Distance)
     Valid = M.TryNormalize(M.Scale(Offset, -1.0), Forward)
@@ -196,7 +196,8 @@ End Function
 
 ''' Optional fixed-lens zoom uses shared input/easing and absolute scene distance bounds.
 Public Function ComposeDistance(Base As P.Camera3D, Controls As Camera.Controls,
-    MinimumDistance As Double, MaximumDistance As Double) As P.Camera3D
+    MinimumDistance As Double, MaximumDistance As Double,
+    Optional MaximumPitch As Double = 1.48) As P.Camera3D
 
     Dim Result As P.Camera3D
     Dim OrbitControls As Camera.Controls
@@ -206,7 +207,7 @@ Public Function ComposeDistance(Base As P.Camera3D, Controls As Camera.Controls,
 
     OrbitControls = Controls
     OrbitControls.Zoom = 0.0
-    Result = ComposeOrbit(Base, OrbitControls)
+    Result = ComposeOrbit(Base, OrbitControls, 18.0, MaximumPitch)
     BaseDistance = Max(0.01, M.Length(M.Subtract(Result.Position, Result.Target)))
     Distance = Clamp(BaseDistance, MinimumDistance, MaximumDistance)
 

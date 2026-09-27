@@ -16,6 +16,8 @@ Public Type Control
 End Type
 
 Public Type State
+    Atlas As Image
+    AtlasLoaded As Boolean
     Controls[80] As Control
     ControlCount As Number
     Section As Number
@@ -29,6 +31,8 @@ Public Type State
     Busy As Boolean
     ProgressPercent As Number
     CanUndo As Boolean
+    RecentLabels[10] As Text
+    RecentCount As Number
     CanRedo As Boolean
 End Type
 
@@ -113,7 +117,7 @@ Public Function Input(ByRef Value As State) As Number
 End Function
 
 Public Sub Button(ByRef Value As State, Action As Number, X As Number, Y As Number,
-    Width As Number, Label As Text, Optional Selected As Boolean = False, Optional Enabled As Boolean = True)
+    Width As Number, Label As Text, Optional Selected As Boolean = False, Optional Enabled As Boolean = True, Optional Height As Number = 26)
 
     Dim ColorValue As Number
     Dim Index As Number
@@ -131,13 +135,13 @@ Public Sub Button(ByRef Value As State, Action As Number, X As Number, Y As Numb
         Action = 0
     End If
 
-    Fill Rectangle X, Y, Width, 26, ColorValue
+    Fill Rectangle X, Y, Width, Height, ColorValue
     Draw Text Label At X + 7, Y + 5 Size 14 Color TextColor
     Index = Value.ControlCount
     Value.Controls[Index].X = X
     Value.Controls[Index].Y = Y
     Value.Controls[Index].Width = Width
-    Value.Controls[Index].Height = 26
+    Value.Controls[Index].Height = Height
     Value.Controls[Index].Action = Action
     Value.ControlCount = Index + 1
 
@@ -147,7 +151,7 @@ Public Function PaletteRows() As Number
 
     Dim Result As Number
 
-    Result = Max(1, Min(9, (Window_Height() - 636) / 28))
+    Result = 2 * Max(1, Min(3, (Window_Height() - 636) / 93))
 
     Return Result
 
@@ -160,26 +164,39 @@ Private Sub Library(ByRef Value As State, X As Number)
     Dim Matching As Number
     Dim Shape As Catalog.Template
     Dim Rows As Number
+    Dim TileX As Number
+    Dim TileY As Number
 
     Call Button(Value, 1, X, 206, 91, "Buildings", Value.Category = 1)
     Call Button(Value, 2, X + 96, 206, 91, "Surfaces", Value.Category = 2)
     Call Button(Value, 3, X + 192, 206, 91, "Decor", Value.Category = 3)
 
-    If Value.Category = 2 Then
+    If Value.Category = 0 Then
+
+        Draw Text "Pan Mode" At X, 250 Size 18 Color RGB(70, 225, 220)
+        Draw Text "Left-drag to pan the map." At X, 282 Size 14 Color WHITE
+        Draw Text "Click a category to resume editing." At X, 310 Size 13 Color WHITE
+
+    Else If Value.Category = 2 Then
 
         Call Button(Value, 40, X, 240, 91, "Ground", Value.Surface = 1)
         Call Button(Value, 41, X + 96, 240, 91, "Road", Value.Surface = 3)
         Call Button(Value, 42, X + 192, 240, 91, "Water", Value.Surface = 2)
-        Call Button(Value, 12, X, 274, 91, "Line", Value.Tool = 12)
-        Call Button(Value, 13, X + 96, 274, 91, "Rectangle", Value.Tool = 13)
-        Call Button(Value, 14, X + 192, 274, 91, "Erase", Value.Tool = 14)
-        Call Button(Value, 44, X, 314, 34, "-")
-        Call Button(Value, 45, X + 248, 314, 34, "+")
 
-        Draw Text "Line Width: " + NumberLabel(Value.Width * 2) + " m" At X + 45, 321 Size 14 Color WHITE
-        Draw Text "Click the start, then the end." At X, 350 Size 14 Color WHITE
-        Draw Text "Esc cancels the preview." At X, 372 Size 14 Color WHITE
-        Draw Text "Erase restores grass." At X, 394 Size 14 Color WHITE
+        Fill Rectangle X + 5, 270, 81, 18, RGB(69, 112, 38)
+        Fill Rectangle X + 101, 270, 81, 18, RGB(144, 162, 171)
+        Fill Rectangle X + 197, 270, 81, 18, RGB(18, 57, 126)
+
+        Call Button(Value, 12, X, 296, 91, "Line", Value.Tool = 12)
+        Call Button(Value, 13, X + 96, 296, 91, "Rectangle", Value.Tool = 13)
+        Call Button(Value, 14, X + 192, 296, 91, "Erase", Value.Tool = 14)
+        Call Button(Value, 44, X, 336, 34, "-")
+        Call Button(Value, 45, X + 248, 336, 34, "+")
+
+        Draw Text "Line Width: " + NumberLabel(Value.Width * 2) + " m" At X + 45, 341 Size 14 Color WHITE
+        Draw Text "Click the start, then the end." At X, 375 Size 14 Color WHITE
+        Draw Text "Esc cancels the preview." At X, 397 Size 14 Color WHITE
+        Draw Text "Erase restores grass." At X, 419 Size 14 Color WHITE
 
     Else
 
@@ -198,10 +215,18 @@ Private Sub Library(ByRef Value As State, X As Number)
             If Shape.Category = Value.Category Then
 
                 If Matching >= Value.Page * Rows And Row < Rows Then
-                    Call Button(Value, 100 + Index, X, 312 + Row * 28, 283,
-                        Shape.Label, Value.Template = Index)
+
+                    TileX = X + (Row Mod 2) * 144
+                    TileY = 304 + (Row / 2) * 93
+
+                    Call Button(Value, 100 + Index, TileX, TileY, 139,
+                        "", Value.Template = Index, True, 89)
+
+                    Draw Image Value.Atlas From (Index Mod 5) * 128, (Index / 5) * 96 Size 128 By 96 At TileX + 20, TileY + 2 Size 96 By 72 Filter Smooth
+                    Draw Text Text_Slice(Shape.Label, 0, 19) At TileX + 5, TileY + 72 Size 11 Color WHITE
 
                     Row = Row + 1
+
                 End If
 
                 Matching = Matching + 1
@@ -210,10 +235,10 @@ Private Sub Library(ByRef Value As State, X As Number)
 
         End For
 
-        Call Button(Value, 22, X, 316 + Rows * 28, 91, "Rotate -15")
-        Call Button(Value, 23, X + 96, 316 + Rows * 28, 91, "Rotate +15")
-        Call Button(Value, 24, X + 192, 316 + Rows * 28, 91, "Delete")
-        Call Button(Value, 34, X, 348 + Rows * 28, 283, "Duplicate Selected (Ctrl+D)")
+        Call Button(Value, 22, X, 308 + (Rows / 2) * 93, 91, "Rotate -15")
+        Call Button(Value, 23, X + 96, 308 + (Rows / 2) * 93, 91, "Rotate +15")
+        Call Button(Value, 24, X + 192, 308 + (Rows / 2) * 93, 91, "Delete")
+        Call Button(Value, 34, X, 340 + (Rows / 2) * 93, 283, "Duplicate Selected (Ctrl+D)")
 
     End If
 
@@ -267,10 +292,18 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State,
     Dim X As Number
     Dim LightBottom As Number
     Dim FileStep As Number
+    Dim Index As Number
 
     X = LeftEdge() + 10
     LightBottom = 212 + 7 * Min(32, Max(16, (Window_Height() - 537) / 7))
-    FileStep = Min(34, Max(26, (Window_Height() - 455) / 7))
+    FileStep = Min(32, Max(22, (Window_Height() - 525) / 8))
+
+    If Not Value.AtlasLoaded Then
+        Load Image Value.Atlas From "Assets/Neris/Town-Palette.png"
+
+        Value.AtlasLoaded = True
+    End If
+
     Value.ControlCount = 0
     Fill Rectangle X - 10, 128, 306, Max(0, Window_Height() - 298), RGB(12, 23, 36)
     Draw Text "Town Editor" At X, 138 Size 21 Color WHITE
@@ -302,15 +335,39 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State,
 
         Call Construction(Value, Guide, X)
 
+    Else If Value.Section = 4 Then
+
+        Draw Text "Recent Versions (Newest First)" At X, 210 Size 14 Color WHITE
+
+        If Value.RecentCount = 0 Then
+            Draw Text "No Viewer versions saved yet." At X, 246 Size 14 Color WHITE
+        End If
+
+        FileStep = Min(29, Max(21, (Window_Height() - 520) / 10))
+
+        For Index = 0 To Value.RecentCount - 1
+            Call Button(Value, 500 + Index, X, 236 + Index * FileStep, 283,
+                Text_Slice(Value.RecentLabels[Index], 0, 36), False, True, FileStep - 1)
+        End For
+
     Else
 
-        Call Button(Value, 300, X, 212 + 0 * FileStep, 283, "Save For Viewer")
-        Call Button(Value, 301, X, 212 + 1 * FileStep, 283, "Save To Blender")
-        Call Button(Value, 302, X, 212 + 2 * FileStep, 283, "Save New Version")
-        Call Button(Value, 303, X, 212 + 3 * FileStep, 283, "New Town / Environment")
-        Call Button(Value, 304, X, 212 + 4 * FileStep, 283, "New Linked World")
-        Call Button(Value, 305, X, 212 + 5 * FileStep, 283, "Open Town / Environment")
-        Call Button(Value, 306, X, 212 + 6 * FileStep, 283, "Open Linked World")
+        Draw Text "Viewer (.town)" At X, 212 Size 15 Color WHITE
+
+        Call Button(Value, 300, X, 237, 139, "Save For Viewer")
+        Call Button(Value, 302, X + 144, 237, 139, "Save As...")
+        Call Button(Value, 305, X, 267, 139, "Open For Viewer")
+        Call Button(Value, 310, X + 144, 267, 139, "Open As...")
+
+        Draw Text "Blender (.blend)" At X, 301 Size 15 Color WHITE
+
+        Call Button(Value, 301, X, 326, 139, "Save For Blender")
+        Call Button(Value, 307, X + 144, 326, 139, "Open Blender...")
+        Call Button(Value, 309, X, 358, 283, "Show Last File In Explorer")
+        Call Button(Value, 303, X, 390, 139, "New Town")
+        Call Button(Value, 308, X + 144, 390, 139, "Open Recovery...")
+        Call Button(Value, 304, X, 422, 139, "New World")
+        Call Button(Value, 306, X + 144, 422, 139, "Open World")
 
     End If
 
@@ -324,6 +381,16 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State,
     If Value.Busy Then
         Fill Rectangle X, Window_Height() - 169, 283, 4, RGB(29, 48, 65)
         Fill Rectangle X, Window_Height() - 169, 283 * Max(0, Min(100, Value.ProgressPercent)) / 100, 4, RGB(70, 225, 220)
+    End If
+
+End Sub
+
+Public Sub Release(ByRef Value As State)
+
+    If Value.AtlasLoaded Then
+        Unload Image Value.Atlas
+
+        Value.AtlasLoaded = False
     End If
 
 End Sub

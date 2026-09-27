@@ -308,7 +308,7 @@ Private Sub Constrain(ByRef View As Arena.State, Base As P.Camera3D)
     Offset = M.Subtract(Base.Position, Base.Target)
     BasePitch = Atan2(Offset.Y, Sqrt(Offset.X * Offset.X + Offset.Z * Offset.Z))
     Pitch = Clamp(BasePitch + M.Radians(View.Controls.OrbitPitch),
-        M.Radians(-20.0), M.Radians(80.0))
+        M.Radians(-20.0), Max(M.Radians(80.0), View.MaximumPitch))
     View.Controls.OrbitPitch = M.Degrees(Pitch - BasePitch)
     MinimumPan = (25.0 - Base.Target.Y) / Cos(Pitch)
     View.Controls.PanY = Max(MinimumPan, View.Controls.PanY)

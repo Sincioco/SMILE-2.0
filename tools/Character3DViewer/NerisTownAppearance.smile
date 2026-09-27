@@ -13,7 +13,7 @@ Import Smile.Tools.NerisTownFlowers As Flowers
 Import Smile.Tools.NerisTownSite As Site
 Import Smile.Tools.NerisTownLayout As Layout
 
-Public Const MOAT_ROUGHNESS = 68
+Public Const MOAT_ROUGHNESS = 45
 Public Const MOAT_RIPPLES = 2
 
 Public Type State
@@ -35,7 +35,7 @@ Private Function ApplyLighting() As Boolean
 
     Ok = G.ClearAdditionalLights3DChecked()
     Ok = G.SetAmbientLight3D(200, 215, 235, 38) And Ok
-    Ok = G.SetDirectionalLight3D(-40, -65, -25, 255, 237, 214, 260) And Ok
+    Ok = G.SetDirectionalLight3D(40, 65, 25, 255, 237, 214, 260) And Ok
     Ok = G.SetPointLight3D(0, -600, 550, -1380, 195, 218, 255, 300, 1800) And Ok
     Ok = G.SetSpotLight3D(1, -4010, 1500, 1610, 255, 236, 209, 480, 2700) And Ok
     Ok = G.SetSpotLightCone3D(1, 22, -70, 43, 40, 65) And Ok

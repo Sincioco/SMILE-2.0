@@ -8,6 +8,7 @@ Import Smile.Tools.Character3DViewerCalibration As Calibration
 Import Smile.Tools.NerisTownInspectionTests As Inspection
 Import Smile.Tools.TownEditor As Commands
 Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownTabs As Tabs
 Import Smile.Tools.TownCatalogData As Catalog
 Import Smile.Simple3D.Graphics3D As G
 
@@ -20,6 +21,8 @@ Dim Draft As Document.State
 Dim Controls As Commands.State
 Dim Action As Number
 Dim Shape As Catalog.Template
+Dim OpenTabs As Tabs.State
+Dim SecondTown As Document.State
 
 Game Window "Town Editor Session Check" Size 1100 By 720
 
@@ -29,6 +32,23 @@ Action = Commands.Command(Controls, Draft, 3)
 Shape = Catalog.TemplateAt(Controls.Ui.Template)
 
 Call Check(Shape.Category = 3, "Changing Category Selects A Matching Placement Template")
+
+Action = Commands.Command(Controls, Draft, 3)
+
+Call Check(Controls.Ui.Category = 0 And Not Commands.CapturesMap(Controls),
+    "Clicking Active Decor Category Releases Map For Panning")
+
+Action = Commands.Command(Controls, Draft, 1)
+Action = Commands.Command(Controls, Draft, 1)
+
+Call Check(Controls.Ui.Category = 0 And Controls.Selected.SelectedCount = 0,
+    "Buildings Toggle Off And Clear Selection")
+
+Action = Commands.Command(Controls, Draft, 2)
+Action = Commands.Command(Controls, Draft, 2)
+
+Call Check(Controls.Ui.Category = 0 And Controls.Ui.Tool = 0,
+    "Surfaces Toggle Off And Cancel The Paint Tool")
 
 Ok = Editor.Available()
 
@@ -67,6 +87,14 @@ If Value.Ready Then
     Print "Arin Pose Keys " + Calibration.NumberText(KeyTotal)
 
     Call Check(KeyTotal > 0, "Accepted Arin Calibration Is Retained")
+    Call Town.Input(Value, KEY_1, False)
+    Call Town.Update(Value, 16)
+    Call Check(Not Value.PartyControl And Not Value.Cinematic And
+        Value.View.LiveCamera.Position.Y > Value.View.LiveCamera.Target.Y And
+        Abs(Value.View.LiveCamera.Position.Z - Value.View.LiveCamera.Target.Z) < 5.0 And
+        Abs(Value.View.LiveCamera.Position.X - Value.View.LiveCamera.Target.X) < 0.001,
+        "One Key Selects A North Up Overhead Editor View")
+    Call Town.ResetOverview(Value)
     Call Town.Input(Value, KEY_TAB, False)
     Call Check(Value.PartyControl And Not Editor.Editing(), "Tab Leaves Editing And Enables Party Control")
     Call Inspection.Run(Value, Failures)
@@ -94,6 +122,26 @@ Call Check(Value.Ready And Value.Flight.Arrival And Not Value.PartyControl And
 Call Town.Destroy(Value)
 Call Check(G.LiveMeshCount3D() = 0 And G.LiveMaterialCount3D() = 0 And G.LiveObjectCount3D() = 0,
     "Editable Town And Actor Resources Release")
+
+Ok = Document.Blank(Draft, "Tab One", 12, 12, 20.0)
+Ok = Document.Blank(SecondTown, "Tab Two", 12, 12, 20.0)
+Draft.Light.Ambient = 37
+Draft.Revision = Draft.Revision + 1
+Ok = Tabs.Add(OpenTabs, Draft, SecondTown)
+
+Call Check(Ok And OpenTabs.TabCount = 2 And Draft.Name = "Tab Two", "Open Creates A New Town Tab")
+
+Ok = Tabs.SelectTab(OpenTabs, Draft, 0, False)
+
+Call Check(Ok And Draft.Light.Ambient = 37 And Document.Dirty(Draft), "Switching Tabs Preserves Unsaved Edits")
+
+Ok = Tabs.SelectTab(OpenTabs, Draft, 1, True)
+
+Call Check(OpenTabs.TabCount = 1 And Draft.Name = "Tab One", "Closing Other Tab Preserves Current Document")
+
+Ok = Tabs.SelectTab(OpenTabs, Draft, 0, True)
+
+Call Check(Not Ok And OpenTabs.TabCount = 1, "Permanent Neris Tab Cannot Close")
 
 If Failures = 0 Then
     Print "PASS Town Editor Session"

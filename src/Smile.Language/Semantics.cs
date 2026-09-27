@@ -4285,6 +4285,15 @@ internal sealed class SemanticAnalyzer
                 RequireType(argument, SmileType.Text, "SML3003", "Built-in 'Text_Prompt' requires Text arguments.");
             return SmileType.Text;
         }
+        if (identifier.Kind == SyntaxKind.FilePickKeyword)
+        {
+            RequireGameWindow(identifier.Span, "Built-in 'File_Pick'");
+            if (arguments.Count > 0)
+                RequireType(arguments[0], SmileType.Boolean, "SML3003", "File_Pick requires Boolean saving.");
+            foreach (var argument in arguments.Skip(1))
+                RequireType(argument, SmileType.Text, "SML3003", "File_Pick requires Text title, extension and suggested name.");
+            return SmileType.Text;
+        }
         if (identifier.Kind == SyntaxKind.FileImportKeyword)
             return SmileType.Text;
         if (identifier.Kind == SyntaxKind.FileExportKeyword)

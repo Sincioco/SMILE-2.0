@@ -270,6 +270,7 @@ internal sealed class MasmEmitter
         Line("EXTERN smile_file_export:PROC");
         Line("EXTERN smile_file_import:PROC");
         Line("EXTERN smile_text_prompt:PROC");
+        Line("EXTERN smile_file_pick:PROC");
         Line("EXTERN smile_text_from_code:PROC");
         if (_rememberWindowPlacement) Line("EXTERN smile_window_persistence_configure:PROC");
         if (_responsiveWindow) Line("EXTERN smile_window_responsive_configure:PROC");
@@ -1900,6 +1901,7 @@ internal sealed class MasmEmitter
                 Line("    mov rcx, rax");
                 CallAligned("smile_file_reveal");
                 break;
+            case SyntaxKind.FilePickKeyword:
             case SyntaxKind.TextPromptKeyword:
             case SyntaxKind.FileExportKeyword:
                 foreach (var argument in call.Arguments)
@@ -1907,8 +1909,8 @@ internal sealed class MasmEmitter
                     EmitExpression(argument.Expression);
                     PushRax();
                 }
-                EmitNativeCall(call.Identifier.Kind == SyntaxKind.TextPromptKeyword
-                    ? "smile_text_prompt" : "smile_file_export", call.Arguments.Count);
+                EmitNativeCall(call.Identifier.Kind == SyntaxKind.FilePickKeyword ? "smile_file_pick" :
+                    call.Identifier.Kind == SyntaxKind.TextPromptKeyword ? "smile_text_prompt" : "smile_file_export", call.Arguments.Count);
                 break;
             case SyntaxKind.FileImportKeyword:
                 CallAligned("smile_file_import");

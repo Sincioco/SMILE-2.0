@@ -808,6 +808,13 @@ exact error traces and returned-image cleanup; no assembly rewriting is required
 
 ### Native text prompts and editor keys
 
+`File_Pick(Saving As Boolean, Title As Text, Extension As Text, SuggestedName As Text) As Text`
+requires `Game Window`. Native Windows opens an owner-modal Save/Open dialog and
+returns the selected absolute path, or empty text on cancellation. It does not read
+or write file contents. `Extension` is an alphanumeric suffix without a dot. Native
+Save asks before replacing an existing destination. The Web target returns empty
+text because browser pages cannot expose native filesystem paths.
+
 `Text_Prompt(Title As Text, Message As Text, Initial As Text) As Text` requires
 `Game Window`. It opens an owner-modal Unicode text dialog and returns the entered
 text on OK; Cancel returns empty text. The title is bounded to 256 UTF-16 code

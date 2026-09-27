@@ -2,8 +2,10 @@
 
 ## Native Neris Town
 
-The native Viewer opens on **Neris Town**, built from the saved
-`games/SinStarI/SourceAssets/Towns/Neris/NerisTownV1/Blend/Neris-Town-Waterfront.blend`.
+The native Viewer opens on **Neris Town**, restoring the latest Town Editor working
+copy. Its initial catalog/layout came from
+`games/SinStarI/SourceAssets/Towns/Neris/NerisTownV1/Blend/Neris-Town-Waterfront.blend`;
+that Blender file does not replace your current editor changes.
 Two moated castles share the northern street circuit, beside military HQ. Eight
 estates occupy the northwest residential area, sixteen homes the southwest,
 fourteen smaller homes the northeast, and three shops the southeast. House/shop
@@ -15,7 +17,9 @@ Y=-265). Arin starts 13 m south of it, facing the town. Connected roads and brid
 serve tree-lined parks, benches, lamps, flowers, seven fountains and crystal circles.
 Managed decoration footprints avoid roads, water and door approaches. There are
 147 detailed trees and 48 shared flower planters. Two-metre paving retains its
-seams but has no wavy texture. Filtered low-contrast grass reduces shimmer.
+seams with smooth stone faces and a soft sheen, without periodic grain.
+Filtered low-contrast grass reduces shimmer. Closed surface sides prevent the
+background showing through beneath roads and water edges.
 All water uses the deep-blue moat tint. Moats use subtle, slower ripples and a
 rougher surface to soften the repeating wave highlights; fountains retain movement.
 
@@ -1187,24 +1191,58 @@ grass in the marked rectangle. Water uses clean shorelines without narrow trim;
 road across water creates a bridge. **Sun** exposes color, intensity, ambient light,
 azimuth/elevation, shadows and day/night presets.
 
-**Files** supports **Save For Viewer**, **Save To Blender**, **Save New Version**,
-**New Town / Environment**, **Open Town / Environment**, **New Linked World** and
-**Open Linked World**. Enter the saved name when opening. New blank environments
-are 256 metres square. Linked maps contain up to sixteen saved town references:
-add a town, drag its node, connect nodes, save, or open the selected town. They are
-editable navigation maps, not an overworld gameplay simulation.
+### Town tabs, file dialogs and versions
 
-Use `Launch.ps1` so Blender save requests have their background worker. New versions
-appear in `games/SinStarI/SourceAssets/Towns/Neris/NerisTownV1/Versions`; Neris save-back
-updates the saved `Blend/Neris-Town-Waterfront.blend`. It does not save or replace
-an already open Blender session. Reopen the saved file in Blender when ready to
-review it, preserving any unsaved Blender edits first. A progress bar/message
-reports surface rebuilds and Blender saves; Viewer edits continue in the meantime.
+Click the active **Buildings**, **Surfaces** or **Decor** category again to select
+none. The palette shows **Pan Mode**, and left-drag pans. Building/decor tiles show
+previews of the actual models. Press **1** while editing for a north-up overhead
+view; wheel zoom, pan and orbit remain available. This is a near-vertical perspective
+view, not a separate orthographic renderer.
 
-Working copies recover across tabs/relaunches. Saved document names are limited to
-80 Unicode characters; duplicate version names are refused. Files are tied to the
-current catalog fingerprint. Limits, ownership, tests and known presentation
-boundaries are documented in [town authoring](../../docs/architecture/town-authoring.md).
+| Files command | Result |
+| --- | --- |
+| **Save For Viewer** | Windows Save dialog for a `.town` snapshot, suggested as `yyyy-MM-dd HHmm - Town Name.town`. Keeps the ten latest saved versions for that town. |
+| **Save As...** under Viewer | Prompts for a new town name, then its save path; the saved copy opens in a new tab. |
+| **Open For Viewer** | Lists the current town's last ten versions, newest first; selecting a version opens a tab. |
+| **Open As...** under Viewer | Windows Open dialog for another `.town` file. |
+| **Save For Blender** | Windows Save dialog for an exact `.blend` destination, then background conversion and verification. |
+| **Open Blender...** | Windows Open dialog; imports a compatible editor-saved `.blend` into a new tab. |
+| **Show Last File In Explorer** | Reveals the most recent successful file operation's path. |
+
+The **Neris Town** tab is permanent. Right-click any additional town tab to close it;
+its last working copy remains available through **Open Recovery...** by name. Up to
+eight town tabs share one live renderer. Tab switches retain document changes and
+clear temporary markers/undo history. Duplicate open names get a numeric suffix.
+**New Town** creates a blank 256-metre environment. **New World / Open World** edit
+linked maps of up to sixteen saved town references; these are navigation maps,
+not overworld gameplay.
+
+Use `Launch.ps1`: its worker performs file transfers and runs installed Blender
+in the background. The native process snapshots the editor document before queuing;
+you can continue editing while a progress bar reports the job. Completion marks
+only the matching revision saved. Canceling a dialog leaves the town intact.
+There is no implicit save to `Neris-Town-Waterfront.blend`: choose that exact file
+in the Blender Save dialog when you want to replace it. An open interactive Blender
+window is unaffected; reopen the saved file there after preserving any unsaved work.
+
+Viewer versions are saved **where you choose**. The private per-profile version
+index stores those paths. Repeated saves to the same dated name preserve the earlier
+revision as a numbered sibling. Retention removes only indexed files whose checksum
+still matches; externally modified files are preserved. Autosave/recovery remains in
+Windows Local AppData under `SMILE 2.0/Games/<application hash>/Data`, distinct from
+your chosen portable files. The launcher also handles the physical-profile versus
+MSIX LocalCache distinction when attaching to an existing Viewer.
+
+Blender export uses Python `bpy`, immutable Neris templates and the editor document;
+it writes a temporary file, reopens it for verification, then replaces the selected
+destination. No MCP or interactive Blender automation is involved. New exports embed
+layout metadata and **Town Assembly** parents. Import supports whole-assembly moves,
+upright rotation, positive scale and deletion. Direct mesh/material editing, arbitrary
+new models and direct Blender surface edits are not imported. Older editor exports
+restore their embedded layout and whole-assembly deletions. Saved files require the
+matching Neris catalog; the current editor document is authoritative.
+
+Limits, ownership and validation are in [town authoring](../../docs/architecture/town-authoring.md).
 
 ### Town Editor guides and history
 

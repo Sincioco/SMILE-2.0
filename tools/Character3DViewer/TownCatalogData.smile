@@ -4412,4 +4412,14 @@ Public Function InitialItem(Index As Number) As Document.Item
 
 End Function
 
+Public Function IsLawnPart(Slot As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Slot = 116
+
+    Return Result
+
+End Function
+
 End Module

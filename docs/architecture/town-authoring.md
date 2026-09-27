@@ -54,13 +54,13 @@ and trees submit geometry to the same shadow pass.
 | Shared `SurfaceGrid3D` | Packed cells, physical line/rectangle painting and exterior-bank predicates |
 | `TownSelection`, `TownPicking`, `TownEditor` | Category selection, cancelable group gestures, projection and commands |
 | `TownGuides`, `TownHistory` | Caller-owned temporary construction drawing/snapping and bounded edit snapshots; no persistence |
-| `TownEditorPanel` | Palette/control hit rectangles and progress; no persistence or GPU ownership |
+| `TownEditorPanel` | Palette/control hit rectangles, one thumbnail atlas and progress; no persistence |
 | `TownCatalogRenderer`, `TownSurfaceRenderer`, `TownAttachments`, `TownLighting` | Shared-template submission, incremental surfaces, door/water attachments and light application |
 | `TownGeometry`, `TownDocumentNavigation` | Template transforms and a committed movement/camera snapshot |
 | `TownDocumentMap` | Cached edited minimap, labels and current leader position |
 | `TownDocumentStore`, `TownLibrary` | Bounded transactional codecs, named saves and working-copy recovery |
 | `TownWorldDocument`, `TownWorldEditor` | Sixteen saved town references, draggable map nodes and bidirectional links |
-| `TownEditorSession` | One private active document, pending explicit save snapshot and lifecycle coordination |
+| `TownEditorSession` | Active document/renderer lifecycle, tab and transfer coordination |
 | `Watch-TownSaves`, `town_document_codec`, `town_blender_save` | Launcher-owned background Blender job and atomic verified result |
 | `NerisTown` | Delegated input/update/draw/lifecycle alongside the existing party and camera |
 
@@ -72,7 +72,7 @@ Save Data and Character3D remain the runtime owners.
 ## Catalog, coordinates and resource budget
 
 The immutable `NerisTownV1/Authoring/Catalog.blend` is the checksum-verified template
-source. Current `Blend/Neris-Town-Waterfront.blend` is the explicit save-back target.
+source. Save For Blender writes only the path chosen in the Windows dialog.
 The live interactive Blender session is never saved, closed or replaced by the worker.
 Catalog export creates 358 initial instances, 35 templates, 337 parts and 30 models,
 plus 14 reused Old Castle models. Template GLBs are shared, never copied per tree
@@ -102,15 +102,16 @@ a change to building transforms, saved documents, or navigation clearance.
 
 ## Saves and background work
 
-Save For Viewer uses application-owned atomic Save Data. Save To Blender writes a
-structured request; Save New Version prompts for a unique name and produces both
-Viewer and Blender snapshots. Names contain 1–80 Unicode scalar values without
-control characters. Filesystem names are sanitized and hashed under the town root.
-Duplicate named versions are refused. Save-back opens the immutable template,
-reconstructs transformed assemblies/surfaces/light, saves a temporary `.blend`,
-reopens and verifies it, then replaces the destination. The saved Blender file
-contains the document JSON and packed paving texture. The worker also writes the
-matching named Viewer snapshot even if the Viewer closes before it finishes.
+Save For Viewer and Save For Blender use Windows file dialogs for explicit `.town`
+and `.blend` destinations. Save As prompts for a new town name and opens a copy in
+another tab. Viewer saves keep the latest ten indexed versions per town, using the
+local dated filename suggestion. Open For Viewer lists these versions newest first;
+Open As browses other town files. File transfer runs in the launcher-owned worker.
+Blender conversion reconstructs assemblies, surfaces and light from the immutable
+catalog and editor snapshot, verifies a temporary `.blend`, then replaces the chosen
+file. It embeds the document and packs the current textures. No implicit canonical
+Blender destination is used. Names contain 1-80 Unicode scalar values without
+control characters. Native recovery remains separate from these portable files.
 
 Working recovery is saved after edits settle and on view changes. Opening another
 town or creating a blank one first preserves the current working copy. Explicit
@@ -188,3 +189,67 @@ clear/undo/redo, selected-object duplication and undo, and Fit during editing.
 The bridge depth regression fails with the former fixed near plane and passes
 with height-based near clipping; Royal/HQ bridges were inspected at multiple
 overview angles and zoom levels. The release Viewer was rebuilt and relaunched.
+
+## Native files and tab ownership (September 28)
+
+`TownTabs` owns up to eight document snapshots with Neris permanently at index zero.
+`TownFileJobs` owns one immutable pending save/open snapshot, origin name/revision,
+request identity, recent-version results and UI progress. It uses the existing
+`TownDocumentStore` codec and `TownLibrary` recovery rules. The session delegates
+file transfer and tab operations; it does not implement filesystem or Blender work.
+`TownEditorPanel` owns/releases one shared thumbnail atlas generated from actual
+catalog assemblies. The static catalog fingerprint and user layouts are unchanged.
+
+`File_Pick` is a shared native path-only primitive backed by Windows common dialogs.
+`Watch-TownSaves.ps1` owns the Viewer-bound background worker. `TownFileWorker.ps1`
+validates bounded UTF-32 job metadata and checksummed envelopes; `TownVersionFiles.ps1`
+owns date-ordered retention and its local index. `town_blender_files.py` reuses the
+existing assembly/terrain/light builder for explicit paths and validated imports.
+The portable `.town` format remains the original checksummed document envelope.
+See the Viewer README's file-command table for current user behavior; these dialogs
+supersede the earlier name-only save controls and implicit Blender destination.
+
+The live Town Editor remains authoritative. A Blender import only occurs after an
+explicit Open command; the worker never reloads the old canonical `.blend` over live
+edits. New exports include assembly anchors and normalized document checksums.
+Whole-assembly transforms/deletions round-trip; arbitrary model/material edits and
+direct Blender terrain edits are outside this importer. Previous editor exports
+restore their saved metadata and whole-assembly deletions. Additional tabs preserve
+working copies on close. Opening/switching documents resets markers/history.
+
+`ArenaViewport3D.MaximumPitch` opts the editor into a safe near-vertical pole limit;
+other callers retain the existing limit. Neris owns the `1` command and its camera
+mode transition. Ordinary pan/zoom/orbit still belongs to shared camera modules.
+The lawn texture generator removes directional periodic waves. Catalog lawn parts
+use the same current grass texture/material as editable terrain. An opaque submerged
+water bed overlaps banks below lawn height, sealing exposed seams and receiving
+building shadows through water transmission. It adds no raised shoreline trim.
+Water Fresnel reflection preserves reflected colors while its roughness attenuates
+mirror strength. Reflections remain a bounded screen-space effect, with a sky fallback
+for offscreen geometry. Exposed road/water sides now close down to the bed; this
+also prevents the background showing through at grazing camera angles.
+
+Town sun vectors point from the surface toward the sun, matching the native PBR
+and shadow-camera contract. The former downward vector placed the shadow camera
+under the ground. Town-scale shadow bias is explicit. Simple-material shadow
+filtering now uses the shadow-map texel size, matching PBR filtering. Grass and
+paving load mip chains with anisotropic filtering. Simple grass uses Data pixels
+because its shader performs color decode; PBR paving uses a Color texture. Flat
+stone faces replace the periodic grain that produced visible wavy bands. Subtle
+tile joints remain, with nonmetallic 38% roughness for a soft sheen in both the
+Viewer and future Blender saves.
+
+Validation: the native editor foundation/route/render/session fixtures cover category
+release, top-down input, tab retention/permanent Neris, submerged shore geometry and
+resource cleanup. `test-town-version-files.ps1` covers ten-version retention,
+same-minute saves, order, checksum rejection and externally modified-file protection.
+`test-town-file-roundtrip.py` checks a real full-scene Blender save/reopen, metadata,
+whole-assembly movement/deletion and terrain/light retention on isolated paths.
+Native UI acceptance verified category deselection/pan, top-down view, thumbnail
+placement choices, Windows Save/Open dialogs, dated Viewer saving/recent ordering,
+Blender save/reopen in a new tab, and right-click closure with permanent Neris.
+Compiler checks passed 327, graphics/input/audio checks passed 58, and native
+Viewer hardening/architecture passed. The refreshed VSIX payload was installed
+and hash-verified. Terrain checks measure closed edges below their surface heights,
+castle/HQ/bridge clearances and native/Blender height parity.
+No Studio implementation or Web/browser acceptance is part of this change.

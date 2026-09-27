@@ -1,0 +1,422 @@
+''' Caller-owned asynchronous file transfer; chosen paths are never implicit save targets.
+Module Smile.Tools.TownFileJobs
+
+Option Explicit
+
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownDocumentStore As Storage
+Import Smile.Tools.TownLibrary As Library
+
+Public Const SAVE_VIEWER = 1
+Public Const OPEN_VIEWER = 2
+Public Const SAVE_BLENDER = 3
+Public Const OPEN_BLENDER = 4
+Public Const LIST_VIEWER = 5
+
+Public Type State
+    SaveAsCopy As Boolean
+    RequestId As Number
+    Operation As Number
+    Clock As Number
+    OriginRevision As Number
+    OriginName As Text
+    Path As Text
+    LastPath As Text
+    Message As Text
+    Progress As Number
+    RecentPaths[10] As Text
+    RecentLabels[10] As Text
+    RecentCount As Number
+    Pending As Document.State
+End Type
+
+Private Dim Bytes[170000] As Number
+Private Dim Offset As Number
+
+Private Function IdText(Id As Number) As Text
+
+    Dim Result As Text
+
+    Do
+        Result = Text_From_Code(48 + Id Mod 10) + Result
+        Id = Id / 10
+
+    Loop Until Id = 0
+
+    Return Result
+
+End Function
+
+Public Function SnapshotKey(Id As Number) As Text
+
+    Dim Result As Text
+
+    Result = "TownEditor.File.Snapshot." + IdText(Id)
+
+    Return Result
+
+End Function
+
+Public Function OpenedKey(Id As Number) As Text
+
+    Dim Result As Text
+
+    Result = "TownEditor.File.Opened." + IdText(Id)
+
+    Return Result
+
+End Function
+
+Private Sub PutInteger(Value As Number)
+
+    Dim Index As Number
+
+    For Index = 0 To 3
+        Bytes[Offset] = Value Mod 256
+        Offset = Offset + 1
+        Value = Value / 256
+    End For
+
+End Sub
+
+Public Function Queue(ByRef Value As State, ByRef Town As Document.State,
+    Operation As Number, Path As Text) As Boolean
+
+    Dim Id As Number
+    Dim Index As Number
+    Dim Status As Number
+    Dim Ok As Boolean
+
+    If Value.RequestId > 0 Or Text_Length(Path) = 0 Or Text_Length(Path) > 4095 Then
+        Return False
+    End If
+
+    Load Id From "TownEditor.File.Sequence" Default 0
+    Id = Id + 1
+    Save Id To "TownEditor.File.Sequence"
+    Ok = Library.Remember(Town)
+
+    If Ok And (Operation = SAVE_VIEWER Or Operation = SAVE_BLENDER) Then
+        Ok = Storage.SaveDocument(Town, SnapshotKey(Id), False)
+    End If
+
+    If Not Ok Then
+        Value.Message = "Could not preserve the current town."
+        Return False
+    End If
+
+    Offset = 0
+
+    Call PutInteger(21387092)
+    Call PutInteger(Operation)
+    Call PutInteger(Id)
+    Call PutInteger(Text_Length(Path))
+
+    For Index = 0 To Text_Length(Path) - 1
+        Call PutInteger(Text_Code_At(Path, Index))
+    End For
+
+    Call PutInteger(Text_Length(Town.Name))
+
+    For Index = 0 To Text_Length(Town.Name) - 1
+        Call PutInteger(Text_Code_At(Town.Name, Index))
+    End For
+
+    Save Data Bytes Count Offset To "TownEditor.File.Request" Status Status
+
+    If Status <> DATA_STATUS_OK Then
+        Value.Message = "Could not queue the file operation."
+        Return False
+    End If
+
+    If Operation = LIST_VIEWER Then
+        Value.RecentCount = 0
+    End If
+
+    Value.SaveAsCopy = False
+    Value.Pending = Town
+    Value.OriginRevision = Town.Revision
+    Value.OriginName = Town.Name
+    Value.Operation = Operation
+    Value.Path = Path
+    Value.RequestId = Id
+    Value.Clock = 0
+    Value.Progress = 0
+    Value.Message = "Opening town in background..."
+
+    If Operation = SAVE_VIEWER Or Operation = SAVE_BLENDER Then
+        Value.Message = "Saving chosen file in background..."
+    End If
+
+    Return True
+
+End Function
+
+Public Sub Choose(ByRef Value As State, ByRef Town As Document.State, Operation As Number)
+
+    Dim Saving As Boolean
+    Dim Extension As Text
+    Dim Title As Text
+    Dim Suggested As Text
+    Dim Path As Text
+    Dim Ok As Boolean
+    Dim ClockStatus As Storage.BridgeStatus
+
+    If Value.RequestId > 0 Then
+        Value.Message = "A file operation is still running."
+        Return
+    End If
+
+    Saving = Operation = SAVE_VIEWER Or Operation = SAVE_BLENDER
+    Extension = "town"
+    Title = "Open Town For Viewer"
+
+    If Saving Then
+        Title = "Save Town For Viewer"
+    End If
+
+    If Operation = SAVE_BLENDER Or Operation = OPEN_BLENDER Then
+
+        Extension = "blend"
+        Title = "Open Blender File"
+
+        If Saving Then
+            Title = "Save Town For Blender"
+        End If
+
+    End If
+
+    If Saving Then
+
+        Suggested = SafeName(Town.Name) + "." + Extension
+
+        If Operation = SAVE_VIEWER Then
+
+            ClockStatus = Storage.ReadBridgeStatus("TownEditor.File.Clock")
+
+            If Text_Length(ClockStatus.Message) = 0 Then
+                Value.Message = "Start with Launch.ps1 to enable saves."
+                Return
+            End If
+
+            Suggested = ClockStatus.Message + " - " + Suggested
+
+        End If
+
+    End If
+
+    Path = File_Pick(Saving, Title, Extension, Suggested)
+
+    If Text_Length(Path) = 0 Then
+        Value.Message = "Canceled; current town retained."
+        Return
+    End If
+
+    Ok = Queue(Value, Town, Operation, Path)
+
+End Sub
+
+''' Returns True when Pending is ready for the caller to open in a new tab.
+Public Function Update(ByRef Value As State, ByRef Town As Document.State, Elapsed As Number) As Boolean
+
+    Dim Status As Storage.BridgeStatus
+    Dim Ok As Boolean
+    Dim Opened As Boolean
+
+    If Value.RequestId = 0 Then
+        Return False
+    End If
+
+    Value.Clock = Value.Clock + Elapsed
+
+    If Value.Clock < 500 Then
+        Return False
+    End If
+
+    Value.Clock = 0
+    Status = Storage.ReadBridgeStatus("TownEditor.File.Response")
+
+    If Status.RequestId <> Value.RequestId Then
+        Value.Message = "Waiting for file worker (Launch.ps1)."
+        Return False
+    End If
+
+    Value.Message = Status.Message
+    Value.Progress = Status.Progress
+
+    If Status.Status = 0 Then
+        Return False
+    End If
+
+    If Status.Status = 1 Then
+
+        If Value.Operation = OPEN_VIEWER Or Value.Operation = OPEN_BLENDER Then
+
+            Ok = Storage.LoadDocument(Value.Pending, OpenedKey(Value.RequestId))
+
+            If Ok Then
+                Ok = Library.Remember(Town)
+            End If
+
+            If Ok Then
+                Opened = True
+                Value.Message = "Town opened in a new tab."
+            Else
+                Value.Message = "Invalid town; current edits retained."
+            End If
+
+        Else If Value.Operation = LIST_VIEWER Then
+
+            Call ReadRecent(Value)
+
+        Else
+
+            Ok = Library.SaveCurrent(Value.Pending)
+
+            If Not Value.SaveAsCopy And Town.Name = Value.OriginName And Town.Revision = Value.OriginRevision Then
+                Town.Name = Value.Pending.Name
+                Town.SavedRevision = Town.Revision
+            End If
+
+            Ok = Library.Remember(Town) And Ok
+            Value.Message = "Saved chosen file."
+            Opened = Value.SaveAsCopy
+
+            If Not Ok Then
+                Value.Message = "File saved; local recovery failed."
+            End If
+
+        End If
+
+        If Value.Operation <> LIST_VIEWER Then
+            Value.LastPath = Value.Path
+        End If
+
+    End If
+
+    Value.RequestId = 0
+
+    Return Opened
+
+End Function
+
+Public Function FileLabel(Path As Text) As Text
+
+    Dim Index As Number
+    Dim Start As Number
+    Dim Letter As Number
+    Dim Result As Text
+
+    For Index = 0 To Text_Length(Path) - 1
+
+        Letter = Text_Code_At(Path, Index)
+
+        If Letter = 47 Or Letter = 92 Then
+            Start = Index + 1
+        End If
+
+    End For
+
+    Result = Text_Slice(Path, Start, Text_Length(Path) - Start - 5)
+
+    Return Result
+
+End Function
+
+Private Function SafeName(Name As Text) As Text
+
+    Dim Index As Number
+    Dim Letter As Number
+    Dim Result As Text
+
+    For Index = 0 To Text_Length(Name) - 1
+
+        Letter = Text_Code_At(Name, Index)
+
+        If (Letter < 32 Or Letter = 34 Or Letter = 42 Or Letter = 47 Or
+            Letter = 58 Or Letter = 60 Or Letter = 62 Or Letter = 63 Or Letter = 92 Or Letter = 124) Then
+            Letter = 95
+        End If
+
+        Result = Result + Text_From_Code(Letter)
+    End For
+
+    Return Result
+
+End Function
+
+Private Function GetInteger() As Number
+
+    Dim Result As Number
+    Dim Factor As Number
+    Dim Index As Number
+
+    Factor = 1
+
+    For Index = 0 To 3
+        Result = Result + Bytes[Offset] * Factor
+        Factor = Factor * 256
+        Offset = Offset + 1
+    End For
+
+    Return Result
+
+End Function
+
+Private Sub ReadRecent(ByRef Value As State)
+
+    Dim ByteCount As Number
+    Dim Status As Number
+    Dim Index As Number
+    Dim Letter As Number
+    Dim Length As Number
+    Dim Id As Number
+    Dim Path As Text
+
+    Value.RecentCount = 0
+    Load Data "TownEditor.File.Recent" Into Bytes Count ByteCount Status Status
+
+    If Status <> DATA_STATUS_OK Or ByteCount < 12 Then
+        Return
+    End If
+
+    Offset = 0
+    Id = GetInteger()
+
+    If Id <> 21780308 Then
+        Return
+    End If
+
+    Id = GetInteger()
+    Length = GetInteger()
+
+    If Id <> Value.RequestId Or Length < 0 Or Length > 10 Then
+        Return
+    End If
+
+    For Index = 0 To Length - 1
+
+        If Offset + 4 > ByteCount Then
+            Return
+        End If
+
+        Id = GetInteger()
+        Path = ""
+
+        If Id < 1 Or Id > 4095 Or Offset + Id * 4 > ByteCount Then
+            Return
+        End If
+
+        For Letter = 0 To Id - 1
+            Path = Path + Text_From_Code(GetInteger())
+        End For
+
+        Value.RecentPaths[Index] = Path
+        Value.RecentLabels[Index] = FileLabel(Path)
+    End For
+
+    Value.RecentCount = Length
+
+End Sub
+
+End Module

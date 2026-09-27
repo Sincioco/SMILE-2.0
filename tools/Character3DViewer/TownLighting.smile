@@ -18,10 +18,12 @@ Public Function Apply(Light As Document.Sun) As Boolean
     Elevation = M.Radians(Light.Elevation)
     Ok = G.ClearAdditionalLights3DChecked()
     Ok = G.SetAmbientLight3D(200, 215, 235, Light.Ambient) And Ok
-    Ok = G.SetDirectionalLight3D(ToNumber(-Sin(Azimuth) * Cos(Elevation) * 1000.0),
-        ToNumber(-Sin(Elevation) * 1000.0), ToNumber(-Cos(Azimuth) * Cos(Elevation) * 1000.0),
+    ' The native light/shadow vector points from the ground toward the sun.
+    Ok = G.SetDirectionalLight3D(ToNumber(Sin(Azimuth) * Cos(Elevation) * 1000.0),
+        ToNumber(Sin(Elevation) * 1000.0), ToNumber(Cos(Azimuth) * Cos(Elevation) * 1000.0),
         Light.RedValue, Light.GreenValue, Light.BlueValue, Light.Intensity) And Ok
     Ok = Scene.SetShadows(Light.Shadows) And Ok
+    Ok = Scene.SetShadowBias(25, 60) And Ok
 
     Call Scene.UseCustomLighting()
 

@@ -14,6 +14,7 @@ foreach ($chunk in $catalog.chunks) {
 $textureRoot = Join-Path $PSScriptRoot 'Assets\Neris'
 $null = New-Item -ItemType Directory -Force -Path $textureRoot
 Copy-Item -LiteralPath (Join-Path $townRoot 'Textures\Neris-Grass-Color.png') -Destination $textureRoot -Force
+Copy-Item -LiteralPath (Join-Path $townRoot 'Authoring\Town-Palette.png') -Destination $textureRoot -Force
 
 # A deterministic two-metre paving tile. Geometry remains at its authored scale;
 # repeating texture coordinates supply fine seams without thousands of draw calls.
@@ -22,10 +23,10 @@ $bitmap = [Drawing.Bitmap]::new(128, 128)
 try {
     for ($y = 0; $y -lt 128; $y++) {
         for ($x = 0; $x -lt 128; $x++) {
-            $grain = (($x * 73 + $y * 151 + $x * $y * 7) % 5) - 2
-            $seam = if ($x -eq 0 -or $y -eq 0) { 14 } else { 0 }
-            $bitmap.SetPixel($x, $y, [Drawing.Color]::FromArgb(144 + $grain - $seam,
-                162 + $grain - $seam, 171 + $grain - $seam))
+            # A flat stone face avoids periodic grain turning into wavy moire bands.
+            $seam = if ($x -eq 0 -or $y -eq 0) { 8 } else { 0 }
+            $bitmap.SetPixel($x, $y, [Drawing.Color]::FromArgb(144 - $seam,
+                162 - $seam, 171 - $seam))
         }
     }
     $bitmap.Save((Join-Path $textureRoot 'Neris-Paving.png'), [Drawing.Imaging.ImageFormat]::Png)

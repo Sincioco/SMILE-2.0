@@ -535,12 +535,12 @@ Public Function QueueBlender(ByRef Value As Document.State, Mode As Number) As N
 
 End Function
 
-Public Function ReadBridgeStatus() As BridgeStatus
+Public Function ReadBridgeStatus(Optional Key As Text = "TownEditor.Blender.Response") As BridgeStatus
 
     Dim Result As BridgeStatus
     Dim Status As Number
 
-    Load Data "TownEditor.Blender.Response" Into Bytes Count ByteCount Status Status
+    Load Data Key Into Bytes Count ByteCount Status Status
 
     If Status <> DATA_STATUS_OK Then
         Return Result

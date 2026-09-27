@@ -4,6 +4,20 @@
 
 ## Native water effect material
 
+September 28 native appearance: water uses physical head-on Fresnel reflectance
+(.0204), preserves reflected scene colors and attenuates reflection by roughness.
+The water light vector now follows the surface-to-light convention used by PBR
+and the shadow camera. Simple-material PCF offsets use the shadow-map texel size
+(`shadow.w`), matching PBR; the previous value was the light slot. Neris applies
+an upward sun vector and a town-scale bias, with an opaque bed visible through
+water transmission so building shadows reach its water areas.
+
+Follow-up concern outside town: `Scene3D` named arena presets still submit negative
+Y directional vectors. Their current visible impact has not been revalidated;
+town uses its own corrected document light. Preserve the approved arena appearance
+until a focused preset comparison checks sunlight/shadow direction and updates
+the presets with native visual acceptance. Web adoption remains held.
+
 September 25 native filtering: world-space ripple octaves and procedural foam fade
 before their pixel footprint becomes unresolved. Water and PBR GGX roughness also
 incorporate screen-space normal variance, broadening subpixel highlights rather than

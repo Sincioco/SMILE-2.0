@@ -84,12 +84,12 @@ float4 ShadeWater(float4 pixel, float2 uv, float4 base, float3 world, float3 sur
     float3 gradient = ddx(height)*acrossX + ddy(height)*acrossY;
     normal = normalize(normal - gradient * sign(determinant) / max(abs(determinant), .00001));
     float facing = saturate(dot(normal, view));
-    // Broaden the reflected rim so narrow authored streams read at gameplay distance.
-    float fresnel = .06 + .94 * pow(1-facing, 3);
+    // Water reflects little head-on and more strongly at grazing angles.
+    float fresnel = .0204 + .9796 * pow(1-facing, 5);
     float3 reflected = reflect(-view, normal);
     float3 reflection = WaterReflection(world + normal*2, reflected, WaterEnvironment(reflected));
 
-    float3 light = normalize(-waterLightDirection.xyz);
+    float3 light = normalize(waterLightDirection.xyz);
     float3 halfway = normalize(light + view);
     float nl = saturate(dot(normal, light));
     float nh = saturate(dot(normal, halfway));
@@ -130,10 +130,10 @@ float4 ShadeWater(float4 pixel, float2 uv, float4 base, float3 world, float3 sur
     float foamNoise = sin(world.x*.62 + sin(world.z*.41)*2 + seconds*2.8) *
         sin(world.y*.83 - world.z*.36 + seconds*1.9);
     float foam = smoothstep(.72,.94,foamNoise) * waterParameters.z * (1-smoothstep(.8,3,footprint));
-    // Honor the artist's material/vertex tint across the water body, including
-    // its reflected environment. Otherwise grazing views erase deep-water color.
-    // White preserves existing water; direct sunlight still produces white glints.
-    float3 result = lerp(transmission, reflection, fresnel) * ToLinear(saturate(base.rgb)) + highlight;
+    // Water absorbs its transmitted color; reflected buildings retain their own color.
+    // Rough surfaces soften the reflection instead of becoming a mirror-like floor.
+    float reflectedAmount = fresnel * (1 - roughness * .65);
+    float3 result = lerp(transmission * ToLinear(saturate(base.rgb)), reflection, reflectedAmount) + highlight;
     result = lerp(result, float3(.72,.83,.85), foam);
     float opacity = saturate(base.a * (1.15 + fresnel*.45 + foam*.5));
     if (atlasOutput.z < .5) result = pow(saturate(result), 1.0/2.2);

@@ -42,6 +42,16 @@ Public Sub Start(ByRef Value As State)
 
 End Sub
 
+Public Function CapturesMap(ByRef Value As State) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Value.Ui.Category <> 0 Or Value.Ui.Tool = 15 Or Value.Ui.Tool = 16
+
+    Return Result
+
+End Function
+
 Public Sub Cancel(ByRef Value As State, ByRef Town As Document.State)
 
     Call Selection.EndDrag(Value.Selected, Town, True)
@@ -116,6 +126,18 @@ Public Function Command(ByRef Value As State, ByRef Town As Document.State, Acti
     Call History.Ensure(Value.HistoryState, Town, Value.Guide.Ink)
 
     If Action >= 1 And Action <= 3 Then
+
+        If Value.Ui.Category = Action Then
+
+            Value.Ui.Category = 0
+            Value.Ui.Tool = 0
+            Value.Ui.Message = "Pan: drag the map. Choose a tab to edit."
+
+            Call Selection.SetCategory(Value.Selected, 0)
+
+            Return 0
+
+        End If
 
         Value.Ui.Category = Action
         Value.Ui.Page = 0
@@ -454,7 +476,8 @@ Public Function Input(ByRef Value As State, ByRef Town As Document.State,
 
         Value.Rubber = False
 
-    Else If Not Blocked And Not Panel.Hovered() And Not Key_Held(KEY_SHIFT) And Pointer_Pressed(POINTER_PRIMARY) Then
+    Else If (CapturesMap(Value) And Not Blocked And Not Panel.Hovered() And
+        Not Key_Held(KEY_SHIFT) And Pointer_Pressed(POINTER_PRIMARY)) Then
 
         If (Value.Ui.Tool = 15 Or Value.Ui.Tool = 16) And OnGround Then
 

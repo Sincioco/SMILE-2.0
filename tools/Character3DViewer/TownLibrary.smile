@@ -10,10 +10,18 @@ Public Function Recover(ByRef Town As Document.State) As Boolean
 
     Dim Ok As Boolean
 
-    Ok = Storage.LoadDocument(Town, "TownEditor.Working", True)
+    Ok = Storage.LoadDocument(Town, "TownEditor.PermanentNeris", True)
+
+    If Not Ok Then
+        Ok = Storage.LoadDocument(Town, "TownEditor.Working", True)
+    End If
 
     If Not Ok Then
         Ok = Storage.LoadDocument(Town, "TownEditor.Current")
+    End If
+
+    If Ok Then
+        Town.Name = "Neris Town"
     End If
 
     Return Ok
@@ -26,6 +34,10 @@ Public Function Remember(ByRef Town As Document.State) As Boolean
 
     Ok = Storage.SaveDocument(Town, "TownEditor.Recovery." + Town.Name, False)
     Ok = Storage.SaveDocument(Town, "TownEditor.Working", False) And Ok
+
+    If Town.Name = "Neris Town" Then
+        Ok = Storage.SaveDocument(Town, "TownEditor.PermanentNeris", False) And Ok
+    End If
 
     Return Ok
 

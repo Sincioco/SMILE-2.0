@@ -127,6 +127,7 @@ Public Sub LoadNext(ByRef Value As State)
     End If
 
     Ok = Scene.SetShadowArea(-1000, 650, 0, 8000, 7600, 1, 11000) And Ok
+    Ok = Scene.SetShadowBias(25, 60) And Ok
     Value.Ready = Value.View.Ready And Value.People.Ready And Ok
     Value.Failed = Not Value.Ready
 
@@ -183,6 +184,12 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean)
             Blocked Or CameraPanel.Hovered() Or Value.Panel.DragRow > 0)
 
         Blocked = Blocked Or Authoring.CameraBlocked(CameraPanel.Hovered() Or Value.Panel.DragRow > 0)
+    End If
+
+    If Key = KEY_1 And Authoring.Editing() Then
+        Call TopDown(Value)
+
+        Return
     End If
 
     Value.InputActive = (Key <> KEY_NONE Or Pointer_Delta_X() <> 0 Or
@@ -393,6 +400,33 @@ Public Sub ResetOverview(ByRef Value As State)
     Call Arena.BeginTransition(Value.View, 0)
     Call Motion.Reset(Value.View.Controls, Value.View.Zoom)
     Call Arena.ComposeCamera(Value.View, Value.BaseCamera)
+
+End Sub
+
+''' North stays at the top; the tiny pole offset keeps the world-up camera basis stable.
+Public Sub TopDown(ByRef Value As State)
+
+    Dim Distance As Double
+
+    Distance = Max(200.0, M.Distance(Value.View.LiveCamera.Position, Value.View.LiveCamera.Target))
+    Value.BaseCamera = Value.View.LiveCamera
+    Value.BaseCamera.Position = M.Add(Value.BaseCamera.Target, P.Vector(0.0, Distance, -Distance * 0.0002))
+    Value.View.MaximumPitch = 1.57062
+    Value.PartyControl = False
+    Value.Follow = False
+    Value.Cinematic = False
+    Value.IdleOrbit = False
+    Value.IdleTime = 0
+    Value.InspectMoving = False
+    Value.Flight.Suspended = True
+    Value.Flight.Focusing = False
+    Value.Flight.Arrival = False
+    Value.InputActive = True
+
+    Call FreeCamera.Reset(Value.Inspection)
+    Call Motion.Reset(Value.View.Controls, Value.View.Zoom)
+    Call Arena.BeginTransition(Value.View, 0)
+    Call Drone.Compose(Value.Flight, Value.View, Value.BaseCamera, False, 0)
 
 End Sub
 
@@ -666,7 +700,7 @@ Public Sub Overlay(ByRef Value As State)
     Draw Text "WASD / Arrows: Inspect   Tab: Control Party   Ctrl+Tab: Next Leader" At 18, Window_Height() - 70 Size 14 Color WHITE
 
     If Authoring.Editing() Then
-        Draw Text "Left: Select / Draw   Shift+Left: Pan   Middle: Orbit   Wheel: Zoom" At 18, Window_Height() - 48 Size 14 Color WHITE
+        Draw Text "1: Top Down   Left: Edit / Pan   Shift+Left: Pan   Middle: Orbit   Wheel: Zoom" At 18, Window_Height() - 48 Size 14 Color WHITE
     Else
         Draw Text "Middle: Orbit   Left: Pan   Wheel: Zoom   Right Click: Overview" At 18, Window_Height() - 48 Size 14 Color WHITE
     End If

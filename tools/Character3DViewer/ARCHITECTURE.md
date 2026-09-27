@@ -1,5 +1,41 @@
 # Character Viewer Architecture
 
+## September 28 native town file and appearance changes
+
+`TownEditorSession` coordinates the existing document/render lifecycle and delegates
+file jobs to `TownFileJobs`, tab snapshots to `TownTabs`, and thumbnail controls to
+`TownEditorPanel`. `TownLibrary` owns permanent Neris recovery. Filesystem work stays
+in `TownFileWorker.ps1`; retention is isolated in `TownVersionFiles.ps1`; Blender
+conversion reuses the current builder from `town_blender_files.py`. No bootstrap,
+Studio implementation, architecture threshold or exclusion changes are required.
+
+The shared `File_Pick` primitive owns only a Windows path dialog. It introduces no
+filesystem access or town-specific logic in the runtime. `ArenaViewport3D` exposes
+an optional pitch limit; the town's `1` command opts into near-vertical inspection.
+Grass material ownership remains with catalog/surface rendering; submerged shoreline
+geometry and closed road/water sides belong to the surface renderer. Shared water
+shading stays town-independent. TownLighting owns the corrected upward sun vector;
+simple-material shadow texel filtering remains in the native renderer. Terrain and
+catalog grass use mipmapped anisotropic textures without changing catalog identity.
+
+Changed feature-owner sizes (review triggers, not new baselines):
+
+| Owner | Lines |
+| --- | ---: |
+| `TownEditorSession.smile` | 640 |
+| `TownEditorPanel.smile` | 398 |
+| `TownFileJobs.smile` | 422 |
+| `TownTabs.smile` | 210 |
+| `TownSurfaceRenderer.smile` | 524 |
+| `TownFileWorker.ps1` | 118 |
+| `TownVersionFiles.ps1` | 60 |
+| `town_blender_files.py` | 130 |
+
+Compiler, native Viewer hardening, editor foundation/route/render/session, real
+Blender round-trip, terrain separation and dated-version retention checks pass.
+The editor catalog fingerprint is unchanged. Detailed contracts and current manual
+acceptance results belong in the town-authoring document.
+
 ## Native Neris town ownership
 
 The native host retains top tabs and delegates town lifecycle to `NerisTown`.
@@ -27,7 +63,9 @@ replacement. Studio/Web adoption remains held.
 
 ### Blender and export boundary
 
-`Blend/Neris-Town-Waterfront.blend` is current; the reproducible input is preserved
+The live Town Editor document is authoritative. Explicit Blender imports/exports
+are described in `docs/architecture/town-authoring.md`; the static showcase
+`Blend/Neris-Town-Waterfront.blend` must not replace live edits. Its reproducible input is preserved
 `Neris-Town-Expanded.blend`. `waterfront_plan.py` owns coordinates;
 `waterfront_town.py` places architecture/terrain/streets; `waterfront_landscape.py`
 places checked gardens/furniture. No script saves a live interactive Blender session.

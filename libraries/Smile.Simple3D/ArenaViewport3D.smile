@@ -24,6 +24,7 @@ Public Type State
     WorldScale As Double
     MinimumDistance As Double
     MaximumDistance As Double
+    MaximumPitch As Double
     PreviousTime As Number
     Ready As Boolean
 End Type
@@ -103,7 +104,7 @@ Public Sub ComposeCamera(ByRef Value As State, BaseCamera As P.Camera3D)
 
     If Value.MinimumDistance > 0.0 And Value.MaximumDistance > Value.MinimumDistance Then
         Value.LiveCamera = Motion.ComposeDistance(BaseCamera, Value.Controls,
-            Value.MinimumDistance, Value.MaximumDistance)
+            Value.MinimumDistance, Value.MaximumDistance, Max(1.48, Value.MaximumPitch))
     Else
 
         BaseCamera.FovDegrees = BaseCamera.FovDegrees - ToDouble(Motion.DEFAULT_ZOOM)

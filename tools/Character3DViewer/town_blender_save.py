@@ -42,6 +42,11 @@ def populate_items(document, catalog):
     for item in document['items']:
         source = samples[item['template']]
         delta = item_matrix(item) @ source_matrix(source).inverted()
+        anchor = bpy.data.objects.new('Town Assembly %d' % item['identity'], None)
+        output.objects.link(anchor)
+        anchor.matrix_world = item_matrix(item)
+        anchor['town_assembly'] = item['identity']
+        anchor['town_template'] = item['template']
         copies = {}
         for name in source['members']:
             original = originals[name]
@@ -50,9 +55,12 @@ def populate_items(document, catalog):
             output.objects.link(clone)
             copies[original] = clone
         for original, clone in copies.items():
-            clone.parent = copies.get(original.parent)
+            clone.parent = copies.get(original.parent, anchor)
             clone.matrix_world = delta @ original.matrix_world
             clone['town_identity'] = item['identity']
+            clone['town_member'] = original.name
+            local = anchor.matrix_world.inverted() @ clone.matrix_world
+            clone['town_local_matrix'] = [n for row in local for n in row]
     bpy.data.batch_remove(ids=list(originals.values()))
 
 
@@ -91,6 +99,17 @@ def terrain(document):
         faces.append((base+4, base+5, base+6, base+7))
         materials.append(4)
 
+    def skirt(kind, neighbor, a, b, c, d):
+        kind, neighbor = min(kind, 3), min(neighbor, 3)
+        if kind == 0 or kind <= neighbor:
+            return
+        height = -.01 if kind == 1 else .085 if kind == 2 else .212
+        base = len(vertices)
+        vertices.extend(((a/10, b/10, -.03), (a/10, b/10, height),
+                         (c/10, d/10, height), (c/10, d/10, -.03)))
+        faces.append((base, base+1, base+2, base+3))
+        materials.append(0 if kind == 1 else 5 if kind == 2 else 2)
+
     for z in range(rows):
         x = 0
         while x < cols:
@@ -103,7 +122,14 @@ def terrain(document):
                 # Keep the authored lawn below the castle/HQ floors, not coplanar.
                 height = -.01 if kind == 1 else .085 if kind == 2 else .212
                 quad(xs[start], zs[z], xs[x], zs[z+1], height, material)
+                if kind == 2:
+                    quad(xs[start]-1, zs[z]-1, xs[x]+1, zs[z+1]+1, -.03, 5)
         for x in range(cols):
+            kind = cell(x, z)
+            skirt(kind, cell(x-1, z), xs[x], zs[z], xs[x], zs[z+1])
+            skirt(kind, cell(x+1, z), xs[x+1], zs[z+1], xs[x+1], zs[z])
+            skirt(kind, cell(x, z-1), xs[x+1], zs[z], xs[x], zs[z])
+            skirt(kind, cell(x, z+1), xs[x], zs[z+1], xs[x+1], zs[z+1])
             if cell(x, z) == 4:
                 if cell(x-1, z) == 2:
                     rail(xs[x]-2.25, zs[z], xs[x]+2.25, zs[z+1])
@@ -115,7 +141,25 @@ def terrain(document):
                     rail(xs[x], zs[z+1]-2.25, xs[x+1], zs[z+1]+2.25)
     mesh = bpy.data.meshes.new('Town Editable Surface')
     mesh.from_pydata(vertices, [], faces)
-    for name in ('Town Grass', 'Royal Deep Blue Water', 'Town Paving', 'Pale Carved Stone', 'Aged Gold'):
+    bed = bpy.data.materials.new('Town Submerged Water Bed')
+    bed.use_nodes = True
+    shader = next(n for n in bed.node_tree.nodes if n.type == 'BSDF_PRINCIPLED')
+    shader.inputs['Base Color'].default_value = (.017, .076, .258, 1)
+    shader.inputs['Roughness'].default_value = 1
+    # Reload current lawn textures without changing the immutable assembly template.
+    for image in list(bpy.data.images):
+        if image.name.startswith(('Neris-Grass-Color', 'Neris-Grass-Normal')):
+            stem = 'Neris-Grass-Normal' if 'Normal' in image.name else 'Neris-Grass-Color'
+            replacement = bpy.data.images.load(str(TOWN / 'Textures' / (stem + '.png')), check_existing=False)
+            if 'Normal' in stem:
+                replacement.colorspace_settings.name = 'Non-Color'
+            replacement.pack()
+            for mat in bpy.data.materials:
+                if mat.node_tree:
+                    for node in mat.node_tree.nodes:
+                        if node.type == 'TEX_IMAGE' and node.image == image:
+                            node.image = replacement
+    for name in ('Town Grass', 'Royal Deep Blue Water', 'Town Paving', 'Pale Carved Stone', 'Aged Gold', 'Town Submerged Water Bed'):
         mesh.materials.append(bpy.data.materials[name])
     for poly, material in zip(mesh.polygons, materials):
         poly.material_index = material
@@ -128,13 +172,17 @@ def terrain(document):
     if not paving_path.is_file():
         raise ValueError('Paving texture missing; build the Viewer before saving')
     paving = bpy.data.materials['Town Paving']
-    image = bpy.data.images.load(str(paving_path), check_existing=True)
+    image = bpy.data.images.load(str(paving_path), check_existing=False)
     image.pack()
     texture = paving.node_tree.nodes.new('ShaderNodeTexImage')
     texture.image = image
     texture.extension = 'REPEAT'
     shader = next(n for n in paving.node_tree.nodes if n.type == 'BSDF_PRINCIPLED')
     paving.node_tree.links.new(texture.outputs['Color'], shader.inputs['Base Color'])
+    shader.inputs['Roughness'].default_value = .38
+    shader.inputs['Metallic'].default_value = 0
+    for link in list(shader.inputs['Normal'].links):
+        paving.node_tree.links.remove(link)
     obj = bpy.data.objects.new('Town Editable Surface', mesh)
     bpy.context.scene.collection.objects.link(obj)
 

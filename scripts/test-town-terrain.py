@@ -42,6 +42,15 @@ floors['Royal Bridge Deck'] = max((bridge.matrix_world @ v.co).z for v in bridge
 terrain({'columns': 3, 'rows': 2, 'cells': [1, 2, 3, 1, 2, 4],
          'xs': [-20, 0, 20, 40], 'zs': [0, 20, 40]})
 mesh = bpy.data.objects['Town Editable Surface'].data
+paving = bpy.data.materials['Town Paving']
+shader = next(n for n in paving.node_tree.nodes if n.type == 'BSDF_PRINCIPLED')
+assert abs(shader.inputs['Roughness'].default_value - .38) < .00001
+assert not shader.inputs['Normal'].links, 'Paving must not regain a grain/bump pattern'
+image = shader.inputs['Base Color'].links[0].from_node.image
+pixels, width = list(image.pixels), image.size[0]
+interior = {tuple(pixels[(y*width+x)*4:(y*width+x)*4+3])
+            for y in range(1, width-1) for x in range(1, width-1)}
+assert len(interior) == 1, 'Flat stone faces must not regain periodic grain'
 heights = {}
 for face in mesh.polygons:
     heights.setdefault(face.material_index, []).extend(mesh.vertices[i].co.z for i in face.vertices)
@@ -52,7 +61,7 @@ for name, floor in floors.items():
 
 assert abs(min(heights[1])-.085) < .00001, 'Water height changed'
 assert abs(max(heights[2])-.212) < .00001, 'Road/bridge height changed'
-assert min(heights[2])-floors['Royal Bridge Deck'] >= .06, 'Bridge paving crowds the authored support'
+assert max(heights[2])-floors['Royal Bridge Deck'] >= .06, 'Bridge paving crowds the authored support'
 assert 3 in heights and 4 in heights, 'Bridge rail walls/caps were removed'
 
 # Compare the native upload height with the actual Blender output (XZY, x10, +21).
@@ -67,5 +76,16 @@ bpy.data.objects.remove(bpy.data.objects['Town Editable Surface'], do_unlink=Tru
 terrain({'columns': 3, 'rows': 1, 'cells': [1, 2, 3],
          'xs': [-20, 0, 20, 40], 'zs': [0, 20]})
 mesh = bpy.data.objects['Town Editable Surface'].data
-assert len(mesh.polygons) == 3 and {p.material_index for p in mesh.polygons} == {0, 1, 2}
+tops = [f for f in mesh.polygons if abs(f.normal.z) > .99]
+sides = [f for f in mesh.polygons if abs(f.normal.z) < .01]
+assert len(tops) == 4 and {p.material_index for p in mesh.polygons} == {0, 1, 2, 5}
+assert len(sides) == 10, 'Every exposed surface edge must be closed'
+for face in sides:
+    levels = [mesh.vertices[i].co.z for i in face.vertices]
+    assert abs(min(levels) + .03) < .00001, 'Side must reach the submerged bed'
+    expected = -.01 if face.material_index == 0 else .085 if face.material_index == 5 else .212
+    assert abs(max(levels) - expected) < .00001, 'Sides must not rise above their surface'
+bed = [v.co for f in tops if f.material_index == 5 for v in (mesh.vertices[i] for i in f.vertices)]
+assert all(abs(p.z + .03) < .00001 for p in bed), 'Water bed must stay below the lawn'
+assert min(p.x for p in bed) < 0 and max(p.x for p in bed) > 2, 'Bed must overlap both banks'
 print('PASS clean shorelines, retained bridge rails and native/Blender height parity', flush=True)

@@ -3929,6 +3929,8 @@ internal static class WebOutputWriter
 
             const FILE_TRANSFER_MAX_BYTES = 8 * 1024 * 1024;
             const fileTransferUrls = new Set();
+            // Browsers cannot disclose native paths. Evaluate arguments, then report unavailable.
+            function filePick() { return ""; }
             let cancelFileImport = null;
 
             function textPrompt(title, message, initialValue) {
@@ -4281,7 +4283,7 @@ internal static class WebOutputWriter
                 print, clearScreen, wait, getKey, keyHeld, keyEventHeld, windowWidth, windowHeight, windowTitle, windowActivate, windowLoading, windowDeferClose, windowCloseRequested, pointerX, pointerY, pointerDeltaX, pointerDeltaY,
                 pointerWheelDelta, pointerWheelRemainder, pointerInside, pointerHeld, pointerPressed, pointerReleased,
                 playSound, stopSound,
-                playMusic, pauseMusic, resumeMusic, stopMusic, setMusicVolume, loadTextFile, fileExport, fileImport, textPrompt,
+                playMusic, pauseMusic, resumeMusic, stopMusic, setMusicVolume, loadTextFile, fileExport, fileImport, filePick, textPrompt,
                 loadInt, saveInt, loadData, saveData, loadDataChecked, saveDataChecked, renderer3DDouble, renderer3DDoubleValue, renderer3D, renderer3DImage, renderer3DText, renderer3DTextValue,
                 gameClosed, endProgram, mediaShutdown, mediaDiagnostics, run
             };

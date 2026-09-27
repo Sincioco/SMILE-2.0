@@ -16,10 +16,12 @@ ROOT = Path(__file__).resolve().parents[1]
 def textures():
     size = 1024
     rng = np.random.default_rng(92626)
-    y, x = np.mgrid[0:size, 0:size] * math.tau / size
-    tone = .85 + .08*np.sin(3*x+2*y) + .06*np.sin(5*y-x) + .04*np.sin(9*x+7*y)
-    tone += rng.normal(0, .008, (size, size))
-    rgb = tone[..., None] * np.array([.115, .29, .032])
+    # Subtle isotropic noise, without periodic waves or a diagonal weave.
+    tone = rng.normal(1.0, .12, (size, size))
+    for _ in range(8):
+        tone = (tone*4 + np.roll(tone,1,0) + np.roll(tone,-1,0)
+                + np.roll(tone,1,1) + np.roll(tone,-1,1))/8
+    rgb = tone[..., None] * np.array([.18, .34, .07])
     height = np.zeros((size, size))
     # Thousands of overlapping tapered strokes give the ground a dense cut-grass
     # weave. Wrapped pixels make both maps seamless at the two-meter repeat.
@@ -28,7 +30,7 @@ def textures():
         angle = rng.uniform(0, math.tau)
         length = rng.uniform(7, 29)
         width = rng.uniform(.7, 2.2)
-        tint = np.array([.105, .275, .030]) * rng.uniform(.88, 1.12)
+        tint = np.array([.17, .325, .065]) * rng.uniform(.94, 1.06)
         for t in np.linspace(0, 1, int(length*1.6)):
             for across in [-1, 0, 1]:
                 dx = across*width*(1-t)

@@ -135,6 +135,28 @@ def decode(payload, catalog, request=False):
     return result
 
 
-def respond(folder, request_id, status, progress, message):
+def encode(document, catalog):
+    fingerprint = hashlib.sha256(json.dumps(catalog, sort_keys=True).encode()).hexdigest()
+    result = bytearray(b'TWN\x01') + name(fingerprint) + name(document['name']) + b'\0'
+    precise = lambda value: integer(round(value * 1000000))
+    result += integer(document['columns']) + integer(document['rows']) + precise(document['cell_size'])
+    for edge in document['xs'] + document['zs']:
+        result += precise(edge)
+    cells = document['cells']
+    for start in range(0, len(cells), 16):
+        result += integer(sum(cell * 8**i for i, cell in enumerate(cells[start:start+16])))
+    result += integer(len(document['items']))
+    for item in document['items']:
+        result += integer(item['identity']) + integer(item['template']) + integer(item['source'])
+        for value in item['position'] + item['scale'] + [item['yaw']]:
+            result += precise(value)
+    for value in document['sun'][:5]:
+        result += integer(value)
+    result += precise(document['sun'][5]) + precise(document['sun'][6]) + bytes([document['sun'][7]])
+    decode(result, catalog)  # Same format/range checks apply in both directions.
+    return bytes(result)
+
+
+def respond(folder, request_id, status, progress, message, key='TownEditor.Blender.Response'):
     payload = b'TWR\x01' + integer(request_id) + integer(status) + integer(progress) + name(message[:80])
-    atomic_write(key_path(folder, 'TownEditor.Blender.Response'), payload)
+    atomic_write(key_path(folder, key), payload)
