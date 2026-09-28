@@ -247,7 +247,7 @@ Private Sub Encode(ByRef Value As Document.State, MarkSaved As Boolean)
     Call WriteByte(84)
     Call WriteByte(87)
     Call WriteByte(78)
-    Call WriteByte(1)
+    Call WriteByte(2)
     Call WriteName(Catalog.FINGERPRINT)
     Call WriteName(Value.Name)
 
@@ -307,6 +307,8 @@ Private Sub Encode(ByRef Value As Document.State, MarkSaved As Boolean)
         Call WriteByte(0)
     End If
 
+    Call WriteByte(Value.Light.ShadowOpacity + 1)
+
     ByteCount = Offset
 
 End Sub
@@ -318,11 +320,18 @@ Private Function Decode() As Boolean
     Dim Packed As Number
     Dim Digit As Number
     Dim Shadows As Number
+    Dim Version As Number
 
     Offset = 0
     Valid = True
 
-    If ReadByte() <> 84 Or ReadByte() <> 87 Or ReadByte() <> 78 Or ReadByte() <> 1 Then
+    If ReadByte() <> 84 Or ReadByte() <> 87 Or ReadByte() <> 78 Then
+        Return False
+    End If
+
+    Version = ReadByte()
+
+    If Version < 1 Or Version > 2 Then
         Return False
     End If
 
@@ -419,12 +428,18 @@ Private Function Decode() As Boolean
     Candidate.Light.Elevation = ReadPrecise()
     Shadows = ReadByte()
     Candidate.Light.Shadows = Shadows = 1
+    Candidate.Light.ShadowOpacity = -1
+
+    If Version >= 2 Then
+        Candidate.Light.ShadowOpacity = ReadByte() - 1
+    End If
 
     If (Candidate.Light.RedValue < 0 Or Candidate.Light.RedValue > 255 Or
         Candidate.Light.GreenValue < 0 Or Candidate.Light.GreenValue > 255 Or
         Candidate.Light.BlueValue < 0 Or Candidate.Light.BlueValue > 255 Or
         Candidate.Light.Intensity < 0 Or Candidate.Light.Intensity > 1000 Or
         Candidate.Light.Ambient < 0 Or Candidate.Light.Ambient > 100 Or
+        Candidate.Light.ShadowOpacity < -1 Or Candidate.Light.ShadowOpacity > 100 Or
         Shadows < 0 Or Shadows > 1 Or Offset <> ByteCount) Then
         Return False
     End If

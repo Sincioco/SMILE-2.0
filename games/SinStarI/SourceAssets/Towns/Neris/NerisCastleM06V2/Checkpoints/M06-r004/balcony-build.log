@@ -1,0 +1,7 @@
+00:01.266  blend            | Read blend: "D:\Projects\Sin-Star-I-Assets\Neris-Castle\source\neris-castle-M06-r003.blend"
+00:13.781  render           | Saved: 'D:\Projects\Sin-Star-I-Assets\Neris-Castle\checkpoints\M06-r004\balcony-repaired.png'
+Info: Saved as "neris-castle-M06-r004.blend"
+NC_RESULT [{"side": "West", "deck_x": [-39.15, -20.05], "tower_contact": true, "piers_clear_windows": true, "door_threshold": 13.13, "pots": 2}, {"side": "East", "deck_x": [20.05, 39.15], "tower_contact": true, "piers_clear_windows": true, "door_threshold": 13.13, "pots": 2}]
+Blender 5.2.1 LTS (hash 9e2066aef7ef built 2026-08-25 02:38:20)
+
+Blender quit

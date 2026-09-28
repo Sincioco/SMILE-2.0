@@ -75,6 +75,7 @@ Private Dim ShadowNearDepth As Number
 Private Dim ShadowFarDepth As Number
 Private Dim ShadowConstantBias As Number
 Private Dim ShadowNormalBias As Number
+Private Dim ShadowOpacityValue As Number
 Private Dim HdrOverride As Boolean
 Private Dim HdrEnabledValue As Boolean
 Private Dim BloomOverride As Boolean
@@ -137,6 +138,7 @@ Private Sub EnsureInitialized()
     ShadowFarDepth = 1200
     ShadowConstantBias = 500
     ShadowNormalBias = 600
+    ShadowOpacityValue = -1
     HdrOverride = False
     HdrEnabledValue = False
     BloomOverride = False
@@ -306,7 +308,8 @@ Private Function ApplyRenderProfile() As Boolean
             ShadowSlotValue,
             Resolution,
             ShadowConstantBias,
-            ShadowNormalBias
+            ShadowNormalBias,
+            ShadowOpacityValue
         )
     End If
 
@@ -911,6 +914,26 @@ Public Function SetShadowBias(ConstantBias As Number, NormalBias As Number) As B
 
 End Function
 
+''' -1 retains physical lighting; 0..100 blends received shadow coverage toward black.
+Public Function SetShadowOpacity(Percent As Number) As Boolean
+
+    If Not RenderSettingWritable() Then
+        Return False
+    End If
+
+    If Percent < -1 Or Percent > 100 Then
+        ErrorValue = SCENE_ERROR_INVALID_RENDER_SETTING
+
+        Return False
+    End If
+
+    ShadowOpacityValue = Percent
+    ErrorValue = SCENE_ERROR_NONE
+
+    Return True
+
+End Function
+
 Public Function ShadowResolution() As Number
 
     Dim Result As Number
@@ -1144,7 +1167,11 @@ End Function
 
 Public Function TextureWrap() As Number
 
-    Return Graphics3D.TEXTURE_WRAP_REPEAT
+    Dim ReturnValue As Number
+
+    ReturnValue = Graphics3D.TEXTURE_WRAP_REPEAT
+
+    Return ReturnValue
 
 End Function
 

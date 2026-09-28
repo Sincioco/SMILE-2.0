@@ -19,6 +19,7 @@ Public Const CLOSE_UP_DISTANCE = 100
 
 Public Type PointerInput
     Blocked As Boolean
+    PanModifier As Boolean
     OrbitPressed As Boolean
     OrbitHeld As Boolean
     OrbitReleased As Boolean
@@ -35,6 +36,7 @@ Public Function ReadPointer(Blocked As Boolean) As PointerInput
     Dim Result As PointerInput
 
     Result.Blocked = Blocked
+    Result.PanModifier = Key_Held(KEY_SHIFT)
     Result.OrbitPressed = Pointer_Pressed(POINTER_MIDDLE)
     Result.OrbitHeld = Pointer_Held(POINTER_MIDDLE)
     Result.OrbitReleased = Pointer_Released(POINTER_MIDDLE)
@@ -48,6 +50,23 @@ Public Function ReadPointer(Blocked As Boolean) As PointerInput
     Return Result
 
 End Function
+
+''' Shift at middle-button press selects pan until release, even if Shift changes.
+Public Sub ResolveGesture(Controls As Camera.Controls, ByRef Input As PointerInput)
+
+    If ((Input.PanModifier And Not Controls.Orbiting And Input.OrbitHeld) Or
+        (Controls.Panning And (Input.OrbitHeld Or Input.OrbitReleased))) Then
+
+        Input.PanPressed = Input.PanPressed Or Input.OrbitPressed
+        Input.PanHeld = Input.PanHeld Or Input.OrbitHeld
+        Input.PanReleased = Input.PanReleased Or Input.OrbitReleased
+        Input.OrbitPressed = False
+        Input.OrbitHeld = False
+        Input.OrbitReleased = False
+
+    End If
+
+End Sub
 
 Public Sub Reset(ByRef Controls As Camera.Controls, ByRef Zoom As Camera.ZoomState,
     Optional InitialYaw As Double = 0.0, Optional InitialZoom As Number = DEFAULT_ZOOM)
@@ -97,6 +116,8 @@ Public Function UpdatePointer(ByRef Controls As Camera.Controls,
     Dim OrbitActive As Boolean
     Dim PanActive As Boolean
     Dim Changed As Boolean
+
+    Call ResolveGesture(Controls, Input)
 
     OrbitActive = ((Not Input.Blocked And (Input.OrbitPressed Or Input.OrbitHeld)) Or
         (Controls.Orbiting And (Input.OrbitHeld Or Input.OrbitReleased)))

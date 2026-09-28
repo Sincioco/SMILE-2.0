@@ -1373,7 +1373,8 @@ Public Class Session
             Me.ViewWidth,
             Me.ViewHeight,
             Me.ViewerUiState.CalibrationVisible,
-            Me.Party.Enabled
+            Me.Party.Enabled,
+            Key_Held(KEY_SHIFT)
         )
 
         If Not Blocked Then
@@ -2836,7 +2837,8 @@ Public Class Session
             Not OrbitPrimary And Pointer_Pressed(POINTER_PRIMARY),
             Not OrbitPrimary And Pointer_Held(POINTER_PRIMARY),
             Not OrbitPrimary And Pointer_Released(POINTER_PRIMARY),
-            X, Y, Pointer_Delta_X(), Pointer_Delta_Y(), Me.ViewWidth, Me.ViewHeight, False, Me.Party.Enabled)
+            X, Y, Pointer_Delta_X(), Pointer_Delta_Y(), Me.ViewWidth, Me.ViewHeight, False, Me.Party.Enabled,
+            Key_Held(KEY_SHIFT) And Pointer_Held(POINTER_MIDDLE))
         Input.WheelDelta = Pointer_Wheel_Delta()
         Me.Session.Ready = ViewerCamera.UpdatePointerInteraction(
             Me.ViewerCameraState, Input, ORBIT_POINTER_DIVISOR, PAN_POINTER_DIVISOR, 8) And Me.Session.Ready

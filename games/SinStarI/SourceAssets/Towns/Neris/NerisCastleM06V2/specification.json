@@ -1,0 +1,672 @@
+{
+  "schema_version": 1,
+  "design_id": "neris-castle-proposal-v1",
+  "status": "proposed-unapproved",
+  "purpose": "Game-asset exterior construction proposal, not a surveyed reconstruction or real-world engineering drawing.",
+  "units": "meters",
+  "coordinate_system": {
+    "handedness": "right",
+    "up": "+Z",
+    "front": "-Y (south)",
+    "back": "+Y (north)",
+    "left": "-X (west, as viewed facing the front)",
+    "right": "+X (east, as viewed facing the front)",
+    "origin": [
+      0,
+      0,
+      0
+    ],
+    "ground_level_z": 0
+  },
+  "authority": {
+    "appearance": "references/original-castle-contact-sheet.png, front image is primary silhouette reference",
+    "heraldry": "references/original-neris-flag-design.png, appearance only; textual mottos are not accepted story canon",
+    "geometry": "This proposal becomes binding only after explicit M01 approval. Revise this JSON, tables and derived diagrams together.",
+    "scope": "Exterior, traversable forecourt and entrance threshold; no castle interiors, combat logic, military HQ, town or engine changes."
+  },
+  "site": {
+    "wall_outer_x": [
+      -52,
+      52
+    ],
+    "wall_outer_y": [
+      -64,
+      64
+    ],
+    "wall_thickness": 3,
+    "wall_body_top_z": 12,
+    "battlement_top_z": 14,
+    "tower_inclusive_bounds_x": [
+      -54,
+      54
+    ],
+    "tower_inclusive_bounds_y": [
+      -66,
+      66
+    ],
+    "foundation_bounds_x": [
+      -56,
+      56
+    ],
+    "foundation_bounds_y": [
+      -68,
+      68
+    ],
+    "moat_outer_x": [
+      -70,
+      70
+    ],
+    "moat_outer_y": [
+      -82,
+      82
+    ],
+    "moat_water_z": -2,
+    "moat_bed_z": -5,
+    "approach_x": [
+      -8,
+      8
+    ],
+    "approach_y": [
+      -96,
+      -82
+    ],
+    "footprint_note": "Tower-inclusive 108 x 132 m refers to ground/shaft footprint. Approved roof eaves can overhang; the massing illustration uses up to 0.72 m tower eave overhang. Report actual source/export AABBs separately."
+  },
+  "courtyard": {
+    "paving_x": [
+      -40,
+      40
+    ],
+    "paving_y": [
+      -46,
+      8
+    ],
+    "paving_z": 0,
+    "fountain_center": [
+      0,
+      -18,
+      0
+    ],
+    "fountain_radius": 6,
+    "fountain_rim_z": 1,
+    "fountain_crystal_top_z": 10,
+    "minimum_primary_route_width": 4,
+    "route_centerline_xy": [
+      [
+        0,
+        -96
+      ],
+      [
+        0,
+        -84
+      ],
+      [
+        0,
+        -64
+      ],
+      [
+        0,
+        -49
+      ],
+      [
+        9,
+        -30
+      ],
+      [
+        9,
+        -7
+      ],
+      [
+        0,
+        2
+      ],
+      [
+        0,
+        14
+      ]
+    ],
+    "colonnade_west_x": [
+      -43,
+      -36
+    ],
+    "colonnade_east_x": [
+      36,
+      43
+    ],
+    "colonnade_y": [
+      -40,
+      8
+    ],
+    "colonnade_roof_top_z": 8.5,
+    "gate_to_paving_connector_x": [
+      -6,
+      6
+    ],
+    "gate_to_paving_connector_y": [
+      -50,
+      -46
+    ]
+  },
+  "gatehouse": {
+    "bounds_x": [
+      -15,
+      15
+    ],
+    "bounds_y": [
+      -64,
+      -50
+    ],
+    "body_top_z": 20,
+    "roof_top_z": 26,
+    "portal_clear_width": 12,
+    "portal_spring_z": 11,
+    "portal_apex_z": 15,
+    "portal_profile": "Pointed arch, straight jambs to spring and two quadratic curved sides to apex; preserve minimum clearance for route.",
+    "open_gate_default": true,
+    "tower_centers": [
+      [
+        -19,
+        -58
+      ],
+      [
+        19,
+        -58
+      ]
+    ],
+    "tower_radius": 5,
+    "tower_shaft_top_z": 20,
+    "tower_roof_top_z": 28,
+    "tower_crystal_top_z": 32,
+    "portcullis": "Optional secondary mechanism; do not add a solid slab across the open passage."
+  },
+  "drawbridge": {
+    "width": 10,
+    "length": 20,
+    "thickness": 0.5,
+    "hinge_world": [
+      0,
+      -64,
+      -0.25
+    ],
+    "local_extension_axis": "-Y",
+    "local_y_range": [
+      -20,
+      0
+    ],
+    "local_z_range": [
+      -0.25,
+      0.25
+    ],
+    "rotation_axis": "local X",
+    "test_rotation_degrees": [
+      0,
+      -45,
+      -90
+    ],
+    "lowered_top_z": 0,
+    "lowered_tip_y": -84,
+    "moat_crossing_y": [
+      -82,
+      -68
+    ],
+    "minimum_clear_deck_width": 8.4,
+    "tip_center_formula": "hinge + (0, -length*cos(theta), length*sin(theta)); theta is positive raising angle; Blender local X rotation = -theta.",
+    "scope_note": "Articulated game prop; real mechanical engineering and physically simulated winches are out of scope.",
+    "clearance_rebates": [
+      {
+        "id": "closing-face-recess",
+        "owner": "gatehouse",
+        "x": [
+          -5.3,
+          5.3
+        ],
+        "y": [
+          -64.35,
+          -63.6
+        ],
+        "z": [
+          -0.6,
+          20.3
+        ],
+        "purpose": "Clear the thickness of the vertical closed leaf; this is a shallow recess, not a second passage."
+      },
+      {
+        "id": "inner-leaf-seat",
+        "owner": "site",
+        "x": [
+          -5.3,
+          5.3
+        ],
+        "y": [
+          -68,
+          -64
+        ],
+        "z": [
+          -0.6,
+          0.05
+        ],
+        "purpose": "Prevent foundation intersecting the underside of the lowered deck; form a dedicated seat/support."
+      },
+      {
+        "id": "outer-landing-seat",
+        "owner": "site",
+        "x": [
+          -5.3,
+          5.3
+        ],
+        "y": [
+          -84.1,
+          -82
+        ],
+        "z": [
+          -0.6,
+          0.05
+        ],
+        "purpose": "Receive the lowered leaf flush with the approach, not embedded in a solid road block."
+      }
+    ],
+    "minimum_noncontact_clearance_m": 0.05
+  },
+  "palace": {
+    "keep_bounds_x": [
+      -16,
+      16
+    ],
+    "keep_bounds_y": [
+      14,
+      52
+    ],
+    "keep_base_z": 3,
+    "keep_body_top_z": 32,
+    "dome_center_xy": [
+      0,
+      34
+    ],
+    "drum_radius": 13,
+    "drum_z": [
+      32,
+      38
+    ],
+    "dome_z": [
+      38,
+      51
+    ],
+    "crystal_top_z": 60,
+    "west_wing_x": [
+      -40,
+      -17
+    ],
+    "east_wing_x": [
+      17,
+      40
+    ],
+    "wing_y": [
+      16,
+      50
+    ],
+    "wing_base_z": 3,
+    "wing_eaves_z": 18,
+    "wing_roof_top_z": 23,
+    "rear_gallery_x": [
+      -40,
+      40
+    ],
+    "rear_gallery_y": [
+      50,
+      57
+    ],
+    "rear_gallery_base_z": 3,
+    "rear_gallery_eaves_z": 16,
+    "rear_gallery_roof_top_z": 20,
+    "forecourt_turret_centers": [
+      [
+        -18,
+        18
+      ],
+      [
+        18,
+        18
+      ]
+    ],
+    "rear_turret_centers": [
+      [
+        -18,
+        48
+      ],
+      [
+        18,
+        48
+      ]
+    ],
+    "turret_radius": 3,
+    "forecourt_turret_top_z": 43,
+    "rear_turret_top_z": 49,
+    "entrance_center": [
+      0,
+      14,
+      3
+    ],
+    "entrance_opening_width": 6,
+    "entrance_opening_height": 10,
+    "stair_x": [
+      -7,
+      7
+    ],
+    "stair_y": [
+      2,
+      14
+    ],
+    "stair_rise": 3,
+    "stair_count": 20,
+    "stair_riser": 0.15,
+    "stair_tread": 0.6,
+    "terrace_x": [
+      -42,
+      42
+    ],
+    "terrace_y": [
+      14,
+      57
+    ],
+    "terrace_z": 3,
+    "facade_details": {
+      "status": "proposed detail schedule, subject to M03 approval; does not override approved major bounds",
+      "main_front_plane_y": 14,
+      "main_portal": {
+        "center_x": 0,
+        "bottom_z": 3,
+        "width": 6,
+        "height": 10,
+        "spring_height_above_bottom": 7,
+        "recess_depth": 0.6,
+        "outer_frame_band": 0.45
+      },
+      "main_window": {
+        "center_x": 0,
+        "bottom_z": 16,
+        "width": 7,
+        "height": 14.5,
+        "spring_height_above_bottom": 10.0,
+        "recess_depth": 0.3,
+        "outer_frame_band": 0.35,
+        "mullion_width": 0.16
+      },
+      "front_piers": {
+        "center_x": [
+          -12,
+          -8,
+          8,
+          12
+        ],
+        "width": 0.8,
+        "projection": 0.45,
+        "bottom_z": 3,
+        "top_z": 31.5
+      },
+      "side_wing_front_window_centers_x": [
+        -36,
+        -29,
+        -23,
+        23,
+        29,
+        36
+      ],
+      "side_wing_front_windows": {
+        "front_plane_y": 16,
+        "bottom_z": 6,
+        "width": 3,
+        "height": 6,
+        "spring_height_above_bottom": 4.5,
+        "recess_depth": 0.2,
+        "outer_frame_band": 0.25
+      },
+      "bands_z": [
+        3.6,
+        14.2,
+        31.6
+      ],
+      "dome_radial_ribs": 16,
+      "rear_note": "Same shell and bounds; use a smaller service/state rear portal, matching window vocabulary and no second forecourt. Do not force front details onto rear geometry."
+    }
+  },
+  "corner_towers": {
+    "centers": [
+      [
+        -48,
+        -60
+      ],
+      [
+        48,
+        -60
+      ],
+      [
+        -48,
+        60
+      ],
+      [
+        48,
+        60
+      ]
+    ],
+    "radius": 6,
+    "shaft_top_z": 24,
+    "roof_top_z": 33,
+    "crystal_top_z": 37
+  },
+  "materials": [
+    {
+      "id": "NC.MAT.IvoryStone",
+      "srgb_hex": "#E8E0D2",
+      "metallic": 0,
+      "roughness": 0.72,
+      "role": "Primary masonry; broad clean planes, subtle joints."
+    },
+    {
+      "id": "NC.MAT.TealRoof",
+      "srgb_hex": "#235E76",
+      "metallic": 0.3,
+      "roughness": 0.43,
+      "role": "Roof panels and domes; segmented golden ribs."
+    },
+    {
+      "id": "NC.MAT.RoyalGold",
+      "srgb_hex": "#BC9655",
+      "metallic": 0.85,
+      "roughness": 0.3,
+      "role": "Sparse trim, emblems and hardware."
+    },
+    {
+      "id": "NC.MAT.CrystalBlue",
+      "srgb_hex": "#46C8F2",
+      "metallic": 0,
+      "roughness": 0.22,
+      "role": "Faceted crystal; visible color without requiring bloom or transmission."
+    },
+    {
+      "id": "NC.MAT.BannerTeal",
+      "srgb_hex": "#174E65",
+      "metallic": 0,
+      "roughness": 0.85,
+      "role": "Cloth banners with one consistent insignia."
+    },
+    {
+      "id": "NC.MAT.WarmWindow",
+      "srgb_hex": "#E4B361",
+      "metallic": 0,
+      "roughness": 0.38,
+      "role": "Warm recess accent; keep depth and frame legible."
+    },
+    {
+      "id": "NC.MAT.DarkIron",
+      "srgb_hex": "#344348",
+      "metallic": 0.7,
+      "roughness": 0.45,
+      "role": "Hinges, chains and gate hardware."
+    },
+    {
+      "id": "NC.MAT.BridgeTimber",
+      "srgb_hex": "#796854",
+      "metallic": 0,
+      "roughness": 0.7,
+      "role": "Drawbridge planks, kept separate from trim."
+    },
+    {
+      "id": "NC.MAT.Foliage",
+      "srgb_hex": "#426342",
+      "metallic": 0,
+      "roughness": 0.9,
+      "role": "Restrained cypress shapes and planting."
+    },
+    {
+      "id": "NC.MAT.Moat",
+      "srgb_hex": "#497C91",
+      "metallic": 0,
+      "roughness": 0.25,
+      "role": "Separate water surface; advanced water shader is optional."
+    }
+  ],
+  "module_contracts": [
+    {
+      "owner": "site",
+      "collection": "NC.Site",
+      "dependencies": [
+        "layout"
+      ],
+      "owns": [
+        "foundation",
+        "moat basin",
+        "approach"
+      ]
+    },
+    {
+      "owner": "fortifications",
+      "collection": "NC.Fortifications",
+      "dependencies": [
+        "layout",
+        "materials"
+      ],
+      "owns": [
+        "curtain walls",
+        "battlements",
+        "corner towers"
+      ]
+    },
+    {
+      "owner": "gatehouse",
+      "collection": "NC.Gatehouse",
+      "dependencies": [
+        "layout",
+        "materials"
+      ],
+      "owns": [
+        "gate structure",
+        "gate towers",
+        "gateway opening"
+      ]
+    },
+    {
+      "owner": "bridge",
+      "collection": "NC.Bridge",
+      "dependencies": [
+        "layout",
+        "materials"
+      ],
+      "owns": [
+        "drawbridge leaf",
+        "pivot",
+        "attached hardware",
+        "pose validation"
+      ]
+    },
+    {
+      "owner": "palace",
+      "collection": "NC.Palace",
+      "dependencies": [
+        "layout",
+        "materials"
+      ],
+      "owns": [
+        "keep",
+        "wings",
+        "dome",
+        "turrets",
+        "entrance"
+      ]
+    },
+    {
+      "owner": "courtyard",
+      "collection": "NC.Courtyard",
+      "dependencies": [
+        "layout",
+        "materials"
+      ],
+      "owns": [
+        "paving",
+        "fountain",
+        "stairs",
+        "colonnades",
+        "planting",
+        "route clearance"
+      ]
+    },
+    {
+      "owner": "materials",
+      "collection": "data-block owner",
+      "dependencies": [
+        "material specification"
+      ],
+      "owns": [
+        "shared materials",
+        "flag master",
+        "export texture sources"
+      ]
+    },
+    {
+      "owner": "review",
+      "collection": "NC.Review",
+      "dependencies": [
+        "layout"
+      ],
+      "owns": [
+        "cameras",
+        "review lighting",
+        "scale proxy",
+        "reports"
+      ]
+    },
+    {
+      "owner": "export",
+      "collection": "NC.ExportCandidate (disposable copy only)",
+      "dependencies": [
+        "approved castle",
+        "verified target capabilities"
+      ],
+      "owns": [
+        "export staging",
+        "portable asset",
+        "reimport validation"
+      ]
+    }
+  ],
+  "provisional_gameplay_budgets": {
+    "target_evaluated_triangles": 350000,
+    "review_stop_above_triangles": 500000,
+    "target_shared_materials": 12,
+    "review_stop_above_materials": 16,
+    "target_texture_residency_mib": 128,
+    "note": "Proposal only; not a measured SMILE capability. Count instantiated geometry and exported primitives, not just source meshes. Master detail is not automatically gameplay detail."
+  },
+  "validation": {
+    "placement_tolerance_m": 0.05,
+    "major_size_tolerance_m": 0.1,
+    "scale_proxy_height": 1.85,
+    "minimum_primary_route_width_m": 4,
+    "revision_policy": "Explicit user approval required to change layout after M01. No automatic visual approval."
+  },
+  "reference_limitations": [
+    "Original four images are stylized generated concept views, not mutually exact orthographic projections.",
+    "The rear geometry and moat visibility differ in the concept. This proposal uses one continuous moat and one courtyard south of one main keep.",
+    "Side views must be rendered from the same model, never synthesized as separate buildings.",
+    "New dimensions are design decisions, not measurements recovered from the image."
+  ]
+}

@@ -23,6 +23,7 @@ Import Smile.Simple3D.PrecisionMath3D As Math3D
 Import Smile.Tools.TownWorldEditor As World
 Import Smile.Tools.TownSelection As Selection
 Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Tools.NerisTownTour As Tour
 
 Private Dim Town As Document.State
 Private Dim Transfers As Files.State
@@ -123,7 +124,9 @@ Public Function LoadNext() As Boolean
 
     Dim Ok As Boolean
 
-    If Assets.Loaded < Catalog.CHUNK_COUNT + 14 Then
+    Call Renderer.SyncDocument(Assets, Town)
+
+    If Assets.Loaded < Assets.Required Then
         Call Renderer.LoadNext(Assets)
 
         Return False
@@ -172,7 +175,7 @@ Public Function Progress() As Number
 
     Dim Result As Number
 
-    Result = Assets.Loaded * 70 / (Catalog.CHUNK_COUNT + 14)
+    Result = Assets.Loaded * 70 / Max(1, Assets.Required)
 
     If Prepared Then
         Result = 70 + Ground.Row * 20 / Max(1, Town.Surface.Rows)
@@ -433,6 +436,8 @@ Public Sub Update(Leader As P.Vector3, Elapsed As Number)
 
     If AppliedRevision <> Town.Revision Then
 
+        Call Renderer.SyncDocument(Assets, Town)
+
         Ok = Lighting.Apply(Town.Light)
 
         If Ground.LiveRevision = Town.Surface.Revision And Controls.Ui.SunSlider.DragOwner = 0 Then
@@ -450,7 +455,16 @@ Public Sub Update(Leader As P.Vector3, Elapsed As Number)
 
     Call Terrain.Update(Ground, Elapsed)
 
-    Controls.Ui.Busy = Ground.Stage <> 0 Or Transfers.RequestId > 0
+    If Assets.Loaded < Assets.Required Then
+        Call Renderer.LoadNext(Assets)
+    End If
+
+    Controls.Ui.Busy = Ground.Stage <> 0 Or Transfers.RequestId > 0 Or Assets.Loaded < Assets.Required
+
+    If Assets.Loaded < Assets.Required Then
+        Controls.Ui.ProgressPercent = (Assets.Loaded - Catalog.CHUNK_COUNT) * 100 / 14
+        Controls.Ui.Message = "Loading Old Castle..."
+    End If
 
     If Ground.Stage <> 0 Then
         Controls.Ui.ProgressPercent = Ground.Row * 90 / Max(1, Town.Surface.Rows)
@@ -654,6 +668,12 @@ Public Sub FrameDocument(ByRef Camera As P.Camera3D, Optional Overview As Boolea
     Angle = Math3D.Radians(Camera.FovDegrees * 0.5)
     Angle = Atan2(Sin(Angle) * Min(1.0, ToDouble(Window_Width()) / ToDouble(Max(1, Window_Height()))), Cos(Angle))
     Camera.Position = Math3D.Add(Camera.Target, Math3D.Scale(Direction, Radius / Sin(Angle)))
+
+End Sub
+
+Public Sub ReadTour(ByRef Value As Tour.State, IncludeCastle As Boolean)
+
+    Call Tour.ReadTown(Value, Town, IncludeCastle)
 
 End Sub
 

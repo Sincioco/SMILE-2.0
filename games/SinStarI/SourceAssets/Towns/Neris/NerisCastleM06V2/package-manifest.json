@@ -1,0 +1,572 @@
+{
+  "revision": "M06-r005",
+  "source": "Source/neris-castle-M06-r005.blend",
+  "dimensions": "proposed-unapproved",
+  "files": [
+    {
+      "path": "Automation/blender-background.mjs",
+      "bytes": 1047,
+      "sha256": "89e64f82fa19ec50a53d9e5987760a1c12156c24cf2915de2e3585873ae74e5c"
+    },
+    {
+      "path": "Automation/contact-sheet.mjs",
+      "bytes": 6448,
+      "sha256": "901f109b15f1c8168ddc8ed5ebb51b69e6f2b70f9ce4d52d721425d33fab68f6"
+    },
+    {
+      "path": "Automation/export-r005.mjs",
+      "bytes": 720,
+      "sha256": "fe52dd57e5bfdf37d1a45020ea41aa7a5ccc3e02253d7f985dcfa6fb2504e941"
+    },
+    {
+      "path": "Automation/finalize-record.mjs",
+      "bytes": 1552,
+      "sha256": "ca5e3de8237b4b4c4df3d5b4da46a94050d9982dc11e826108599877c522fadc"
+    },
+    {
+      "path": "Automation/install-relocated-town.mjs",
+      "bytes": 1755,
+      "sha256": "16c05a3fa4eefdd0238b53dc219f00a85c0046dea675834576ae1f67e301f8c1"
+    },
+    {
+      "path": "Automation/luxury-arcade-furniture.mjs",
+      "bytes": 3941,
+      "sha256": "ed0fc5d0816e9f76b013443caaf1138d99a91c9b5a6e82f3337971f10d328805"
+    },
+    {
+      "path": "Automation/luxury-balcony-repair.mjs",
+      "bytes": 4789,
+      "sha256": "2418c9bd0b50493d78fc1c7ed09576bbacd970da3dfd965c75955ecf4ae515ff"
+    },
+    {
+      "path": "Automation/luxury-corrections.mjs",
+      "bytes": 4236,
+      "sha256": "81a39e73e4ccbbed1be156ca1671e58b0638bea9b84df73d9907e3d7dac840cc"
+    },
+    {
+      "path": "Automation/luxury-export.mjs",
+      "bytes": 6124,
+      "sha256": "8d19c8626732c3743c66f5019da759294caac8a52ccda78efe68f02776f99643"
+    },
+    {
+      "path": "Automation/luxury-finishes.mjs",
+      "bytes": 8191,
+      "sha256": "cfe0815409ef5b865c6afc0f699b30bc3d159ba98168afb5bd95638c8a1dfa40"
+    },
+    {
+      "path": "Automation/luxury-fountain.mjs",
+      "bytes": 3078,
+      "sha256": "dea73da133b70b4b98b63e739fc3b935ec8b2298c75c87c98c736dd582257be2"
+    },
+    {
+      "path": "Automation/luxury-masonry-texture.mjs",
+      "bytes": 1654,
+      "sha256": "4aa4e512f6ec219fc0642fafe9fcaebfb2c7dc2b9260e59d2d4105f7bbb685ce"
+    },
+    {
+      "path": "Automation/luxury-night.mjs",
+      "bytes": 5263,
+      "sha256": "2c736ddf0c548571b82a89775b0c97637ea6149e9f72d8fc58129da25920f6e9"
+    },
+    {
+      "path": "Automation/luxury-operable-doors.mjs",
+      "bytes": 4588,
+      "sha256": "df6e320ca31fc315572956b8c4d4f01544b2d49553010e8c6960ebb715818b86"
+    },
+    {
+      "path": "Automation/luxury-palace.mjs",
+      "bytes": 4386,
+      "sha256": "b9191d564dd71306115840a524e575a5e203baccf03fe176ff8ad78bc98c9b5a"
+    },
+    {
+      "path": "Automation/luxury-path-lighting.mjs",
+      "bytes": 4211,
+      "sha256": "4ffd4e519c80cf438235b5bfe428cec4870bcb47fb79fa57a15a3bdf15034e09"
+    },
+    {
+      "path": "Automation/luxury-path-repair.mjs",
+      "bytes": 1408,
+      "sha256": "142d2e5c4ff1bdfa88ff22df390b5ceac5d00dd4254b13e29f709db9a2dcc7fe"
+    },
+    {
+      "path": "Automation/luxury-terraces.mjs",
+      "bytes": 5712,
+      "sha256": "31587e3ac1732b52809dd2e1604ccbec66ae0de9fc36395ff52f61cfe3ef77ce"
+    },
+    {
+      "path": "Automation/luxury-wall-gold.mjs",
+      "bytes": 1261,
+      "sha256": "0684a5a864a5b4ef4a17891c57663fa1eb90b1667b930343f98d6c5b6be6ffc1"
+    },
+    {
+      "path": "Automation/luxury-wall-lanterns.mjs",
+      "bytes": 3097,
+      "sha256": "6e5e2e46beb97dc3395cfe278d4b5098db8b061bfead6fa4decb6a46f2d77f49"
+    },
+    {
+      "path": "Automation/m02-entry.mjs",
+      "bytes": 3100,
+      "sha256": "c0dce72870471e0b153a7d1bb036ccbe71d45358231fb8612b65106ac4dd18b8"
+    },
+    {
+      "path": "Automation/m03-facade.mjs",
+      "bytes": 7812,
+      "sha256": "349c67c08b5e15622c3bb0651c52ef96eaab545867ac53eae3475ff243fc2a35"
+    },
+    {
+      "path": "Automation/m03-towers.mjs",
+      "bytes": 4253,
+      "sha256": "e793ca2b95912ec16198d496a73e80e2bd99ee2c787be7118b45033dd5fc15a3"
+    },
+    {
+      "path": "Automation/m04-courtyard.mjs",
+      "bytes": 5625,
+      "sha256": "246878d2de9883c5295d4475a1e0e476d185571b6b4bd4cd61a6e57d6c3b21b0"
+    },
+    {
+      "path": "Automation/m05-heraldry.mjs",
+      "bytes": 5350,
+      "sha256": "14d6909f02d175a24955e601a33897624b9c2b529653e56feb920da5c6ee339a"
+    },
+    {
+      "path": "Automation/m05-materials.mjs",
+      "bytes": 4561,
+      "sha256": "640c52cc926fc7db69c6348825745b1311faa65d7f3130a4c09188b734133c63"
+    },
+    {
+      "path": "Automation/m05-ornament.mjs",
+      "bytes": 3912,
+      "sha256": "f818ea696f51727827e57c9f3559e5c73f52f8fc20f839f61b8161d90b909db4"
+    },
+    {
+      "path": "Automation/m06-export.mjs",
+      "bytes": 4922,
+      "sha256": "51556937e5c3233e0d1b4ccb3f66224a7ebed73bf81fca157b8184312da7aea0"
+    },
+    {
+      "path": "Automation/m06-native.mjs",
+      "bytes": 3931,
+      "sha256": "11f7778c33fe50049d6ceb3f73b0e938aa52a4c86ef253f731b0d4d7eff5c8d0"
+    },
+    {
+      "path": "Automation/masonry-texture.mjs",
+      "bytes": 1653,
+      "sha256": "e00b3e675c4e5f3828cc509176cf839a16cb833d062df10162dda7868db567ed"
+    },
+    {
+      "path": "Automation/model-primitives.mjs",
+      "bytes": 4974,
+      "sha256": "4954dd4794ed521a5e538121e64244bddaa310ef2ef8e52a87518886fbb27fbd"
+    },
+    {
+      "path": "Automation/native-pack.mjs",
+      "bytes": 9660,
+      "sha256": "dd58750e186df27a00ea2ec0740f1f33e5d9aecd5ea598f71c4cb1079c34a4c8"
+    },
+    {
+      "path": "Automation/prepare-relocated-town.mjs",
+      "bytes": 2314,
+      "sha256": "6982fc2abd6f8e9b24b5a2fdcf05ddf2267a6569bc25729b4baa40588a0bf34f"
+    },
+    {
+      "path": "Automation/prepare-town-ground.mjs",
+      "bytes": 3981,
+      "sha256": "aed7cb4cbd97b3c30f2f4ee2a0c12ba6a157a9d755a9fedef2b3ecc8fbfa0aab"
+    },
+    {
+      "path": "Automation/publish-r005.mjs",
+      "bytes": 5108,
+      "sha256": "a202e7d8d9945684fcf4b389e07189a58328045cbd624e3de7d9d4cd624a3e89"
+    },
+    {
+      "path": "Automation/README.md",
+      "bytes": 1760,
+      "sha256": "ab78a9da3516cbb9635b7f2f09465f46e1241e9bfa26e29a85447f2e9f583165"
+    },
+    {
+      "path": "Automation/record-r005.mjs",
+      "bytes": 2506,
+      "sha256": "ac6c63a906a123d567f02c723cbf75d4255980cbfe07dff0dbc5c90922d59e06"
+    },
+    {
+      "path": "Automation/relocate-town-castle.mjs",
+      "bytes": 6720,
+      "sha256": "0c1356e7d6f503a526f9270046b000747a5caa08c942fb3f9a3cf394e9044e01"
+    },
+    {
+      "path": "Automation/repair-town-landing.mjs",
+      "bytes": 3109,
+      "sha256": "e86a51f6a37a7934423c331f43ec9fe5b60301107da7f24a159855067258ecb3"
+    },
+    {
+      "path": "Automation/review-r005.mjs",
+      "bytes": 2307,
+      "sha256": "c3bad2d8854b30fd42fecdabda28fb84b91657c36f22a036d55ef5eac23c3dc9"
+    },
+    {
+      "path": "Automation/validate-m01.mjs",
+      "bytes": 5858,
+      "sha256": "60f6a6cd223f4494de00773d9f8bb7e4bb9ab9f7b927e3e73fbd3fba91273f47"
+    },
+    {
+      "path": "Automation/validate-m06.mjs",
+      "bytes": 4326,
+      "sha256": "cc8cf027296bcf9e44334a4c21d4c5ff7e3b5422594c5621fcbc8b60384f8c7d"
+    },
+    {
+      "path": "castle.glb",
+      "bytes": 46803820,
+      "sha256": "7d4202d2e3ccead62693bb9664b6e38fec584ab90ce122b5ef1b5ca3a3745b10"
+    },
+    {
+      "path": "Castle.sm3d.json",
+      "bytes": 14,
+      "sha256": "50208d78350a7a160dec59a82df1499b6ca7da33e54c5eb11c97e342118e68bb"
+    },
+    {
+      "path": "Checkpoints/back.png",
+      "bytes": 1860079,
+      "sha256": "b8f722b762b4f0f6e0e2cb1f28d272c3c515e7cdc658d84fa5884262a80e99cd"
+    },
+    {
+      "path": "Checkpoints/bridge-closed-royal.png",
+      "bytes": 1532901,
+      "sha256": "f291b564ea2b872881044618d187bd1c6f371f730079c6336aeca2732953dff8"
+    },
+    {
+      "path": "Checkpoints/contact-sheet.png",
+      "bytes": 1821563,
+      "sha256": "73c28cd4210c31b2ce5261f15606089a81369477b0c289df2d123f12f85d89a6"
+    },
+    {
+      "path": "Checkpoints/facade-detail-progress.png",
+      "bytes": 1717904,
+      "sha256": "b08b724141fcc01ae28783bd0c0a44a68e6f71281a0eb6a8d57b5b0b5fb09623"
+    },
+    {
+      "path": "Checkpoints/facade-detail.png",
+      "bytes": 2148797,
+      "sha256": "c1d9473baa29026ec4406259ab85ee91937fd5929803a8d40e0ebb7814cf5edc"
+    },
+    {
+      "path": "Checkpoints/facade-progress.png",
+      "bytes": 1464346,
+      "sha256": "f32c0cb828ed41699c0682261b649e236665f3c9f89b304816ce86be74626ea4"
+    },
+    {
+      "path": "Checkpoints/foliage-detail.png",
+      "bytes": 1188535,
+      "sha256": "b744233c8d2a37dacef6d651c14fc62f9e9391f6ad67dabf22c6d607028229b5"
+    },
+    {
+      "path": "Checkpoints/front.png",
+      "bytes": 1920370,
+      "sha256": "3439fe6da73f9efda144390d75e8c7483cfeac820fe2f716a87a6f441bfc07e8"
+    },
+    {
+      "path": "Checkpoints/hero-front.png",
+      "bytes": 3233446,
+      "sha256": "cf8540778d48a2401666d06dbc449b14a1e55432e3a2237446928ec371f4f75f"
+    },
+    {
+      "path": "Checkpoints/hero-three-quarter.png",
+      "bytes": 3342513,
+      "sha256": "19dfd9b51221c3d14ae6fbedcc4b7a15108f999dc254c0e8b1b5fbbb0db16927"
+    },
+    {
+      "path": "Checkpoints/left.png",
+      "bytes": 1853180,
+      "sha256": "3d62c6dca42acfa0bb068de307e78e3be0860697025aa46b6011511fde5f2066"
+    },
+    {
+      "path": "Checkpoints/M06-r004/balcony-build.log",
+      "bytes": 648,
+      "sha256": "ea0e230ef9a1589b2c1f5a3cada43b11cadd76258b4a0bc37b016873b70b5717"
+    },
+    {
+      "path": "Checkpoints/M06-r004/balcony-checks.json",
+      "bytes": 387,
+      "sha256": "52a09f09d926c02d3d62515fb60414a087245bacb8bf5c764eb2ca7549560680"
+    },
+    {
+      "path": "Checkpoints/M06-r004/balcony-repaired.png",
+      "bytes": 1867049,
+      "sha256": "309842702a380dcf0825d05f2121b996ed87184eae43a223a807befda0a9149e"
+    },
+    {
+      "path": "Checkpoints/M06-r005/back.png",
+      "bytes": 1900108,
+      "sha256": "4eb63a2b2aa8b7a6dc9e13887268ad60168030283932d0d00d1137ce5a0e1b95"
+    },
+    {
+      "path": "Checkpoints/M06-r005/castle-final-camera.log",
+      "bytes": 103,
+      "sha256": "b7b06407f8c504c472fe2eb9310e6553a8d52a51faca940044b5fde171ce32c6"
+    },
+    {
+      "path": "Checkpoints/M06-r005/castle-final-town-tests.log",
+      "bytes": 268,
+      "sha256": "2c43c0568e3f16c18579fbd8f9c1d194f1293298c397bc8fa285d29b6750370c"
+    },
+    {
+      "path": "Checkpoints/M06-r005/castle-style-final.log",
+      "bytes": 42,
+      "sha256": "9c00e8c3840a9f95cc633057e35dc5ca3bcfc66bad13de2ca6b4078d5006f1cc"
+    },
+    {
+      "path": "Checkpoints/M06-r005/castle-vsix-verify.log",
+      "bytes": 363,
+      "sha256": "6e9fc3aceea97d0669ae0e586e5c087d68e97ad4ab2a40ef263c26ad6d8bd956"
+    },
+    {
+      "path": "Checkpoints/M06-r005/castle-water-lab-tests.log",
+      "bytes": 1006,
+      "sha256": "e61820465f177a52b3aa74900c3d258dc28a75a7dc11dd717259f49d3eb0122d"
+    },
+    {
+      "path": "Checkpoints/M06-r005/checkpoint.md",
+      "bytes": 3679,
+      "sha256": "f888db75160932d0724cdd2aa6bd840f226344c4bd10183b0af7773f317459d0"
+    },
+    {
+      "path": "Checkpoints/M06-r005/contact-sheet.png",
+      "bytes": 2030407,
+      "sha256": "687df0e5e9b9eb0fc2da50d4318d8ed0c9c6b2a119cf6a5f7d92b49f43d99d7b"
+    },
+    {
+      "path": "Checkpoints/M06-r005/courtyard-night.png",
+      "bytes": 1950795,
+      "sha256": "26fcb7090ccada943a1141ca7c611a832f21996cbbc72fb185cfc8bfb8646939"
+    },
+    {
+      "path": "Checkpoints/M06-r005/export.log",
+      "bytes": 27426,
+      "sha256": "3e0a8e88a1c4a1c224459d869f623c004d2c2e2941f30233475928a69a948290"
+    },
+    {
+      "path": "Checkpoints/M06-r005/front.png",
+      "bytes": 1933406,
+      "sha256": "5ee8c11374ed74d3cae923ddcfdc78377c87ae76d67b125477a44543f5e4c439"
+    },
+    {
+      "path": "Checkpoints/M06-r005/hero-front.png",
+      "bytes": 3257345,
+      "sha256": "c454ddf140ab3592bf53e0816976cbffe3e5bc7bdbc000b016157a9e1eb9065d"
+    },
+    {
+      "path": "Checkpoints/M06-r005/hero-three-quarter.png",
+      "bytes": 3385300,
+      "sha256": "cdf88e2181517d1b15ae5c14dbc23b53d3f183d6166ab77121a2826cd6cf80e8"
+    },
+    {
+      "path": "Checkpoints/M06-r005/left.png",
+      "bytes": 1888691,
+      "sha256": "d0e970e69bbe0916b99dfd899395a1d463a12aaaeb2eecf32d5473709a94b37c"
+    },
+    {
+      "path": "Checkpoints/M06-r005/offline-validation.json",
+      "bytes": 1715,
+      "sha256": "57fb56de597af23c9b9917a6c12757945ee08139cdffe0bccad31b4ef5d452fa"
+    },
+    {
+      "path": "Checkpoints/M06-r005/path-repair.log",
+      "bytes": 322,
+      "sha256": "dc5d0421c41a2f197b966e8e26a0e9f6c69464e5ea75cb2cab6233ddcb0e476a"
+    },
+    {
+      "path": "Checkpoints/M06-r005/review-render.log",
+      "bytes": 1232,
+      "sha256": "d728910667ad93394cdc679cf93c7c764c2253823676d22b37d934e9b2c5103e"
+    },
+    {
+      "path": "Checkpoints/M06-r005/right.png",
+      "bytes": 1890396,
+      "sha256": "39fa9b2ee5437e826a87c5852ba37fb7dd82713ed932641bf0b97b867c1e04a2"
+    },
+    {
+      "path": "Checkpoints/M06-r005/scene-measurements.json",
+      "bytes": 1122951,
+      "sha256": "3e154fe76e5a08010e104faea296189577f59824db6211959cfdef0eb795fe95"
+    },
+    {
+      "path": "Checkpoints/M06-r005/top.png",
+      "bytes": 3668150,
+      "sha256": "5a6ee589210be94206ee00779cdceb9f991fdae9c7d801d397d1111ac7b40db2"
+    },
+    {
+      "path": "Checkpoints/main-window-progress.png",
+      "bytes": 1679362,
+      "sha256": "f73f0d610b868433b7812ccc9001648884ed3f6a0b7b3019ec573bd4a0e45be1"
+    },
+    {
+      "path": "Checkpoints/portal-closed.png",
+      "bytes": 1598283,
+      "sha256": "b2f8ac0099607b0f6b500af27432ce06dc022ded238d83cd464e91ca98691643"
+    },
+    {
+      "path": "Checkpoints/portal-lamps.png",
+      "bytes": 1596521,
+      "sha256": "0b728b9e58cbda73caba76d591a6be127ecdf91dc5e862446126ea785a681dbc"
+    },
+    {
+      "path": "Checkpoints/portal-open.png",
+      "bytes": 1587465,
+      "sha256": "e5be06d3508db8dc49b416e5bbabfca58aa33b0d107a607e1d20a4ad00970070"
+    },
+    {
+      "path": "Checkpoints/right.png",
+      "bytes": 1849603,
+      "sha256": "2003253ae7d6caa4e776eb0a5acc45b937b1e879685a6c87f9c4fecb6975647a"
+    },
+    {
+      "path": "Checkpoints/scene-measurements.json",
+      "bytes": 1231851,
+      "sha256": "89e90ce816f34e92ec367e952fbfd46b75a1a8be15f15fd543b7bb0c29721264"
+    },
+    {
+      "path": "Checkpoints/top.png",
+      "bytes": 3600318,
+      "sha256": "e79d145181bcab385b5c0814f4d239f0ba9ca8f60dc889dc100e9cb18ce644a4"
+    },
+    {
+      "path": "Checkpoints/Town-r002/landing-checks.log",
+      "bytes": 390,
+      "sha256": "d1e368c82013bac74b85363eee05fa7439ee5f959d3665e5519387f6a93bc15b"
+    },
+    {
+      "path": "door-east.glb",
+      "bytes": 168876,
+      "sha256": "eb746c53b8d77976b9c526b1573e24fa53b31abcb66ad7f0db1c1d9a16c74699"
+    },
+    {
+      "path": "door-west.glb",
+      "bytes": 168804,
+      "sha256": "784057dceeef1e495f0ec1ff38fa0b04e96457cec251fc72a72fa37349b8b099"
+    },
+    {
+      "path": "drawbridge.glb",
+      "bytes": 264284,
+      "sha256": "b46fc6f28cb70b11fe25a5106f90e43ed301f96daf1935606bfaaaf260bb4a98"
+    },
+    {
+      "path": "export-settings.json",
+      "bytes": 4405,
+      "sha256": "f95500df5a9a119ccdcd97c7a5c5275fe73b22688e0757738d9f361712e56fea"
+    },
+    {
+      "path": "Native/castle-00.glb",
+      "bytes": 4637976,
+      "sha256": "4da6757ba670b8f2db45378b129854c81ec2911ebe591a5e35e11e892085b10a"
+    },
+    {
+      "path": "Native/castle-01.glb",
+      "bytes": 4659404,
+      "sha256": "364138dd2e7bc8557dcfdcc79685a730a24ce1d97bd77c9df98c6fa7785d1320"
+    },
+    {
+      "path": "Native/castle-02.glb",
+      "bytes": 4662340,
+      "sha256": "baf9d0aa5251cfd8b54a227e5b582c03fa3464fce5a4e7291279ac9dfdf1eb77"
+    },
+    {
+      "path": "Native/castle-03.glb",
+      "bytes": 4668532,
+      "sha256": "6fa08e83964cc94feebf0e88751770aed7a930e30e77de8404438d46ce83b1ce"
+    },
+    {
+      "path": "Native/castle-04.glb",
+      "bytes": 4741884,
+      "sha256": "b4d5895d7fa76defbf3611b138cea7530f8a7e8bc9f96894f7f418226705c5e1"
+    },
+    {
+      "path": "Native/castle-05.glb",
+      "bytes": 4670968,
+      "sha256": "eaba7fd0021c523063a66f90bfcedbb1739c887029a043892e2a161f3d099ee5"
+    },
+    {
+      "path": "Native/castle-06.glb",
+      "bytes": 4697804,
+      "sha256": "d44ec8e01db204017847d4643dac96b02469dc98315ebeb65fe05cd630ef2908"
+    },
+    {
+      "path": "Native/castle-07.glb",
+      "bytes": 4795620,
+      "sha256": "fa12275c62b5df0c74a1804c8315da13f3ca17ab14c0b43719c8ad2197667183"
+    },
+    {
+      "path": "Native/castle-08.glb",
+      "bytes": 4966176,
+      "sha256": "d9a39d87a21ad6263df54805c28858455aa1bda3074d75d86275778387935e34"
+    },
+    {
+      "path": "Native/castle-09.glb",
+      "bytes": 3526336,
+      "sha256": "2bba5535699316643473d0dbd7dabb70fa6c07834792e06615e854c956d65bb3"
+    },
+    {
+      "path": "Native/castle-10.glb",
+      "bytes": 2034828,
+      "sha256": "f9eec61baa4ad6eec3f27669d0514fb9f0a52575951ac86c2f6e50be93f5d308"
+    },
+    {
+      "path": "Native/castle-11.glb",
+      "bytes": 116420,
+      "sha256": "91a8670e2b08226380c797cb767c3a2cd56e14078cfaf7ec7fd3fbc153e01c49"
+    },
+    {
+      "path": "Native/native-layout.json",
+      "bytes": 6499,
+      "sha256": "ca0f2586091b11379118605a0c22d9f68e19d9f76d64127c59d581bbea41935a"
+    },
+    {
+      "path": "Native/neris-ivory-courses-1024.png",
+      "bytes": 77597,
+      "sha256": "592be8d330811ad0adc68b7594cafa79901bf7a0b1d3a487702b9182b8fb1a03"
+    },
+    {
+      "path": "neris-castle.glb",
+      "bytes": 47943196,
+      "sha256": "ec15a328cbbcc367daa580ce8d0d450eb92cd7fe207745c520876a9ab8dd7ff6"
+    },
+    {
+      "path": "prepare-native.mjs",
+      "bytes": 3584,
+      "sha256": "58367e5f22f9372d059fec2f8b0ba9435d664f5da6f4c77c46a2dde10df2feaf"
+    },
+    {
+      "path": "README.md",
+      "bytes": 4338,
+      "sha256": "8f609877576fb5e6f8c3ab09776a963a93d7d80aa598177d31099f8dd18e820b"
+    },
+    {
+      "path": "review-cameras.json",
+      "bytes": 3621,
+      "sha256": "53eb9bd0454d99e262bfd52d2c69bcf6d701ba5ad68f62a3bbdc7657d6c3c414"
+    },
+    {
+      "path": "Source/neris-castle-M06-r003.blend",
+      "bytes": 30976350,
+      "sha256": "fbe7de3ea3ee1a67d901468790902dcf5a6af81aad1fc242329dcc07bfd5a49a"
+    },
+    {
+      "path": "Source/neris-castle-M06-r005.blend",
+      "bytes": 31011720,
+      "sha256": "0f8c2cac461aa62fd5e948ed760c40e5308228c7e58c98329f96ed38bbe57899"
+    },
+    {
+      "path": "specification.json",
+      "bytes": 14361,
+      "sha256": "5e2892d8c826f2499980acc9bf62e7ff59f0b7c017c4d38df71a7ac381aa607c"
+    },
+    {
+      "path": "Textures/neris-ivory-courses-1024.png",
+      "bytes": 78191,
+      "sha256": "e6994700fe1f1740f4c3d165511ba511f30ffd278082b28d9e41c8ef281c9c2c"
+    },
+    {
+      "path": "Textures/neris-warm-limestone-r003.png",
+      "bytes": 77597,
+      "sha256": "592be8d330811ad0adc68b7594cafa79901bf7a0b1d3a487702b9182b8fb1a03"
+    }
+  ]
+}

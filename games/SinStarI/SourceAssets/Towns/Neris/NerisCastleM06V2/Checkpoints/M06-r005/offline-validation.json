@@ -1,0 +1,76 @@
+{
+  "checks": [
+    {
+      "file": "neris-castle.glb",
+      "bytes": 47943196,
+      "sha256": "ec15a328cbbcc367daa580ce8d0d450eb92cd7fe207745c520876a9ab8dd7ff6",
+      "meshes": 102,
+      "materials": 22,
+      "triangles": 894499,
+      "degenerateUV": 0,
+      "embeddedImages": 1
+    },
+    {
+      "file": "castle.glb",
+      "bytes": 46803820,
+      "sha256": "7d4202d2e3ccead62693bb9664b6e38fec584ab90ce122b5ef1b5ca3a3745b10",
+      "meshes": 86,
+      "materials": 21,
+      "triangles": 856971,
+      "degenerateUV": 0,
+      "embeddedImages": 1
+    },
+    {
+      "file": "drawbridge.glb",
+      "bytes": 264284,
+      "sha256": "b46fc6f28cb70b11fe25a5106f90e43ed301f96daf1935606bfaaaf260bb4a98",
+      "meshes": 7,
+      "materials": 7,
+      "triangles": 5776,
+      "degenerateUV": 0,
+      "embeddedImages": 0
+    },
+    {
+      "file": "door-west.glb",
+      "bytes": 168804,
+      "sha256": "784057dceeef1e495f0ec1ff38fa0b04e96457cec251fc72a72fa37349b8b099",
+      "meshes": 3,
+      "materials": 3,
+      "triangles": 4904,
+      "degenerateUV": 0,
+      "embeddedImages": 0
+    },
+    {
+      "file": "door-east.glb",
+      "bytes": 168876,
+      "sha256": "eb746c53b8d77976b9c526b1573e24fa53b31abcb66ad7f0db1c1d9a16c74699",
+      "meshes": 3,
+      "materials": 3,
+      "triangles": 4904,
+      "degenerateUV": 0,
+      "embeddedImages": 0
+    }
+  ],
+  "asymmetricMarker": {
+    "blender": [
+      3,
+      7,
+      11
+    ],
+    "gltf": [
+      3,
+      11,
+      -7
+    ],
+    "passed": true
+  },
+  "pivot": {
+    "gltf": [
+      0,
+      -0.25,
+      64
+    ],
+    "movingParts": 7
+  },
+  "khronosValidator": "not run: no existing offline validator located; no installation or npm used"
+}

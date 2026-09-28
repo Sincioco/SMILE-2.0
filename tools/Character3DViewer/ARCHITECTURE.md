@@ -1,14 +1,18 @@
 # Character Viewer Architecture
 
-## September 28 detailed west castle and inspection/water fixes
+## September 28 royal castle, town inspection and water
 
-NerisCastleM06V1 owns the editable source, portable GLB, real Blender evidence,
-authored masonry texture and bounded native derivatives. NerisCastlePreview
-loads eight static model chunks and one three-part hinged leaf; NerisCastleRoute
-owns placement, planter/fountain clearance, twenty stairs and the closed palace
-threshold. ProximityDrawbridge retains the existing approach/absence timing.
-The live town document, its roads, rectangular terrain and two older castles
-remain authoritative. Native terrain replaces only the portable Site.Moat surface.
+NerisCastleM06V2 owns source M06-r005, the complete portable GLB, actual fixed-camera
+Blender evidence, masonry texture and native derivatives. NerisCastlePreview loads
+12 static model chunks, one seven-part bridge and two three-part palace doors:
+15 models and 98 draw objects. NerisCastleRoute owns the placement, courtyard
+clearance, stairs, proximity bridge and palace-door trigger. Native terrain owns
+the moat. The native foundation exports its top only, omitting buried faces.
+The r002 town document puts this castle at the former Tripo site; the original
+Royal Castle and other buildings remain. The source Tripo package/palette remain
+available. TownCatalogRenderer admits its 14 models only while a Tripo placement
+exists; TownEditorSession loads additions incrementally and the last removal
+releases those models/parts. Document removal never deletes the source asset.
 
 The existing cooker allows 65,535 vertices per part, 131,072 vertices and 16 parts
 per model. Export copies are split at complete triangles; source geometry and
@@ -17,26 +21,41 @@ UV presence and all native counts before copying. The portable candidate remains
 one complete GLB with embedded texture. Native source textures use relative paths;
 the normal project cooker owns publication.
 
-NerisTownCamera owns the positive eight-degree inspection floor. GroundShot
-distinguishes party control/arrival from inspection that follows a party center.
-The panel consumes the same limit. Shared arena input, smoothing and zoom stay
-in their existing owners; intentional low party framing remains available.
+NerisTownKeyboard owns explicit Fly Inspect and held-key mapping. NerisTownCamera
+owns the eight-degree inspection floor, ground-level Fly Inspect and temporary
+cursor-orbit anchor. TownPicking unprojects the last rendered opaque depth with
+a ground fallback; ray construction respects the current near plane. Releasing
+an off-center orbit absorbs the displayed camera without snapping its target.
+NerisTownTour owns only landmark selection and continuous shot timing/framing.
+It reads active document bounds and the placed new castle through the session;
+it does not own rendering, input, document mutation or party movement. Reset
+starts at the actual map center; the tour then varies buildings, height and range.
 
-water_surface3d.h receives the existing sun shadow projection and filtered depth
-map. It attenuates direct water illumination/highlights while retaining ambient
-light and sky reflections. graphics3d_directx.cpp supplies the existing constants
-and resource binding; no new public API, render target or dependency is added.
-Spot-light shadow maps are deliberately not applied to the directional water light.
+water_surface3d.h owns water shading, directional shadow opacity and a bounded
+screen-space reflection search. water_scene3d.h owns one reusable opaque-color
+snapshot, independent of heat distortion. Native water requests the existing
+linear depth snapshot while any live water material needs it. The renderer wires
+opaque capture before transparent draws and releases resources with its targets.
+Blue tint bounds the reflection/highlight contribution. Offscreen objects cannot
+appear in screen-space reflections; missing hits use the environment fallback.
+Sun shadow opacity lives in TownLighting and the TWN2 document field; TWN1 and
+legacy Blender checksums remain compatible. Studio/Web adoption is held.
 
-Validation records live in NerisCastleM06V1/Checkpoints/M06-r002. Native water has
-an offscreen WARP regression executing the actual shader, including shadow off/on,
-unoccluded consistency and SRV release. Existing Water Lab tests were aligned with
-the shared background fields and E realism shortcut. The legacy town scene fixture
-releases its 51 static chunks before loading the new castle, because the live editor
-uses the catalog path instead. It checks all three moving bridge parts and camera
-modes; the actual live town is inspected separately with all three castles.
+Current evidence is NerisCastleM06V2/Checkpoints/M06-r005. Native session checks
+exercise 468 meshes, 432 materials, 50/64 models, 98 castle parts, actual rendered
+cursor depth, continuous tour, Fly Inspect floor and preserved 24 Arin keyframes.
+WARP executes the production shader for shadow opacity 0/50/100, local reflection
+colors without distortion, capture reuse and SRV release. Town rendering tests
+remove/re-add/remove Tripo and require every live resource count to return to its
+baseline. The main native Viewer is also inspected visually; this is not Web evidence.
 
 No architecture limits, exclusions, baselines, Studio or Web scope changed.
+
+Current changed-owner sizes: NerisTown 815→906 lines (scene/input coordination),
+NerisTownCamera 360→424, TownEditorSession 660→680, TownCatalogRenderer 144→185,
+TownPicking 159→179. The added tour, keyboard, fountain and glow owners retain their
+own bounded state. No behavior algorithm moved into NativeViewerHost; it only
+passes header hover separately so global camera keys remain reachable.
 
 
 ## September 28 Decor palette and Sun sliders
@@ -126,7 +145,8 @@ replacement. Studio/Web adoption remains held.
 | `FollowCamera3D` / `CameraClearance3D` | Reusable acceleration-limited following and padded segment/AABB clearance |
 | `FreeCamera3D` | Input-independent eased translation of the eye and target together |
 | `ArenaViewport3D` / `ArenaCamera3D` | Shared input, distance zoom and framing transition |
-| `NerisTownCameraPanel` | Standalone numeric controls and Orbit/Fit; no panel background |
+| `NerisTownCameraPanel` | Numeric controls and Orbit/Fit/Fly Inspect |
+| `NerisTownKeyboard` | Explicit keyboard mode, held input routing and camera travel |
 | `NerisTownAppearance` | Lighting/water clock and effect lifecycle |
 | `NerisTownTrees` / `NerisTownFlowers` | Reused template draw objects; trees also own recycled leaves |
 | `NerisTownCrystals` / `NerisTownMap` | Halos/sparkles; map images/projection/fade/leader coordinates |
@@ -172,9 +192,14 @@ leader and raise aim for stairs. Manual pitch is -20..80 degrees. Boundary turns
 look inward slowly. Ctrl+F retains F for floor; Fit preserves automatic orbit.
 Movement stops orbit; manual camera input suspends following.
 
-Party movement is explicitly enabled by Tab. Town startup, orbit, pan and camera
-framing commands leave WASD/arrows in inspection mode. `NerisTown` owns the mode
-and dispatches movement; `FreeCamera3D` owns only translation velocity, and
+WASD moves the party by default regardless of camera framing. The explicit Fly
+Inspect toggle (off at startup) sends WASD/arrows to camera travel; with it off,
+arrows control continuous zoom/orbit. Space pauses/resumes the automatic tour;
+Alt and Shift+Space have no separate travel action. Fly Inspect reaches the ground
+by moving forward/down the viewing direction, retaining a 0.1-unit clearance.
+`NerisTownKeyboard` owns the toggle, held-key mapping and camera travel state;
+`NerisTown` coordinates party/navigation and camera owners. `FreeCamera3D` owns
+smooth translation math, and
 `NerisTownParty.Stand` keeps all route slots stationary while presenting idle poses.
 `NerisTownCamera.Compose` resolves the unzoomed drone shot before applying arena
 zoom and paired ground clearance. Feeding the zoomed shot to the slow follow
@@ -1609,3 +1634,15 @@ The native fixture exposed insufficient bridge depth separation in the unedited
 overview. NerisTownCamera changes one coefficient from 0.05 to 0.1, retaining the
 25-unit close-view minimum. The existing nine-depth regression and ground-level
 clip check both pass. No threshold or baseline was relaxed.
+
+September 28 controls: Shift+middle pan is resolved by shared ArenaCamera3D.ResolveGesture,
+including captured mode through Shift release. ViewerCamera delegates before its
+calibration orbit logic, covering characters, Party and Battle; the town uses the
+same resolver. Space descends and Shift + Space ascends through existing shared key support.
+Alt has no camera binding; native Windows shortcuts remain unchanged.
+
+The edited-town regression exposed a leaked 90-degree Top Down pitch override.
+Normal orbit/framing commands now restore the standard 80-degree upper bound;
+Top Down remains an explicit editor view. The town-session runner uses the prepared
+Release asset mirror, matching the normal native build and Neris scene fixture;
+its obsolete Debug mirror lacked the comparison castle and failed scene loading.

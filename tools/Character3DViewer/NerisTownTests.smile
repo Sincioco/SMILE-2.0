@@ -151,32 +151,32 @@ Sub CheckCastle()
     Call Trail.Reset(Visitors, P.Vector(0.0, 23.12, -2780.0), 4, 22.0)
     Call Castle.Update(Visitors, 4, 100)
     Call Check(Castle.Angle() = 90.0, "West Bridge Starts Raised Without Visitors")
-    Call Check(Not Navigation.CanStand(-3650.0, -2142.0), "Raised West Bridge Blocks Crossing")
+    Call Check(Not Navigation.CanStand(Castle.ORIGIN_X, Castle.ORIGIN_Z - 1290.0), "Raised West Bridge Blocks Crossing")
 
-    Visitors.Positions[0] = P.Vector(-3650.0, Castle.DECK_Y, -2410.0)
+    Visitors.Positions[0] = P.Vector(Castle.ORIGIN_X, Castle.DECK_Y, Castle.ORIGIN_Z - 1558.0)
 
     For Step = 1 To 15
         Call Castle.Update(Visitors, 4, 100)
     End For
 
     Call Check(Abs(Castle.Angle() - 45.0) < 0.001, "Approach Lowers Bridge Smoothly Halfway")
-    Call Check(Not Navigation.CanStand(-3650.0, -2142.0), "Moving Bridge Does Not Admit Crossing")
+    Call Check(Not Navigation.CanStand(Castle.ORIGIN_X, Castle.ORIGIN_Z - 1290.0), "Moving Bridge Does Not Admit Crossing")
 
     For Step = 1 To 15
         Call Castle.Update(Visitors, 4, 100)
     End For
 
     Call Check(Castle.Angle() = 0.0, "Approach Fully Lowers Bridge")
-    Call Check(Navigation.CanStand(-3650.0, -2142.0), "Lowered Bridge Admits Party")
+    Call Check(Navigation.CanStand(Castle.ORIGIN_X, Castle.ORIGIN_Z - 1290.0), "Lowered Bridge Admits Party")
 
-    Point = Navigation.Move(P.Vector(-3650.0, Castle.DECK_Y, -2280.0), 0.0, 765.0)
+    Point = Navigation.Move(P.Vector(Castle.ORIGIN_X, Castle.DECK_Y, Castle.ORIGIN_Z - 1428.0), 0.0, 765.0)
 
-    Call Check(Point.Z > -1646.0, "Party Crosses Landing Bridge And Twelve Metre Gateway")
-    Call Check(Not Navigation.CanStand(-3000.0, -1900.0), "Moat Beside Bridge Stays Impassable")
-    Call Check(Not Navigation.CanStand(-3650.0, -1156.0), "Fountain Is A Solid Obstacle")
+    Call Check(Point.Z > Castle.ORIGIN_Z - 794.0, "Party Crosses Landing Bridge And Twelve Metre Gateway")
+    Call Check(Not Navigation.CanStand(Castle.ORIGIN_X + 650.0, Castle.ORIGIN_Z - 1048.0), "Moat Beside Bridge Stays Impassable")
+    Call Check(Not Navigation.CanStand(Castle.ORIGIN_X, Castle.ORIGIN_Z - 304.0), "Fountain Is A Solid Obstacle")
 
     Visitors.Positions[0] = P.Vector(0.0, 23.12, -2780.0)
-    Visitors.Positions[3] = P.Vector(-3480.0, Castle.DECK_Y, -850.0)
+    Visitors.Positions[3] = P.Vector(Castle.ORIGIN_X + 170.0, Castle.DECK_Y, Castle.ORIGIN_Z + 2.0)
 
     For Step = 1 To 60
         Call Castle.Update(Visitors, 4, 100)
@@ -197,15 +197,15 @@ Sub CheckCastle()
     End For
 
     Call Check(Castle.Angle() = 90.0, "Bridge Rises Automatically After Departure")
-    Call Check(Not Navigation.CanStand(-3650.0, -2142.0), "Closed Bridge Restores Collision")
+    Call Check(Not Navigation.CanStand(Castle.ORIGIN_X, Castle.ORIGIN_Z - 1290.0), "Closed Bridge Restores Collision")
 
-    Point = Navigation.Move(P.Vector(-3650.0, Castle.DECK_Y, -816.0), 0.0, 241.0)
+    Point = Navigation.Move(P.Vector(Castle.ORIGIN_X, Castle.DECK_Y, Castle.ORIGIN_Z + 36.0), 0.0, 241.0)
 
-    Call Check(Point.Z >= -614.0 And Point.Z <= -608.9 And
+    Call Check(Point.Z >= Castle.ORIGIN_Z + 238.0 And Point.Z <= Castle.ORIGIN_Z + 243.1 And
         Abs(Point.Y - Castle.DECK_Y - 51.0) < 0.001,
         "Twenty Stairs Reach The Closed Palace Threshold Without Walking Through Its Door")
 
-    Call Check(Not Castle.Contains(-3650.0, -2780.0),
+    Call Check(Not Castle.Contains(Castle.ORIGIN_X, Castle.ORIGIN_Z - 1928.0),
         "Normal Town Terrain Owns The Front Ground And Road")
 
     Call Check(Not Castle.CanStand(Castle.ORIGIN_X + 26.0 * Castle.SCALE,
@@ -214,7 +214,43 @@ Sub CheckCastle()
         Not Castle.CanStand(Castle.ORIGIN_X, Castle.ORIGIN_Z + 14.6 * Castle.SCALE),
         "Closed Palace Door Ends The Exterior Route")
 
+    Visitors.Positions[0] = P.Vector(Castle.ORIGIN_X, Castle.DECK_Y + 51.0,
+        Castle.ORIGIN_Z + 14.2 * Castle.SCALE)
+
+    For Step = 1 To 10
+        Call Castle.Update(Visitors, 4, 100)
+    End For
+
+    Call Check(Castle.DoorAngle() = 95.0 And
+        Castle.CanStand(Castle.ORIGIN_X, Castle.ORIGIN_Z + 18.0 * Castle.SCALE),
+        "Touching Palace Threshold Opens Both Doors And Admits Entry")
+
+    Visitors.Positions[0].Z = Castle.ORIGIN_Z + 16.0 * Castle.SCALE
+
+    Call Castle.Update(Visitors, 4, 100)
+    Call Check(Castle.ConsumeEntry(), "Palace Threshold Emits A Cutscene Entry Event")
+    Call Check(Not Castle.ConsumeEntry(), "Palace Entry Is One Shot Per Approach")
+
+    Visitors.Positions[3] = Visitors.Positions[0]
+    Visitors.Positions[0] = P.Vector(0.0, 23.12, -2780.0)
+
+    For Step = 1 To 30
+        Call Castle.Update(Visitors, 4, 100)
+    End For
+
+    Call Check(Castle.DoorAngle() = 95.0, "Follower In The Entrance Keeps Palace Doors Open")
+
+    Visitors.Positions[3] = Visitors.Positions[0]
+
+    For Step = 1 To 30
+        Call Castle.Update(Visitors, 4, 100)
+    End For
+
+    Call Check(Castle.DoorAngle() = 0.0 And
+        Not Castle.CanStand(Castle.ORIGIN_X, Castle.ORIGIN_Z + 18.0 * Castle.SCALE),
+        "Palace Doors Close And Restore Collision After Everyone Leaves")
+
     Call Castle.Enable(False)
-    Call Check(Not Castle.Contains(-3650.0, -850.0), "Leaving Preview Releases Its Navigation")
+    Call Check(Not Castle.Contains(Castle.ORIGIN_X, Castle.ORIGIN_Z + 2.0), "Leaving Preview Releases Its Navigation")
 
 End Sub

@@ -1,0 +1,24 @@
+[
+  {
+    "side": "West",
+    "deck_x": [
+      -39.15,
+      -20.05
+    ],
+    "tower_contact": true,
+    "piers_clear_windows": true,
+    "door_threshold": 13.13,
+    "pots": 2
+  },
+  {
+    "side": "East",
+    "deck_x": [
+      20.05,
+      39.15
+    ],
+    "tower_contact": true,
+    "piers_clear_windows": true,
+    "door_threshold": 13.13,
+    "pots": 2
+  }
+]

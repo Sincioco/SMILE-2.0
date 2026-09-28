@@ -1,0 +1,14 @@
+WaterSurfaceTests.cpp
+Water surface seam normals passed.
+WaterShadowTests.cpp
+Water shadow GPU regression: off 0.181154/0.173791, on 0.057355/0.173791, unbound 1: PASS
+Shadow opacity 0/50/100: 0.181154/0.090577/0.000000; opaque capture reused 1
+Local scene-color reflections without distortion: PASS
+Dependency is up to date: D:\SMILE 2.0\libraries\Smile.Simple3D\bin\Release\Smile.Simple3D.smilelib
+Dependency is up to date: D:\SMILE 2.0\libraries\Smile.UI\bin\Release\Smile.UI.smilelib
+CACHE-HIT Model3DAsset BuildAssets/kael-v1-water-preview.glb -> Assets/KaelWater.sm3d [c622cf43a6aba383b24519e91776302af14e94fad56352068ce35cc9427d90b8]
+CACHE-HIT Model3DAsset BuildAssets/mira-animation-checkpoint.glb -> Assets/Mira.sm3d [52bfbfb3bfa9c6fcfe75fe267b6e1b16fd5d021e9d199a1f931472dfd80ee068]
+Compiled D:\SMILE 2.0\tools\WaterVfxLab\WaterLabTests.generated.smileproj
+Output: D:\SMILE 2.0\tools\WaterVfxLab\bin\Tests\WaterLabTests.exe
+Published 27 project assets.
+Water Lab native failures: 0

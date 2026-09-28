@@ -6,7 +6,11 @@ The native Viewer opens on **Neris Town**, restoring the latest Town Editor work
 copy. Its initial catalog/layout came from
 `games/SinStarI/SourceAssets/Towns/Neris/NerisTownV1/Blend/Neris-Town-Waterfront.blend`;
 that Blender file does not replace your current editor changes.
-Two moated castles share the northern street circuit, beside military HQ. Eight
+The new royal castle replaces the Tripo placement on the northern street circuit,
+beside the existing Royal Castle and military HQ. Tripo remains a reusable palette
+building and loads its geometry/materials only while placed. The saved relocation
+is `NerisTownV1/Blend/Neris-Town-Royal-Castle-r002.blend`; the live document remains
+authoritative for subsequent town edits. Eight
 estates occupy the northwest residential area, sixteen homes the southwest,
 fourteen smaller homes the northeast, and three shops the southeast. House/shop
 fronts face inward; civic landmarks and castles face south. City Hall is 2x and
@@ -25,29 +29,35 @@ rougher surface to soften the repeating wave highlights; fountains retain moveme
 
 | Control | Action |
 | --- | --- |
-| WASD / Arrow Keys | Inspect by moving the camera; move the leader only after Tab |
+| WASD | Move the party; move the camera when Fly Inspect is on |
+| Arrow Keys | Up/down zoom, left/right orbit while held; camera travel when Fly Inspect is on |
+| Space | Pause / resume automatic camera orbit |
+| Fly Inspect | Explicit camera-travel toggle, off by default; party stands still while on |
 | R | Toggle Walk / Run |
 | + / - | Change speed in 25-point steps, within 25-400% |
 | Ctrl+Tab | Cycle Arin > Orin > Zara > Mira > Arin as leader |
-| Tab | Enable party control; face north behind the leader with a one-second ease |
+| Tab | Reframe behind the party; face north behind the leader with a one-second ease |
 | Ctrl+F | Toggle the cinematic drone, initially enabled |
-| Middle Drag / Left Drag | Manual orbit / pan; return movement keys to inspection |
+| Middle Drag / Left Drag | Orbit about the visible point under the cursor / pan; keyboard mode stays unchanged |
+| Shift + Middle Drag | Pan in every Viewer tab; gesture stays pan until mouse release |
 | Wheel | Ease zoom without stopping orbit |
 | F / G / B | Floor / grid / shared background |
 | O / C or Orbit | Start/resume orbit at the current zoom |
-| Right Click | Reset cinematic overview |
+| Right Click | Start at the map center, then continue the varied landmark tour |
 | Fit | Fit the entire town; preserve active orbit |
 | M | Show / hide minimap |
+| 1 | North-up top-down view in and out of Edit Town |
 
 H Orbit, V Orbit and Zoom controls sit at the lower left with no panel background.
-Orbit and Fit sit at the lower right, 14 pixels above the bottom edge.
+Orbit, Fit and Fly Inspect sit at the lower right, 14 pixels above the bottom edge.
 Directly above them, a compact panel with an 80% opaque background shows sampled FPS, camera/control mode,
 camera position and target XYZ, yaw/pitch, fixed lens FOV and eye-to-target distance.
 FPS uses actual frame time rather than the capped animation clock.
 Town entry opens centered behind Arin through the Kingdom of Neris sign. After
-20 seconds without keyboard or mouse activity, inspection orbit starts. Any input
-stops that automatic orbit and restarts the idle countdown. Party control still
-requires Tab.
+20 seconds without keyboard or mouse activity, inspection orbit starts. The continuous
+tour varies its chosen houses, civic signs, castle exteriors and courtyards, with
+changing height/range and smooth transitions. Space pauses/resumes its clock. Any input
+stops that automatic orbit and restarts the idle countdown. WASD moves the party by default, independent of mouse gestures.
 The V Orbit slider spans 8 to 80 degrees in inspection. Party control and the initial
 arrival shot retain -20 to 80 degrees. Orbiting around the party is inspection,
 so it cannot aim up into the sky at maximum zoom.
@@ -76,8 +86,9 @@ indoor shots retain the close clipping distance; camera position and angle are u
 Wheel zoom is applied after drone following so the eye and target retain their
 angle and settle promptly. It never feeds the zoomed camera back into the slow
 follow solver. Inspection translates the camera in its viewing direction and
-sideways while every party member stays in place. Pan, orbit and wheel zoom remain
-available while inspecting; Tab explicitly switches the keys back to party control.
+sideways while every party member stays in place when Fly Inspect is on. Pan, orbit
+and wheel zoom remain available. Turning Fly Inspect off restores WASD party movement;
+Tab changes framing only. Space pauses/resumes automatic orbit; Alt is unassigned.
 
 The party walks authored stairs and thresholds. Sixty-six authored doors swing
 inward and expose one-shot IDs through `NerisTownEntrances.ConsumeEntry`.
@@ -88,17 +99,14 @@ subject to user review.
 
 ### Native loading and validation
 
-The static town uses 37 models; the Old Castle uses 14 shared-texture partitions.
-Tree/flower templates reuse draw objects. Old Castle runtime textures are 2K;
-its original 4K source is preserved. Static PBR cooking shares identical converted
-pixels, including ORM maps, without changing character fingerprints. The complete
-scene uses 155/256 meshes and 144/512 materials. Native frame submission capacity
-is 2,048; other resource capacities are unchanged by this pass.
-
-A focused local run measured about 0.63 seconds for town and Old Castle geometry
-plus material preparation, including about 0.24 seconds for Old Castle. This
-excludes party loading, frame scheduling and the required visible logo interval;
-it is not a cold-start guarantee.
+The relocated town with its party and detailed M06-r005 castle uses 468 meshes,
+432 materials and 50/64 model slots. Its castle uses 15 models/98 parts. The absent
+Tripo castle contributes none of its 14 geometry models, materials or draw objects.
+Placing it loads those incrementally; removing the last instance releases them.
+Tree/flower templates reuse draw objects. Original Tripo sources remain preserved.
+Native water keeps its blue tint, receives configurable sun shadows and reflects
+visible nearby geometry through a shared opaque-scene snapshot. Offscreen geometry
+uses an environment fallback. No resource capacities are raised.
 
 Build/launch: `pwsh -File tools/Character3DViewer/Launch.ps1 -Build`.
 Checks: `scripts/test-neris-town.ps1`, `test-neris-waterfront.py`,
@@ -1184,7 +1192,7 @@ choose a palette item and **Place Copy**, or use **Select / Move**. Drag on empt
 ground to select a group; Ctrl adds; drag a selected item to move the group;
 **Rotate -15 / +15**, **Delete**, and Esc operate on that selection. Vertical height
 and scale stay authored. Shift+left drag pans while editing; middle drag orbits,
-wheel zooms and WASD/arrows inspect. **Done** returns to inspection; Tab enables the
+wheel zooms and keyboard controls follow the Fly Inspect toggle. **Done** returns to inspection; Tab reframes behind the
 party. While holding movement keys in party mode, left/middle drags keep the party
 moving and release returns to the drone view in one second, preserving wheel zoom.
 

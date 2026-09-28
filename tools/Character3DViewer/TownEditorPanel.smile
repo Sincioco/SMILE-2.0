@@ -283,7 +283,7 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State,
     Dim Index As Number
 
     X = LeftEdge() + 10
-    LightBottom = 212 + 7 * Min(32, Max(16, (Window_Height() - 537) / 7))
+    LightBottom = 212 + 8 * Min(32, Max(16, (Window_Height() - 537) / 8))
     FileStep = Min(32, Max(22, (Window_Height() - 525) / 8))
 
     If Not Value.AtlasLoaded Then

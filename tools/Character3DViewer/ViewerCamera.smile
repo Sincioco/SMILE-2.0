@@ -35,6 +35,7 @@ End Type
 
 Public Type PointerInput
     Blocked As Boolean
+    PanModifier As Boolean
     OrbitPressed As Boolean
     OrbitHeld As Boolean
     OrbitReleased As Boolean
@@ -230,11 +231,13 @@ Public Function CreatePointerInput(Blocked As Boolean,
     PointerX As Number, PointerY As Number,
     PointerDeltaX As Number, PointerDeltaY As Number,
     WindowWidth As Number, WindowHeight As Number,
-    CalibrationVisible As Boolean, PartyEnabled As Boolean) As PointerInput
+    CalibrationVisible As Boolean, PartyEnabled As Boolean,
+    Optional PanModifier As Boolean = False) As PointerInput
 
     Dim Result As PointerInput
 
     Result.Blocked = Blocked
+    Result.PanModifier = PanModifier
     Result.OrbitPressed = OrbitPressed
     Result.OrbitHeld = OrbitHeld
     Result.OrbitReleased = OrbitReleased
@@ -254,11 +257,36 @@ Public Function CreatePointerInput(Blocked As Boolean,
 
 End Function
 
+Private Sub ResolveGesture(ByRef Value As State, ByRef Input As PointerInput)
+
+    Dim Shared As ArenaCamera.PointerInput
+
+    Shared.PanModifier = Input.PanModifier
+    Shared.OrbitPressed = Input.OrbitPressed
+    Shared.OrbitHeld = Input.OrbitHeld
+    Shared.OrbitReleased = Input.OrbitReleased
+    Shared.PanPressed = Input.PanPressed
+    Shared.PanHeld = Input.PanHeld
+    Shared.PanReleased = Input.PanReleased
+
+    Call ArenaCamera.ResolveGesture(Value.Controls, Shared)
+
+    Input.OrbitPressed = Shared.OrbitPressed
+    Input.OrbitHeld = Shared.OrbitHeld
+    Input.OrbitReleased = Shared.OrbitReleased
+    Input.PanPressed = Shared.PanPressed
+    Input.PanHeld = Shared.PanHeld
+    Input.PanReleased = Shared.PanReleased
+
+End Sub
+
 Public Function PointerRequiresCalibrationOrigin(ByRef Value As State,
     Input As PointerInput) As Boolean
 
     Dim BeginOrbit As Boolean
     Dim Result As Boolean
+
+    Call ResolveGesture(Value, Input)
 
     BeginOrbit = (Not Input.Blocked And
         (Input.OrbitPressed Or
@@ -278,6 +306,8 @@ Public Function UpdatePointerInteraction(ByRef Value As State,
     Dim OrbitActive As Boolean
     Dim PanActive As Boolean
     Dim Result As Boolean
+
+    Call ResolveGesture(Value, Input)
 
     BeginOrbit = (Not Input.Blocked And
         (Input.OrbitPressed Or

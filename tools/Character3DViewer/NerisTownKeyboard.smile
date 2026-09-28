@@ -1,0 +1,175 @@
+''' Town keyboard policy. Camera velocity and explicit Fly Inspect belong to this owner.
+Module Smile.Tools.NerisTownKeyboard
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Simple3D.PrecisionCamera3D As Camera
+Import Smile.Simple3D.FreeCamera3D As FreeCamera
+Import Smile.Tools.NerisTownNavigation As Navigation
+Import Smile.Simple3D.ArenaViewport3D As Arena
+Import Smile.Simple3D.ArenaCamera3D As Motion
+
+Public Type State
+    FlyInspect As Boolean
+    Travel As FreeCamera.State
+    Moving As Boolean
+End Type
+
+Public Type HeldKeys
+    Sideways As Double
+    ForwardAmount As Double
+    ArrowSide As Double
+    ArrowForward As Double
+End Type
+
+Public Function ReadKeys(Blocked As Boolean) As HeldKeys
+
+    Dim Result As HeldKeys
+
+    If Blocked Then
+        Return Result
+    End If
+
+    If Key_Held(KEY_W) Then
+        Result.ForwardAmount = Result.ForwardAmount + 1.0
+    End If
+
+    If Key_Held(KEY_S) Then
+        Result.ForwardAmount = Result.ForwardAmount - 1.0
+    End If
+
+    If Key_Held(KEY_D) Then
+        Result.Sideways = Result.Sideways + 1.0
+    End If
+
+    If Key_Held(KEY_A) Then
+        Result.Sideways = Result.Sideways - 1.0
+    End If
+
+    If Key_Held(KEY_UP) Then
+        Result.ArrowForward = Result.ArrowForward + 1.0
+    End If
+
+    If Key_Held(KEY_DOWN) Then
+        Result.ArrowForward = Result.ArrowForward - 1.0
+    End If
+
+    If Key_Held(KEY_RIGHT) Then
+        Result.ArrowSide = Result.ArrowSide + 1.0
+    End If
+
+    If Key_Held(KEY_LEFT) Then
+        Result.ArrowSide = Result.ArrowSide - 1.0
+    End If
+
+    Return Result
+
+End Function
+
+Public Function Active(Keys As HeldKeys) As Boolean
+
+    Dim Result As Boolean
+
+    Result = (Keys.Sideways <> 0.0 Or Keys.ForwardAmount <> 0.0 Or
+        Keys.ArrowSide <> 0.0 Or Keys.ArrowForward <> 0.0)
+
+    Return Result
+
+End Function
+
+Public Function PartyDirection(View As P.Camera3D, Keys As HeldKeys) As P.Vector3
+
+    Dim Result As P.Vector3
+
+    Result = FreeCamera.Direction(View, Keys.Sideways, Keys.ForwardAmount, True)
+
+    Return Result
+
+End Function
+
+Public Function CameraDirection(View As P.Camera3D, Keys As HeldKeys,
+    FlyInspect As Boolean) As P.Vector3
+
+    Dim Result As P.Vector3
+    Dim Ok As Boolean
+
+    If FlyInspect Then
+        Result = FreeCamera.Direction(View, Clamp(Keys.Sideways + Keys.ArrowSide, -1.0, 1.0),
+            Clamp(Keys.ForwardAmount + Keys.ArrowForward, -1.0, 1.0), False)
+    End If
+
+    If M.Length(Result) > 1.0 Then
+        Ok = M.TryNormalize(Result, Result)
+    End If
+
+    Return Result
+
+End Function
+
+Public Sub StopTravel(ByRef Value As State)
+
+    Value.Moving = False
+
+    Call FreeCamera.Reset(Value.Travel)
+
+End Sub
+
+''' Absorb the displayed pose once, so starting travel never jumps after mouse orbit/zoom.
+Public Sub Capture(ByRef Value As State, ByRef View As Arena.State, ByRef Base As P.Camera3D)
+
+    Base = View.LiveCamera
+
+    Call StopTravel(Value)
+    Call Arena.BeginTransition(View, 0)
+    Call Motion.Reset(View.Controls, View.Zoom)
+
+End Sub
+
+Public Function Translate(ByRef Value As State, ByRef View As Arena.State,
+    ByRef Base As P.Camera3D, Direction As P.Vector3, Elapsed As Number) As Boolean
+
+    Dim Speed As Double
+    Dim Lift As Double
+    Dim Changed As Boolean
+
+    If Not Value.Moving And M.Length(Direction) > 0.001 Then
+        Call Capture(Value, View, Base)
+
+        Value.Moving = True
+    End If
+
+    Changed = Value.Moving
+
+    If Value.Moving Then
+
+        Speed = Clamp(M.Distance(View.LiveCamera.Position, View.LiveCamera.Target) * 0.5,
+            100.0, 1400.0)
+        Base = FreeCamera.Step(Value.Travel, Base, Direction, Speed, Elapsed)
+        Lift = Max(0.0, Navigation.GroundHeight(Base.Position.X, Base.Position.Z) + 0.1 - Base.Position.Y)
+        Base.Position.Y = Base.Position.Y + Lift
+        Base.Target.Y = Base.Target.Y + Lift
+        Value.Moving = M.Length(Value.Travel.Velocity) > 0.001
+
+    End If
+
+    Return Changed
+
+End Function
+
+''' Continuous held arrows adjust the shared bounded, eased zoom and orbit controls.
+Public Sub OrbitZoom(ByRef View As Arena.State, Keys As HeldKeys, Elapsed As Number)
+
+    Dim Seconds As Double
+
+    Seconds = ToDouble(Min(100, Max(0, Elapsed))) / 1000.0
+    View.Controls.OrbitYaw = Camera.NormalizeAngle(View.Controls.OrbitYaw +
+        Keys.ArrowSide * Seconds * 35.0)
+    View.Zoom.Target = Clamp(View.Zoom.Target - Keys.ArrowForward * Seconds * 48.0,
+        ToDouble(Motion.ZOOM_IN_LIMIT), ToDouble(Motion.ZOOM_OUT_LIMIT))
+    View.Controls.ZoomTarget = View.Zoom.Target
+
+End Sub
+
+End Module

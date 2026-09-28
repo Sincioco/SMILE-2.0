@@ -22,7 +22,8 @@ Public Function Apply(Light As Document.Sun) As Boolean
     Ok = G.SetDirectionalLight3D(ToNumber(Sin(Azimuth) * Cos(Elevation) * 1000.0),
         ToNumber(Sin(Elevation) * 1000.0), ToNumber(Cos(Azimuth) * Cos(Elevation) * 1000.0),
         Light.RedValue, Light.GreenValue, Light.BlueValue, Light.Intensity) And Ok
-    Ok = Scene.SetShadows(Light.Shadows) And Ok
+    Ok = Scene.SetShadows(Light.Shadows And Light.ShadowOpacity <> 0) And Ok
+    Ok = Scene.SetShadowOpacity(Light.ShadowOpacity) And Ok
     Ok = Scene.SetShadowBias(25, 60) And Ok
 
     Call Scene.UseCustomLighting()

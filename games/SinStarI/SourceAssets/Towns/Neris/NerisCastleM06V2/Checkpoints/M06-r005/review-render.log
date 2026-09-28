@@ -1,0 +1,13 @@
+00:04.109  blend            | Read blend: "D:\Projects\Sin-Star-I-Assets\Neris-Castle\source\neris-castle-M06-r005.blend"
+00:11.203  render           | Saved: 'D:\Projects\Sin-Star-I-Assets\Neris-Castle\checkpoints\M06-r005\front.png'
+00:13.594  render           | Saved: 'D:\Projects\Sin-Star-I-Assets\Neris-Castle\checkpoints\M06-r005\back.png'
+00:15.594  render           | Saved: 'D:\Projects\Sin-Star-I-Assets\Neris-Castle\checkpoints\M06-r005\left.png'
+00:17.625  render           | Saved: 'D:\Projects\Sin-Star-I-Assets\Neris-Castle\checkpoints\M06-r005\right.png'
+00:19.687  render           | Saved: 'D:\Projects\Sin-Star-I-Assets\Neris-Castle\checkpoints\M06-r005\top.png'
+00:21.797  render           | Saved: 'D:\Projects\Sin-Star-I-Assets\Neris-Castle\checkpoints\M06-r005\hero-front.png'
+00:23.969  render           | Saved: 'D:\Projects\Sin-Star-I-Assets\Neris-Castle\checkpoints\M06-r005\hero-three-quarter.png'
+00:25.703  render           | Saved: 'D:\Projects\Sin-Star-I-Assets\Neris-Castle\checkpoints\M06-r005\courtyard-night.png'
+PASS Seven unchanged fixed cameras and separate night review rendered from r005; source file untouched
+Blender 5.2.1 LTS (hash 9e2066aef7ef built 2026-08-25 02:38:20)
+
+Blender quit

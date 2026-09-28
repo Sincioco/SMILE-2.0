@@ -152,6 +152,7 @@ Town.Light.Ambient = 61
 Town.Light.Azimuth = 217.5
 Town.Light.Elevation = 33.25
 Town.Light.Shadows = False
+Town.Light.ShadowOpacity = 37
 Ok = Storage.SaveDocument(Town, "TownEditor.FoundationFixture")
 
 Call Check(Ok And Not Document.Dirty(Town), "Viewer Save Commits A Complete Town")
@@ -168,7 +169,7 @@ Call Check(Ok And Town.Name = "Neris " + Text_From_Code(22478) + Text_From_Code(
     "Named Town And Precise Positions Round Trip Through Native Save Storage")
 Call Check(Town.Light.RedValue = 161 And Town.Light.GreenValue = 179 And
     Town.Light.BlueValue = 203 And Town.Light.Intensity = 145 And Town.Light.Ambient = 61 And
-    Town.Light.Azimuth = 217.5 And Town.Light.Elevation = 33.25 And Not Town.Light.Shadows,
+    Town.Light.Azimuth = 217.5 And Town.Light.Elevation = 33.25 And Not Town.Light.Shadows And Town.Light.ShadowOpacity = 37,
     "Every Edited Sun Setting Reopens With Its Own Town")
 Call Check(Grid.ReadCell(Town.Surface, Grid.CellX(Town.Surface, -580.0),
     Grid.CellZ(Town.Surface, -1700.0)) = Grid.SURFACE_BRIDGE,

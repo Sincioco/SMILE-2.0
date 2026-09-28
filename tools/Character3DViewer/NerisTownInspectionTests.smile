@@ -5,22 +5,305 @@ Option Explicit
 
 Import Smile.Tools.NerisTown As Town
 Import Smile.Tools.NerisTownParty As Party
+Import Smile.Tools.NerisTownMap As TownMap
 Import Smile.Tools.NerisTownCamera As Drone
+Import Smile.Tools.NerisTownKeyboard As Keyboard
+Import Smile.Tools.Character3DViewerCamera As ViewerCamera
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PrecisionMath3D As M
 Import Smile.Simple3D.ArenaViewport3D As Arena
 Import Smile.Simple3D.ArenaCamera3D As Motion
+Import Smile.Simple3D.PrecisionCamera3D As Camera
+Import Smile.Tools.TownPicking As Picking
+Import Smile.Tools.TownEditorSession As Authoring
+Import Smile.Tools.NerisTownTour As Tour
+Import Smile.Tools.NerisTownNavigation As Navigation
 
 Public Sub Run(ByRef Value As Town.State, ByRef Failures As Number)
 
+    Dim SavedMap As TownMap.State
+    Dim SavedPosition As P.Vector3
+
     Call ZoomAfterTab(Value, Failures)
-    Call InspectionMovement(Value, Failures)
+    Call PartyMovementAcrossCameras(Value, Failures)
     Call IdleOrbit(Value, Failures)
     Call WalkingCameraGesture(Value, Failures)
     Call BridgeDepthPrecision(Value, Failures)
     Call InspectionPitch(Value, Failures)
 
+    SavedMap = Value.Map
+    SavedPosition = Value.People.Path.Positions[0]
+
+    Call ShiftMiddlePan(Value, Failures)
+    Call KeyboardModes(Value, Failures)
+    Call CursorOrbit(Value, Failures)
+    Call LandmarkTour(Value, Failures)
+
+    Call Party.Teleport(Value.People, SavedPosition)
+    Call Party.Update(Value.People, SavedPosition, 0)
+
+    Value.Map = SavedMap
     Value.Look.Time = 0
+
+End Sub
+
+Private Sub CursorOrbit(ByRef Value As Town.State, ByRef Failures As Number)
+
+    Dim Point As P.Vector3
+    Dim Before As P.Camera3D
+    Dim Pixel As Camera.ProjectedPoint
+    Dim Depth As Double
+    Dim Ok As Boolean
+    Dim X As Number
+    Dim Y As Number
+
+    Call Town.ResetOverview(Value)
+
+    Value.Cinematic = False
+    X = Window_Width() / 2 + 55
+    Y = Window_Height() / 2 + 45
+    Ok = Picking.Ground(Value.View.LiveCamera, X, Y, Window_Width(), Window_Height(), Point)
+    Before = Value.View.LiveCamera
+
+    Call Keyboard.Capture(Value.Keys, Value.View, Value.BaseCamera)
+    Call Drone.BeginCursorOrbit(Value.Flight, Before, Point, X, Y)
+    Call Drone.Compose(Value.Flight, Value.View, Value.BaseCamera, False, 0)
+
+    Call Check(Ok And M.Distance(Before.Position, Value.View.LiveCamera.Position) < 0.01,
+        "Picking An Off-Center Orbit Pivot Does Not Jump The Camera", Failures)
+    Call Motion.ApplyDrag(Value.View.Controls, True, False, 1, 1, 10000.0, 10000.0)
+    Call Drone.Compose(Value.Flight, Value.View, Value.BaseCamera, False, 16)
+
+    Pixel = Camera.ProjectViewerPoint(Point, Value.View.LiveCamera, Window_Width(), Window_Height())
+
+    Call Check(Abs(Pixel.X - ToDouble(X)) < 0.01 And Abs(Pixel.Y - ToDouble(Y)) < 0.01,
+        "Slow Orbit Keeps The Clicked World Point Beneath Its Original Pixel", Failures)
+    Call Motion.ApplyDrag(Value.View.Controls, True, False, 15, 8, 10000.0, 10000.0)
+    Call Drone.Compose(Value.Flight, Value.View, Value.BaseCamera, False, 16)
+
+    Pixel = Camera.ProjectViewerPoint(Point, Value.View.LiveCamera, Window_Width(), Window_Height())
+    Before = Value.View.LiveCamera
+
+    Call Check(Abs(Pixel.X - ToDouble(X)) < 0.01 And Abs(Pixel.Y - ToDouble(Y)) < 0.01,
+        "Moderate Orbit Keeps The Same Picked Pivot", Failures)
+    Call Drone.FinishCursorOrbit(Value.Flight, Value.View, Value.BaseCamera)
+    Call Drone.Compose(Value.Flight, Value.View, Value.BaseCamera, False, 0)
+    Call Check(M.Distance(Before.Position, Value.View.LiveCamera.Position) < 0.01,
+        "Releasing Cursor Orbit Preserves Its Final Framing", Failures)
+
+    Depth = 123.0
+    Ok = P.TryCursorDepth(-1, 0, Window_Width(), Window_Height(), Depth)
+
+    Call Check(Not Ok And Depth = 123.0, "Invalid Depth Pick Does Not Mutate Output", Failures)
+    Call Town.ResetOverview(Value)
+
+End Sub
+
+Private Sub LandmarkTour(ByRef Value As Town.State, ByRef Failures As Number)
+
+    Dim View As P.Camera3D
+    Dim Before As P.Camera3D
+    Dim Index As Number
+    Dim Previous As Number
+    Dim Changes As Number
+    Dim MaximumStep As Double
+    Dim Closest As Double
+
+    If Not Value.Edited Then
+        Return
+    End If
+
+    Call Town.ResetOverview(Value)
+    Call Authoring.ReadTour(Value.TourState, True)
+
+    View = Value.View.LiveCamera
+
+    Call Tour.Start(Value.TourState, View, 5742)
+
+    Previous = Value.TourState.Selected
+    Before = View
+    View = Tour.Advance(Value.TourState, View, 100, True)
+
+    Call Check(M.Distance(Before.Position, View.Position) = 0.0 And Value.TourState.Clock = 0,
+        "Paused Tour Holds Both Framing And Its Shot Clock", Failures)
+
+    Closest = 100000.0
+
+    For Index = 0 To 999
+
+        Before = View
+        View = Tour.Advance(Value.TourState, View, 100, False)
+        MaximumStep = Max(MaximumStep, M.Distance(Before.Position, View.Position))
+        Closest = Min(Closest, M.Distance(View.Position, View.Target))
+
+        If Previous <> Value.TourState.Selected Then
+            Changes = Changes + 1
+            Previous = Value.TourState.Selected
+        End If
+
+    End For
+
+    Call Check(Value.TourState.SubjectCount > 20 And Changes >= 2 And Closest < 3000.0,
+        "Tour Visits Different Placed Buildings And Includes Close Views", Failures)
+    Call Check(MaximumStep < 600.0, "Continuous Tour Never Cuts Between Building Shots", Failures)
+    Call Town.ResetOverview(Value)
+
+End Sub
+
+Private Sub ShiftMiddlePan(ByRef Value As Town.State, ByRef Failures As Number)
+
+    Dim Pointer As Motion.PointerInput
+    Dim ActorPointer As ViewerCamera.PointerInput
+    Dim ActorCamera As ViewerCamera.State
+    Dim Ok As Boolean
+
+    Call Motion.Reset(Value.View.Controls, Value.View.Zoom)
+
+    Pointer.PanModifier = True
+    Pointer.OrbitPressed = True
+    Pointer.OrbitHeld = True
+    Pointer.DeltaX = 12
+    Pointer.DeltaY = 6
+    Ok = Motion.UpdatePointer(Value.View.Controls, Value.View.Zoom, Pointer)
+
+    Call Check(Value.View.Controls.Panning And Not Value.View.Controls.Orbiting And
+        Value.View.Controls.PanX < 0.0 And Value.View.Controls.PanY > 0.0 And
+        Value.View.Controls.OrbitYaw = 0.0,
+        "Shared Shift Middle Drag Pans In Both Axes", Failures)
+
+    Pointer.PanModifier = False
+    Pointer.OrbitPressed = False
+    Ok = Motion.UpdatePointer(Value.View.Controls, Value.View.Zoom, Pointer)
+
+    Call Check(Value.View.Controls.Panning And Value.View.Controls.OrbitYaw = 0.0,
+        "Releasing Shift Mid-Drag Keeps Pan Until Mouse Release", Failures)
+
+    Pointer.OrbitHeld = False
+    Pointer.OrbitReleased = True
+    Ok = Motion.UpdatePointer(Value.View.Controls, Value.View.Zoom, Pointer)
+
+    Call Check(Not Value.View.Controls.Panning And Not Value.View.Controls.Orbiting,
+        "Middle Release Ends Captured Pan", Failures)
+
+    ActorCamera.Frame.PanXLimit = 500.0
+    ActorCamera.Frame.PanYLimit = 500.0
+    ActorPointer = ViewerCamera.CreatePointerInput(False, True, True, False,
+        False, False, False, 400, 300, 12, 6, 1440, 994, True, False, True)
+    Ok = ViewerCamera.UpdatePointerInteraction(ActorCamera, ActorPointer, 1, 3, 8)
+
+    Call Check(ActorCamera.Controls.Panning And Not ActorCamera.CalibrationOrbitActive And
+        ActorCamera.Controls.PanX < 0.0 And ActorCamera.Controls.PanY > 0.0,
+        "Character And Party Camera Uses Shared Shift Middle Pan", Failures)
+
+    ActorPointer.PanModifier = False
+    ActorPointer.OrbitPressed = False
+    Ok = ViewerCamera.UpdatePointerInteraction(ActorCamera, ActorPointer, 1, 3, 8)
+
+    Call Check(ActorCamera.Controls.Panning And ActorCamera.Controls.OrbitYaw = 0.0,
+        "Character Camera Keeps Pan Capture After Shift Release", Failures)
+    Call Town.ResetOverview(Value)
+
+End Sub
+
+Private Sub KeyboardModes(ByRef Value As Town.State, ByRef Failures As Number)
+
+    Dim Keys As Keyboard.HeldKeys
+    Dim Empty As Keyboard.HeldKeys
+    Dim Leader As P.Vector3
+    Dim Follower As P.Vector3
+    Dim Eye As P.Vector3
+    Dim Zoom As Double
+    Dim Yaw As Double
+    Dim Index As Number
+
+    Call Check(Not Value.Keys.FlyInspect, "Fly Inspect Starts Off", Failures)
+    Call Town.ResetOverview(Value)
+    Call Town.Update(Value, 0)
+
+    Value.Cinematic = False
+    Leader = Value.People.Path.Positions[0]
+    Zoom = Value.View.Zoom.Target
+    Yaw = Value.View.Controls.OrbitYaw
+    Keys.ArrowForward = 1.0
+    Keys.ArrowSide = -1.0
+
+    Call Town.AdvanceKeyboard(Value, Keys, 100)
+    Call Check(Value.View.Zoom.Target < Zoom And Value.View.Controls.OrbitYaw < Yaw,
+        "Held Up Zooms In And Left Orbits Left With Fly Off", Failures)
+    Call Check(M.Distance(Leader, Value.People.Path.Positions[0]) < 0.001,
+        "Arrow Inspection Never Moves The Party", Failures)
+
+    Keys.ArrowForward = -1.0
+    Keys.ArrowSide = 1.0
+
+    Call Town.AdvanceKeyboard(Value, Keys, 100)
+    Call Check(Abs(Value.View.Zoom.Target - Zoom) < 0.001 And
+        Abs(Value.View.Controls.OrbitYaw - Yaw) < 0.001,
+        "Down And Right Reverse Zoom And Orbit", Failures)
+
+    Call Town.ResetOverview(Value)
+    Call Town.Input(Value, KEY_SPACE, False)
+    Call Check(Value.Cinematic And Value.OrbitPaused, "Space Pauses Automatic Orbit", Failures)
+    Call Town.Input(Value, KEY_SPACE, False)
+    Call Check(Value.Cinematic And Not Value.OrbitPaused, "Space Resumes Automatic Orbit", Failures)
+    Call Town.ToggleInspection(Value)
+
+    Keys = Empty
+    Keys.ArrowForward = 1.0
+    Eye = Value.View.LiveCamera.Position
+    Leader = Value.People.Path.Positions[0]
+    Follower = Value.People.Path.Positions[1]
+
+    For Index = 0 To 30
+        Call Town.AdvanceKeyboard(Value, Keys, 16)
+        Call Drone.Compose(Value.Flight, Value.View, Value.BaseCamera, False, 16)
+    End For
+
+    Call Check(M.Distance(Eye, Value.View.LiveCamera.Position) > 1.0 And
+        M.Distance(Leader, Value.People.Path.Positions[0]) < 0.001 And
+        M.Distance(Follower, Value.People.Path.Positions[1]) < 0.001,
+        "Fly Arrows Move The Camera And Freeze All Party Slots", Failures)
+
+    Call Keyboard.StopTravel(Value.Keys)
+    Call Motion.Reset(Value.View.Controls, Value.View.Zoom)
+
+    Value.BaseCamera.Position = P.Vector(0.0, 40.0, -2780.0)
+    Value.BaseCamera.Target = P.Vector(0.0, 0.0, -2700.0)
+    Value.View.LiveCamera = Value.BaseCamera
+
+    For Index = 0 To 60
+        Call Town.AdvanceKeyboard(Value, Keys, 100)
+        Call Drone.Compose(Value.Flight, Value.View, Value.BaseCamera, False, 100, False, True)
+    End For
+
+    Eye = Value.View.LiveCamera.Position
+
+    Call Check(Abs(Eye.Y - Navigation.GroundHeight(Eye.X, Eye.Z) - 0.1) < 0.01,
+        "Fly Inspect Reaches Ground Level Without Passing Through The Floor", Failures)
+    Call Town.ToggleInspection(Value)
+
+    Eye = Value.BaseCamera.Position
+    Keys = Empty
+
+    Call Town.AdvanceKeyboard(Value, Keys, 100)
+    Call Check(Not Value.Keys.FlyInspect And M.Distance(Eye, Value.BaseCamera.Position) < 0.001,
+        "Turning Fly Off Cancels Residual Camera Travel", Failures)
+
+    Keys.Sideways = 1.0
+
+    Call Party.Teleport(Value.People, P.Vector(0.0, 23.12, -2780.0))
+    Call Town.ResetOverview(Value)
+    Call Town.Update(Value, 0)
+
+    Leader = Value.People.Path.Positions[0]
+
+    For Index = 0 To 30
+        Call Town.AdvanceKeyboard(Value, Keys, 16)
+    End For
+
+    Call Check(M.Distance(Leader, Value.People.Path.Positions[0]) > 1.0,
+        "WASD Resumes Party Movement After Fly Is Turned Off", Failures)
+    Call Town.ResetOverview(Value)
 
 End Sub
 
@@ -132,19 +415,19 @@ Private Sub WalkingCameraGesture(ByRef Value As Town.State, ByRef Failures As Nu
 
         Input.PanHeld = Index = 0
         Input.OrbitHeld = Index = 1
-        Owned = Drone.MovingGesture(Value.Flight, Value.View, Input, Value.PartyControl, True)
+        Owned = Drone.MovingGesture(Value.Flight, Value.View, Input, Value.PartyCamera, True)
 
         Call Motion.ApplyDrag(Value.View.Controls, Input.OrbitHeld, Input.PanHeld, 20, 10, 360.0, 220.0)
-        Call Check(Owned And Value.Flight.Peeking And Value.PartyControl And Not Value.Flight.Suspended,
-            "Walking Pan And Orbit Retain Party Control", Failures)
+        Call Check(Owned And Value.Flight.Peeking And Value.PartyCamera And Not Value.Flight.Suspended,
+            "Walking Pan And Orbit Retain Party Framing", Failures)
 
         Input.PanHeld = False
         Input.OrbitHeld = False
-        Owned = Drone.MovingGesture(Value.Flight, Value.View, Input, Value.PartyControl, True)
+        Owned = Drone.MovingGesture(Value.Flight, Value.View, Input, Value.PartyCamera, True)
 
         Call Check(Owned And Not Value.Flight.Peeking And Value.View.TransitionDuration = 1000 And
             Value.View.Controls.PanX = 0.0 And Value.View.Controls.OrbitYaw = 0.0 And
-            Value.View.Zoom.Target = OriginalZoom And Value.PartyControl,
+            Value.View.Zoom.Target = OriginalZoom And Value.PartyCamera,
             "Released Walking Gesture Eases Back In One Second And Retains Zoom", Failures)
         Call Arena.AdvanceTransition(Value.View, 1000)
     End For
@@ -152,7 +435,7 @@ Private Sub WalkingCameraGesture(ByRef Value As Town.State, ByRef Failures As Nu
     Input.PanHeld = True
     Owned = Drone.MovingGesture(Value.Flight, Value.View, Input, False, True)
 
-    Call Check(Not Owned, "Inspection Drag Does Not Enable Party Control", Failures)
+    Call Check(Not Owned, "Free Camera Drag Does Not Switch To Party Framing", Failures)
     Call Town.ResetOverview(Value)
 
 End Sub
@@ -170,7 +453,7 @@ Private Sub IdleOrbit(ByRef Value As Town.State, ByRef Failures As Number)
     Call Town.UpdateIdle(Value, True, 1)
     Call Check(Value.IdleTime = 0, "Input Restarts The Idle Countdown", Failures)
     Call Town.UpdateIdle(Value, False, 20000)
-    Call Check(Value.Cinematic And Value.IdleOrbit And Not Value.PartyControl,
+    Call Check(Value.Cinematic And Value.IdleOrbit And Not Value.PartyCamera,
         "Twenty Seconds Of Inactivity Starts Inspection Orbit", Failures)
     Call Town.UpdateIdle(Value, True, 1)
     Call Check(Not Value.Cinematic And Not Value.IdleOrbit And Value.IdleTime = 0,
@@ -178,61 +461,54 @@ Private Sub IdleOrbit(ByRef Value As Town.State, ByRef Failures As Number)
 
 End Sub
 
-Private Sub InspectionMovement(ByRef Value As Town.State, ByRef Failures As Number)
+Private Sub PartyMovementAcrossCameras(ByRef Value As Town.State, ByRef Failures As Number)
 
-    Dim Positions[4] As P.Vector3
+    Dim StartPosition As P.Vector3
     Dim StartView As P.Camera3D
-    Dim StopView As P.Camera3D
-    Dim Index As Number
+    Dim StopPosition As P.Vector3
+    Dim Mode As Number
     Dim Frame As Number
 
-    Call Town.ResetOverview(Value)
+    StartPosition = P.Vector(0.0, 23.12, -2780.0)
 
-    Value.Cinematic = False
-    StartView = Value.View.LiveCamera
+    For Mode = 0 To 5
 
-    For Index = 0 To 3
-        Positions[Index] = Value.People.Path.Positions[Index]
+        Call Party.Teleport(Value.People, StartPosition)
+        Call Town.ResetOverview(Value)
+
+        If Mode = 1 Then
+            Call Town.StartOrbit(Value)
+        Else If Mode = 2 Then
+            Call Motion.ApplyDrag(Value.View.Controls, False, True, 20, 10, 360.0, 220.0)
+        Else If Mode = 3 Then
+            Call Motion.ApplyDrag(Value.View.Controls, True, False, 20, 10, 360.0, 220.0)
+        Else If Mode = 4 Then
+            Call Town.FitTown(Value)
+        Else If Mode = 5 Then
+            Call Town.Input(Value, KEY_TAB, True)
+        End If
+
+        StartView = Value.BaseCamera
+
+        For Frame = 1 To 60
+            Call Town.MoveParty(Value, P.Vector(1.0, 0.0, 0.0), 16)
+        End For
+
+        Call Check(Value.People.Path.Positions[0].X > StartPosition.X + 50.0 And
+            M.Distance(Value.People.Path.Positions[1], StartPosition) > 1.0,
+            "Leader And Followers Move After Overview Orbit Pan Fit And Tab", Failures)
+        Call Check(Not Value.Cinematic And
+            M.Distance(StartView.Position, Value.BaseCamera.Position) < 0.001,
+            "Movement Stops Showcase Orbit Without Becoming Free Camera Travel", Failures)
+
+        StopPosition = Value.People.Path.Positions[0]
+
+        Call Town.MoveParty(Value, P.Vector(0.0, 0.0, 0.0), 100)
+        Call Check(M.Distance(StopPosition, Value.People.Path.Positions[0]) < 0.001,
+            "Released Movement Stops The Leader In Every Camera Mode", Failures)
     End For
 
-    For Frame = 1 To 60
-        Call Town.InspectMove(Value, P.Vector(1.0, 0.0, 0.0), 16)
-        Call Town.Update(Value, 0)
-    End For
-
-    Call Check(Not Value.PartyControl And Not Value.Follow And
-        Value.View.LiveCamera.Position.X > StartView.Position.X + 100.0,
-        "Inspection Moves The Camera Without Enabling Party Control", Failures)
-    Call Check(M.Distance(M.Subtract(StartView.Target, StartView.Position),
-        M.Subtract(Value.View.LiveCamera.Target, Value.View.LiveCamera.Position)) < 0.001,
-        "Inspection Translation Preserves Zoom And Viewing Angle", Failures)
-
-    For Frame = 1 To 120
-        Call Town.Update(Value, 16)
-    End For
-
-    StopView = Value.View.LiveCamera
-
-    Call Town.Update(Value, 100)
-    Call Check(Not Value.InspectMoving And
-        M.Distance(StopView.Position, Value.View.LiveCamera.Position) < 0.001,
-        "Inspection Eases To A Complete Stop After Key Release", Failures)
-
-    For Index = 0 To 3
-        Call Check(M.Distance(Positions[Index], Value.People.Path.Positions[Index]) < 0.001 And
-            Not Value.People.Path.Moving[Index],
-            "Every Party Member Stays In Place During Inspection", Failures)
-    End For
-
-    Call Town.Input(Value, KEY_TAB, True)
-
-    StartView = Value.BaseCamera
-
-    Call Town.InspectMove(Value, P.Vector(1.0, 0.0, 0.0), 100)
-    Call Check(Value.PartyControl And M.Distance(StartView.Position,
-        Value.BaseCamera.Position) < 0.001, "Tab Enables Party Control And Disables Free Travel", Failures)
-    Call Town.StartOrbit(Value)
-    Call Check(Not Value.PartyControl, "Orbit Returns The Keys To Inspection", Failures)
+    Call Party.Teleport(Value.People, StartPosition)
     Call Town.ResetOverview(Value)
 
 End Sub

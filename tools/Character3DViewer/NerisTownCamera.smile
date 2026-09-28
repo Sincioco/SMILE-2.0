@@ -29,7 +29,41 @@ Public Type State
     OrbitAtParty As Boolean
     OrbitOffset As P.Vector3
     Peeking As Boolean
+    CursorOrbit As Boolean
+    CursorAnchor As P.Vector3
+    CursorX As Number
+    CursorY As Number
+    CursorDepth As Double
 End Type
+
+Public Sub BeginCursorOrbit(ByRef Value As State, View As P.Camera3D,
+    Point As P.Vector3, X As Number, Y As Number)
+
+    Dim Projected As Camera.ProjectedPoint
+
+    Projected = Camera.ProjectViewerPoint(Point, View, Window_Width(), Window_Height())
+    Value.CursorOrbit = Projected.Visible
+    Value.CursorAnchor = Point
+    Value.CursorX = X
+    Value.CursorY = Y
+    Value.CursorDepth = Projected.Depth
+
+End Sub
+
+Public Sub FinishCursorOrbit(ByRef Value As State, ByRef View As Arena.State,
+    ByRef Base As P.Camera3D)
+
+    If Not Value.CursorOrbit Then
+        Return
+    End If
+
+    Base = View.LiveCamera
+    Value.CursorOrbit = False
+
+    Call Motion.Reset(View.Controls, View.Zoom)
+    Call Arena.BeginTransition(View, 0)
+
+End Sub
 
 Public Sub Start(ByRef Value As State)
 
@@ -50,22 +84,23 @@ Public Sub Focus(ByRef Value As State, Yaw As Double, Displayed As P.Camera3D)
     Value.WasMoving = False
     Value.OrbitAtParty = False
     Value.Peeking = False
+    Value.CursorOrbit = False
 
     Call Follow.Reset(Value.Flight, Displayed.Position)
 
 End Sub
 
-''' A drag while walking borrows the view without replacing movement axes or party control.
+''' A drag in party framing borrows the view without replacing movement axes.
 Public Function MovingGesture(ByRef Value As State, ByRef View As Arena.State,
-    Input As Motion.PointerInput, PartyControl As Boolean, MovingHeld As Boolean) As Boolean
+    Input As Motion.PointerInput, PartyCamera As Boolean, MovingHeld As Boolean) As Boolean
 
     Dim Held As Boolean
     Dim Owned As Boolean
 
     Held = Input.PanHeld Or Input.OrbitHeld
-    Owned = Value.Peeking Or (PartyControl And MovingHeld And Not Input.Blocked And Held)
+    Owned = Value.Peeking Or (PartyCamera And MovingHeld And Not Input.Blocked And Held)
 
-    If PartyControl And MovingHeld And Not Input.Blocked And Held Then
+    If PartyCamera And MovingHeld And Not Input.Blocked And Held Then
 
         Value.Peeking = True
         Value.Arrival = False
@@ -266,7 +301,7 @@ End Sub
 ''' Follow the unzoomed shot first. Direct zoom must never enter the slow drone solver.
 Public Sub Compose(ByRef Value As State, ByRef View As Arena.State,
     Base As P.Camera3D, Following As Boolean, Elapsed As Number,
-    Optional LowShot As Boolean = False)
+    Optional LowShot As Boolean = False, Optional FreeInspect As Boolean = False)
 
     Dim Resolved As P.Camera3D
     Dim Lift As Double
@@ -280,7 +315,7 @@ Public Sub Compose(ByRef Value As State, ByRef View As Arena.State,
         Resolved = Resolve(Value, Base, Elapsed)
     End If
 
-    Call Constrain(View, Resolved, LowShot)
+    Call Constrain(View, Resolved, LowShot, FreeInspect)
 
     ' Apply town ground clearance once, translating both eye and target to retain pitch.
     FloorVisible = View.FloorVisible
@@ -288,23 +323,40 @@ Public Sub Compose(ByRef Value As State, ByRef View As Arena.State,
 
     Call Arena.ComposeCamera(View, Resolved)
 
+    If Value.CursorOrbit Then
+        View.LiveCamera = Camera.KeepCursorAnchor(View.LiveCamera, Value.CursorAnchor,
+            Value.CursorX, Value.CursorY, Value.CursorDepth, Window_Width(), Window_Height())
+    End If
+
     View.FloorVisible = FloorVisible
     Lift = Max(0.0, 25.01 - View.LiveCamera.Position.Y)
+
+    If FreeInspect Then
+        Lift = Max(0.0, Navigation.GroundHeight(View.LiveCamera.Position.X, View.LiveCamera.Position.Z) +
+            0.1 - View.LiveCamera.Position.Y)
+    End If
+
     View.LiveCamera.Position.Y = View.LiveCamera.Position.Y + Lift
     View.LiveCamera.Target.Y = View.LiveCamera.Target.Y + Lift
     ' Elevated town views need more depth precision than a nearby character shot.
     ' The 6.2 cm bridge paving/deck gap otherwise collapses in the 24-bit buffer.
     View.LiveCamera.NearPlane = Max(25.0, (View.LiveCamera.Position.Y - 25.0) * 0.1)
+
+    If FreeInspect Then
+        View.LiveCamera.NearPlane = Max(0.25, (View.LiveCamera.Position.Y -
+            Navigation.GroundHeight(View.LiveCamera.Position.X, View.LiveCamera.Position.Z)) * 0.1)
+    End If
+
     Value.Focusing = Value.Focusing And View.TransitionDuration > 0
 
 End Sub
 
-''' Following a party center is also used by inspection orbit; it is not party control.
-Public Function GroundShot(Value As State, PartyControl As Boolean) As Boolean
+''' Following a party center can use either free orbit or the low party framing.
+Public Function GroundShot(Value As State, PartyCamera As Boolean) As Boolean
 
     Dim Result As Boolean
 
-    Result = PartyControl Or (Value.Arrival And Not Value.Suspended)
+    Result = PartyCamera Or (Value.Arrival And Not Value.Suspended)
 
     Return Result
 
@@ -325,7 +377,7 @@ Public Function MinimumPitch(LowShot As Boolean) As Double
 
 End Function
 
-Private Sub Constrain(ByRef View As Arena.State, Base As P.Camera3D, LowShot As Boolean)
+Private Sub Constrain(ByRef View As Arena.State, Base As P.Camera3D, LowShot As Boolean, FreeInspect As Boolean)
 
     Dim Offset As P.Vector3
     Dim BasePitch As Double
@@ -336,8 +388,20 @@ Private Sub Constrain(ByRef View As Arena.State, Base As P.Camera3D, LowShot As 
     BasePitch = Atan2(Offset.Y, Sqrt(Offset.X * Offset.X + Offset.Z * Offset.Z))
     Pitch = Clamp(BasePitch + M.Radians(View.Controls.OrbitPitch),
         M.Radians(MinimumPitch(LowShot)), Max(M.Radians(80.0), View.MaximumPitch))
+
+    If FreeInspect Then
+        Pitch = Clamp(BasePitch + M.Radians(View.Controls.OrbitPitch), M.Radians(-80.0), M.Radians(80.0))
+    End If
+
     View.Controls.OrbitPitch = M.Degrees(Pitch - BasePitch)
-    MinimumPan = (25.0 - Base.Target.Y) / Cos(Pitch)
+
+    If FreeInspect Then
+        Return
+    End If
+
+    ' A captured cursor orbit may aim below the floor while its eye stays above it.
+    ' Preserve that framing on release; forbid additional downward pan from there.
+    MinimumPan = (Min(25.0, Base.Target.Y) - Base.Target.Y) / Cos(Pitch)
     View.Controls.PanY = Max(MinimumPan, View.Controls.PanY)
 
 End Sub

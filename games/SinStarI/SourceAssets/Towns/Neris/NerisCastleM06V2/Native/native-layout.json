@@ -1,0 +1,195 @@
+{
+  "native_chunks": [
+    {
+      "file": "castle-00.glb",
+      "parts": [
+        "NC.Export.Courtyard.Cypress0.00",
+        "NC.Export.Courtyard.Cypress0.01",
+        "NC.Export.Courtyard.IvoryStone.00",
+        "NC.Export.Gatehouse.LampGlow",
+        "NC.Export.Palace.LampGlow",
+        "NC.Export.Site.DeckFloor"
+      ],
+      "vertices": 131063,
+      "triangles": 60086,
+      "sha256": "4da6757ba670b8f2db45378b129854c81ec2911ebe591a5e35e11e892085b10a"
+    },
+    {
+      "file": "castle-01.glb",
+      "parts": [
+        "NC.Export.Courtyard.Cypress1.00",
+        "NC.Export.Courtyard.Cypress1.01",
+        "NC.Export.Gatehouse.RoyalGold.00",
+        "NC.Export.Courtyard.IvoryStone.01",
+        "NC.Export.Palace.Cypress1",
+        "NC.Export.Gatehouse.BannerTeal"
+      ],
+      "vertices": 131058,
+      "triangles": 63580,
+      "sha256": "364138dd2e7bc8557dcfdcc79685a730a24ce1d97bd77c9df98c6fa7785d1320"
+    },
+    {
+      "file": "castle-02.glb",
+      "parts": [
+        "NC.Export.Courtyard.Cypress2.00",
+        "NC.Export.Courtyard.Cypress2.01",
+        "NC.Export.Fortifications.RoyalGold.01",
+        "NC.Export.Fortifications.Masonry",
+        "NC.Export.Gatehouse.Masonry",
+        "NC.Export.Palace.RoyalDoor"
+      ],
+      "vertices": 131046,
+      "triangles": 64164,
+      "sha256": "baf9d0aa5251cfd8b54a227e5b582c03fa3464fce5a4e7291279ac9dfdf1eb77"
+    },
+    {
+      "file": "castle-03.glb",
+      "parts": [
+        "NC.Export.Fortifications.IvoryStone.05",
+        "NC.Export.Fortifications.IvoryStone.06",
+        "NC.Export.Fortifications.IvoryStone.04",
+        "NC.Export.Courtyard.GardenWood",
+        "NC.Export.Fortifications.PolishedBrass"
+      ],
+      "vertices": 131026,
+      "triangles": 65424,
+      "sha256": "6fa08e83964cc94feebf0e88751770aed7a930e30e77de8404438d46ce83b1ce"
+    },
+    {
+      "file": "castle-04.glb",
+      "parts": [
+        "NC.Export.Fortifications.IvoryStone.07",
+        "NC.Export.Fortifications.IvoryStone.03",
+        "NC.Export.Fortifications.IvoryStone.02",
+        "NC.Export.Palace.RoyalGold.09",
+        "NC.Export.Fortifications.TealRoof",
+        "NC.Export.Gatehouse.CrystalBlue",
+        "NC.Export.Palace.BannerTeal",
+        "NC.Export.Courtyard.TealRoof"
+      ],
+      "vertices": 131039,
+      "triangles": 77102,
+      "sha256": "b4d5895d7fa76defbf3611b138cea7530f8a7e8bc9f96894f7f418226705c5e1"
+    },
+    {
+      "file": "castle-05.glb",
+      "parts": [
+        "NC.Export.Palace.IvoryStone.04",
+        "NC.Export.Gatehouse.IvoryStone.00",
+        "NC.Export.Palace.IvoryStone.01",
+        "NC.Export.Courtyard.Cypress0.02",
+        "NC.Export.Fortifications.BannerTeal"
+      ],
+      "vertices": 131072,
+      "triangles": 65600,
+      "sha256": "eaba7fd0021c523063a66f90bfcedbb1739c887029a043892e2a161f3d099ee5"
+    },
+    {
+      "file": "castle-06.glb",
+      "parts": [
+        "NC.Export.Fortifications.IvoryStone.00",
+        "NC.Export.Palace.IvoryStone.00",
+        "NC.Export.Fortifications.IvoryStone.01",
+        "NC.Export.Gatehouse.IvoryStone.01",
+        "NC.Export.Courtyard.LampGlow"
+      ],
+      "vertices": 131065,
+      "triangles": 70142,
+      "sha256": "d44ec8e01db204017847d4643dac96b02469dc98315ebeb65fe05cd630ef2908"
+    },
+    {
+      "file": "castle-07.glb",
+      "parts": [
+        "NC.Export.Palace.IvoryStone.02",
+        "NC.Export.Palace.IvoryStone.03",
+        "NC.Export.Palace.RoyalGold.00",
+        "NC.Export.Palace.IvoryStone.05",
+        "NC.Export.Palace.PolishedBrass",
+        "NC.Export.Fortifications.DarkIron"
+      ],
+      "vertices": 131072,
+      "triangles": 86196,
+      "sha256": "fa12275c62b5df0c74a1804c8315da13f3ca17ab14c0b43719c8ad2197667183"
+    },
+    {
+      "file": "castle-08.glb",
+      "parts": [
+        "NC.Export.Palace.RoyalGold.01",
+        "NC.Export.Fortifications.RoyalGold.00",
+        "NC.Export.Palace.RoyalGold.02",
+        "NC.Export.Courtyard.Cypress1.02",
+        "NC.Export.Palace.RoyalGold.03",
+        "NC.Export.Palace.Masonry",
+        "NC.Export.Courtyard.Cypress2.02",
+        "NC.Export.Palace.RoyalGlass",
+        "NC.Export.Courtyard.DarkIron",
+        "NC.Export.Palace.CrystalBlue"
+      ],
+      "vertices": 130974,
+      "triangles": 114481,
+      "sha256": "d9a39d87a21ad6263df54805c28858455aa1bda3074d75d86275778387935e34"
+    },
+    {
+      "file": "castle-09.glb",
+      "parts": [
+        "NC.Export.Courtyard.PolishedBrass.00",
+        "NC.Export.Palace.RoyalGold.08",
+        "NC.Export.Palace.RoyalGold.04",
+        "NC.Export.Palace.RoyalGold.05",
+        "NC.Export.Palace.RoyalGold.07",
+        "NC.Export.Palace.RoyalGold.06",
+        "NC.Export.Courtyard.BridgeTimber",
+        "NC.Export.Fortifications.IvoryStone.08"
+      ],
+      "vertices": 82958,
+      "triangles": 130958,
+      "sha256": "2bba5535699316643473d0dbd7dabb70fa6c07834792e06615e854c956d65bb3"
+    },
+    {
+      "file": "castle-10.glb",
+      "parts": [
+        "NC.Export.Courtyard.RoyalGold",
+        "NC.Export.Courtyard.PolishedBrass.01",
+        "NC.Export.Fortifications.RoyalGold.02",
+        "NC.Export.Gatehouse.RoyalGold.01",
+        "NC.Export.Fortifications.RoyalGlass",
+        "NC.Export.Palace.IvoryStone.06",
+        "NC.Export.Palace.TealRoof",
+        "NC.Export.Gatehouse.RoyalGlass",
+        "NC.Export.Courtyard.PathStone",
+        "NC.Export.Palace.DarkIron",
+        "NC.Export.Courtyard.CrystalBlue",
+        "NC.Export.Courtyard.FlowerIvory",
+        "NC.Export.Courtyard.FlowerRose",
+        "NC.Export.Courtyard.FlowerViolet",
+        "NC.Export.Fortifications.CrystalBlue",
+        "NC.Export.Gatehouse.DarkIron"
+      ],
+      "vertices": 49810,
+      "triangles": 58560,
+      "sha256": "f9eec61baa4ad6eec3f27669d0514fb9f0a52575951ac86c2f6e50be93f5d308"
+    },
+    {
+      "file": "castle-11.glb",
+      "parts": [
+        "NC.Export.Gatehouse.TealRoof",
+        "NC.Export.Palace.FlowerIvory",
+        "NC.Export.Palace.FlowerRose",
+        "NC.Export.Palace.FlowerViolet"
+      ],
+      "vertices": 1004,
+      "triangles": 620,
+      "sha256": "91a8670e2b08226380c797cb767c3a2cd56e14078cfaf7ec7fd3fbc153e01c49"
+    }
+  ],
+  "total_static_parts": 85,
+  "excluded": [
+    "NC.Export.Site.Moat"
+  ],
+  "exclusion_reason": "Town supplies water. Foundation sides/underside omitted; top floor retained.",
+  "texture": {
+    "file": "neris-ivory-courses-1024.png",
+    "uri": "neris-ivory-courses-1024.png",
+    "sha256": "592be8d330811ad0adc68b7594cafa79901bf7a0b1d3a487702b9182b8fb1a03"
+  }
+}

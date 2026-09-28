@@ -540,4 +540,27 @@ Public Function ReflectionPlane() As Double
 
 End Function
 
+''' Last native opaque frame depth at viewport-local logical coordinates; sky returns False.
+''' Call between frames. Web currently returns False so callers can use a ground-plane fallback.
+Public Function TryCursorDepth(X As Number, Y As Number, Width As Number, Height As Number,
+    ByRef Depth As Double) As Boolean
+
+    Dim Candidate As Double
+
+    If Width <= 0 Or Height <= 0 Or X < 0 Or Y < 0 Or X >= Width Or Y >= Height Then
+        Return False
+    End If
+
+    Candidate = Renderer3DDoubleValue(11, X * 1000000 / Width, Y * 1000000 / Height, 0)
+
+    If Graphics3D.LastError() <> 0 Or Candidate <= 0.0 Then
+        Return False
+    End If
+
+    Depth = Candidate
+
+    Return True
+
+End Function
+
 End Module

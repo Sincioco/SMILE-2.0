@@ -1,7 +1,7 @@
 #pragma once
 
-// Native water shading borrows this view's opaque scene and optional matching depth.
-// It owns no render targets and must release the SRV before the next render pass.
+// Native water shading borrows the water scene owner's opaque color and matching depth.
+// Bindings must release the SRV before the next render pass.
 struct SmileWaterTextureBinding3D
 {
     ID3D11DeviceContext* context;
@@ -76,9 +76,13 @@ float WaterHeight(float3 p, float seconds, float footprint)
 float3 WaterReflection(float3 origin, float3 direction, float3 fallback)
 {
     if (waterParameters.w < .5 || softDepth.x < .5) return fallback;
-    [loop] for (int index = 1; index <= 20; ++index)
+    // Scale the search to the visible scene instead of assuming metre-sized geometry.
+    float stride = max(.15, length(waterCamera.xyz-origin) * .002);
+    float previousDistance = stride;
+    float previousGap = -stride;
+    [loop] for (int index = 1; index <= 28; ++index)
     {
-        float distance = 4.0 + index * index * .65;
+        float distance = stride * (1.0 + index * index * .5);
         float4 clip = mul(float4(origin + direction * distance, 1), vp);
         if (clip.w <= .01) break;
         float2 unit = float2(clip.x / clip.w * .5 + .5, .5 - clip.y / clip.w * .5);
@@ -86,13 +90,27 @@ float3 WaterReflection(float3 origin, float3 direction, float3 fallback)
         float2 screen = (waterViewport.xy + unit * waterViewport.zw) / target.xy;
         float scene = sceneDepthTexture.SampleLevel(sceneDepthSampler, screen, 0).r;
         float gap = clip.w - scene;
-        if (gap > .1 && gap < 4.0 + index * 1.3)
+        float thickness = max(stride*2, scene*.004);
+        if (gap >= 0 && previousGap < 0 && gap < thickness + distance-previousDistance)
         {
+            float low = previousDistance, high = distance;
+            [unroll] for (int refine = 0; refine < 4; ++refine)
+            {
+                float middle = (low+high)*.5;
+                float4 sampleClip = mul(float4(origin+direction*middle,1),vp);
+                float2 sampleUnit = float2(sampleClip.x/sampleClip.w*.5+.5,.5-sampleClip.y/sampleClip.w*.5);
+                float2 sampleScreen = (waterViewport.xy+sampleUnit*waterViewport.zw)/target.xy;
+                float sampleDepth = sceneDepthTexture.SampleLevel(sceneDepthSampler,sampleScreen,0).r;
+                if (sampleClip.w >= sampleDepth) high=middle; else low=middle;
+                unit=sampleUnit; screen=sampleScreen;
+            }
             float edge = saturate(min(min(unit.x, 1-unit.x), min(unit.y, 1-unit.y)) * 12);
             float3 sceneColor = waterScene.SampleLevel(waterSampler, screen, 0).rgb;
             if (atlasOutput.z < .5) sceneColor = ToLinear(saturate(sceneColor));
             return lerp(fallback, sceneColor, edge * .85);
         }
+        previousDistance=distance;
+        previousGap=gap;
     }
     return fallback;
 }
@@ -135,8 +153,9 @@ float4 ShadeWater(float4 pixel, float2 uv, float4 base, float3 world, float3 sur
     float visibility = WaterShadowVisibility(world, normal, light);
     float ambientShare = waterAmbient.w /
         max(waterAmbient.w + waterLightColor.w * max(nl, .15), .0001);
-    float illumination = lerp(ambientShare, 1, visibility);
-    float3 highlight = min(specular, 12) * nl * waterLightColor.rgb * waterLightColor.w * visibility;
+    float physicalVisibility = waterShadowStyle.x < 0 ? visibility : 1;
+    float illumination = lerp(ambientShare, 1, physicalVisibility);
+    float3 highlight = min(specular, 12) * nl * waterLightColor.rgb * waterLightColor.w * physicalVisibility;
 
     float2 screen = pixel.xy / target.xy;
     float2 bend = float2(dot(normal,cameraRight.xyz), -dot(normal,cameraUp.xyz)) * .012;
@@ -164,9 +183,16 @@ float4 ShadeWater(float4 pixel, float2 uv, float4 base, float3 world, float3 sur
     float foam = smoothstep(.72,.94,foamNoise) * waterParameters.z * (1-smoothstep(.8,3,footprint));
     // Water absorbs its transmitted color; reflected buildings retain their own color.
     // Rough surfaces soften the reflection instead of becoming a mirror-like floor.
-    float reflectedAmount = fresnel * (1 - roughness * .65);
+    // Retain the material's blue identity at grazing angles; preserve a bounded sheen.
+    float3 waterTint = ToLinear(saturate(base.rgb));
+    float tintPeak = max(max(waterTint.r, waterTint.g), max(waterTint.b, .001));
+    float3 reflectionTint = lerp(float3(1,1,1), waterTint/tintPeak, .72);
+    reflection *= reflectionTint;
+    highlight *= lerp(float3(1,1,1), reflectionTint, .55);
+    float reflectedAmount = min(.34, fresnel * (1 - roughness * .65));
     float3 result = lerp(transmission * ToLinear(saturate(base.rgb)) * illumination, reflection, reflectedAmount) + highlight;
-    result = lerp(result, float3(.72,.83,.85) * illumination, foam);
+    result = lerp(result, float3(.38,.61,.80) * illumination, foam);
+    if (waterShadowStyle.x >= 0) result *= lerp(1, visibility, waterShadowStyle.x);
     float opacity = saturate(base.a * (1.15 + fresnel*.45 + foam*.5));
     if (atlasOutput.z < .5) result = pow(saturate(result), 1.0/2.2);
     return float4(result, opacity);

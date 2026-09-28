@@ -31,6 +31,7 @@ Public Type Sun
     Azimuth As Double
     Elevation As Double
     Shadows As Boolean
+    ShadowOpacity As Number
 End Type
 
 Public Type State
@@ -54,6 +55,7 @@ Public Sub DefaultSun(ByRef Value As Sun)
     Value.Azimuth = 58.0
     Value.Elevation = 54.0
     Value.Shadows = True
+    Value.ShadowOpacity = 65
 
 End Sub
 

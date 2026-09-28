@@ -5,6 +5,7 @@ Option Explicit
 Import Smile.Tools.NerisTown As Town
 Import Smile.Tools.NerisTownParty As Party
 Import Smile.Tools.NerisTownAssets As Assets
+Import Smile.Tools.NerisTownAppearance As Appearance
 Import Smile.Tools.NerisTownNavigation As Navigation
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PrecisionMath3D As Math3D
@@ -12,6 +13,7 @@ Import Smile.Simple3D.Character3D As Character
 Import Smile.Simple3D.ArenaCamera3D As Motion
 Import Smile.Simple3D.ArenaViewport3D As Arena
 Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Scene3D As Scene
 Import Smile.Tools.Character3DViewerCalibration As Calibration
 Import Smile.Tools.NerisTownTrees As Trees
 Import Smile.Tools.NerisTownMap As TownMap
@@ -325,8 +327,8 @@ Sub CheckCamera(ByRef Scene As Town.State)
     Dim Changed As Boolean
     Dim Distance As Double
 
-    Call Check(Scene.Flight.Enabled And Scene.Follow And Not Scene.PartyControl,
-        "Town Starts With Arrival Framing And Inspection Keys")
+    Call Check(Scene.Flight.Enabled And Scene.Follow And Scene.PartyCamera,
+        "Town Starts With Arrival Framing And Party Movement")
 
     Call Town.Update(Scene, 0)
     Call Check(Scene.Flight.Arrival And Abs(Scene.View.LiveCamera.Position.X) < 0.001 And
@@ -652,15 +654,23 @@ Sub CheckCastleRender(ByRef Value As Town.State)
     ' to avoid testing an unsupported duplicate town beyond the 64-model pool.
 
     Call Assets.Destroy(Value.Town)
+    Call Appearance.Destroy(Value.Look)
 
     Ok = Castle.Create(Value.Comparison)
 
     Print "Castle Parts " + Calibration.NumberText(Value.Comparison.ObjectCount)
     Print "Castle Moving Parts " + Calibration.NumberText(Value.Comparison.LeafCount)
 
-    Call Check(Ok And Value.Comparison.ObjectCount = 42 And Value.Comparison.LeafCount = 3,
-        "Detailed West Castle Loads 39 Static Parts And Three Hinged Material Parts")
-    Call Town.Draw(Value)
+    Call Check(Value.Comparison.Light.Ready, "Castle Crystal And Lamp Halos Initialize")
+    Call Check(Value.Comparison.Water.Ready And Value.Comparison.Water.Basins.PointCount = 134 And
+        Value.Comparison.Water.Streams.PointCount = 1208,
+        "All Fountain Basins Jets And Rings Accept Normalized Ribbon Coordinates")
+    Call Castle.Update(Value.Comparison, 600)
+    Call Check(Value.Comparison.Water.Ready And Value.Comparison.Water.Time = 600,
+        "Fountain Animation Advances Without Invalidating Its Resources")
+    Call Check(Ok And Value.Comparison.ObjectCount = 98 And Value.Comparison.LeafCount = 7,
+        "Detailed West Castle Loads 85 Static Parts, Seven Bridge Parts And Six Door Parts")
+    Call DrawCastleCheck(Value)
 
     For Part = Value.Comparison.Leaf To Value.Comparison.Leaf + Value.Comparison.LeafCount - 1
 
@@ -668,17 +678,17 @@ Sub CheckCastleRender(ByRef Value As Town.State)
 
         Call Check(Ok And Pose.Rotation.X = 90.0, "Native Bridge Mesh Starts Upright At Its Real Hinge")
         Call Check(Abs(Pose.Position.X - CastleRoute.ORIGIN_X) < 0.001 And
-            Abs(Pose.Position.Y - 18.87) < 0.001 And Abs(Pose.Position.Z + 1940.0) < 0.001,
+            Abs(Pose.Position.Y - 18.87) < 0.001 And Abs(Pose.Position.Z - CastleRoute.ORIGIN_Z + 64.0 * CastleRoute.SCALE) < 0.001,
             "Native Hinge Retains Measured Placement And Scale")
     End For
 
-    Call Party.Teleport(Value.People, P.Vector(CastleRoute.ORIGIN_X, CastleRoute.DECK_Y, -2410.0))
+    Call Party.Teleport(Value.People, P.Vector(CastleRoute.ORIGIN_X, CastleRoute.DECK_Y, CastleRoute.ORIGIN_Z - 1558.0))
 
     For Step = 1 To 30
         Call CastleRoute.Update(Value.People.Path, Value.People.MemberCount, 100)
     End For
 
-    Call Town.Draw(Value)
+    Call DrawCastleCheck(Value)
 
     For Part = Value.Comparison.Leaf To Value.Comparison.Leaf + Value.Comparison.LeafCount - 1
         Ok = P.TryTransform(Value.Comparison.Objects[Part], Pose)
@@ -693,7 +703,7 @@ Sub CheckCastleRender(ByRef Value As Town.State)
         Call CastleRoute.Update(Value.People.Path, Value.People.MemberCount, 100)
     End For
 
-    Call Town.Draw(Value)
+    Call DrawCastleCheck(Value)
 
     For Part = Value.Comparison.Leaf To Value.Comparison.Leaf + Value.Comparison.LeafCount - 1
         Ok = P.TryTransform(Value.Comparison.Objects[Part], Pose)
@@ -701,5 +711,17 @@ Sub CheckCastleRender(ByRef Value As Town.State)
         Call Check(Ok And Pose.Rotation.X = 90.0 And Not Value.Failed,
             "Actual Party Departure Draws The Raised Native Leaf")
     End For
+
+End Sub
+
+Sub DrawCastleCheck(ByRef Value As Town.State)
+
+    Dim Ok As Boolean
+
+    Ok = Arena.BeginFrame(Value.View, Value.BaseCamera, True, False)
+    Ok = Castle.Draw(Value.Comparison) And Ok
+    Ok = Scene.EndScene() And Ok
+
+    Call Check(Ok, "Castle And Animated Fountain Draw Within Native Resource Budgets")
 
 End Sub

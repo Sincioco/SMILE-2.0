@@ -1,4 +1,4 @@
-"""Bounded TWN1/Save Data codec shared by the Blender worker and round-trip checks."""
+"""Bounded TWN1/TWN2 codec shared by the existing Blender document worker."""
 import hashlib
 import json
 import struct
@@ -83,7 +83,10 @@ class Reader:
 
 def decode(payload, catalog, request=False):
     r = Reader(payload)
-    if bytes(r.byte() for _ in range(4)) != b'TWN\x01':
+    if bytes(r.byte() for _ in range(3)) != b'TWN':
+        raise ValueError('Unsupported town format')
+    version = r.byte()
+    if version not in (1, 2):
         raise ValueError('Unsupported town format')
     fingerprint = hashlib.sha256(json.dumps(catalog, sort_keys=True).encode()).hexdigest()
     if r.name() != fingerprint:
@@ -125,6 +128,10 @@ def decode(payload, catalog, request=False):
                           position=position, scale=scale, yaw=yaw))
     result['items'] = items
     result['sun'] = [r.integer() for _ in range(5)] + [r.precise(), r.precise(), r.byte()]
+    if version == 2:
+        result['sun'].append(r.byte() - 1)
+        if not -1 <= result['sun'][8] <= 100:
+            raise ValueError('Invalid shadow opacity')
     result['payload'] = payload[:r.offset]
     if request:
         result['mode'], result['request_id'] = r.integer(), r.integer()
@@ -137,7 +144,9 @@ def decode(payload, catalog, request=False):
 
 def encode(document, catalog):
     fingerprint = hashlib.sha256(json.dumps(catalog, sort_keys=True).encode()).hexdigest()
-    result = bytearray(b'TWN\x01') + name(fingerprint) + name(document['name']) + b'\0'
+    # Eight-value legacy snapshots must retain their checksum when opened.
+    version = 2 if len(document['sun']) == 9 else 1
+    result = bytearray(b'TWN') + bytes([version]) + name(fingerprint) + name(document['name']) + b'\0'
     precise = lambda value: integer(round(value * 1000000))
     result += integer(document['columns']) + integer(document['rows']) + precise(document['cell_size'])
     for edge in document['xs'] + document['zs']:
@@ -153,6 +162,8 @@ def encode(document, catalog):
     for value in document['sun'][:5]:
         result += integer(value)
     result += precise(document['sun'][5]) + precise(document['sun'][6]) + bytes([document['sun'][7]])
+    if version == 2:
+        result += bytes([document['sun'][8] + 1])
     decode(result, catalog)  # Same format/range checks apply in both directions.
     return bytes(result)
 

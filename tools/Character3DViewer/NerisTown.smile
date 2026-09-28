@@ -10,7 +10,7 @@ Import Smile.Simple3D.ArenaViewport3D As Arena
 Import Smile.Simple3D.ArenaCamera3D As Motion
 Import Smile.Simple3D.Scene3D As Scene
 Import Smile.Simple3D.Character3D As Character
-Import Smile.Simple3D.FreeCamera3D As FreeCamera
+Import Smile.Tools.NerisTownKeyboard As Keyboard
 Import Smile.Tools.Character3DViewerRendering As Rendering
 Import Smile.Tools.NerisTownAssets As Assets
 Import Smile.Tools.NerisTownParty As Party
@@ -24,6 +24,8 @@ Import Smile.Tools.NerisTownEntrances As Entrances
 Import Smile.Tools.TownEditorSession As Authoring
 Import Smile.Tools.NerisCastlePreview As Castle
 Import Smile.Tools.NerisCastleRoute As CastleRoute
+Import Smile.Tools.TownPicking As Picking
+Import Smile.Tools.NerisTownTour As Tour
 
 Public Type State
     Town As Assets.State
@@ -34,15 +36,16 @@ Public Type State
     Map As TownMap.State
     BaseCamera As P.Camera3D
     Cinematic As Boolean
+    OrbitPaused As Boolean
     Follow As Boolean
-    PartyControl As Boolean
-    InspectMoving As Boolean
-    Inspection As FreeCamera.State
+    PartyCamera As Boolean
     InputActive As Boolean
     IdleTime As Number
     IdleOrbit As Boolean
     Flight As Drone.State
     Panel As CameraPanel.State
+    Keys As Keyboard.State
+    TourState As Tour.State
     Doors As Entrances.State
     Ready As Boolean
     Failed As Boolean
@@ -57,6 +60,7 @@ Public Sub Start(ByRef Value As State)
 
     Value = Empty
     Value.Follow = True
+    Value.PartyCamera = True
     Value.Edited = Authoring.Available()
     Value.BaseCamera.UpDirection = P.Vector(0.0, 1.0, 0.0)
     ' Town-scale depth precision keeps thin paving layers separated during orbit.
@@ -147,16 +151,38 @@ Public Sub LoadNext(ByRef Value As State)
 
 End Sub
 
-Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean)
+Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
+    Optional HeaderHovered As Boolean = False)
 
     Dim Pointer As Motion.PointerInput
     Dim ArenaKey As Number
     Dim PanelAction As Number
     Dim MovingGesture As Boolean
+    Dim OrbitPoint As P.Vector3
 
     If Not Value.Ready Then
         Return
     End If
+
+    ' Header hover blocks pointer gestures, not independent keyboard framing.
+
+    If Key = KEY_1 And Not Blocked And Not Authoring.GestureActive() Then
+        Call TopDown(Value)
+
+        Return
+    End If
+
+    If Key = KEY_SPACE And Not Blocked And Value.Cinematic Then
+
+        Value.OrbitPaused = Not Value.OrbitPaused
+        Value.IdleOrbit = False
+        Value.InputActive = True
+
+        Return
+
+    End If
+
+    Blocked = Blocked Or HeaderHovered
 
     If (Pointer_Pressed(POINTER_PRIMARY) And Pointer_X() >= 665 And Pointer_X() < 755 And
         Pointer_Y() >= 10 And Pointer_Y() < 39) Then
@@ -176,7 +202,7 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean)
 
         Value.BaseCamera = Value.View.LiveCamera
         Value.Follow = False
-        Value.PartyControl = False
+        Value.PartyCamera = False
         Value.Cinematic = False
         Value.Flight.Suspended = True
 
@@ -198,13 +224,13 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean)
         Pointer_Y() >= 10 And Pointer_Y() < 39) Then
 
         Call Party.Teleport(Value.People, P.Vector(CastleRoute.ORIGIN_X,
-            CastleRoute.DECK_Y, -2410.0))
+            CastleRoute.DECK_Y, CastleRoute.ORIGIN_Z - 1558.0))
         Call Drone.ArrivalFrame(Value.Flight, Value.View, Value.BaseCamera,
             Value.People.Path.Positions[0])
 
         Value.Follow = True
         Value.Cinematic = False
-        Value.PartyControl = True
+        Value.PartyCamera = True
         Value.InputActive = True
         Value.IdleTime = 0
         Value.IdleOrbit = False
@@ -213,19 +239,13 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean)
 
     End If
 
-    If Key = KEY_1 And Authoring.Editing() Then
-        Call TopDown(Value)
-
-        Return
-    End If
-
     Value.InputActive = (Key <> KEY_NONE Or Pointer_Delta_X() <> 0 Or
         Pointer_Delta_Y() <> 0 Or Pointer_Wheel_Delta() <> 0 Or
         Pointer_Held(POINTER_PRIMARY) Or Pointer_Held(POINTER_MIDDLE) Or
         Pointer_Held(POINTER_SECONDARY))
 
     PanelAction = CameraPanel.Input(Value.Panel, Value.View, Value.BaseCamera, Blocked,
-        Drone.GroundShot(Value.Flight, Value.PartyControl))
+        Drone.GroundShot(Value.Flight, Value.PartyCamera))
     Blocked = Blocked Or CameraPanel.Hovered() Or Value.Panel.DragRow > 0
 
     If PanelAction = 1 Then
@@ -245,14 +265,29 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean)
 
         Value.Cinematic = False
         Value.Flight.Suspended = True
-        Value.PartyControl = False
+        Value.PartyCamera = False
+
+    Else If PanelAction = 4 Then
+
+        Call ToggleInspection(Value)
 
     End If
 
     Pointer = Motion.ReadPointer(Blocked)
+
+    Call Motion.ResolveGesture(Value.View.Controls, Pointer)
+
+    If Value.Flight.CursorOrbit And Not Pointer.OrbitHeld Then
+        Call Drone.FinishCursorOrbit(Value.Flight, Value.View, Value.BaseCamera)
+    End If
+
     MovingGesture = Drone.MovingGesture(Value.Flight, Value.View, Pointer,
-        Value.PartyControl, MovementHeld())
+        Value.PartyCamera And Not Value.Keys.FlyInspect, MovementHeld())
     ArenaKey = Key
+
+    If Not Blocked And Pointer.OrbitPressed Then
+        Value.View.MaximumPitch = M.Radians(80.0)
+    End If
 
     If Key = KEY_F And Key_Event_Held(KEY_CONTROL) Then
         ArenaKey = 0
@@ -279,14 +314,21 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean)
 
         Value.Cinematic = False
         Value.Flight.Suspended = True
-        Value.PartyControl = False
+        Value.PartyCamera = False
 
     End If
 
-    If Not Blocked And Not MovingGesture And Pointer.OrbitPressed And Value.Follow Then
-        Call StartOrbit(Value)
+    If Not Blocked And Not MovingGesture And Pointer.OrbitPressed Then
 
-        Value.Cinematic = False
+        Call Keyboard.Capture(Value.Keys, Value.View, Value.BaseCamera)
+        Call ManualCamera(Value)
+
+        If Picking.OrbitPoint(Value.View.LiveCamera, Pointer_X(), Pointer_Y(),
+            Window_Width(), Window_Height(), OrbitPoint) Then
+            Call Drone.BeginCursorOrbit(Value.Flight, Value.View.LiveCamera, OrbitPoint,
+                Pointer_X(), Pointer_Y())
+        End If
+
     End If
 
     If Not Blocked And Pointer_Pressed(POINTER_SECONDARY) Then
@@ -303,17 +345,19 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean)
 
     Else If Key = KEY_TAB Then
 
+        Value.View.MaximumPitch = M.Radians(80.0)
+
+        Call Keyboard.StopTravel(Value.Keys)
+
         Value.Flight.Focusing = True
         Value.Flight.Enabled = True
 
         Call Arena.BeginTransition(Value.View, 1000)
 
         Value.Follow = True
-        Value.PartyControl = True
-        Value.InspectMoving = False
+        Value.PartyCamera = True
         Value.Cinematic = False
 
-        Call FreeCamera.Reset(Value.Inspection)
         Call Drone.Focus(Value.Flight, 180.0, Value.View.LiveCamera)
         Call Motion.Reset(Value.View.Controls, Value.View.Zoom)
 
@@ -324,6 +368,8 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean)
 End Sub
 
 Public Sub ToggleDrone(ByRef Value As State)
+
+    Call Keyboard.StopTravel(Value.Keys)
 
     Value.Flight.Enabled = Not Value.Flight.Enabled
     Value.Cinematic = False
@@ -345,15 +391,16 @@ Public Sub ToggleDrone(ByRef Value As State)
 
 End Sub
 
-''' Keep the selected town/party center and zoom; only right-click restores the overview.
+''' Begin a continuous tour from the displayed view; no initial camera cut.
 Public Sub StartOrbit(ByRef Value As State)
 
     Dim Offset As P.Vector3
 
-    Value.PartyControl = False
-    Value.InspectMoving = False
+    Value.View.MaximumPitch = M.Radians(80.0)
 
-    Call FreeCamera.Reset(Value.Inspection)
+    Call Keyboard.StopTravel(Value.Keys)
+
+    Value.PartyCamera = False
 
     Offset = M.Subtract(Value.View.LiveCamera.Position, Value.View.LiveCamera.Target)
 
@@ -370,7 +417,22 @@ Public Sub StartOrbit(ByRef Value As State)
     End If
 
     Value.Cinematic = True
+    Value.OrbitPaused = False
     Value.Flight.Suspended = True
+
+    If Value.Edited Then
+
+        Call Drone.FinishCursorOrbit(Value.Flight, Value.View, Value.BaseCamera)
+        Call Authoring.ReadTour(Value.TourState, CastleRoute.Active())
+
+        Value.BaseCamera = Value.View.LiveCamera
+        Value.Follow = False
+
+        Call Tour.Start(Value.TourState, Value.BaseCamera, Timer())
+        Call Motion.Reset(Value.View.Controls, Value.View.Zoom)
+        Call Arena.BeginTransition(Value.View, 0)
+
+    End If
 
 End Sub
 
@@ -382,10 +444,12 @@ Public Sub FitTown(ByRef Value As State)
     Dim Distance As Double
     Dim Ok As Boolean
 
-    Value.PartyControl = False
-    Value.InspectMoving = False
+    Value.View.MaximumPitch = M.Radians(80.0)
+    Value.Flight.CursorOrbit = False
 
-    Call FreeCamera.Reset(Value.Inspection)
+    Call Keyboard.StopTravel(Value.Keys)
+
+    Value.PartyCamera = False
 
     Direction = M.Subtract(Value.View.LiveCamera.Position, Value.View.LiveCamera.Target)
     Ok = M.TryNormalize(Direction, Direction)
@@ -406,16 +470,24 @@ Public Sub FitTown(ByRef Value As State)
 
     Call Motion.Reset(Value.View.Controls, Value.View.Zoom)
 
+    If Value.Cinematic And Value.Edited Then
+        Call Authoring.ReadTour(Value.TourState, CastleRoute.Active())
+        Call Tour.Start(Value.TourState, Value.BaseCamera, Timer())
+    End If
+
 End Sub
 
 Public Sub ResetOverview(ByRef Value As State)
 
-    Value.PartyControl = False
-    Value.InspectMoving = False
+    Value.View.MaximumPitch = M.Radians(80.0)
+    Value.Flight.CursorOrbit = False
 
-    Call FreeCamera.Reset(Value.Inspection)
+    Call Keyboard.StopTravel(Value.Keys)
+
+    Value.PartyCamera = False
 
     Value.Cinematic = True
+    Value.OrbitPaused = False
     Value.Follow = False
     Value.Flight.Suspended = True
     Value.BaseCamera.Target = P.Vector(-900.0, 160.0, 0.0)
@@ -429,6 +501,11 @@ Public Sub ResetOverview(ByRef Value As State)
     Call Motion.Reset(Value.View.Controls, Value.View.Zoom)
     Call Arena.ComposeCamera(Value.View, Value.BaseCamera)
 
+    If Value.Edited Then
+        Call Authoring.ReadTour(Value.TourState, CastleRoute.Active())
+        Call Tour.Start(Value.TourState, Value.View.LiveCamera, Timer())
+    End If
+
 End Sub
 
 ''' North stays at the top; the tiny pole offset keeps the world-up camera basis stable.
@@ -436,101 +513,119 @@ Public Sub TopDown(ByRef Value As State)
 
     Dim Distance As Double
 
+    Value.Flight.CursorOrbit = False
+
+    Call Keyboard.StopTravel(Value.Keys)
+
     Distance = Max(200.0, M.Distance(Value.View.LiveCamera.Position, Value.View.LiveCamera.Target))
     Value.BaseCamera = Value.View.LiveCamera
     Value.BaseCamera.Position = M.Add(Value.BaseCamera.Target, P.Vector(0.0, Distance, -Distance * 0.0002))
     Value.View.MaximumPitch = 1.57062
-    Value.PartyControl = False
+    Value.PartyCamera = False
     Value.Follow = False
     Value.Cinematic = False
     Value.IdleOrbit = False
     Value.IdleTime = 0
-    Value.InspectMoving = False
     Value.Flight.Suspended = True
     Value.Flight.Focusing = False
     Value.Flight.Arrival = False
     Value.InputActive = True
 
-    Call FreeCamera.Reset(Value.Inspection)
     Call Motion.Reset(Value.View.Controls, Value.View.Zoom)
     Call Arena.BeginTransition(Value.View, 0)
     Call Drone.Compose(Value.Flight, Value.View, Value.BaseCamera, False, 0)
 
 End Sub
 
-Private Function WalkDirection(View As P.Camera3D, Grounded As Boolean) As P.Vector3
+''' Fly mode is an explicit toggle; mouse gestures never select keyboard ownership.
+Public Sub ToggleInspection(ByRef Value As State)
 
-    Dim Result As P.Vector3
-    Dim X As Double
-    Dim Z As Double
+    Value.Keys.FlyInspect = Not Value.Keys.FlyInspect
 
-    If Key_Held(KEY_UP) Or Key_Held(KEY_W) Then
-        Z = Z + 1.0
+    Call Keyboard.Capture(Value.Keys, Value.View, Value.BaseCamera)
+    Call ManualCamera(Value)
+
+End Sub
+
+Private Sub ManualCamera(ByRef Value As State)
+
+    Value.View.MaximumPitch = M.Radians(80.0)
+    Value.Follow = False
+    Value.PartyCamera = False
+    Value.Cinematic = False
+    Value.IdleOrbit = False
+    Value.IdleTime = 0
+    Value.Flight.Suspended = True
+    Value.Flight.Arrival = False
+    Value.Flight.Focusing = False
+    Value.Flight.Peeking = False
+
+End Sub
+
+''' Route one held-key snapshot. WASD never depends on camera framing or mouse gestures.
+Public Sub AdvanceKeyboard(ByRef Value As State, Keys As Keyboard.HeldKeys, Elapsed As Number)
+
+    Dim Direction As P.Vector3
+    Dim Translating As Boolean
+    Dim Walking As Boolean
+
+    Direction = Keyboard.CameraDirection(Value.View.LiveCamera, Keys, Value.Keys.FlyInspect)
+    Translating = Keyboard.Translate(Value.Keys, Value.View, Value.BaseCamera, Direction, Elapsed)
+
+    If Translating Then
+        Call ManualCamera(Value)
     End If
 
-    If Key_Held(KEY_DOWN) Or Key_Held(KEY_S) Then
-        Z = Z - 1.0
-    End If
+    If Value.Keys.FlyInspect Then
 
-    If Key_Held(KEY_RIGHT) Or Key_Held(KEY_D) Then
-        X = X + 1.0
-    End If
+        Call Party.Stand(Value.People, Elapsed)
 
-    If Key_Held(KEY_LEFT) Or Key_Held(KEY_A) Then
-        X = X - 1.0
-    End If
+    Else
 
-    Result = FreeCamera.Direction(View, X, Z, Grounded)
+        If Keys.ArrowSide <> 0.0 Or Keys.ArrowForward <> 0.0 Then
 
-    Return Result
+            If Value.Follow Then
+                Call Keyboard.Capture(Value.Keys, Value.View, Value.BaseCamera)
+            End If
 
-End Function
+            Call ManualCamera(Value)
+            Call Keyboard.OrbitZoom(Value.View, Keys, Elapsed)
 
-''' Keyboard inspection translates the camera without advancing any party route slot.
-Public Sub InspectMove(ByRef Value As State, Direction As P.Vector3, Elapsed As Number)
+        End If
 
-    Dim Speed As Double
-    Dim Lift As Double
+        Walking = Keys.Sideways <> 0.0 Or Keys.ForwardAmount <> 0.0
+        Direction = Keyboard.PartyDirection(Drone.MovementCamera(Value.Flight,
+            Value.View.LiveCamera, Walking), Keys)
 
-    If Value.PartyControl Then
-        Return
-    End If
-
-    If Not Value.InspectMoving And M.Length(Direction) > 0.001 Then
-
-        Value.InspectMoving = True
-        Value.Follow = False
-        Value.Cinematic = False
-        Value.Flight.Suspended = True
-        Value.Flight.Focusing = False
-        Value.BaseCamera = Value.View.LiveCamera
-
-        Call Arena.BeginTransition(Value.View, 0)
-        Call Motion.Reset(Value.View.Controls, Value.View.Zoom)
-
-    End If
-
-    If Value.InspectMoving Then
-
-        Speed = Clamp(M.Distance(Value.View.LiveCamera.Position,
-            Value.View.LiveCamera.Target) * 0.5, 100.0, 1400.0)
-        Value.BaseCamera = FreeCamera.Step(Value.Inspection, Value.BaseCamera,
-            Direction, Speed, Elapsed)
-        Lift = Max(0.0, 25.01 - Value.BaseCamera.Position.Y)
-        Value.BaseCamera.Position.Y = Value.BaseCamera.Position.Y + Lift
-        Value.BaseCamera.Target.Y = Value.BaseCamera.Target.Y + Lift
-        Value.InspectMoving = M.Length(Value.Inspection.Velocity) > 0.001
+        Call MoveParty(Value, Direction, Elapsed)
 
     End If
 
 End Sub
 
-Public Sub Update(ByRef Value As State, Elapsed As Number)
+''' Party movement retains navigation, collision and follower ownership.
+Public Sub MoveParty(ByRef Value As State, Direction As P.Vector3, Elapsed As Number)
 
-    Dim Direction As P.Vector3
     Dim Leader As P.Vector3
     Dim Distance As Double
-    Dim MovingInput As Boolean
+
+    Leader = Value.People.Path.Positions[0]
+
+    Call OnMovement(Value, M.Length(Direction) > 0.001)
+
+    If M.Length(Direction) > 0.001 Then
+        Distance = Party.WalkingSpeed(Value.People) * ToDouble(Elapsed) / 1000.0
+        Leader = Navigation.Move(Leader, Direction.X * Distance, Direction.Z * Distance)
+    End If
+
+    Call Party.Update(Value.People, Leader, Elapsed)
+
+End Sub
+
+Public Sub Update(ByRef Value As State, Elapsed As Number)
+
+    Dim Held As Keyboard.HeldKeys
+    Dim Leader As P.Vector3
 
     If Not Value.Ready Then
         Call LoadNext(Value)
@@ -538,41 +633,19 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
         Return
     End If
 
-    MovingInput = MovementHeld()
+    Held = Keyboard.ReadKeys(Authoring.CameraBlocked() Or
+        (Authoring.Editing() And Key_Held(KEY_CONTROL)))
 
-    Call UpdateIdle(Value, Value.InputActive Or MovingInput Or Authoring.GestureActive(), Elapsed)
-
-    If Value.PartyControl Then
-        Direction = WalkDirection(Drone.MovementCamera(Value.Flight,
-            Value.View.LiveCamera, MovingInput), True)
-    Else
-        Direction = WalkDirection(Value.View.LiveCamera, False)
-    End If
-
-    If Authoring.CameraBlocked() Or (Authoring.Editing() And Key_Held(KEY_CONTROL)) Then
-        Direction = P.Vector(0.0, 0.0, 0.0)
-    End If
-
-    Leader = Value.People.Path.Positions[0]
+    Call UpdateIdle(Value, Value.InputActive Or Keyboard.Active(Held) Or
+        Authoring.GestureActive(), Elapsed)
 
     If CastleRoute.Active() Then
         Call CastleRoute.Update(Value.People.Path, Value.People.MemberCount, Elapsed)
     End If
 
-    Call OnMovement(Value, M.Length(Direction) > 0.001)
+    Call AdvanceKeyboard(Value, Held, Elapsed)
 
-    If Value.PartyControl And M.Length(Direction) > 0.001 Then
-        Distance = Party.WalkingSpeed(Value.People) * ToDouble(Elapsed) / 1000.0
-        Leader = Navigation.Move(Leader, Direction.X * Distance, Direction.Z * Distance)
-    End If
-
-    If Value.PartyControl Then
-        Call Party.Update(Value.People, Leader, Elapsed)
-    Else
-
-        Call InspectMove(Value, Direction, Elapsed)
-        Call Party.Stand(Value.People, Elapsed)
-    End If
+    Leader = Value.People.Path.Positions[0]
 
     If Value.Edited Then
 
@@ -592,7 +665,7 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
 
                 Value.Follow = True
                 Value.Cinematic = False
-                Value.PartyControl = False
+                Value.PartyCamera = True
 
             End If
 
@@ -605,19 +678,26 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
 
     End If
 
+    Call Castle.Update(Value.Comparison, Elapsed)
     Call TownMap.Update(Value.Map, Party.IsMoving(Value.People), Elapsed)
 
     If Value.Cinematic Then
-        Value.View.Controls.OrbitYaw = Camera.NormalizeAngle(Value.View.Controls.OrbitYaw + ToDouble(Elapsed) * 0.0025)
+
+        If Value.Edited And Value.TourState.SubjectCount > 0 Then
+            Value.BaseCamera = Tour.Advance(Value.TourState, Value.BaseCamera, Elapsed, Value.OrbitPaused)
+        Else If Not Value.OrbitPaused Then
+            Value.View.Controls.OrbitYaw = Camera.NormalizeAngle(Value.View.Controls.OrbitYaw + ToDouble(Elapsed) * 0.0025)
+        End If
+
     End If
 
-    If Value.Follow Then
+    If Value.Follow And Not Value.Keys.FlyInspect Then
         Value.BaseCamera = Drone.Frame(Value.Flight, Value.BaseCamera, Leader,
             Value.People.Members[0].Yaw, Party.IsMoving(Value.People), Elapsed)
     End If
 
-    Call Drone.Compose(Value.Flight, Value.View, Value.BaseCamera, Value.Follow, Elapsed,
-        Drone.GroundShot(Value.Flight, Value.PartyControl))
+    Call Drone.Compose(Value.Flight, Value.View, Value.BaseCamera, Value.Follow And Not Value.Keys.FlyInspect, Elapsed,
+        Drone.GroundShot(Value.Flight, Value.PartyCamera), Value.Keys.FlyInspect)
 
 End Sub
 
@@ -625,9 +705,7 @@ Private Function MovementHeld() As Boolean
 
     Dim Result As Boolean
 
-    Result = (Key_Held(KEY_UP) Or Key_Held(KEY_W) Or Key_Held(KEY_DOWN) Or
-        Key_Held(KEY_S) Or Key_Held(KEY_LEFT) Or Key_Held(KEY_A) Or
-        Key_Held(KEY_RIGHT) Or Key_Held(KEY_D))
+    Result = Key_Held(KEY_W) Or Key_Held(KEY_S) Or Key_Held(KEY_A) Or Key_Held(KEY_D)
 
     Return Result
 
@@ -697,7 +775,13 @@ Public Sub Draw(ByRef Value As State)
 
     End If
 
-    Ok = Arena.BeginFrame(Value.View, Value.BaseCamera, True, False)
+    Ok = True
+
+    If Value.Edited Then
+        Ok = Castle.ApplyLighting(Value.Comparison)
+    End If
+
+    Ok = Arena.BeginFrame(Value.View, Value.BaseCamera, True, False) And Ok
 
     If Ok Then
 
@@ -731,15 +815,20 @@ Public Sub Overlay(ByRef Value As State)
     Draw Text "Speed: " + Numbers.NumberText(Value.People.SpeedPercent) + "%  (+ / -)" At 405, 18 Size 16 Color WHITE
     Fill Rectangle 665, 10, 90, 29, RGB(20, 90, 108)
     Draw Text "Edit Town" At 675, 17 Size 15 Color WHITE
-    Draw Text "WASD / Arrows: Inspect   Tab: Control Party   Ctrl+Tab: Next Leader" At 18, Window_Height() - 70 Size 14 Color WHITE
+
+    If Value.Keys.FlyInspect Then
+        Draw Text "WASD / Arrows: Fly   Space: Pause / Resume Orbit" At 18, Window_Height() - 70 Size 14 Color WHITE
+    Else
+        Draw Text "WASD: Party   Up / Down: Zoom   Left / Right: Orbit   Space: Pause / Resume Orbit" At 18, Window_Height() - 70 Size 14 Color WHITE
+    End If
 
     If Authoring.Editing() Then
         Draw Text "1: Top Down   Left: Edit / Pan   Shift+Left: Pan   Middle: Orbit   Wheel: Zoom" At 18, Window_Height() - 48 Size 14 Color WHITE
     Else
-        Draw Text "Middle: Orbit   Left: Pan   Wheel: Zoom   Right Click: Overview" At 18, Window_Height() - 48 Size 14 Color WHITE
+        Draw Text "Middle: Orbit   Shift+Middle / Left: Pan   Wheel: Zoom   1: Top Down   Right: Overview" At 18, Window_Height() - 48 Size 14 Color WHITE
     End If
 
-    Draw Text "F: Floor   G: Grid   B: Background   M: Map   Ctrl+F: Drone   R: Walk / Run" At 18, Window_Height() - 26 Size 14 Color WHITE
+    Draw Text "F / G: Floor / Grid   B: Background   M: Map   Tab: Follow   Ctrl+Tab: Leader   R: Run" At 18, Window_Height() - 26 Size 14 Color WHITE
 
     If CastleRoute.Active() And Not Authoring.Editing() Then
         Fill Rectangle 770, 10, 150, 29, RGB(20, 90, 108)
@@ -747,8 +836,8 @@ Public Sub Overlay(ByRef Value As State)
     End If
 
     Call CameraPanel.Draw(Value.Panel, Value.View, Value.Cinematic,
-        Value.PartyControl, Value.Flight.Enabled And Not Value.Flight.Suspended,
-        Drone.GroundShot(Value.Flight, Value.PartyControl))
+        Value.PartyCamera, Value.Flight.Enabled And Not Value.Flight.Suspended,
+        Drone.GroundShot(Value.Flight, Value.PartyCamera), Value.Keys.FlyInspect)
 
     If Value.Ready Then
 
@@ -775,12 +864,14 @@ Public Sub Overlay(ByRef Value As State)
             Draw Text "Walk" At 345, 18 Size 16 Color RGB(70, 210, 205)
         End If
 
-        If Value.Cinematic Then
+        If Value.Keys.FlyInspect Then
+            Draw Text "Fly Inspect" At 180, 18 Size 16 Color RGB(70, 210, 205)
+        Else If Value.Cinematic Then
             Draw Text "Cinematic Orbit" At 180, 18 Size 16 Color RGB(70, 210, 205)
-        Else If Value.PartyControl Then
-            Draw Text "Control Party" At 180, 18 Size 16 Color RGB(70, 210, 205)
+        Else If Value.PartyCamera Then
+            Draw Text "Follow Party" At 180, 18 Size 16 Color RGB(70, 210, 205)
         Else
-            Draw Text "Inspect Town" At 180, 18 Size 16 Color RGB(70, 210, 205)
+            Draw Text "Free Camera" At 180, 18 Size 16 Color RGB(70, 210, 205)
         End If
 
     End If

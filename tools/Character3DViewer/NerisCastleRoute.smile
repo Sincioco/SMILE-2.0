@@ -7,17 +7,25 @@ Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PartyTrail3D As Trail
 Import Smile.Tools.ProximityDrawbridge As Bridge
 
-Public Const ORIGIN_X = -3650.0
-Public Const ORIGIN_Z = -852.0
+Public Const ORIGIN_X = -3660.0
+Public Const ORIGIN_Z = 2440.0
 Public Const SCALE = 17.0
 Public Const DECK_Y = 23.12
 
 Private Dim Enabled As Boolean
 Private Dim Motion As Bridge.State
+Private Dim DoorRotation As Double
+Private Dim DoorHold As Number
+Private Dim Entered As Boolean
+Private Dim PendingEntry As Boolean
 
 Public Sub Enable(Value As Boolean)
 
     Enabled = Value
+    DoorRotation = 0.0
+    DoorHold = 0
+    Entered = False
+    PendingEntry = False
 
     Call Bridge.Reset(Motion)
 
@@ -78,14 +86,62 @@ Public Sub Update(ByRef Path As Trail.State, ActorCount As Number, Elapsed As Nu
 
     Dim Index As Number
     Dim Occupied As Boolean
+    Dim NearDoor As Boolean
+    Dim Local As P.Vector3
+    Dim Leader As P.Vector3
 
     For Index = 0 To Min(ActorCount, 5) - 1
         Occupied = Occupied Or OccupiedBy(Path.Positions[Index].X, Path.Positions[Index].Z)
+        Local = LocalPoint(Path.Positions[Index].X, Path.Positions[Index].Z)
+        NearDoor = NearDoor Or (Abs(Local.X) < 3.6 And Local.Z > 13.2 And Local.Z < 24.0 And
+            Abs(Path.Positions[Index].Y - DECK_Y - 3.0 * SCALE) < 15.0)
     End For
 
     Call Bridge.Update(Motion, Occupied, Elapsed)
 
+    If NearDoor Then
+
+        DoorHold = 1000
+        DoorRotation = Min(95.0, DoorRotation + ToDouble(Elapsed) * 0.10)
+
+    Else
+
+        DoorHold = Max(0, DoorHold - Elapsed)
+
+        If DoorHold = 0 Then
+            DoorRotation = Max(0.0, DoorRotation - ToDouble(Elapsed) * 0.075)
+        End If
+
+        Entered = False
+
+    End If
+
+    Leader = LocalPoint(Path.Positions[0].X, Path.Positions[0].Z)
+
+    If Abs(Leader.X) < 2.8 And Leader.Z >= 15.0 And DoorRotation >= 75.0 And Not Entered Then
+        PendingEntry = True
+        Entered = True
+    End If
+
 End Sub
+
+Public Function DoorAngle() As Double
+
+    Return DoorRotation
+
+End Function
+
+''' Consume once per entry; a future cutscene owner can use this event.
+Public Function ConsumeEntry() As Boolean
+
+    Dim Result As Boolean
+
+    Result = PendingEntry
+    PendingEntry = False
+
+    Return Result
+
+End Function
 
 Public Function CanStand(X As Double, Z As Double) As Boolean
 
@@ -119,9 +175,9 @@ Public Function CanStand(X As Double, Z As Double) As Boolean
             Result = False
         End If
 
-    Else If Point.Z >= 14.0 And Point.Z <= 14.3 Then
+    Else If Point.Z >= 14.0 And Point.Z <= 23.2 Then
 
-        Result = Abs(Point.X) <= 2.8
+        Result = Abs(Point.X) <= 2.8 And (Point.Z <= 14.3 Or DoorRotation >= 75.0)
 
     End If
 

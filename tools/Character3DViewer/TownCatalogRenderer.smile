@@ -15,10 +15,50 @@ Public Type State
     Models[48] As Core.Model3D
     Objects[768] As Core.Object3D
     Loaded As Number
+    Required As Number
     ObjectCount As Number
     Failed As Boolean
     ErrorCode As Number
 End Type
+
+''' Old Castle remains a palette template; GPU ownership follows actual placements.
+Public Sub SyncDocument(ByRef Value As State, ByRef Town As Document.State)
+
+    Dim Index As Number
+    Dim Part As Number
+    Dim Slot As Number
+
+    Value.Required = Catalog.CHUNK_COUNT
+
+    For Index = 0 To Town.ItemCount - 1
+
+        If Town.Items[Index].Active And Town.Items[Index].Template = 6 Then
+            Value.Required = Catalog.CHUNK_COUNT + 14
+            Exit For
+        End If
+
+    End For
+
+    If Value.Required = Catalog.CHUNK_COUNT And Value.Loaded > Value.Required Then
+
+        For Index = Catalog.CHUNK_COUNT To Value.Loaded - 1
+
+            For Part = 0 To Value.Models[Index].PartCount - 1
+                Slot = Index * 16 + Part
+
+                Call G.DestroyObjectInstance3D(Value.Objects[Slot])
+
+                Value.ObjectCount = Value.ObjectCount - 1
+            End For
+
+            Call G.DestroyModel3D(Value.Models[Index])
+        End For
+
+        Value.Loaded = Value.Required
+
+    End If
+
+End Sub
 
 Public Sub LoadNext(ByRef Value As State)
 
@@ -29,7 +69,7 @@ Public Sub LoadNext(ByRef Value As State)
     Dim Ok As Boolean
     Dim EmptyTexture As Core.Texture3D
 
-    If Value.Failed Or Value.Loaded >= Catalog.CHUNK_COUNT + 14 Then
+    If Value.Failed Or Value.Loaded >= Value.Required Then
         Return
     End If
 
@@ -99,7 +139,7 @@ Public Function Draw(ByRef Value As State, ByRef Town As Document.State) As Bool
 
         Item = Town.Items[Index]
 
-        If Item.Active Then
+        If Item.Active And (Item.Template <> 6 Or Value.Loaded = Catalog.CHUNK_COUNT + 14) Then
 
             Shape = Catalog.TemplateAt(Item.Template)
 
@@ -136,6 +176,7 @@ Public Sub Destroy(ByRef Value As State)
     Call G.DestroyTexture3D(Value.Grass)
 
     Value.Loaded = 0
+    Value.Required = 0
     Value.ObjectCount = 0
     Value.Failed = False
 

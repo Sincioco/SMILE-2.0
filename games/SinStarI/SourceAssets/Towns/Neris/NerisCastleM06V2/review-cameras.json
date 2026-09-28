@@ -1,0 +1,226 @@
+{
+  "schema_version": 1,
+  "status": "proposed-unapproved",
+  "blender_world_axes": "X right/east, Y back/north, Z up",
+  "orthographic_shared_frame": {
+    "width_m": 200,
+    "height_m": 112.5,
+    "resolution": [
+      2048,
+      1152
+    ],
+    "rule": "Set projection/sensor fit using installed Blender API; verify projected rulers. Do not independently auto-fit each elevation."
+  },
+  "cameras": [
+    {
+      "id": "NC.CAM.Front",
+      "type": "ORTHO",
+      "location": [
+        0,
+        -240,
+        24
+      ],
+      "target": [
+        0,
+        0,
+        24
+      ],
+      "up_hint": [
+        0,
+        0,
+        1
+      ],
+      "frame": "orthographic_shared_frame",
+      "output": "front.png"
+    },
+    {
+      "id": "NC.CAM.Back",
+      "type": "ORTHO",
+      "location": [
+        0,
+        240,
+        24
+      ],
+      "target": [
+        0,
+        0,
+        24
+      ],
+      "up_hint": [
+        0,
+        0,
+        1
+      ],
+      "frame": "orthographic_shared_frame",
+      "output": "back.png"
+    },
+    {
+      "id": "NC.CAM.Left",
+      "type": "ORTHO",
+      "location": [
+        -240,
+        0,
+        24
+      ],
+      "target": [
+        0,
+        0,
+        24
+      ],
+      "up_hint": [
+        0,
+        0,
+        1
+      ],
+      "frame": "orthographic_shared_frame",
+      "output": "left.png"
+    },
+    {
+      "id": "NC.CAM.Right",
+      "type": "ORTHO",
+      "location": [
+        240,
+        0,
+        24
+      ],
+      "target": [
+        0,
+        0,
+        24
+      ],
+      "up_hint": [
+        0,
+        0,
+        1
+      ],
+      "frame": "orthographic_shared_frame",
+      "output": "right.png"
+    },
+    {
+      "id": "NC.CAM.Top",
+      "type": "ORTHO",
+      "location": [
+        0,
+        0,
+        260
+      ],
+      "target": [
+        0,
+        0,
+        0
+      ],
+      "up_hint": [
+        0,
+        1,
+        0
+      ],
+      "frame_width_m": 200,
+      "frame_height_m": 200,
+      "resolution": [
+        2048,
+        2048
+      ],
+      "output": "top.png"
+    },
+    {
+      "id": "NC.CAM.HeroFront",
+      "type": "PERSP",
+      "location": [
+        0,
+        -230,
+        120
+      ],
+      "target": [
+        0,
+        0,
+        22
+      ],
+      "up_hint": [
+        0,
+        0,
+        1
+      ],
+      "lens_mm_starting_point": 45,
+      "resolution": [
+        2560,
+        1440
+      ],
+      "output": "hero-front.png"
+    },
+    {
+      "id": "NC.CAM.HeroThreeQuarter",
+      "type": "PERSP",
+      "location": [
+        165,
+        -240,
+        150
+      ],
+      "target": [
+        0,
+        0,
+        22
+      ],
+      "up_hint": [
+        0,
+        0,
+        1
+      ],
+      "lens_mm_starting_point": 45,
+      "resolution": [
+        2560,
+        1440
+      ],
+      "output": "hero-three-quarter.png"
+    },
+    {
+      "id": "NC.CAM.Courtyard",
+      "type": "PERSP",
+      "location": [
+        0,
+        -46,
+        1.65
+      ],
+      "target": [
+        0,
+        14,
+        16
+      ],
+      "up_hint": [
+        0,
+        0,
+        1
+      ],
+      "lens_mm_starting_point": 24,
+      "resolution": [
+        2048,
+        1152
+      ],
+      "output": "courtyard-eye.png"
+    },
+    {
+      "id": "NC.CAM.GateDetail",
+      "type": "PERSP",
+      "location": [
+        22,
+        -95,
+        15
+      ],
+      "target": [
+        0,
+        -60,
+        8
+      ],
+      "up_hint": [
+        0,
+        0,
+        1
+      ],
+      "lens_mm_starting_point": 35,
+      "resolution": [
+        2048,
+        1152
+      ],
+      "output": "gate-detail.png"
+    }
+  ]
+}

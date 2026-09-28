@@ -14,6 +14,10 @@ Import Smile.Tools.TownEditorPanel As Panel
 Import Smile.Tools.TownSunControls As Sun
 Import Smile.Tools.TownHistory As History
 Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionCamera3D As Camera
+Import Smile.Simple3D.ArenaCamera3D As Motion
+Import Smile.Tools.NerisCastleRoute As Castle
 
 Dim Value As Town.State
 Dim Index As Number
@@ -74,6 +78,16 @@ Call Check(Value.Ready And Value.Edited And Not Value.Failed, "Editable Town And
 
 Print "Meshes " + Calibration.NumberText(G.LiveMeshCount3D())
 Print "Materials " + Calibration.NumberText(G.LiveMaterialCount3D())
+Print "Models " + Calibration.NumberText(G.LiveModelCount3D()) + "/" + Calibration.NumberText(G.MaximumModelCount3D())
+Print "Castle Parts " + Calibration.NumberText(Value.Comparison.ObjectCount)
+
+For Index = 0 To 14
+
+    If Not Value.Comparison.Models[Index].GeometryReady Then
+        Print "Missing Castle Model " + Calibration.NumberText(Index)
+    End If
+
+End For
 
 If Value.Ready Then
 
@@ -92,17 +106,25 @@ If Value.Ready Then
     Print "Arin Pose Keys " + Calibration.NumberText(KeyTotal)
 
     Call Check(KeyTotal > 0, "Accepted Arin Calibration Is Retained")
-    Call Town.Input(Value, KEY_1, False)
+    Call Town.Input(Value, KEY_1, False, True)
     Call Town.Update(Value, 16)
-    Call Check(Not Value.PartyControl And Not Value.Cinematic And
+
+    Call Check(Not Value.PartyCamera And Not Value.Cinematic And
         Value.View.LiveCamera.Position.Y > Value.View.LiveCamera.Target.Y And
         Abs(Value.View.LiveCamera.Position.Z - Value.View.LiveCamera.Target.Z) < 5.0 And
         Abs(Value.View.LiveCamera.Position.X - Value.View.LiveCamera.Target.X) < 0.001,
-        "One Key Selects A North Up Overhead Editor View")
+        "One Key Selects A North Up Overhead Editor View Even Over The Header")
     Call Town.ResetOverview(Value)
     Call Town.Input(Value, KEY_TAB, False)
-    Call Check(Value.PartyControl And Not Editor.Editing(), "Tab Leaves Editing And Enables Party Control")
+    Call Check(Value.PartyCamera And Not Editor.Editing(), "Tab Leaves Editing And Follows The Party")
+    Call Town.Input(Value, KEY_1, False)
+    Call Town.Update(Value, 16)
+    Call Check(Not Editor.Editing() And Not Value.Follow And
+        Value.View.LiveCamera.Position.Y > Value.View.LiveCamera.Target.Y And
+        Abs(Value.View.LiveCamera.Position.Z - Value.View.LiveCamera.Target.Z) < 5.0,
+        "One Key Selects Top Down Outside Edit Town")
     Call Inspection.Run(Value, Failures)
+    Call CheckVisibleDepth()
 
 End If
 
@@ -121,7 +143,7 @@ For Index = 0 To 180
 End For
 
 Call Town.Update(Value, 16)
-Call Check(Value.Ready And Value.Flight.Arrival And Not Value.PartyControl And
+Call Check(Value.Ready And Value.Flight.Arrival And Value.PartyCamera And
     Value.People.Path.Positions[0].Z = -2780.0 And Abs(Value.View.LiveCamera.Position.X) < 0.001,
     "Reentering The Edited Town Restores The Centered Arrival")
 Call Town.Destroy(Value)
@@ -160,6 +182,38 @@ Sub Check(Condition As Boolean, Label As Text)
         Print "FAIL " + Label
         Failures = Failures + 1
     End If
+
+End Sub
+
+Sub CheckVisibleDepth()
+
+    Dim Depth As Double
+    Dim Hit As P.Vector3
+    Dim Ok As Boolean
+    Dim BeforeMeshes As Number
+
+    BeforeMeshes = G.LiveMeshCount3D()
+    Value.Cinematic = False
+    Value.Follow = False
+    Value.Flight.CursorOrbit = False
+    Value.BaseCamera.Position = P.Vector(Castle.ORIGIN_X, 1400.0, Castle.ORIGIN_Z - 0.1)
+    Value.BaseCamera.Target = P.Vector(Castle.ORIGIN_X, Castle.DECK_Y, Castle.ORIGIN_Z)
+    Value.View.MaximumPitch = 1.57072
+
+    Call Motion.Reset(Value.View.Controls, Value.View.Zoom)
+    Call Town.Update(Value, 0)
+    Call Town.Draw(Value)
+
+    Call Check(Not Value.Failed, "Top Down Depth Frame Draws")
+
+    Ok = P.TryCursorDepth(Window_Width() / 2, Window_Height() / 2,
+        Window_Width(), Window_Height(), Depth)
+    Hit = Camera.CursorPointAtDepth(Value.View.LiveCamera, Window_Width() / 2,
+        Window_Height() / 2, Depth, Window_Width(), Window_Height())
+
+    Call Check(Ok And Abs(Hit.Y - Castle.DECK_Y) < 2.0,
+        "Native Cursor Depth Hits The Rendered Courtyard Floor")
+    Call Check(G.LiveMeshCount3D() = BeforeMeshes, "Cursor Picking Allocates No Meshes")
 
 End Sub
 
@@ -258,5 +312,11 @@ Sub CheckSunGesture()
     Call Sun.SetValue(Draft, 3, 2000)
     Call Check(Draft.Light.Elevation = -85.0 And Draft.Light.Intensity = 1000,
         "Sun Sliders Clamp To Supported Settings")
+
+    Draft.Light.ShadowOpacity = -1
+
+    Call Sun.SetValue(Draft, 7, 65)
+    Call Check(Draft.Light.ShadowOpacity = 65,
+        "Choosing The Legacy Shadow Slider Position Commits Explicit Opacity")
 
 End Sub

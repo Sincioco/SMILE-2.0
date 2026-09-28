@@ -15,6 +15,9 @@
 #include "thermal_fire3d.h"
 #include "water_surface3d.h"
 #include "water_ribbon_normals3d.h"
+#include "water_scene3d.h"
+
+static SmileWaterScene3D smile_water_scene3d;
 
 // One logical subviewport; reset is the existing full-window behavior.
 static double smile_viewport_region3d[4];
@@ -583,6 +586,7 @@ struct SmileVfxConstants3D
     SmileMatrix3D water_shadow_mvp;
     float water_shadow[4];
     float water_ambient[4];
+    float water_shadow_style[4];
 };
 
 struct SmileDepthConstants3D
@@ -600,6 +604,7 @@ struct SmileConstants3D
     SmileMatrix3D shadow_mvp;
     float shadow[4];
     float output[4];
+    float shadow_style[4];
     float shadow_light[4];
     float reflection[4];
     float reflection_viewport[4];
@@ -628,6 +633,7 @@ struct SmilePbrConstants3D
     SmileMatrix3D shadow_mvp;
     float shadow[4];
     float output[4];
+    float shadow_style[4];
     float reflection[4];
     float reflection_viewport[4];
     SmileMatrix3D bones[SMILE_3D_MAX_BONES];
@@ -858,6 +864,7 @@ static long long smile_vfx_ribbon_triangle_count3d;
 static long long smile_vfx_particle_submission_count3d;
 static long long smile_vfx_ribbon_submission_count3d;
 static int smile_soft_depth_requested3d;
+static int smile_water_depth_requested3d;
 static int smile_soft_depth_effective3d;
 static int smile_soft_depth_fallback_reason3d = SMILE_3D_SOFT_DEPTH_FALLBACK_DISABLED;
 static int smile_soft_depth_width3d;
@@ -965,6 +972,8 @@ static float smile_shadow_near3d = 1.0f;
 static float smile_shadow_far3d = 2400.0f;
 static float smile_shadow_bias3d = 0.0015f;
 static float smile_shadow_normal_bias3d = 0.006f;
+// -1 preserves legacy physical shadows; 0..100 is explicit received-shadow opacity.
+static int smile_shadow_opacity_percent3d = -1;
 static float smile_frame_clear3d[4];
 static SmileMatrix3D smile_shadow_view_projection3d;
 
@@ -5062,7 +5071,7 @@ static int smile_3d_ensure_gpu_particle_resources(SmileGpuParticleSystem3D* syst
 static int smile_3d_create_pipeline(void)
 {
     static const char* vertex_source =
-        "cbuffer C:register(b0){row_major float4x4 model;row_major float4x4 mvp;float4 tint;float4 material;float4 animation;row_major float4x4 shadowMvp;float4 shadow;float4 output;float4 shadowLight;float4 reflection;float4 reflectionViewport;row_major float4x4 bones[32];}"
+        "cbuffer C:register(b0){row_major float4x4 model;row_major float4x4 mvp;float4 tint;float4 material;float4 animation;row_major float4x4 shadowMvp;float4 shadow;float4 output;float4 shadowStyle;float4 shadowLight;float4 reflection;float4 reflectionViewport;row_major float4x4 bones[32];}"
         "cbuffer B:register(b1){row_major float4x4 modelBones[192];}"
         "struct I{float3 p:POSITION;float3 n:NORMAL;float2 uv:TEXCOORD0;float4 j:BLENDINDICES;float4 w:BLENDWEIGHT;};"
         "struct O{float4 p:SV_POSITION;float3 n:NORMAL;float2 uv:TEXCOORD0;float3 world:TEXCOORD1;float4 sp:TEXCOORD2;};"
@@ -5073,22 +5082,22 @@ static int smile_3d_create_pipeline(void)
     // Both material paths use a 5x5 tent-weighted comparison filter at 1.5 texel
     // spacing: a gradual penumbra without frame-varying noise or extra resources.
     static const char* pixel_source =
-        "cbuffer C:register(b0){row_major float4x4 model;row_major float4x4 mvp;float4 tint;float4 material;float4 animation;row_major float4x4 shadowMvp;float4 shadow;float4 output;float4 shadowLight;float4 reflection;float4 reflectionViewport;row_major float4x4 bones[32];}"
+        "cbuffer C:register(b0){row_major float4x4 model;row_major float4x4 mvp;float4 tint;float4 material;float4 animation;row_major float4x4 shadowMvp;float4 shadow;float4 output;float4 shadowStyle;float4 shadowLight;float4 reflection;float4 reflectionViewport;row_major float4x4 bones[32];}"
         "Texture2D baseTexture:register(t0);SamplerState baseSampler:register(s0);Texture2D reflectionTexture:register(t4);SamplerState reflectionSampler:register(s4);Texture2D shadowMap:register(t5);SamplerComparisonState shadowSampler:register(s5);"
         "float ShadowValue(float4 p,float3 world,float3 n){if(shadow.x<.5||p.w<=0)return 1;float3 q=p.xyz/p.w;float2 uv=float2(q.x*.5+.5,-q.y*.5+.5);if(any(uv<0)||any(uv>1)||q.z<0||q.z>1)return 1;float3 L=shadowLight.w>1.5?normalize(shadowLight.xyz-world):normalize(shadowLight.xyz);float bias=output.y+output.z*(1-saturate(dot(normalize(n),L)));float sum=0;[unroll]for(int y=-2;y<=2;++y)[unroll]for(int x=-2;x<=2;++x){float weight=(3-abs(x))*(3-abs(y));sum+=weight*shadowMap.SampleCmpLevelZero(shadowSampler,uv+float2(x,y)*(shadow.w*1.5),q.z-bias);}return sum/81;}"
         "float3 ToLinear(float3 c){return lerp(c/12.92,pow((c+.055)/1.055,2.4),step(.04045,c));}"
         "float4 main(float4 p:SV_POSITION,float3 n:NORMAL,float2 uv:TEXCOORD0,float3 world:TEXCOORD1,float4 sp:TEXCOORD2):SV_TARGET{if(reflection.x>.5&&world.y<reflection.y+.01)discard;"
         "float4 base=tint;if(material.x>.5){float4 sample=baseTexture.Sample(baseSampler,uv);"
         "if(sample.a>.0001)sample.rgb/=sample.a;base*=sample;}if(material.w>=0&&base.a<material.w)discard;"
-        "float l=.28+.72*max(0,dot(normalize(n),normalize(float3(-.35,.8,-.45))))*ShadowValue(sp,world,n);"
+        "float coverage=ShadowValue(sp,world,n);float l=.28+.72*max(0,dot(normalize(n),normalize(float3(-.35,.8,-.45))))*(shadowStyle.x<0?coverage:1);"
         "float light=material.y>.5?1:l+material.z;float3 color=base.rgb*light;float3 finalColor=output.x>.5?max(ToLinear(color),0):color;"
-        "if(reflection.z>.0001){uint rw,rh;reflectionTexture.GetDimensions(rw,rh);float2 screenUv=saturate((p.xy-reflectionViewport.xy)/reflectionViewport.zw);float2 texel=float2(1.0/max((float)rw,1),1.0/max((float)rh,1))*reflection.w*2;float3 reflected=reflectionTexture.Sample(reflectionSampler,screenUv).rgb*.4;reflected+=(reflectionTexture.Sample(reflectionSampler,screenUv+float2(texel.x,0)).rgb+reflectionTexture.Sample(reflectionSampler,screenUv-float2(texel.x,0)).rgb+reflectionTexture.Sample(reflectionSampler,screenUv+float2(0,texel.y)).rgb+reflectionTexture.Sample(reflectionSampler,screenUv-float2(0,texel.y)).rgb)*.15;finalColor=lerp(finalColor,reflected,reflection.z);}return float4(finalColor,base.a);}";
+        "if(reflection.z>.0001){uint rw,rh;reflectionTexture.GetDimensions(rw,rh);float2 screenUv=saturate((p.xy-reflectionViewport.xy)/reflectionViewport.zw);float2 texel=float2(1.0/max((float)rw,1),1.0/max((float)rh,1))*reflection.w*2;float3 reflected=reflectionTexture.Sample(reflectionSampler,screenUv).rgb*.4;reflected+=(reflectionTexture.Sample(reflectionSampler,screenUv+float2(texel.x,0)).rgb+reflectionTexture.Sample(reflectionSampler,screenUv-float2(texel.x,0)).rgb+reflectionTexture.Sample(reflectionSampler,screenUv+float2(0,texel.y)).rgb+reflectionTexture.Sample(reflectionSampler,screenUv-float2(0,texel.y)).rgb)*.15;finalColor=lerp(finalColor,reflected,reflection.z);}if(shadowStyle.x>=0&&material.y<.5)finalColor*=lerp(1,coverage,shadowStyle.x);return float4(finalColor,base.a);}";
     static const char* pbr_vertex_source =
         "cbuffer P:register(b0){row_major float4x4 model;row_major float4x4 mvp;row_major float4x4 normalMatrix;"
         "float4 objectColor;float4 baseFactor;float4 surfaceFactors;float4 emissiveAlpha;float4 textureFlags;"
         "float4 cameraPosition;float4 ambientLight;float4 directionalDirection;float4 directionalColor;"
         "float4 localPositionType[4];float4 localDirectionRange[4];float4 localColorIntensity[4];float4 localCone[4];"
-        "float4 animation;row_major float4x4 shadowMvp;float4 shadow;float4 output;float4 reflection;float4 reflectionViewport;row_major float4x4 bones[32];}"
+        "float4 animation;row_major float4x4 shadowMvp;float4 shadow;float4 output;float4 shadowStyle;float4 reflection;float4 reflectionViewport;row_major float4x4 bones[32];}"
         "cbuffer B:register(b1){row_major float4x4 modelBones[192];}"
         "struct I{float3 p:POSITION;float3 n:NORMAL;float2 uv:TEXCOORD0;float4 j:BLENDINDICES;float4 w:BLENDWEIGHT;float4 t:TANGENT;};"
         "struct O{float4 p:SV_POSITION;float3 world:TEXCOORD1;float3 n:NORMAL;float4 t:TANGENT;float2 uv:TEXCOORD0;float4 sp:TEXCOORD2;};"
@@ -5104,7 +5113,7 @@ static int smile_3d_create_pipeline(void)
         "float4 objectColor;float4 baseFactor;float4 surfaceFactors;float4 emissiveAlpha;float4 textureFlags;"
         "float4 cameraPosition;float4 ambientLight;float4 directionalDirection;float4 directionalColor;"
         "float4 localPositionType[4];float4 localDirectionRange[4];float4 localColorIntensity[4];float4 localCone[4];"
-        "float4 animation;row_major float4x4 shadowMvp;float4 shadow;float4 output;float4 reflection;float4 reflectionViewport;row_major float4x4 bones[32];}"
+        "float4 animation;row_major float4x4 shadowMvp;float4 shadow;float4 output;float4 shadowStyle;float4 reflection;float4 reflectionViewport;row_major float4x4 bones[32];}"
         "Texture2D baseTexture:register(t0);Texture2D normalMap:register(t1);Texture2D ormTexture:register(t2);Texture2D emissiveTexture:register(t3);"
         "SamplerState baseSampler:register(s0);SamplerState normalSampler:register(s1);SamplerState ormSampler:register(s2);SamplerState emissiveSampler:register(s3);Texture2D reflectionTexture:register(t4);SamplerState reflectionSampler:register(s4);Texture2D shadowMap:register(t5);SamplerComparisonState shadowSampler:register(s5);"
         "static const float PI=3.14159265359;"
@@ -5128,17 +5137,17 @@ static int smile_3d_create_pipeline(void)
         // Broaden subpixel highlights by the normal variation across the pixel footprint.
         "float3 normalDx=ddx(N),normalDy=ddy(N);float variance=min(.18,.25*(dot(normalDx,normalDx)+dot(normalDy,normalDy)));"
         "rough=min(1,sqrt(sqrt(pow(rough,4)+variance)));"
-        "float3 V=normalize(cameraPosition.xyz-world);float3 color=ambientLight.rgb*ambientLight.w*base.rgb*ao;"
-        "if(directionalDirection.w>.5){float3 L=normalize(directionalDirection.xyz);float sf=shadow.y<1.5?ShadowValue(sp,N,L):1;color+=Shade(N,V,L,directionalColor.rgb*directionalColor.w*sf,base.rgb,metal,rough);}"
+        "float3 V=normalize(cameraPosition.xyz-world);float coverage=1;float3 color=ambientLight.rgb*ambientLight.w*base.rgb*ao;"
+        "if(directionalDirection.w>.5){float3 L=normalize(directionalDirection.xyz);float sf=shadow.y<1.5?ShadowValue(sp,N,L):1;if(shadow.y<1.5)coverage=sf;if(shadowStyle.x>=0)sf=1;color+=Shade(N,V,L,directionalColor.rgb*directionalColor.w*sf,base.rgb,metal,rough);}"
         "[unroll]for(int light=0;light<4;++light){float type=localPositionType[light].w;if(type>.5){float3 delta=localPositionType[light].xyz-world;"
         "float distance=length(delta);float range=max(localDirectionRange[light].w,.0001);if(distance<range){float3 L=delta/max(distance,.0001);"
         "float ratio=distance/range;float attenuation=pow(saturate(1-ratio*ratio),2)/(1+2*ratio*ratio);"
         "if(type>1.5){float spot=dot(-L,normalize(localDirectionRange[light].xyz));attenuation*=smoothstep(localCone[light].y,localCone[light].x,spot);}"
-        "float sf=shadow.y>1.5&&abs(shadow.z-light)<.5?ShadowValue(sp,N,L):1;color+=Shade(N,V,L,localColorIntensity[light].rgb*localColorIntensity[light].w*attenuation*sf,base.rgb,metal,rough);}}}"
+        "float sf=shadow.y>1.5&&abs(shadow.z-light)<.5?ShadowValue(sp,N,L):1;if(shadow.y>1.5&&abs(shadow.z-light)<.5)coverage=sf;if(shadowStyle.x>=0)sf=1;color+=Shade(N,V,L,localColorIntensity[light].rgb*localColorIntensity[light].w*attenuation*sf,base.rgb,metal,rough);}}}"
         "float3 emissive=emissiveAlpha.rgb*(textureFlags.w>.5?emissiveTexture.Sample(emissiveSampler,uv).rgb:float3(1,1,1));"
         "float3 finalColor=max(color+emissive,0);if(output.w>.5){if(output.w<1.5)finalColor=base.rgb;else if(output.w<2.5)finalColor=N*.5+.5;"
         "else if(output.w<3.5)finalColor=rough.xxx;else if(output.w<4.5)finalColor=metal.xxx;else if(output.w<5.5)finalColor=ao.xxx;else finalColor=emissive;}"
-        "float3 outputColor=output.x>.5?finalColor:saturate(ApplyLdrOutputTransfer(finalColor));if(reflection.z>.0001){uint rw,rh;reflectionTexture.GetDimensions(rw,rh);float2 screenUv=saturate((p.xy-reflectionViewport.xy)/reflectionViewport.zw);float2 texel=float2(1.0/max((float)rw,1),1.0/max((float)rh,1))*reflection.w*2;float3 reflected=reflectionTexture.Sample(reflectionSampler,screenUv).rgb*.4;reflected+=(reflectionTexture.Sample(reflectionSampler,screenUv+float2(texel.x,0)).rgb+reflectionTexture.Sample(reflectionSampler,screenUv-float2(texel.x,0)).rgb+reflectionTexture.Sample(reflectionSampler,screenUv+float2(0,texel.y)).rgb+reflectionTexture.Sample(reflectionSampler,screenUv-float2(0,texel.y)).rgb)*.15;outputColor=lerp(outputColor,reflected,reflection.z);}return float4(outputColor,base.a);}";
+        "float3 outputColor=output.x>.5?finalColor:saturate(ApplyLdrOutputTransfer(finalColor));if(reflection.z>.0001){uint rw,rh;reflectionTexture.GetDimensions(rw,rh);float2 screenUv=saturate((p.xy-reflectionViewport.xy)/reflectionViewport.zw);float2 texel=float2(1.0/max((float)rw,1),1.0/max((float)rh,1))*reflection.w*2;float3 reflected=reflectionTexture.Sample(reflectionSampler,screenUv).rgb*.4;reflected+=(reflectionTexture.Sample(reflectionSampler,screenUv+float2(texel.x,0)).rgb+reflectionTexture.Sample(reflectionSampler,screenUv-float2(texel.x,0)).rgb+reflectionTexture.Sample(reflectionSampler,screenUv+float2(0,texel.y)).rgb+reflectionTexture.Sample(reflectionSampler,screenUv-float2(0,texel.y)).rgb)*.15;outputColor=lerp(outputColor,reflected,reflection.z);}if(shadowStyle.x>=0&&output.w<.5)outputColor*=lerp(1,coverage,shadowStyle.x);return float4(outputColor,base.a);}";
     static const char* shadow_vertex_source =
         "cbuffer S:register(b0){row_major float4x4 mvp;float4 alpha;float4 animation;row_major float4x4 bones[32];}"
         "cbuffer B:register(b1){row_major float4x4 modelBones[192];}"
@@ -5180,7 +5189,7 @@ static int smile_3d_create_pipeline(void)
         "struct I{float3 p:POSITION;float2 uv:TEXCOORD0;float4 color:COLOR0;float3 n:NORMAL;};struct O{float4 p:SV_POSITION;float2 uv:TEXCOORD0;float4 color:COLOR0;float worldY:TEXCOORD1;float3 world:TEXCOORD2;float3 normal:TEXCOORD3;};"
         "O main(I i){O o;o.p=mul(float4(i.p,1),vp);o.worldY=i.p.y;o.world=i.p;o.normal=i.n;o.uv=i.uv;o.color=i.color;return o;}";
     static const char vfx_pixel_prefix[] =
-        "cbuffer V:register(b0){row_major float4x4 vp;float4 cameraRight;float4 cameraUp;float4 atlasOutput;float4 material;float4 softDepth;float4 target;float4 distortion;float4 fireRender;float4 reflectionClip;float4 waterCamera;float4 waterLightDirection;float4 waterLightColor;float4 waterParameters;float4 waterViewport;row_major float4x4 waterShadowMvp;float4 waterShadow;float4 waterAmbient;}"
+        "cbuffer V:register(b0){row_major float4x4 vp;float4 cameraRight;float4 cameraUp;float4 atlasOutput;float4 material;float4 softDepth;float4 target;float4 distortion;float4 fireRender;float4 reflectionClip;float4 waterCamera;float4 waterLightDirection;float4 waterLightColor;float4 waterParameters;float4 waterViewport;row_major float4x4 waterShadowMvp;float4 waterShadow;float4 waterAmbient;float4 waterShadowStyle;}"
         "Texture2D effectTexture:register(t0);SamplerState effectSampler:register(s0);Texture2D sceneDepthTexture:register(t6);SamplerState sceneDepthSampler:register(s6);"
         "float3 ToLinear(float3 c){return lerp(c/12.92,pow((c+.055)/1.055,2.4),step(.04045,c));}"
         "float Linear(float z){return softDepth.z*softDepth.w/max(softDepth.w-z*(softDepth.w-softDepth.z),.000001);}";
@@ -5379,7 +5388,7 @@ static int smile_3d_create_pipeline(void)
             return 0;
         }
     }
-    if (smile_soft_depth_requested3d && smile_depth_copy_vertex_shader3d == 0)
+    if ((smile_soft_depth_requested3d || smile_water_depth_requested3d) && smile_depth_copy_vertex_shader3d == 0)
     {
         D3D11_BUFFER_DESC depth_buffer = {};
         D3D11_SAMPLER_DESC depth_sampler = {};
@@ -6621,7 +6630,7 @@ static int smile_3d_create_soft_depth_targets(ID3D11Device* device, int width, i
     D3D11_TEXTURE2D_DESC linear = {};
     WCHAR forced_failure[2];
     HRESULT result;
-    if (!smile_soft_depth_requested3d)
+    if (!smile_soft_depth_requested3d && !smile_water_depth_requested3d)
     {
         smile_soft_depth_effective3d = SMILE_3D_SOFT_DEPTH_OFF;
         smile_soft_depth_fallback_reason3d = SMILE_3D_SOFT_DEPTH_FALLBACK_DISABLED;
@@ -6844,7 +6853,7 @@ static void smile_3d_clear_target_state(void)
     smile_tone_mapping_effective3d = 0;
     smile_m5_target_bytes3d = smile_scene_bytes3d = smile_bloom_bytes3d = 0;
     smile_soft_depth_effective3d = SMILE_3D_SOFT_DEPTH_OFF;
-    smile_soft_depth_fallback_reason3d = smile_soft_depth_requested3d
+    smile_soft_depth_fallback_reason3d = (smile_soft_depth_requested3d || smile_water_depth_requested3d)
         ? SMILE_3D_SOFT_DEPTH_FALLBACK_TARGET
         : SMILE_3D_SOFT_DEPTH_FALLBACK_DISABLED;
     smile_soft_depth_width3d = smile_soft_depth_height3d = 0;
@@ -6977,13 +6986,13 @@ static int smile_3d_create_targets(void)
                 description.Width = (UINT)width;
                 description.Height = (UINT)height;
                 description.MipLevels = description.ArraySize = 1;
-                description.Format = smile_soft_depth_requested3d
+                description.Format = (smile_soft_depth_requested3d || smile_water_depth_requested3d)
                     ? DXGI_FORMAT_R24G8_TYPELESS : DXGI_FORMAT_D24_UNORM_S8_UINT;
                 description.SampleDesc.Count = samples;
                 description.SampleDesc.Quality = quality;
                 description.Usage = D3D11_USAGE_DEFAULT;
                 description.BindFlags = D3D11_BIND_DEPTH_STENCIL |
-                    (smile_soft_depth_requested3d ? D3D11_BIND_SHADER_RESOURCE : 0);
+                    ((smile_soft_depth_requested3d || smile_water_depth_requested3d) ? D3D11_BIND_SHADER_RESOURCE : 0);
                 if (SUCCEEDED(result)) result = device->CreateTexture2D(
                     &description, 0, &smile_depth_texture3d);
                 if (SUCCEEDED(result) && !smile_3d_create_depth_view(
@@ -7100,13 +7109,13 @@ static int smile_3d_create_targets(void)
             description.Width = (UINT)width;
             description.Height = (UINT)height;
             description.MipLevels = description.ArraySize = 1;
-            description.Format = smile_soft_depth_requested3d
+            description.Format = (smile_soft_depth_requested3d || smile_water_depth_requested3d)
                 ? DXGI_FORMAT_R24G8_TYPELESS : DXGI_FORMAT_D24_UNORM_S8_UINT;
             description.SampleDesc.Count = samples;
             description.SampleDesc.Quality = quality;
             description.Usage = D3D11_USAGE_DEFAULT;
             description.BindFlags = D3D11_BIND_DEPTH_STENCIL |
-                (smile_soft_depth_requested3d ? D3D11_BIND_SHADER_RESOURCE : 0);
+                ((smile_soft_depth_requested3d || smile_water_depth_requested3d) ? D3D11_BIND_SHADER_RESOURCE : 0);
             result = device->CreateTexture2D(&description, 0, &smile_depth_texture3d);
             if (SUCCEEDED(result) && !smile_3d_create_depth_view(
                     device, smile_depth_texture3d, samples, &smile_depth_view3d))
@@ -7769,6 +7778,18 @@ static int smile_3d_begin(long long red, long long green, long long blue)
         smile_3d_clear_pending_camera();
         return 0;
     }
+    // Water owns its depth requirement independently of particle soft intersections.
+    // Re-evaluate live materials so removing the last water surface releases it.
+    int water_depth = 0;
+    for (int slot = 0; slot < SMILE_3D_MAX_MATERIALS; ++slot)
+        if (smile_materials3d[slot].active &&
+            smile_materials3d[slot].vfx_shading_mode == SMILE_3D_VFX_SHADING_WATER)
+        { water_depth = 1; break; }
+    if (water_depth != smile_water_depth_requested3d)
+    {
+        smile_water_depth_requested3d = water_depth;
+        smile_m5_configuration_revision3d++;
+    }
     smile_graphics_begin_frame();
     if (!smile_graphics_directx_suspend_2d() || !smile_3d_create_pipeline() ||
         !smile_3d_prepare_m5_resources())
@@ -7841,6 +7862,7 @@ static int smile_3d_begin(long long red, long long green, long long blue)
     smile_distortion_vector_draw_count3d = 0;
     smile_distortion_composite_draw_count3d = 0;
     smile_distortion_emitter_count3d = 0;
+    smile_water_scene3d.valid = false;
     smile_distortion_maximum_strength3d = 0;
     smile_rendering_distortion_vectors3d = 0;
     smile_reflection_pass3d = 0;
@@ -7905,6 +7927,7 @@ static int smile_3d_draw_pbr(const SmileSubmission3D* submission)
     constants.output[0] = smile_hdr_effective3d ? 1.0f : 0.0f;
     constants.output[1] = smile_shadow_bias3d;
     constants.output[2] = smile_shadow_normal_bias3d;
+    constants.shadow_style[0] = (float)smile_shadow_opacity_percent3d / 100.0f;
     constants.output[3] = (float)smile_material_inspection3d;
     smile_3d_set_reflection_constants(
         object, constants.reflection, constants.reflection_viewport);
@@ -8011,6 +8034,7 @@ static int smile_3d_draw_vfx_submission(const SmileSubmission3D* submission)
         constants.water_shadow[2] = smile_shadow_bias3d;
         constants.water_shadow[3] = smile_shadow_normal_bias3d;
         constants.water_ambient[3] = smile_ambient_intensity3d;
+        constants.water_shadow_style[0] = (float)smile_shadow_opacity_percent3d / 100.0f;
         constants.water_parameters[0] = 1.0f;
         constants.water_parameters[1] = material->water_roughness;
         constants.water_parameters[2] = material->water_foam;
@@ -8032,11 +8056,8 @@ static int smile_3d_draw_vfx_submission(const SmileSubmission3D* submission)
             constants.water_viewport[2] = (float)smile_reflections_width();
             constants.water_viewport[3] = (float)smile_reflections_height();
         }
-        else if (!smile_rendering_distortion_vectors3d &&
-            smile_distortion_effective3d != SMILE_3D_DISTORTION_OFF &&
-            smile_distortion_emitter_count3d > 0)
-            water_snapshot = smile_sample_count3d > 1
-                ? smile_scene_shader_view3d : smile_distortion_scratch_shader_view3d;
+        else if (!smile_rendering_distortion_vectors3d && smile_water_scene3d.valid)
+            water_snapshot = smile_water_scene3d.view;
         constants.water_parameters[3] = water_snapshot ? 1.0f : 0.0f;
     }
     SmileWaterTextureBinding3D water_binding(context, water_snapshot,
@@ -8364,6 +8385,7 @@ static int smile_3d_draw_submission(const SmileSubmission3D* submission)
     constants.output[0] = smile_hdr_effective3d ? 1.0f : 0.0f;
     constants.output[1] = smile_shadow_bias3d;
     constants.output[2] = smile_shadow_normal_bias3d;
+    constants.shadow_style[0] = (float)smile_shadow_opacity_percent3d / 100.0f;
     smile_3d_set_reflection_constants(
         object, constants.reflection, constants.reflection_viewport);
     if (smile_shadow_caster3d == 2)
@@ -9112,6 +9134,13 @@ static int smile_3d_end(void)
                     !smile_3d_draw_submission(&smile_frame_submissions3d[submission]))
                 { success = 0; break; }
         if (success) success = smile_3d_snapshot_linear_depth();
+        bool has_water = false;
+        for (unsigned int index = 0; index < smile_frame_submission_count3d; ++index)
+            if (smile_frame_submissions3d[index].material.vfx_shading_mode == SMILE_3D_VFX_SHADING_WATER)
+            { has_water = true; break; }
+        if (success && has_water)
+            smile_water_scene3d.capture((ID3D11Device*)smile_graphics_directx_device(), context, target);
+        else smile_water_scene3d.reset();
         if (success) success = smile_3d_render_distortion_pass();
         target = smile_color_view3d != 0
             ? smile_color_view3d
@@ -9259,6 +9288,7 @@ extern "C" void smile_graphics3d_on_device_lost(void)
     smile_3d_release(smile_linear_depth_shader_view3d);
     smile_3d_release(smile_linear_depth_view3d);
     smile_3d_release(smile_linear_depth_texture3d);
+    smile_water_scene3d.reset();
     smile_3d_release(smile_depth_shader_view3d);
     smile_3d_release(smile_color_view3d); smile_3d_release(smile_color_texture3d);
     smile_3d_release(smile_depth_view3d); smile_3d_release(smile_depth_texture3d);
@@ -9312,7 +9342,7 @@ extern "C" void smile_graphics3d_on_device_lost(void)
     smile_pbr_pipeline_failure3d = 0;
     smile_pbr_pipeline_attempt_count3d = 0;
     smile_soft_depth_effective3d = SMILE_3D_SOFT_DEPTH_OFF;
-    smile_soft_depth_fallback_reason3d = smile_soft_depth_requested3d
+    smile_soft_depth_fallback_reason3d = (smile_soft_depth_requested3d || smile_water_depth_requested3d)
         ? SMILE_3D_SOFT_DEPTH_FALLBACK_NONE
         : SMILE_3D_SOFT_DEPTH_FALLBACK_DISABLED;
     smile_soft_depth_width3d = smile_soft_depth_height3d = 0;
@@ -9862,7 +9892,9 @@ static void smile_3d_reset(void)
     smile_hdr_requested3d = 0;
     smile_bloom_requested3d = 0;
     smile_shadow_requested3d = 0;
+    smile_shadow_opacity_percent3d = -1;
     smile_soft_depth_requested3d = 0;
+    smile_water_depth_requested3d = 0;
     smile_soft_depth_effective3d = SMILE_3D_SOFT_DEPTH_OFF;
     smile_soft_depth_fallback_reason3d = SMILE_3D_SOFT_DEPTH_FALLBACK_DISABLED;
     smile_soft_depth_width3d = smile_soft_depth_height3d = 0;
@@ -10357,8 +10389,9 @@ extern "C" long long smile_renderer3d_command(long long command,
             if (smile_frame_active3d || a < 0 || a > 1 || b < 0 || b > 2 ||
                 c < 0 || c >= SMILE_3D_MAX_LOCAL_LIGHTS ||
                 (d != 1024 && d != 2048) || e < 0 || e > 1000 || f < 0 || f > 1000 ||
-                (a != 0 && b == 0))
+                (a != 0 && b == 0) || g < 0 || g > 101)
             { smile_last_error3d = 50; return 0; }
+            smile_shadow_opacity_percent3d = (int)g - 1;
             if (smile_shadow_requested3d == (a != 0) && smile_shadow_caster3d == b &&
                 smile_shadow_slot3d == c && smile_shadow_requested_resolution3d == d &&
                 (long long)llroundf(smile_shadow_bias3d * 1000000.0f) == e &&

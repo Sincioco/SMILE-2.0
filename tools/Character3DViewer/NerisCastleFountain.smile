@@ -1,0 +1,226 @@
+''' Animated water follows the authored eight fountain streams; owns two bounded ribbons.
+Module Smile.Tools.NerisCastleFountain
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Tools.NerisCastleRoute As Route
+
+Public Type State
+    Water As Core.Material3D
+    Spray As Core.Material3D
+    Basins As Core.RibbonBatch3D
+    Streams As Core.RibbonBatch3D
+    Time As Number
+    Ready As Boolean
+End Type
+
+Private Function WorldPoint(X As Double, Height As Double, Z As Double) As P.Vector3
+
+    Dim Result As P.Vector3
+
+    Result = P.Vector(Route.ORIGIN_X + X * Route.SCALE,
+        Route.DECK_Y + Height * Route.SCALE, Route.ORIGIN_Z + Z * Route.SCALE)
+
+    Return Result
+
+End Function
+
+Private Function Point(ByRef Batch As Core.RibbonBatch3D, ByRef Index As Number,
+    LeftEdge As P.Vector3, RightEdge As P.Vector3, Opacity As Number) As Boolean
+
+    Dim Ok As Boolean
+
+    Ok = P.SetRibbonPoint(Batch, Index, LeftEdge, RightEdge,
+        ToDouble(Index) / ToDouble(Batch.Capacity - 1))
+    Ok = G.SetRibbonPointColor3D(Batch, Index, 155, 221, 246, Opacity) And Ok
+    Index = Index + 1
+
+    Return Ok
+
+End Function
+
+Private Function Basin(ByRef Batch As Core.RibbonBatch3D, ByRef Index As Number,
+    Radius As Double, Height As Double) As Boolean
+
+    Dim Step As Number
+    Dim Angle As Double
+    Dim Center As P.Vector3
+    Dim Edge As P.Vector3
+    Dim Ok As Boolean
+
+    Center = WorldPoint(0.0, Height, -18.0)
+    Ok = Point(Batch, Index, Center, Center, 100)
+
+    For Step = 0 To 64
+        Angle = ToDouble(Step) * 6.283185307179586 / 64.0
+        Edge = WorldPoint(Cos(Angle) * Radius, Height, -18.0 + Sin(Angle) * Radius)
+        Ok = Point(Batch, Index, Center, Edge, 100) And Ok
+    End For
+
+    Ok = Point(Batch, Index, Center, Center, 100) And Ok
+
+    Return Ok
+
+End Function
+
+''' Deterministic trajectory shared by flowing stream strips and impact rings.
+Public Function StreamPoint(Jet As Number, Progress As Double) As P.Vector3
+
+    Dim Angle As Double
+    Dim Radius As Double
+    Dim Height As Double
+    Dim Result As P.Vector3
+
+    Angle = ToDouble(Jet) * 6.283185307179586 / 8.0
+    Radius = 2.1 + 2.55 * Progress
+    Height = 2.75 + 3.7 * Progress * (1.0 - Progress) - 1.69 * Progress
+    Result = WorldPoint(Cos(Angle) * Radius, Height, -18.0 + Sin(Angle) * Radius)
+
+    Return Result
+
+End Function
+
+Private Function Animate(ByRef Value As State) As Boolean
+
+    Dim Jet As Number
+    Dim Cross As Number
+    Dim Step As Number
+    Dim Ring As Number
+    Dim Index As Number
+    Dim Opacity As Number
+    Dim Angle As Double
+    Dim Progress As Double
+    Dim Phase As Double
+    Dim Radius As Double
+    Dim Width As Double
+    Dim Center As P.Vector3
+    Dim LeftEdge As P.Vector3
+    Dim RightEdge As P.Vector3
+    Dim Across As P.Vector3
+    Dim Ok As Boolean
+
+    Ok = True
+
+    For Jet = 0 To 7
+
+        Angle = ToDouble(Jet) * 6.283185307179586 / 8.0
+
+        For Cross = 0 To 1
+
+            Center = StreamPoint(Jet, 0.0)
+            Ok = Point(Value.Streams, Index, Center, Center, 0) And Ok
+
+            For Step = 0 To 32
+
+                Progress = ToDouble(Step) / 32.0
+                Center = StreamPoint(Jet, Progress)
+                Width = (0.043 + 0.013 * Sin(Progress * 48.0 - ToDouble(Value.Time) * 0.010)) * Route.SCALE
+                Across = P.Vector(-Sin(Angle) * Width, 0.0, Cos(Angle) * Width)
+
+                If Cross = 1 Then
+                    Across = P.Vector(0.0, Width, 0.0)
+                End If
+
+                LeftEdge = P.Vector(Center.X - Across.X, Center.Y - Across.Y, Center.Z - Across.Z)
+                RightEdge = P.Vector(Center.X + Across.X, Center.Y + Across.Y, Center.Z + Across.Z)
+                Opacity = 48 + ToNumber(22.0 * (0.5 + 0.5 * Sin(Progress * 42.0 - ToDouble(Value.Time) * 0.012)))
+                Ok = Point(Value.Streams, Index, LeftEdge, RightEdge, Opacity) And Ok
+            End For
+
+            Ok = Point(Value.Streams, Index, Center, Center, 0) And Ok
+        End For
+
+        Center = StreamPoint(Jet, 1.0)
+        Center.Y = Center.Y + 0.025 * Route.SCALE
+
+        For Ring = 0 To 2
+
+            Phase = ToDouble((Value.Time + Ring * 600 + Jet * 97) Mod 1800) / 1800.0
+            Radius = (0.12 + Phase * 0.78) * Route.SCALE
+            Width = (0.016 + Phase * 0.012) * Route.SCALE
+            Opacity = ToNumber((1.0 - Phase) * 48.0)
+            LeftEdge = P.Vector(Center.X + Radius, Center.Y, Center.Z)
+            Ok = Point(Value.Streams, Index, LeftEdge, LeftEdge, 0) And Ok
+
+            For Step = 0 To 24
+
+                Angle = ToDouble(Step) * 6.283185307179586 / 24.0
+                LeftEdge = P.Vector(Center.X + Cos(Angle) * (Radius - Width), Center.Y,
+                    Center.Z + Sin(Angle) * (Radius - Width))
+                RightEdge = P.Vector(Center.X + Cos(Angle) * (Radius + Width), Center.Y,
+                    Center.Z + Sin(Angle) * (Radius + Width))
+                Ok = Point(Value.Streams, Index, LeftEdge, RightEdge, Opacity) And Ok
+            End For
+
+            Ok = Point(Value.Streams, Index, RightEdge, RightEdge, 0) And Ok
+        End For
+    End For
+
+    Ok = G.CommitRibbonBatch3D(Value.Streams, Index) And Ok
+
+    Return Ok
+
+End Function
+
+Public Function Create(ByRef Value As State) As Boolean
+
+    Dim Texture As Core.Texture3D
+    Dim Index As Number
+    Dim Ok As Boolean
+
+    Value.Water = G.CreateEffectMaterial3D(Texture, G.MATERIAL_ALPHA_BLEND, 100)
+    Value.Spray = G.CreateEffectMaterial3D(Texture, G.MATERIAL_ALPHA_BLEND, 100)
+    Value.Basins = G.CreateRibbonBatch3D(134, Value.Water)
+    Value.Streams = G.CreateRibbonBatch3D(1208, Value.Spray)
+    Ok = Value.Basins.Handle <> 0 And Value.Streams.Handle <> 0
+    Ok = G.SetEffectMaterial3D(Value.Water, G.MATERIAL_ALPHA_BLEND, 28, 105, 190, 100, 100) And Ok
+    Ok = G.SetEffectMaterialWater3D(Value.Water, True, 35, 0, 0, 18) And Ok
+    Ok = G.SetEffectMaterial3D(Value.Spray, G.MATERIAL_ALPHA_BLEND, 175, 225, 250, 100, 100) And Ok
+    ' The stone basin cap is at 1.00; keep water above it to avoid depth fighting.
+    Ok = Basin(Value.Basins, Index, 5.67, 1.06) And Ok
+    Ok = Basin(Value.Basins, Index, 1.80, 2.74) And Ok
+    Ok = G.CommitRibbonBatch3D(Value.Basins, Index) And Ok
+    Ok = Animate(Value) And Ok
+    Value.Ready = Ok
+
+    Return Ok
+
+End Function
+
+Public Sub Update(ByRef Value As State, Elapsed As Number)
+
+    If Not Value.Ready Then
+        Return
+    End If
+
+    Value.Time = (Value.Time + Max(0, Elapsed)) Mod 3600000
+    Value.Ready = G.SetEffectMaterialWater3D(Value.Water, True, 35, 0, Value.Time, 18)
+    Value.Ready = Animate(Value) And Value.Ready
+
+End Sub
+
+Public Function Draw(ByRef Value As State) As Boolean
+
+    Dim Ok As Boolean
+
+    Ok = Value.Ready And G.DrawRibbonBatch3D(Value.Basins) And G.DrawRibbonBatch3D(Value.Streams)
+
+    Return Ok
+
+End Function
+
+Public Sub Destroy(ByRef Value As State)
+
+    Call G.DestroyRibbonBatch3D(Value.Basins)
+    Call G.DestroyRibbonBatch3D(Value.Streams)
+    Call G.DestroyMaterial3D(Value.Water)
+    Call G.DestroyMaterial3D(Value.Spray)
+
+    Value.Ready = False
+
+End Sub
+
+End Module

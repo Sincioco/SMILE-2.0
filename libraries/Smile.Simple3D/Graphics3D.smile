@@ -3978,7 +3978,8 @@ Public Function ConfigureShadows3D(
     SpotSlot As Number,
     Resolution As Number,
     ConstantBias As Number,
-    NormalBias As Number
+    NormalBias As Number,
+    Optional OpacityPercent As Number = -1
 ) As Boolean
 
     Dim Result As Boolean
@@ -3991,7 +3992,7 @@ Public Function ConfigureShadows3D(
         Resolution,
         ConstantBias,
         NormalBias,
-        0,
+        OpacityPercent + 1,
         0,
         0,
         0

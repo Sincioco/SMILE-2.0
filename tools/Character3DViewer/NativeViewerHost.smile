@@ -332,7 +332,7 @@ Public Class Session
         ViewerKey = Key
 
         If Me.SelectedTab = TOWN_TAB Then
-            Call Town.Input(Me.TownScene, Key, Pointer_Y() < 94 Or Blocked)
+            Call Town.Input(Me.TownScene, Key, False, Pointer_Y() < 94 Or Blocked)
 
             Return
         End If

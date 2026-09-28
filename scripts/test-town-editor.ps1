@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([switch]$SkipRendering)
+param([switch]$SkipRendering, [string]$SavedTown)
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
@@ -69,6 +69,15 @@ if (-not $SkipRendering) {
     [xml]$project = Get-Content (Join-Path $viewer 'Character3DViewer.smileproj') -Raw
     $project.SmileProject.PropertyGroup.StartupFile = 'TownSessionTests.smile'
     $project.SmileProject.PropertyGroup.ApplicationId = 'smile.tests.town-session.run-' + [Guid]::NewGuid().ToString('N')
+    if ($SavedTown) {
+        $applicationHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData(
+            [Text.Encoding]::UTF8.GetBytes($project.SmileProject.PropertyGroup.ApplicationId))).ToLowerInvariant()
+        $keyHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData(
+            [Text.Encoding]::UTF8.GetBytes('TownEditor.PermanentNeris'))).ToLowerInvariant()
+        $fixtureData = Join-Path $env:LOCALAPPDATA "SMILE 2.0\Games\$applicationHash\Data"
+        $null = New-Item -ItemType Directory -Path $fixtureData -Force
+        Copy-Item -LiteralPath $SavedTown -Destination (Join-Path $fixtureData "$keyHash.bin")
+    }
     $project.SmileProject.PropertyGroup.RememberWindowPlacement = 'false'
     $entry = $project.SmileProject.ItemGroup.SmileSource | Where-Object StartupOnly -eq 'true'
     $entry.SetAttribute('Include', 'TownSessionTests.smile')
@@ -81,11 +90,11 @@ if (-not $SkipRendering) {
     $sessionProject = Join-Path $viewer 'Character3DViewer.TownSessionTests.smileproj'
     $project.Save($sessionProject)
     # The session fixture reuses prepared native assets, including newly added UI images.
-    $images = Join-Path $viewer 'bin/Debug/Assets/Neris'
+    $images = Join-Path $viewer 'bin/Release/Assets/Neris'
     $null = New-Item -ItemType Directory -Path $images -Force
     foreach ($name in @('Town-Palette.png', 'Neris-Grass-Color.png')) {
         Copy-Item -LiteralPath (Join-Path $viewer ('Assets/Neris/' + $name)) -Destination $images -Force
     }
-    Invoke-Check $sessionProject (Join-Path $viewer 'bin\Debug\TownSessionTests.exe') 'PASS Town Editor Session'
+    Invoke-Check $sessionProject (Join-Path $viewer 'bin\Release\TownSessionTests.exe') 'PASS Town Editor Session'
 }
 Write-Host 'PASS Native Town Editor'

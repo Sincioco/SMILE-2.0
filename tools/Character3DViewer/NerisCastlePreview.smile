@@ -7,14 +7,19 @@ Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As G
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Tools.NerisCastleRoute As Route
+Import Smile.Tools.NerisCastleGlow As Glow
+Import Smile.Tools.NerisCastleFountain As Fountain
 Import Smile.Tools.Character3DViewerCalibration As Numbers
 
 Public Type State
-    Models[9] As Core.Model3D
-    Objects[42] As Core.Object3D
+    Models[15] As Core.Model3D
+    Objects[98] As Core.Object3D
     ObjectCount As Number
     Leaf As Number
     LeafCount As Number
+    Doors[2] As Number
+    Light As Glow.State
+    Water As Fountain.State
     Ready As Boolean
 End Type
 
@@ -32,27 +37,35 @@ Public Function Create(ByRef Value As State) As Boolean
 
     Ok = True
 
-    For Index = 0 To 8
+    For Index = 0 To 14
 
-        Name = "Castle-0" + Numbers.NumberText(Index)
+        Name = "Castle-" + Numbers.NumberText(Index)
 
-        If Index = 8 Then
-            Name = "Drawbridge"
+        If Index < 10 Then
+            Name = "Castle-0" + Numbers.NumberText(Index)
         End If
 
-        Value.Models[Index] = G.LoadModelGeometry3D("Assets/Neris/CastleV1/" + Name + ".sm3d")
+        If Index = 12 Then
+            Name = "Drawbridge"
+        Else If Index = 13 Then
+            Name = "Door-West"
+        Else If Index = 14 Then
+            Name = "Door-East"
+        End If
+
+        Value.Models[Index] = G.LoadModelGeometry3D("Assets/Neris/CastleV2/" + Name + ".sm3d")
         Ok = Value.Models[Index].GeometryReady And Ok
         Ok = G.PrepareModelPbr3D(Value.Models[Index], G.TEXTURE_FILTER_ANISOTROPIC, 1, 16) And Ok
 
         For Part = 0 To Value.Models[Index].PartCount - 1
 
-            ' Native payload excludes Site.Moat; the town owns that water surface.
+            ' Only the site's flat top remains; buried foundation faces and moat are omitted.
 
             Object = G.CreateModelPart3D(Value.Models[Index], Part)
             Ok = Object.Handle <> 0 And Ok
             Ok = P.SetScale(Object, Route.SCALE * 100.0, Route.SCALE * 100.0, Route.SCALE * 100.0) And Ok
 
-            If Index = 8 Then
+            If Index = 12 Then
 
                 If Part = 0 Then
                     Value.Leaf = Value.ObjectCount
@@ -61,6 +74,15 @@ Public Function Create(ByRef Value As State) As Boolean
                 Value.LeafCount = Value.LeafCount + 1
                 Ok = P.SetPosition(Object, Route.ORIGIN_X, Route.DECK_Y - 0.25 * Route.SCALE,
                     Route.ORIGIN_Z - 64.0 * Route.SCALE) And Ok
+
+            Else If Index >= 13 Then
+
+                If Part = 0 Then
+                    Value.Doors[Index - 13] = Value.ObjectCount
+                End If
+
+                Ok = P.SetPosition(Object, Route.ORIGIN_X + ToDouble((Index - 13) * 6 - 3) * Route.SCALE,
+                    Route.DECK_Y + 3.0 * Route.SCALE, Route.ORIGIN_Z + 14.55 * Route.SCALE) And Ok
 
             Else
                 Ok = P.SetPosition(Object, Route.ORIGIN_X, Route.DECK_Y, Route.ORIGIN_Z) And Ok
@@ -72,6 +94,8 @@ Public Function Create(ByRef Value As State) As Boolean
         End For
     End For
 
+    Ok = Glow.Create(Value.Light) And Ok
+    Ok = Fountain.Create(Value.Water) And Ok
     Value.Ready = Ok
 
     Call Route.Enable(Ok)
@@ -79,6 +103,26 @@ Public Function Create(ByRef Value As State) As Boolean
     Return Ok
 
 End Function
+
+Public Function ApplyLighting(ByRef Value As State) As Boolean
+
+    Dim Ok As Boolean
+
+    Ok = True
+
+    If Value.Ready Then
+        Ok = Glow.ApplyLighting()
+    End If
+
+    Return Ok
+
+End Function
+
+Public Sub Update(ByRef Value As State, Elapsed As Number)
+
+    Call Fountain.Update(Value.Water, Elapsed)
+
+End Sub
 
 Public Function Draw(ByRef Value As State) As Boolean
 
@@ -95,9 +139,17 @@ Public Function Draw(ByRef Value As State) As Boolean
         Ok = P.SetRotation(Value.Objects[Index], Route.Angle(), 0.0, 0.0) And Ok
     End For
 
+    For Index = 0 To 2
+        Ok = P.SetRotation(Value.Objects[Value.Doors[0] + Index], 0.0, -Route.DoorAngle(), 0.0) And Ok
+        Ok = P.SetRotation(Value.Objects[Value.Doors[1] + Index], 0.0, Route.DoorAngle(), 0.0) And Ok
+    End For
+
     For Index = 0 To Value.ObjectCount - 1
         Ok = G.DrawObject3D(Value.Objects[Index]) And Ok
     End For
+
+    Ok = Glow.Draw(Value.Light) And Ok
+    Ok = Fountain.Draw(Value.Water) And Ok
 
     Return Ok
 
@@ -112,10 +164,12 @@ Public Sub Destroy(ByRef Value As State)
         Call G.DestroyObject3D(Value.Objects[Index])
     End For
 
-    For Index = 0 To 8
+    For Index = 0 To 14
         Call G.DestroyModel3D(Value.Models[Index])
     End For
 
+    Call Glow.Destroy(Value.Light)
+    Call Fountain.Destroy(Value.Water)
     Call Route.Enable(False)
 
     Value = Empty

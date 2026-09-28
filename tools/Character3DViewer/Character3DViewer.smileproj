@@ -16,6 +16,9 @@
     <SmileSource Include="NativeViewerHost.smile" />
     <SmileSource Include="NerisTown.smile" />
     <SmileSource Include="NerisCastlePreview.smile" />
+    <SmileSource Include="NerisTownTour.smile" />
+    <SmileSource Include="NerisCastleGlow.smile" />
+    <SmileSource Include="NerisCastleFountain.smile" />
     <SmileSource Include="NerisCastleRoute.smile" />
     <SmileSource Include="ProximityDrawbridge.smile" />
     <SmileSource Include="TownDocument.smile" />
@@ -44,6 +47,7 @@
     <SmileSource Include="TownLighting.smile" />
     <SmileSource Include="TownAttachments.smile" />
     <SmileSource Include="NerisTownCamera.smile" />
+    <SmileSource Include="NerisTownKeyboard.smile" />
     <SmileSource Include="NerisTownCameraPanel.smile" />
     <SmileSource Include="NerisTownObstacles.smile" />
     <SmileSource Include="NerisTownSite.smile" />
@@ -438,14 +442,20 @@
     <Asset Include="Assets\Neris\Neris-Grass-Color.png" />
     <Asset Include="Assets\Neris\Neris-Paving.png" />
     <Asset Include="Assets\Neris\Town-Palette.png" />
-    <Model3DAsset Include="BuildAssets\Neris\CastleV1\castle-00.glb" Descriptor="BuildAssets\Neris\CastleV1\Castle.sm3d.json" LogicalPath="Assets/Neris/CastleV1/Castle-00.sm3d" Profile="Static" Identity="sin-star-i.neris-castle.m06-r002.part-00" ProductionState="Prototype" />
-    <Model3DAsset Include="BuildAssets\Neris\CastleV1\castle-01.glb" Descriptor="BuildAssets\Neris\CastleV1\Castle.sm3d.json" LogicalPath="Assets/Neris/CastleV1/Castle-01.sm3d" Profile="Static" Identity="sin-star-i.neris-castle.m06-r002.part-01" ProductionState="Prototype" />
-    <Model3DAsset Include="BuildAssets\Neris\CastleV1\castle-02.glb" Descriptor="BuildAssets\Neris\CastleV1\Castle.sm3d.json" LogicalPath="Assets/Neris/CastleV1/Castle-02.sm3d" Profile="Static" Identity="sin-star-i.neris-castle.m06-r002.part-02" ProductionState="Prototype" />
-    <Model3DAsset Include="BuildAssets\Neris\CastleV1\castle-03.glb" Descriptor="BuildAssets\Neris\CastleV1\Castle.sm3d.json" LogicalPath="Assets/Neris/CastleV1/Castle-03.sm3d" Profile="Static" Identity="sin-star-i.neris-castle.m06-r002.part-03" ProductionState="Prototype" />
-    <Model3DAsset Include="BuildAssets\Neris\CastleV1\castle-04.glb" Descriptor="BuildAssets\Neris\CastleV1\Castle.sm3d.json" LogicalPath="Assets/Neris/CastleV1/Castle-04.sm3d" Profile="Static" Identity="sin-star-i.neris-castle.m06-r002.part-04" ProductionState="Prototype" />
-    <Model3DAsset Include="BuildAssets\Neris\CastleV1\castle-05.glb" Descriptor="BuildAssets\Neris\CastleV1\Castle.sm3d.json" LogicalPath="Assets/Neris/CastleV1/Castle-05.sm3d" Profile="Static" Identity="sin-star-i.neris-castle.m06-r002.part-05" ProductionState="Prototype" />
-    <Model3DAsset Include="BuildAssets\Neris\CastleV1\castle-06.glb" Descriptor="BuildAssets\Neris\CastleV1\Castle.sm3d.json" LogicalPath="Assets/Neris/CastleV1/Castle-06.sm3d" Profile="Static" Identity="sin-star-i.neris-castle.m06-r002.part-06" ProductionState="Prototype" />
-    <Model3DAsset Include="BuildAssets\Neris\CastleV1\castle-07.glb" Descriptor="BuildAssets\Neris\CastleV1\Castle.sm3d.json" LogicalPath="Assets/Neris/CastleV1/Castle-07.sm3d" Profile="Static" Identity="sin-star-i.neris-castle.m06-r002.part-07" ProductionState="Prototype" />
-    <Model3DAsset Include="BuildAssets\Neris\CastleV1\drawbridge.glb" Descriptor="BuildAssets\Neris\CastleV1\Castle.sm3d.json" LogicalPath="Assets/Neris/CastleV1/Drawbridge.sm3d" Profile="Static" Identity="sin-star-i.neris-castle.m06-r002.bridge" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\CastleV2\castle-00.glb" Descriptor="BuildAssets\Neris\CastleV2\Castle.sm3d.json" LogicalPath="Assets/Neris/CastleV2/Castle-00.sm3d" Profile="Static" Identity="sin-star-i.neris-castle.m06-r005.part-00" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\CastleV2\castle-01.glb" Descriptor="BuildAssets\Neris\CastleV2\Castle.sm3d.json" LogicalPath="Assets/Neris/CastleV2/Castle-01.sm3d" Profile="Static" Identity="sin-star-i.neris-castle.m06-r005.part-01" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\CastleV2\castle-02.glb" Descriptor="BuildAssets\Neris\CastleV2\Castle.sm3d.json" LogicalPath="Assets/Neris/CastleV2/Castle-02.sm3d" Profile="Static" Identity="sin-star-i.neris-castle.m06-r005.part-02" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\CastleV2\castle-03.glb" Descriptor="BuildAssets\Neris\CastleV2\Castle.sm3d.json" LogicalPath="Assets/Neris/CastleV2/Castle-03.sm3d" Profile="Static" Identity="sin-star-i.neris-castle.m06-r005.part-03" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\CastleV2\castle-04.glb" Descriptor="BuildAssets\Neris\CastleV2\Castle.sm3d.json" LogicalPath="Assets/Neris/CastleV2/Castle-04.sm3d" Profile="Static" Identity="sin-star-i.neris-castle.m06-r005.part-04" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\CastleV2\castle-05.glb" Descriptor="BuildAssets\Neris\CastleV2\Castle.sm3d.json" LogicalPath="Assets/Neris/CastleV2/Castle-05.sm3d" Profile="Static" Identity="sin-star-i.neris-castle.m06-r005.part-05" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\CastleV2\castle-06.glb" Descriptor="BuildAssets\Neris\CastleV2\Castle.sm3d.json" LogicalPath="Assets/Neris/CastleV2/Castle-06.sm3d" Profile="Static" Identity="sin-star-i.neris-castle.m06-r005.part-06" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\CastleV2\castle-07.glb" Descriptor="BuildAssets\Neris\CastleV2\Castle.sm3d.json" LogicalPath="Assets/Neris/CastleV2/Castle-07.sm3d" Profile="Static" Identity="sin-star-i.neris-castle.m06-r005.part-07" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\CastleV2\castle-08.glb" Descriptor="BuildAssets\Neris\CastleV2\Castle.sm3d.json" LogicalPath="Assets/Neris/CastleV2/Castle-08.sm3d" Profile="Static" Identity="sin-star-i.neris-castle.m06-r005.part-08" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\CastleV2\castle-09.glb" Descriptor="BuildAssets\Neris\CastleV2\Castle.sm3d.json" LogicalPath="Assets/Neris/CastleV2/Castle-09.sm3d" Profile="Static" Identity="sin-star-i.neris-castle.m06-r005.part-09" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\CastleV2\castle-10.glb" Descriptor="BuildAssets\Neris\CastleV2\Castle.sm3d.json" LogicalPath="Assets/Neris/CastleV2/Castle-10.sm3d" Profile="Static" Identity="sin-star-i.neris-castle.m06-r005.part-10" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\CastleV2\castle-11.glb" Descriptor="BuildAssets\Neris\CastleV2\Castle.sm3d.json" LogicalPath="Assets/Neris/CastleV2/Castle-11.sm3d" Profile="Static" Identity="sin-star-i.neris-castle.m06-r005.part-11" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\CastleV2\drawbridge.glb" Descriptor="BuildAssets\Neris\CastleV2\Castle.sm3d.json" LogicalPath="Assets/Neris/CastleV2/Drawbridge.sm3d" Profile="Static" Identity="sin-star-i.neris-castle.m06-r005.drawbridge" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\CastleV2\door-west.glb" Descriptor="BuildAssets\Neris\CastleV2\Castle.sm3d.json" LogicalPath="Assets/Neris/CastleV2/Door-West.sm3d" Profile="Static" Identity="sin-star-i.neris-castle.m06-r005.door-west" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\CastleV2\door-east.glb" Descriptor="BuildAssets\Neris\CastleV2\Castle.sm3d.json" LogicalPath="Assets/Neris/CastleV2/Door-East.sm3d" Profile="Static" Identity="sin-star-i.neris-castle.m06-r005.door-east" ProductionState="Prototype" />
   </ItemGroup>
 </SmileProject>

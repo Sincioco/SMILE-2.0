@@ -68,6 +68,7 @@ The typed family has its own command namespace, without changing legacy IDs:
 | Query | 7 / 8 | Staged / committed particle instance position, Index is instance index; components 0–2 |
 | Query | 9 | GPU particle staging, Index is slot; components 0–2 position and 3–5 velocity |
 | Query | 10 | Existing point-light slot position; components 0–2 |
+| Query | 11 | Native last opaque-frame depth: Resource/Index are viewport X/Y in millionths, Component is zero; sky/unavailable depth returns failure |
 
 Typed calls clear LastError on success and set the existing renderer error on
 failure. Query wrappers return Boolean and write a ByRef result only after status
@@ -77,6 +78,11 @@ return the existing 0/1 status. Queries do not encode identities as floating val
 Native precision dispatch is a focused include inside the existing renderer's
 translation unit, borrowing its camera validation, object/animator lookup, socket
 matrix, reflection accessors and submission arrays. It owns no independent state.
+`TryCursorDepth` reads one pixel through a transient staging texture between frames.
+It uses the existing linear depth snapshot, which native water now requests while
+water materials exist. It does not allocate geometry or retain another depth buffer.
+The caller unprojects with the camera that produced that frame. Web currently
+returns failure for this query; town inspection falls back to the ground plane.
 Web uses a focused composed runtime source with those same existing owners.
 Precision3D owns typed bridge/value contracts; PrecisionMath3D owns vector/angle/
 lerp/cubic evaluation. The existing Scene3D and Character3D owners retain lifecycle.

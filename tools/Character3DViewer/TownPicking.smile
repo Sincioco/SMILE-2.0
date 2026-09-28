@@ -18,13 +18,33 @@ Public Type ScreenBox
     Visible As Boolean
 End Type
 
+''' Use the visible opaque surface; transparent water and sky fall back to the town floor.
+Public Function OrbitPoint(View As P.Camera3D, X As Number, Y As Number,
+    Width As Number, Height As Number, ByRef Point As P.Vector3) As Boolean
+
+    Dim Depth As Double
+    Dim Result As Boolean
+
+    If P.TryCursorDepth(X, Y, Width, Height, Depth) Then
+        Point = Camera.CursorPointAtDepth(View, X, Y, Depth, Width, Height)
+
+        Return True
+    End If
+
+    Result = Ground(View, X, Y, Width, Height, Point)
+
+    Return Result
+
+End Function
+
 Public Function Ground(View As P.Camera3D, X As Number, Y As Number,
     Width As Number, Height As Number, ByRef Point As P.Vector3) As Boolean
 
     Dim Ray As P.Vector3
     Dim Distance As Double
 
-    Ray = M.Subtract(Camera.CursorPointAtDepth(View, X, Y, 1000.0, Width, Height), View.Position)
+    Ray = M.Subtract(Camera.CursorPointAtDepth(View, X, Y,
+        Max(1000.0, View.NearPlane + 1.0), Width, Height), View.Position)
 
     If Abs(Ray.Y) < 0.00001 Then
         Return False
@@ -81,7 +101,7 @@ Public Function ItemAt(ByRef Town As Document.State, Category As Number, View As
 
     Result = -1
     Nearest = 1000000.0
-    Point = Camera.CursorPointAtDepth(View, X, Y, 1000.0, Width, Height)
+    Point = Camera.CursorPointAtDepth(View, X, Y, Max(1000.0, View.NearPlane + 1.0), Width, Height)
 
     For Index = 0 To Town.ItemCount - 1
 

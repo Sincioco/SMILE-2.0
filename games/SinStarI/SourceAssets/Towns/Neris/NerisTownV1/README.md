@@ -4,11 +4,18 @@ Created by Louiery R. Sincioco (Sin).
 
 ## Current scene
 
-**[Open Neris-Town-Waterfront.blend](Blend/Neris-Town-Waterfront.blend)**.
-This is the current saved layout used for native export. Keep the adjacent
+**[Open Neris-Town-Royal-Castle-r002.blend](Blend/Neris-Town-Royal-Castle-r002.blend)**.
+This saved revision replaces the former Tripo placement with the detailed M06-r005
+castle, connects its normal-height approach road, and retains a rectangular map
+with a moat and land outside it. The matching portable town document is
+[Neris-Town-Royal-Castle-r002.town](Authoring/Neris-Town-Royal-Castle-r002.town).
+The castle is a separately owned native assembly; its placement is coordinated by
+NerisCastleRoute, while the town snapshot owns terrain and catalog placements.
+Later live Town Editor changes remain authoritative. The older Waterfront layout
+and the user's original `Neris Town.blend` are preserved. Keep the adjacent
 [TripoCastleV1](../TripoCastleV1/README.md) package: the Old Castle is linked by a
 relative Blender path. Preserve interactive hand edits separately before rebuilding.
-The original V1, Detailed and Expanded files remain authoring inputs/earlier revisions.
+The original V1, Detailed, Expanded and Waterfront files remain earlier revisions.
 Do not run their old placement scripts over the current Waterfront arrangement.
 
 [Overview](Previews/Waterfront-Overview.png) |
@@ -18,7 +25,7 @@ Do not run their old placement scripts over the current Waterfront arrangement.
 Named cameras match those previews. Blender middle-drag orbits, Shift+middle-drag
 pans, the wheel zooms and Numpad 0 enters the active camera view.
 
-## Accepted layout
+## Earlier waterfront arrangement
 
 North is Blender +Y; dimensions are metres. Map bounds are X=-490..275 and
 Y=-355..355. The Old Castle is a western addition to Sin's district diagram.

@@ -9,6 +9,43 @@ static double smile_3d_precision_object_component(const SmileObject3D* object, i
     return (double)object->scale[component - 6] * 100.0;
 }
 
+// One pixel is read only on an explicit inspection request, never every frame.
+// Borrow the last opaque depth snapshot; transient staging is released before return.
+static double smile_3d_cursor_depth(long long unit_x, long long unit_y)
+{
+    if (smile_frame_active3d || unit_x < 0 || unit_x >= 1000000 ||
+        unit_y < 0 || unit_y >= 1000000 || smile_linear_depth_texture3d == 0 ||
+        smile_soft_depth_effective3d == SMILE_3D_SOFT_DEPTH_OFF ||
+        smile_soft_depth_copy_draw_count3d == 0) return 0;
+    ID3D11Device* device = (ID3D11Device*)smile_graphics_directx_device();
+    ID3D11DeviceContext* context = (ID3D11DeviceContext*)smile_graphics_directx_context();
+    if (!device || !context) return 0;
+    D3D11_TEXTURE2D_DESC description = {};
+    smile_linear_depth_texture3d->GetDesc(&description);
+    const UINT x = (UINT)(smile_3d_viewport_x() + unit_x * smile_3d_viewport_width() / 1000000);
+    const UINT y = (UINT)(smile_3d_viewport_y() + unit_y * smile_3d_viewport_height() / 1000000);
+    if (x >= description.Width || y >= description.Height) return 0;
+    description.Width = description.Height = 1;
+    description.Usage = D3D11_USAGE_STAGING;
+    description.BindFlags = 0;
+    description.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+    description.MiscFlags = 0;
+    ID3D11Texture2D* staging = 0;
+    if (FAILED(device->CreateTexture2D(&description, 0, &staging))) return 0;
+    const D3D11_BOX pixel = {x, y, 0, x + 1, y + 1, 1};
+    context->CopySubresourceRegion(staging, 0, 0, 0, 0, smile_linear_depth_texture3d, 0, &pixel);
+    D3D11_MAPPED_SUBRESOURCE mapped = {};
+    double depth = 0;
+    if (SUCCEEDED(context->Map(staging, 0, D3D11_MAP_READ, 0, &mapped)))
+    {
+        depth = *(const float*)mapped.pData;
+        context->Unmap(staging, 0);
+    }
+    staging->Release();
+    return _finite(depth) && depth >= smile_camera_near3d &&
+        depth < smile_camera_far3d * .999 ? depth : 0;
+}
+
 extern "C" long long smile_renderer3d_double(long long command, long long resource,
     double a, double b, double c, double d, double e, double f,
     double g, double h, double i, double j, double k, double l)
@@ -146,6 +183,12 @@ extern "C" double smile_renderer3d_double_value(long long command, long long res
     long long index, long long component)
 {
     smile_last_error3d = 0;
+    if (command == 11 && component == 0)
+    {
+        const double depth = smile_3d_cursor_depth(resource, index);
+        if (depth <= 0) smile_last_error3d = 5;
+        return depth;
+    }
     if (command == 1 && resource == 0 && index == 0 && component >= 0 && component < 12)
     {
         if (component < 3) return smile_camera_position3d[component];

@@ -36,6 +36,7 @@ Dim Temporary As Core.Object3D
 Dim Controls As Editor.State
 Dim UntilTime As Number
 Dim Action As Number
+Dim WithoutCastle[5] As Number
 
 Game Window "Town Editor Catalog Check" Size 1100 By 720
 
@@ -71,7 +72,9 @@ For Index = 0 To Catalog.INITIAL_ITEMS - 1
     Town.Items[Index] = Catalog.InitialItem(Index)
 End For
 
-For Index = 0 To Catalog.CHUNK_COUNT + 13
+Call Renderer.SyncDocument(Assets, Town)
+
+For Index = 0 To Assets.Required - 1
     Call Renderer.LoadNext(Assets)
 End For
 
@@ -220,6 +223,57 @@ Call Check(Not Ground.Failed And Ground.LiveRevision = Town.Surface.Revision,
     "Edited Terrain Commits As One Complete Replacement")
 Call Attachments.Destroy(Doors)
 Call Terrain.Destroy(Ground)
+
+' Removing the last Tripo placement releases every resource, while its palette survives.
+
+For Index = 0 To Town.ItemCount - 1
+
+    If Town.Items[Index].Template = 6 Then
+        Town.Items[Index].Active = False
+    End If
+
+End For
+
+Call Renderer.SyncDocument(Assets, Town)
+
+WithoutCastle[0] = G.LiveModelCount3D()
+WithoutCastle[1] = G.LiveMeshCount3D()
+WithoutCastle[2] = G.LiveMaterialCount3D()
+WithoutCastle[3] = G.LiveTextureCount3D()
+WithoutCastle[4] = G.LiveObjectCount3D()
+
+Call Check(Assets.Loaded = Catalog.CHUNK_COUNT And WithoutCastle[0] = Catalog.CHUNK_COUNT,
+    "Unplaced Old Castle Owns No Model Resources")
+
+For Index = 0 To Town.ItemCount - 1
+
+    If Town.Items[Index].Template = 6 Then
+        Town.Items[Index].Active = True
+    End If
+
+End For
+
+Call Renderer.SyncDocument(Assets, Town)
+
+For Index = 0 To 13
+    Call Renderer.LoadNext(Assets)
+End For
+
+Call Check(Not Assets.Failed And G.LiveModelCount3D() = WithoutCastle[0] + 14,
+    "Placing Old Castle Loads Its Fourteen Models On Demand")
+
+For Index = 0 To Town.ItemCount - 1
+
+    If Town.Items[Index].Template = 6 Then
+        Town.Items[Index].Active = False
+    End If
+
+End For
+
+Call Renderer.SyncDocument(Assets, Town)
+Call Check(G.LiveModelCount3D() = WithoutCastle[0] And G.LiveMeshCount3D() = WithoutCastle[1] And
+    G.LiveMaterialCount3D() = WithoutCastle[2] And G.LiveTextureCount3D() = WithoutCastle[3] And
+    G.LiveObjectCount3D() = WithoutCastle[4], "Removing Old Castle Releases Models Meshes Materials Textures And Objects")
 Call Renderer.Destroy(Assets)
 
 ' A bare shore needs grass and road meshes plus water, never a thin trim mesh.

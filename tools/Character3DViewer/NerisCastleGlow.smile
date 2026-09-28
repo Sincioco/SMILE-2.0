@@ -1,0 +1,238 @@
+''' Castle crystal and lantern halos, positioned from the authored Blender bounds.
+Module Smile.Tools.NerisCastleGlow
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Tools.NerisCastleRoute As Route
+
+Public Type State
+    Texture As Core.Texture3D
+    Material As Core.Material3D
+    Particles As Core.ParticleBatch3D
+    Ready As Boolean
+End Type
+
+Public Function Create(ByRef Value As State) As Boolean
+
+    Dim Index As Number
+    Dim Point As P.Vector3
+    Dim Radius As Double
+    Dim Lamp As Boolean
+    Dim Ok As Boolean
+
+    Value.Texture = G.LoadTexture3D("Assets/Fire/ember-shape.png",
+        G.TEXTURE_FILTER_LINEAR, G.TEXTURE_WRAP_CLAMP)
+    Value.Material = G.CreateEffectMaterial3D(Value.Texture, G.MATERIAL_ALPHA_ADDITIVE, 180)
+    Value.Particles = G.CreateParticleBatch3D(68, Value.Material, G.VFX_BILLBOARD_CAMERA, 1, 1)
+    Ok = Value.Texture.Handle <> 0 And Value.Material.Handle <> 0 And Value.Particles.Handle <> 0
+
+    For Index = 0 To 33
+
+        Call Anchor(Index, Point, Radius, Lamp)
+
+        Point = P.Vector(Route.ORIGIN_X + Point.X * Route.SCALE,
+            Route.DECK_Y + Point.Y * Route.SCALE, Route.ORIGIN_Z + Point.Z * Route.SCALE)
+        Ok = P.SetParticle(Value.Particles, Index * 2, Point, Radius * Route.SCALE, 0.0, 0) And Ok
+        Ok = P.SetParticle(Value.Particles, Index * 2 + 1, Point, Radius * Route.SCALE * 0.40, 0.0, 0) And Ok
+
+        If Lamp Then
+            Ok = G.SetParticleColor3D(Value.Particles, Index * 2, 255, 175, 60, 32) And Ok
+            Ok = G.SetParticleColor3D(Value.Particles, Index * 2 + 1, 255, 226, 160, 70) And Ok
+        Else
+            Ok = G.SetParticleColor3D(Value.Particles, Index * 2, 40, 200, 255, 34) And Ok
+            Ok = G.SetParticleColor3D(Value.Particles, Index * 2 + 1, 135, 235, 255, 58) And Ok
+        End If
+
+    End For
+
+    Ok = G.CommitParticleBatch3D(Value.Particles, 68) And Ok
+    Value.Ready = Ok
+
+    Return Ok
+
+End Function
+
+Private Sub Anchor(Index As Number, ByRef Point As P.Vector3,
+    ByRef Radius As Double, ByRef Lamp As Boolean)
+
+    Lamp = False
+
+    Select Case Index
+        Case 0
+            Point = P.Vector(-48.00000, 35.00000, -60.00000)
+            Radius = 2.60000
+        Case 1
+            Point = P.Vector(48.00000, 35.00000, -60.00000)
+            Radius = 2.60000
+        Case 2
+            Point = P.Vector(-48.00000, 35.00000, 60.00000)
+            Radius = 2.60000
+        Case 3
+            Point = P.Vector(48.00000, 35.00000, 60.00000)
+            Radius = 2.60000
+        Case 4
+            Point = P.Vector(-19.00000, 30.00000, -58.00000)
+            Radius = 2.60000
+        Case 5
+            Point = P.Vector(19.00000, 30.00000, -58.00000)
+            Radius = 2.60000
+        Case 6
+            Point = P.Vector(-7.65000, 6.90000, -64.65000)
+            Radius = 0.78000
+            Lamp = True
+        Case 7
+            Point = P.Vector(7.65000, 6.90000, -64.65000)
+            Radius = 0.78000
+            Lamp = True
+        Case 8
+            Point = P.Vector(-18.00000, 41.50000, 18.00000)
+            Radius = 1.95000
+        Case 9
+            Point = P.Vector(18.00000, 41.50000, 18.00000)
+            Radius = 1.95000
+        Case 10
+            Point = P.Vector(-18.00000, 47.50000, 48.00000)
+            Radius = 1.95000
+        Case 11
+            Point = P.Vector(18.00000, 47.50000, 48.00000)
+            Radius = 1.95000
+        Case 12
+            Point = P.Vector(0.00000, 55.50000, 34.00000)
+            Radius = 2.60000
+        Case 13
+            Point = P.Vector(0.00000, 32.70000, 13.50000)
+            Radius = 1.30000
+        Case 14
+            Point = P.Vector(0.00000, 14.67500, 13.40000)
+            Radius = 0.87750
+        Case 15
+            Point = P.Vector(-5.20000, 6.60000, 13.15000)
+            Radius = 0.78000
+            Lamp = True
+        Case 16
+            Point = P.Vector(5.20000, 6.60000, 13.15000)
+            Radius = 0.78000
+            Lamp = True
+        Case 17
+            Point = P.Vector(0.00000, 6.50000, -18.00000)
+            Radius = 2.60000
+        Case 18
+            Point = P.Vector(2.55000, 2.50000, -18.00000)
+            Radius = 1.04000
+        Case 19
+            Point = P.Vector(1.80312, 2.50000, -16.19688)
+            Radius = 1.04000
+        Case 20
+            Point = P.Vector(0.00000, 2.50000, -15.45000)
+            Radius = 1.04000
+        Case 21
+            Point = P.Vector(-1.80312, 2.50000, -16.19688)
+            Radius = 1.04000
+        Case 22
+            Point = P.Vector(-2.55000, 2.50000, -18.00000)
+            Radius = 1.04000
+        Case 23
+            Point = P.Vector(-1.80312, 2.50000, -19.80312)
+            Radius = 1.04000
+        Case 24
+            Point = P.Vector(0.00000, 2.50000, -20.55000)
+            Radius = 1.04000
+        Case 25
+            Point = P.Vector(1.80312, 2.50000, -19.80312)
+            Radius = 1.04000
+        Case 26
+            Point = P.Vector(-48.30000, 6.10000, -42.00000)
+            Radius = 0.78000
+            Lamp = True
+        Case 27
+            Point = P.Vector(-48.30000, 6.10000, -22.00000)
+            Radius = 0.78000
+            Lamp = True
+        Case 28
+            Point = P.Vector(-48.30000, 6.10000, -2.00000)
+            Radius = 0.78000
+            Lamp = True
+        Case 29
+            Point = P.Vector(48.30000, 6.10000, -42.00000)
+            Radius = 0.78000
+            Lamp = True
+        Case 30
+            Point = P.Vector(48.30000, 6.10000, -22.00000)
+            Radius = 0.78000
+            Lamp = True
+        Case 31
+            Point = P.Vector(48.30000, 6.10000, -2.00000)
+            Radius = 0.78000
+            Lamp = True
+        Case 32
+            Point = P.Vector(-30.00000, 6.10000, -60.30000)
+            Radius = 0.78000
+            Lamp = True
+        Case 33
+            Point = P.Vector(30.00000, 6.10000, -60.30000)
+            Radius = 0.78000
+            Lamp = True
+    End Select
+
+End Sub
+
+''' Four broad castle washes share the existing native local-light budget.
+Public Function ApplyLighting() As Boolean
+
+    Dim Index As Number
+    Dim X As Double
+    Dim Z As Double
+    Dim Night As Double
+    Dim Intensity As Number
+    Dim Ok As Boolean
+
+    Night = Clamp((180.0 - ToDouble(G.LightValue3D(G.LIGHT_QUERY_DIRECTIONAL, 0, 8))) / 180.0, 0.0, 1.0)
+    Intensity = ToNumber(10.0 + Night * 790.0)
+    Ok = True
+
+    For Index = 0 To 3
+
+        X = -62.0
+        Z = -72.0
+
+        If Index Mod 2 = 1 Then
+            X = 62.0
+        End If
+
+        If Index >= 2 Then
+            Z = 72.0
+        End If
+
+        Ok = G.SetPointLight3D(Index, ToNumber(Route.ORIGIN_X + X * Route.SCALE),
+            ToNumber(Route.DECK_Y + 18.0 * Route.SCALE), ToNumber(Route.ORIGIN_Z + Z * Route.SCALE),
+            255, 204, 139, Intensity, ToNumber(165.0 * Route.SCALE)) And Ok
+    End For
+
+    Return Ok
+
+End Function
+
+Public Function Draw(ByRef Value As State) As Boolean
+
+    Dim Ok As Boolean
+
+    Ok = Value.Ready And G.DrawParticleBatch3D(Value.Particles)
+
+    Return Ok
+
+End Function
+
+Public Sub Destroy(ByRef Value As State)
+
+    Call G.DestroyParticleBatch3D(Value.Particles)
+    Call G.DestroyMaterial3D(Value.Material)
+    Call G.DestroyTexture3D(Value.Texture)
+
+    Value.Ready = False
+
+End Sub
+
+End Module
