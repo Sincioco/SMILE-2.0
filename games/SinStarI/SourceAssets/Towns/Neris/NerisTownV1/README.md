@@ -4,11 +4,23 @@ Created by Louiery R. Sincioco (Sin).
 
 ## Current scene
 
-**[Open Neris-Town-Royal-Castle-r002.blend](Blend/Neris-Town-Royal-Castle-r002.blend)**.
-This saved revision replaces the former Tripo placement with the detailed M06-r005
-castle, connects its normal-height approach road, and retains a rectangular map
+**[Open Neris-Town-Royal-Castle-r005.blend](Blend/Neris-Town-Royal-Castle-r005.blend)**.
+This saved revision replaces the former Tripo placement with M06-r006 **Royal Court**,
+completes the full-width road to its drawbridge, and retains a rectangular map
 with a moat and land outside it. The matching portable town document is
-[Neris-Town-Royal-Castle-r002.town](Authoring/Neris-Town-Royal-Castle-r002.town).
+[Neris-Town-Royal-Castle-r003.town](Authoring/Neris-Town-Royal-Castle-r003.town).
+It preserves the 361 live placements and the accepted Night Sun settings. Only
+470 road cells changed from the live snapshot. The original Royal Castle's unused
+side stairs are removed; its central entrance stairs remain. Authoring now uses
+`Catalog-r004.blend`. Town r004 adds four smaller Royal Court evergreen shrubs
+to City Hall's front planters; its layout and Sun settings match r003. The existing
+portable r003 town document uses these updated shared catalog models automatically.
+Town r005 places the Communication Tower's dishes on its front/back faces,
+alternating with the left/right crystal poles. Brackets remain attached; camera
+bounds follow the moved dishes. Shrub geometry occupies spare space in the
+existing 30 catalog models, preserving room for Tripo's 14 optional models.
+The 20 original foliage member IDs remain stable for older Blender imports. The catalog retains its document fingerprint, and imports
+of older saved towns accept the specifically retired stair members.
 The castle is a separately owned native assembly; its placement is coordinated by
 NerisCastleRoute, while the town snapshot owns terrain and catalog placements.
 Later live Town Editor changes remain authoritative. The older Waterfront layout

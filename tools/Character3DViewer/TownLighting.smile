@@ -6,7 +6,10 @@ Option Explicit
 Import Smile.Simple3D.Graphics3D As G
 Import Smile.Simple3D.Scene3D As Scene
 Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Simple3D.Precision3D As P
 Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownCatalogData As Catalog
+Import Smile.Tools.TownGeometry As Geometry
 
 Public Function Apply(Light As Document.Sun) As Boolean
 
@@ -27,6 +30,78 @@ Public Function Apply(Light As Document.Sun) As Boolean
     Ok = Scene.SetShadowBias(25, 60) And Ok
 
     Call Scene.UseCustomLighting()
+
+    Return Ok
+
+End Function
+
+''' Slots 0-3 remain Royal Court's washes. Placed town lights own slots 4-63.
+''' Recompute from the document so moved/deleted lamps cannot leave phantom lights.
+Public Function ApplyLocal(ByRef Town As Document.State) As Boolean
+
+    Dim Index As Number
+    Dim Side As Number
+    Dim Slot As Number
+    Dim Capacity As Number
+    Dim Item As Document.Item
+    Dim Shape As Catalog.Template
+    Dim Point As P.Vector3
+    Dim Night As Double
+    Dim Width As Double
+    Dim Height As Double
+    Dim Range As Double
+    Dim Ok As Boolean
+
+    Night = Clamp((180.0 - ToDouble(Town.Light.Intensity)) / 180.0, 0.0, 1.0)
+    Slot = 4
+    Capacity = G.MaximumLocalLightCount3D()
+    Ok = True
+
+    For Index = 0 To Town.ItemCount - 1
+
+        Item = Town.Items[Index]
+
+        If Item.Active And Night > 0.0 And Slot < Capacity Then
+
+            Shape = Catalog.TemplateAt(Item.Template)
+            Height = (Shape.High.Y - Shape.Low.Y) * Item.Scale.Y / 1000.0
+
+            If Shape.Label = "Crystal Lamp" Then
+
+                Point = Geometry.ToWorld(Item, P.Vector(0.0, Shape.High.Y * 0.82, 0.0))
+                Ok = G.SetPointLight3D(Slot, ToNumber(Point.X), ToNumber(Point.Y), ToNumber(Point.Z),
+                    255, 211, 150, ToNumber(Night * 280.0), ToNumber(Max(100.0, Height * 3.5))) And Ok
+                Slot = Slot + 1
+
+            Else If (Shape.Label = "Royal Castle" Or Shape.Label = "Military HQ" Or
+                Shape.Label = "Comm Tower" Or Shape.Label = "City Hall") Then
+
+                Width = Shape.High.X - Shape.Low.X
+                Range = Max(Height * 1.8, Width * Item.Scale.X / 1000.0 * 1.5)
+
+                For Side = 0 To 1
+
+                    If Slot < Capacity Then
+
+                        Point = Geometry.ToWorld(Item, P.Vector((ToDouble(Side) * 2.0 - 1.0) * Width * 0.32,
+                            Shape.Low.Y + (Shape.High.Y - Shape.Low.Y) * 0.28, Shape.Low.Z - Width * 0.08))
+                        Ok = G.SetPointLight3D(Slot, ToNumber(Point.X), ToNumber(Point.Y), ToNumber(Point.Z),
+                            255, 210, 157, ToNumber(Night * 380.0), ToNumber(Range)) And Ok
+                        Slot = Slot + 1
+
+                    End If
+
+                End For
+
+            End If
+
+        End If
+
+    End For
+
+    For Index = Slot To Capacity - 1
+        Ok = G.DisableLight3D(Index) And Ok
+    End For
 
     Return Ok
 

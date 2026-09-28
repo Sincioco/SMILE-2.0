@@ -1,0 +1,27 @@
+{
+  "revision": "M06-r006",
+  "wall_front_planes": {
+    "NC.Gatehouse.Jamb.West": -64.0,
+    "NC.Gatehouse.Jamb.East": -64.0,
+    "NC.Gatehouse.Arch.Vault": -64.0
+  },
+  "previous_vault_recess_metres": 0.4,
+  "unchanged_owners": {
+    "Site": "88182da7cf102cf74dfc7a19bde6dac7e635328141e358c02ee62f88576f912b",
+    "Fortifications": "5c53340e759dcbd093d86058a7a8ea5fa87a69feacffd95770a1c7d5fe845c47",
+    "Bridge": "f331492311700a587091149b6f760935350005173512913068b14223433c8ced",
+    "Palace": "951d80b0de6bb066ec90eec9a790d39157205a17e9e4434d17fc1ce40684284e",
+    "Courtyard": "35a4d1a20cfc152378bb903e0ef15a1dd9dcecaef9b107c88c7018dc1fc1c74e"
+  },
+  "clear_opening_width": 12,
+  "clear_opening_peak": 15,
+  "trim_offsets": {
+    "NC.Gatehouse.Arch.Front.Stone": -0.55,
+    "NC.Gatehouse.Arch.Front.Gold": -0.6,
+    "NC.Gatehouse.Arch.Front.OuterReveal": -0.61,
+    "NC.Gatehouse.Luxury.Arch.0": -0.48,
+    "NC.Gatehouse.Luxury.ArchGold.0": -0.48,
+    "NC.Gatehouse.Luxury.Arch.1": -0.5,
+    "NC.Gatehouse.Luxury.ArchGold.1": -0.5
+  }
+}

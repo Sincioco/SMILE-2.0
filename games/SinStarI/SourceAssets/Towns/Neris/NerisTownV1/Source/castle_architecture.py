@@ -4,7 +4,7 @@ from expansion_architecture import Architecture, arch, block, dome, hip_roof, cy
 from details import crystal, star, banner, lantern
 from paving_grid import geometry
 from castle_facades import framed_window, pilaster, arcaded_cornice, crown_lantern
-from castle_facades import great_facade, gate_spandrels, stair_sweep, bridge_inlay
+from castle_facades import great_facade, gate_spandrels, bridge_inlay
 
 
 def balustrade(g, start, end, height=1.1):
@@ -146,12 +146,11 @@ def create(mats, curtain):
             balustrade(g,(sign*12,y,z),(sign*half,y,z))
             balustrade(g,(sign*half,y,z),(sign*half,27,z))
             for yy in [5,11,23]:cypress(g,sign*(half-1.4),yy,z,3.2)
-    # Broad central steps and continuous sweeping side approaches.
+    # Retain the usable central entrance steps; the side sweeps had no doorway.
     for step in range(26):
         height=(step+1)*.25
         g.box('Royal Entrance Stair',(0,-8+step*.36,height/2),(7.5,.39,height),'trim',0)
     for sign in [-1,1]:
-        stair_sweep(g,sign,balustrade)
         for x,y in [(27,-18),(27,-8),(14,-6),(31,1)]:cypress(g,sign*x,y,.1,5.2)
         for x,y in [(16,-18),(9,-8)]:planter(g,sign*x,y,.1,1.7)
     g.cylinder('Royal Fountain Basin',(0,-16,.35),4.2,.7,'trim',48)

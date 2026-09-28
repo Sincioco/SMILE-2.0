@@ -1,0 +1,15 @@
+{
+  "changedNativeChunks": [
+    "castle-00.glb",
+    "castle-01.glb",
+    "castle-02.glb",
+    "castle-04.glb",
+    "castle-05.glb",
+    "castle-06.glb",
+    "castle-10.glb",
+    "castle-11.glb"
+  ],
+  "unchangedMovingOwners": 3,
+  "staticParts": 85,
+  "movingParts": 13
+}

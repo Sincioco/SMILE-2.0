@@ -64,7 +64,7 @@ static double smile_3d_viewport_height(void) {
 #define SMILE_3D_MAX_MODEL_ANIMATION_CLIPS 64
 #define SMILE_3D_MAX_MODEL_ANIMATION_SOCKETS 64
 #define SMILE_3D_MAX_PENDING_MODEL_EVENTS 32
-#define SMILE_3D_MAX_LOCAL_LIGHTS 4
+#define SMILE_3D_MAX_LOCAL_LIGHTS 64
 #define SMILE_3D_MAX_FRAME_SUBMISSIONS 4096
 #define SMILE_3D_MAX_FRAME_PALETTES 512
 #define SMILE_3D_MAX_PARTICLE_BATCHES 64
@@ -2988,6 +2988,7 @@ static long long smile_3d_pbr_material_value(SmileMaterial3D* material, long lon
 
 static long long smile_3d_light_value(long long query, long long index, long long property)
 {
+    if (query == 5) return SMILE_3D_MAX_LOCAL_LIGHTS;
     if (query == 1)
     {
         long long count = smile_ambient_intensity3d > 0.0f ? 1 : 0;
@@ -5096,7 +5097,7 @@ static int smile_3d_create_pipeline(void)
         "cbuffer P:register(b0){row_major float4x4 model;row_major float4x4 mvp;row_major float4x4 normalMatrix;"
         "float4 objectColor;float4 baseFactor;float4 surfaceFactors;float4 emissiveAlpha;float4 textureFlags;"
         "float4 cameraPosition;float4 ambientLight;float4 directionalDirection;float4 directionalColor;"
-        "float4 localPositionType[4];float4 localDirectionRange[4];float4 localColorIntensity[4];float4 localCone[4];"
+        "float4 localPositionType[64];float4 localDirectionRange[64];float4 localColorIntensity[64];float4 localCone[64];"
         "float4 animation;row_major float4x4 shadowMvp;float4 shadow;float4 output;float4 shadowStyle;float4 reflection;float4 reflectionViewport;row_major float4x4 bones[32];}"
         "cbuffer B:register(b1){row_major float4x4 modelBones[192];}"
         "struct I{float3 p:POSITION;float3 n:NORMAL;float2 uv:TEXCOORD0;float4 j:BLENDINDICES;float4 w:BLENDWEIGHT;float4 t:TANGENT;};"
@@ -5112,7 +5113,7 @@ static int smile_3d_create_pipeline(void)
         "cbuffer P:register(b0){row_major float4x4 model;row_major float4x4 mvp;row_major float4x4 normalMatrix;"
         "float4 objectColor;float4 baseFactor;float4 surfaceFactors;float4 emissiveAlpha;float4 textureFlags;"
         "float4 cameraPosition;float4 ambientLight;float4 directionalDirection;float4 directionalColor;"
-        "float4 localPositionType[4];float4 localDirectionRange[4];float4 localColorIntensity[4];float4 localCone[4];"
+        "float4 localPositionType[64];float4 localDirectionRange[64];float4 localColorIntensity[64];float4 localCone[64];"
         "float4 animation;row_major float4x4 shadowMvp;float4 shadow;float4 output;float4 shadowStyle;float4 reflection;float4 reflectionViewport;row_major float4x4 bones[32];}"
         "Texture2D baseTexture:register(t0);Texture2D normalMap:register(t1);Texture2D ormTexture:register(t2);Texture2D emissiveTexture:register(t3);"
         "SamplerState baseSampler:register(s0);SamplerState normalSampler:register(s1);SamplerState ormSampler:register(s2);SamplerState emissiveSampler:register(s3);Texture2D reflectionTexture:register(t4);SamplerState reflectionSampler:register(s4);Texture2D shadowMap:register(t5);SamplerComparisonState shadowSampler:register(s5);"
@@ -5139,7 +5140,7 @@ static int smile_3d_create_pipeline(void)
         "rough=min(1,sqrt(sqrt(pow(rough,4)+variance)));"
         "float3 V=normalize(cameraPosition.xyz-world);float coverage=1;float3 color=ambientLight.rgb*ambientLight.w*base.rgb*ao;"
         "if(directionalDirection.w>.5){float3 L=normalize(directionalDirection.xyz);float sf=shadow.y<1.5?ShadowValue(sp,N,L):1;if(shadow.y<1.5)coverage=sf;if(shadowStyle.x>=0)sf=1;color+=Shade(N,V,L,directionalColor.rgb*directionalColor.w*sf,base.rgb,metal,rough);}"
-        "[unroll]for(int light=0;light<4;++light){float type=localPositionType[light].w;if(type>.5){float3 delta=localPositionType[light].xyz-world;"
+        "[loop]for(int light=0;light<64;++light){float type=localPositionType[light].w;if(type>.5){float3 delta=localPositionType[light].xyz-world;"
         "float distance=length(delta);float range=max(localDirectionRange[light].w,.0001);if(distance<range){float3 L=delta/max(distance,.0001);"
         "float ratio=distance/range;float attenuation=pow(saturate(1-ratio*ratio),2)/(1+2*ratio*ratio);"
         "if(type>1.5){float spot=dot(-L,normalize(localDirectionRange[light].xyz));attenuation*=smoothstep(localCone[light].y,localCone[light].x,spot);}"

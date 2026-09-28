@@ -191,7 +191,7 @@ def lighting(document):
     for obj in list(bpy.context.scene.objects):
         if obj.type == 'LIGHT':
             bpy.data.objects.remove(obj, do_unlink=True)
-    red, green, blue, intensity, ambient, azimuth, elevation, shadows = document['sun']
+    red, green, blue, intensity, ambient, azimuth, elevation, shadows = document['sun'][:8]
     sun = bpy.data.lights.new('Town Editor Sun', 'SUN')
     sun.color = (red/255, green/255, blue/255)
     sun.energy = intensity / 100
@@ -226,7 +226,7 @@ def main():
     rid = document['request_id']
     try:
         respond(data_folder, rid, 0, 5, 'Opening saved template scene...')
-        source = TOWN / 'Authoring/Catalog.blend'
+        source = TOWN / catalog.get('blend_source', 'Authoring/Catalog.blend')
         if hashlib.sha256(source.read_bytes()).hexdigest() != catalog['source_sha256']:
             raise ValueError('Immutable template scene checksum differs')
         target = destination(document, output_root)

@@ -36,7 +36,7 @@ Public Function Initialize(FirstSlot As Number, Capacity As Number) As Boolean
     If (FirstSlot < 0 Or
         Capacity < 1 Or
         Capacity > MAX_LEASES Or
-        LastSlot > 3) Then
+        LastSlot >= Graphics3D.MaximumLocalLightCount3D()) Then
         ErrorValue = ERROR_CONFIGURATION
         Return False
     End If

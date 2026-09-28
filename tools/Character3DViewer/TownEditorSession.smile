@@ -4,6 +4,7 @@ Module Smile.Tools.TownEditorSession
 Option Explicit
 
 Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.Graphics3D As G
 Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownCatalogData As Catalog
 Import Smile.Tools.TownInitialSurface As Initial
@@ -540,6 +541,16 @@ Public Function Draw() As Boolean
 
 End Function
 
+Public Function ApplyLocalLighting() As Boolean
+
+    Dim Ok As Boolean
+
+    Ok = Lighting.ApplyLocal(Town)
+
+    Return Ok
+
+End Function
+
 Public Sub Overlay(View As P.Camera3D)
 
     Call Tabs.Draw(OpenTabs, Town)
@@ -619,6 +630,7 @@ Public Sub Release()
     Call Renderer.Destroy(Assets)
     Call Navigation.Disable()
 
+    Ok = G.ClearAdditionalLights3DChecked() And Ok
     Ready = False
     Prepared = False
     TeleportPending = HaveDocument
@@ -639,9 +651,10 @@ Public Function TownName() As Text
 
 End Function
 
-Public Sub DrawMap(Position As P.Vector3, Opacity As Number, LeaderName As Text)
+Public Sub DrawMap(Position As P.Vector3, Opacity As Number, LeaderName As Text,
+    LandmarkName As Text, LandmarkPosition As P.Vector3)
 
-    Call Map.Draw(Town, Position, Opacity, LeaderName)
+    Call Map.Draw(Town, Position, Opacity, LeaderName, LandmarkName, LandmarkPosition)
 
 End Sub
 
@@ -654,13 +667,16 @@ Public Sub FrameDocument(ByRef Camera As P.Camera3D, Optional Overview As Boolea
 
     Direction = Math3D.Subtract(Camera.Position, Camera.Target)
 
-    If Overview Then
-        Direction = P.Vector(0.4, 0.7, -0.9)
-    End If
-
     Ok = Math3D.TryNormalize(Direction, Direction)
     Camera.Target = P.Vector((Town.Surface.OriginX + Town.Surface.XEdges[Town.Surface.Columns]) * 0.5,
         150.0, (Town.Surface.OriginZ + Town.Surface.ZEdges[Town.Surface.Rows]) * 0.5)
+
+    If Overview Then
+        Call Tour.Frame(Camera, Camera.Target)
+
+        Return
+    End If
+
     Radius = Sqrt((Town.Surface.XEdges[Town.Surface.Columns] - Town.Surface.OriginX) *
         (Town.Surface.XEdges[Town.Surface.Columns] - Town.Surface.OriginX) +
         (Town.Surface.ZEdges[Town.Surface.Rows] - Town.Surface.OriginZ) *
@@ -668,12 +684,6 @@ Public Sub FrameDocument(ByRef Camera As P.Camera3D, Optional Overview As Boolea
     Angle = Math3D.Radians(Camera.FovDegrees * 0.5)
     Angle = Atan2(Sin(Angle) * Min(1.0, ToDouble(Window_Width()) / ToDouble(Max(1, Window_Height()))), Cos(Angle))
     Camera.Position = Math3D.Add(Camera.Target, Math3D.Scale(Direction, Radius / Sin(Angle)))
-
-End Sub
-
-Public Sub ReadTour(ByRef Value As Tour.State, IncludeCastle As Boolean)
-
-    Call Tour.ReadTown(Value, Town, IncludeCastle)
 
 End Sub
 

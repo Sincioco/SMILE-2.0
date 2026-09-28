@@ -75,6 +75,8 @@ For Index = 0 To 180
 End For
 
 Call Check(Value.Ready And Value.Edited And Not Value.Failed, "Editable Town And Party Load Together")
+Call Check(G.LiveModelCount3D() + 14 <= G.MaximumModelCount3D(),
+    "Royal Court And Detailed Shrubs Leave Room For All Fourteen Optional Tripo Models")
 
 Print "Meshes " + Calibration.NumberText(G.LiveMeshCount3D())
 Print "Materials " + Calibration.NumberText(G.LiveMaterialCount3D())
@@ -276,6 +278,7 @@ Sub CheckSunGesture()
     Dim Command As Number
 
     Call Document.DefaultSun(Draft.Light)
+    Call Check(Draft.Light.Azimuth = 207.0, "Day Preset Defaults To Sun Azimuth 207")
     Call Commands.ResetHistory(Controls, Draft)
 
     Controls.Ui.SunSlider.Original = Draft.Light
@@ -318,5 +321,18 @@ Sub CheckSunGesture()
     Call Sun.SetValue(Draft, 7, 65)
     Call Check(Draft.Light.ShadowOpacity = 65,
         "Choosing The Legacy Shadow Slider Position Commits Explicit Opacity")
+
+    Command = Commands.Command(Controls, Draft, 222)
+
+    Call Check(Draft.Light.RedValue = 140 And Draft.Light.GreenValue = 174 And
+        Draft.Light.BlueValue = 255 And Draft.Light.Intensity = 8 And Draft.Light.Ambient = 8 And
+        Draft.Light.Azimuth = 207.0 And Draft.Light.Elevation = 25.0 And
+        Draft.Light.ShadowOpacity = 65 And Draft.Light.Shadows,
+        "Night Button Applies The Accepted Moonlight Preset")
+
+    Command = Commands.Command(Controls, Draft, 221)
+
+    Call Check(Draft.Light.Intensity = 260 And Draft.Light.Azimuth = 207.0,
+        "Day Button Restores Daylight At Azimuth 207")
 
 End Sub

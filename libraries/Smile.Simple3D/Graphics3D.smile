@@ -532,6 +532,7 @@ Public Const LIGHT_QUERY_ACTIVE_COUNT = 1
 Public Const LIGHT_QUERY_AMBIENT = 2
 Public Const LIGHT_QUERY_DIRECTIONAL = 3
 Public Const LIGHT_QUERY_LOCAL = 4
+Public Const LIGHT_QUERY_MAX_LOCAL = 5
 Public Const PBR_TEXTURE_USAGE = 1
 Public Const PBR_TEXTURE_FILTER = 2
 Public Const PBR_TEXTURE_WRAP = 3
@@ -3899,7 +3900,7 @@ Public Function ClearAdditionalLights3DChecked() As Boolean
 
     Result = True
 
-    For Slot = 0 To 3
+    For Slot = 0 To MaximumLocalLightCount3D() - 1
 
         If Dispatch(COMMAND_SET_LOCAL_LIGHT, Slot, LIGHT_DISABLED, 0, 0, 0, 0, 0, 0, 0, 0) = 0 Then
             Result = False
@@ -3924,6 +3925,18 @@ Public Function ActiveLightCount3D() As Number
     Dim Result As Number
 
     Result = Dispatch(COMMAND_LIGHT_VALUE, LIGHT_QUERY_ACTIVE_COUNT, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Return Result
+
+End Function
+
+''' Native supports 64 local lights; older backends retain their four-slot contract.
+Public Function MaximumLocalLightCount3D() As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_LIGHT_VALUE, LIGHT_QUERY_MAX_LOCAL, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Result = Max(4, Result)
+
     Return Result
 
 End Function

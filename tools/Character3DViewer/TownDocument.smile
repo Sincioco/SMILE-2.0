@@ -52,10 +52,23 @@ Public Sub DefaultSun(ByRef Value As Sun)
     Value.BlueValue = 214
     Value.Intensity = 260
     Value.Ambient = 38
-    Value.Azimuth = 58.0
+    Value.Azimuth = 207.0
     Value.Elevation = 54.0
     Value.Shadows = True
     Value.ShadowOpacity = 65
+
+End Sub
+
+Public Sub NightSun(ByRef Value As Sun)
+
+    Call DefaultSun(Value)
+
+    Value.RedValue = 140
+    Value.GreenValue = 174
+    Value.BlueValue = 255
+    Value.Intensity = 8
+    Value.Ambient = 8
+    Value.Elevation = 25.0
 
 End Sub
 

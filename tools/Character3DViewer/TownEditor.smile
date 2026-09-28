@@ -253,12 +253,8 @@ Public Function Command(ByRef Value As State, ByRef Town As Document.State, Acti
 
     Else If Action = 222 Then
 
-        Town.Light.RedValue = 140
-        Town.Light.GreenValue = 174
-        Town.Light.BlueValue = 255
-        Town.Light.Intensity = 35
-        Town.Light.Ambient = 8
-        Town.Light.Elevation = 25.0
+        Call Document.NightSun(Town.Light)
+
         Town.Revision = Town.Revision + 1
 
     Else

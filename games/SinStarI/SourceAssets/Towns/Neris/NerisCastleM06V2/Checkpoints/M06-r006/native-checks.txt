@@ -1,0 +1,5 @@
+327 SMILE language/compiler/project checks passed.
+58 native Viewer graphics/input/audio checks passed.
+Native PBR normal checks passed.
+Town foundations/routes/render/session checks passed.
+No Web adoption or browser checks run.

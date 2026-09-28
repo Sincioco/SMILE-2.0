@@ -1,0 +1,90 @@
+{
+  "modelCount": 30,
+  "additionalModels": 0,
+  "moves": [
+    [
+      "29:11",
+      [
+        0,
+        4
+      ]
+    ],
+    [
+      "29:12",
+      [
+        0,
+        5
+      ]
+    ],
+    [
+      "29:13",
+      [
+        0,
+        6
+      ]
+    ],
+    [
+      "29:14",
+      [
+        0,
+        7
+      ]
+    ],
+    [
+      "29:15",
+      [
+        0,
+        8
+      ]
+    ],
+    [
+      "30:0",
+      [
+        29,
+        11
+      ]
+    ],
+    [
+      "30:1",
+      [
+        29,
+        12
+      ]
+    ],
+    [
+      "30:2",
+      [
+        29,
+        13
+      ]
+    ],
+    [
+      "30:3",
+      [
+        29,
+        14
+      ]
+    ],
+    [
+      "30:4",
+      [
+        29,
+        15
+      ]
+    ]
+  ],
+  "outputs": [
+    {
+      "file": "D:/SMILE 2.0/games/SinStarI/SourceAssets/Towns/Neris/NerisTownV1/Authoring/Templates/Catalog-00.glb",
+      "vertices": 125112,
+      "triangles": 101404,
+      "parts": 9
+    },
+    {
+      "file": "D:/SMILE 2.0/games/SinStarI/SourceAssets/Towns/Neris/NerisTownV1/Authoring/Templates/Catalog-29.glb",
+      "vertices": 81192,
+      "triangles": 98092,
+      "parts": 16
+    }
+  ]
+}

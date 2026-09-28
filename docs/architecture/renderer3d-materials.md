@@ -9,8 +9,10 @@ September 28 native appearance: water uses physical head-on Fresnel reflectance
 The water light vector now follows the surface-to-light convention used by PBR
 and the shadow camera. Simple-material PCF offsets use the shadow-map texel size
 (`shadow.w`), matching PBR; the previous value was the light slot. Neris applies
-an upward sun vector and a town-scale bias, with an opaque bed visible through
-water transmission so building shadows reach its water areas.
+an upward sun vector and a town-scale bias. At material opacity 100%, the water
+body is opaque blue: black or pale submerged geometry no longer changes its color.
+Lower opacity retains transmission. Reflection, sheen and directional shadows
+remain independent.
 
 Follow-up concern outside town: `Scene3D` named arena presets still submit negative
 Y directional vectors. Their current visible impact has not been revalidated;
@@ -131,7 +133,7 @@ Every queued M5.1 draw snapshots the complete simple/PBR material, including all
 
 ## Lighting
 
-The bounded light set contains one ambient term, one directional light, and four fixed local slots. A local slot is disabled, point, or spot. Point/spot attenuation is range-bounded; spot lights add normalized direction and inner/outer cone cosines. `ResetLights3D` restores white ambient at 25%, the existing white directional light at 100%, and disables local slots. There is no allocation during lighting updates or drawing.
+The bounded light set contains one ambient term, one directional light, and 64 native local slots (four on the held Web backend). A local slot is disabled, point, or spot. Point/spot attenuation is range-bounded; spot lights add normalized direction and inner/outer cone cosines. `ResetLights3D` restores white ambient at 25%, the existing white directional light at 100%, and disables local slots. `LIGHT_QUERY_MAX_LOCAL` reports capacity; shared cleanup and slot-range validation use it. The native constant buffer and shader arrays use the same 64-slot bound, with shading skipped outside each light's range. There is no allocation during lighting updates or drawing.
 
 ## Ownership and atomic model loading
 

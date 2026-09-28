@@ -827,7 +827,7 @@ Public Function SetShadowCaster(CasterType As Number, SpotSlot As Number) As Boo
     If ((CasterType <> Graphics3D.SHADOW_CASTER_DIRECTIONAL And
         CasterType <> Graphics3D.SHADOW_CASTER_SPOT) Or
         SpotSlot < 0 Or
-        SpotSlot > 3) Then
+        SpotSlot >= Graphics3D.MaximumLocalLightCount3D()) Then
         ErrorValue = SCENE_ERROR_INVALID_RENDER_SETTING
 
         Return False

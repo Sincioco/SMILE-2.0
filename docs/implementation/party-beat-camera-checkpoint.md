@@ -483,6 +483,13 @@ and Orin's zero keys (`13AE135FDA40302CB5A4B0146D7103A2ED5346AAEEBB3852AF6DD3C39
 
 ## On Hold — Studio And Web Adoption Record
 
+September 28 Royal Court follow-up is native only: opaque blue water bodies,
+0-degree manual town orbit, simple fixed-perspective map orbit, Day/Night Sun defaults, and
+placed street/landmark lighting. Native now reports 64 local-light slots; Web
+retains four. Adopt the corresponding water shader and local-light capacity on
+Web only when Sin resumes that work, then validate lighting cleanup and Chrome
+camera gestures. No Web publication or browser acceptance was performed here.
+
 September 20 shared arena work adopts `Arena3D`, `ArenaCamera3D`, `ArenaBackdrop3D`
 and `ArenaViewport3D` on native consumers. When the hold is lifted, adopt these same
 library owners and the two Viewer background assets; verify F Floor, G Grid, the

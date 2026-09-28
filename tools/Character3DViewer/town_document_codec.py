@@ -88,7 +88,7 @@ def decode(payload, catalog, request=False):
     version = r.byte()
     if version not in (1, 2):
         raise ValueError('Unsupported town format')
-    fingerprint = hashlib.sha256(json.dumps(catalog, sort_keys=True).encode()).hexdigest()
+    fingerprint = catalog.get('document_fingerprint') or hashlib.sha256(json.dumps(catalog, sort_keys=True).encode()).hexdigest()
     if r.name() != fingerprint:
         raise ValueError('Town catalog differs from the saved document')
     result = {'name': r.name(), 'dirty': r.byte()}
@@ -143,7 +143,7 @@ def decode(payload, catalog, request=False):
 
 
 def encode(document, catalog):
-    fingerprint = hashlib.sha256(json.dumps(catalog, sort_keys=True).encode()).hexdigest()
+    fingerprint = catalog.get('document_fingerprint') or hashlib.sha256(json.dumps(catalog, sort_keys=True).encode()).hexdigest()
     # Eight-value legacy snapshots must retain their checksum when opened.
     version = 2 if len(document['sun']) == 9 else 1
     result = bytearray(b'TWN') + bytes([version]) + name(fingerprint) + name(document['name']) + b'\0'

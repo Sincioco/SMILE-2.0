@@ -83,7 +83,7 @@ Public Function TemplateAt(Index As Number) As Template
             Result.Parts[10] = 335
             Result.Parts[11] = 354
             Result.Parts[12] = 365
-            Result.Parts[13] = 478
+            Result.Parts[13] = 7
 
         Case 2
             Result.Label = "Garden Pavilion"
@@ -113,7 +113,7 @@ Public Function TemplateAt(Index As Number) As Template
             Result.Parts[13] = 398
             Result.Parts[14] = 452
             Result.Parts[15] = 3
-            Result.Parts[16] = 479
+            Result.Parts[16] = 8
 
         Case 3
             Result.Label = "Estate House"
@@ -307,7 +307,7 @@ Public Function TemplateAt(Index As Number) As Template
             Result.PaletteVisible = True
             Result.Low = P.Vector(-111.999998, 0.000000, -92.400017)
             Result.High = P.Vector(111.999998, 189.400005, 81.499996)
-            Result.PartCount = 22
+            Result.PartCount = 27
             Result.SolidCount = 13
             Result.CameraCount = 2
             Result.StepCount = 10
@@ -335,16 +335,21 @@ Public Function TemplateAt(Index As Number) As Template
             Result.Parts[19] = 364
             Result.Parts[20] = 393
             Result.Parts[21] = 467
+            Result.Parts[22] = 475
+            Result.Parts[23] = 476
+            Result.Parts[24] = 477
+            Result.Parts[25] = 478
+            Result.Parts[26] = 479
 
         Case 10
             Result.Label = "Comm Tower"
             Result.Category = 1
             Result.PaletteVisible = True
-            Result.Low = P.Vector(-65.527458, 0.000000, -59.600000)
-            Result.High = P.Vector(65.527458, 250.000000, 56.873755)
+            Result.Low = P.Vector(-64.499998, 0.000000, -65.527458)
+            Result.High = P.Vector(64.499998, 250.000000, 65.527458)
             Result.PartCount = 15
             Result.SolidCount = 7
-            Result.CameraCount = 32
+            Result.CameraCount = 34
             Result.StepCount = 8
             Result.DoorCount = 2
             Result.WaterCount = 0
@@ -442,9 +447,9 @@ Public Function TemplateAt(Index As Number) As Template
             Result.Low = P.Vector(-386.448555, -14.060316, -547.999992)
             Result.High = P.Vector(386.448555, 588.650017, 320.000000)
             Result.PartCount = 20
-            Result.SolidCount = 176
-            Result.CameraCount = 154
-            Result.StepCount = 119
+            Result.SolidCount = 164
+            Result.CameraCount = 211
+            Result.StepCount = 27
             Result.DoorCount = 1
             Result.WaterCount = 1
             Result.Parts[0] = 1
@@ -669,7 +674,7 @@ Public Function TemplateAt(Index As Number) As Template
             Result.Parts[2] = 432
             Result.Parts[3] = 458
             Result.Parts[4] = 463
-            Result.Parts[5] = 475
+            Result.Parts[5] = 4
 
         Case 25
             Result.Label = "Fountain"
@@ -688,7 +693,7 @@ Public Function TemplateAt(Index As Number) As Template
             Result.Parts[2] = 433
             Result.Parts[3] = 459
             Result.Parts[4] = 464
-            Result.Parts[5] = 476
+            Result.Parts[5] = 5
 
         Case 26
             Result.Label = "Kingdom Sign"
@@ -849,7 +854,7 @@ Public Function TemplateAt(Index As Number) As Template
             Result.WaterCount = 0
             Result.Parts[0] = 271
             Result.Parts[1] = 383
-            Result.Parts[2] = 477
+            Result.Parts[2] = 6
 
     End Select
 

@@ -1,12 +1,23 @@
 {
-  "revision": "M06-r005",
-  "source": "Source/neris-castle-M06-r005.blend",
+  "revision": "M06-r006",
+  "name": "Royal Court",
+  "source": "Source/neris-castle-M06-r006.blend",
   "dimensions": "proposed-unapproved",
   "files": [
     {
       "path": "Automation/blender-background.mjs",
       "bytes": 1047,
       "sha256": "89e64f82fa19ec50a53d9e5987760a1c12156c24cf2915de2e3585873ae74e5c"
+    },
+    {
+      "path": "Automation/check-town-r003.mjs",
+      "bytes": 2328,
+      "sha256": "0d60286beb531961ecd21d9481b85a1fd29e171e92bbed2d0a289745b366614d"
+    },
+    {
+      "path": "Automation/city-hall-shrubs.mjs",
+      "bytes": 10002,
+      "sha256": "923614d3d2dc3a39d5d3e1dbafd724332dd788368c98f02163225da59ce891b4"
     },
     {
       "path": "Automation/contact-sheet.mjs",
@@ -19,14 +30,29 @@
       "sha256": "fe52dd57e5bfdf37d1a45020ea41aa7a5ccc3e02253d7f985dcfa6fb2504e941"
     },
     {
+      "path": "Automation/export-r006.mjs",
+      "bytes": 639,
+      "sha256": "66c1347a4832ba7c4280d9c836472768953038779af2e82706e23142ee05e8ac"
+    },
+    {
       "path": "Automation/finalize-record.mjs",
       "bytes": 1552,
       "sha256": "ca5e3de8237b4b4c4df3d5b4da46a94050d9982dc11e826108599877c522fadc"
     },
     {
+      "path": "Automation/flush-entrance.mjs",
+      "bytes": 4031,
+      "sha256": "1dbcd9f6afefea4b3758993c62d9f7ad895bab7b88ee714883011dfccca251fb"
+    },
+    {
+      "path": "Automation/inspect-royal-stairs.mjs",
+      "bytes": 898,
+      "sha256": "6311bd85fa2b42a32084e0e320cbee0e14b3d65329715fbeaa2776b8ef96acde"
+    },
+    {
       "path": "Automation/install-relocated-town.mjs",
-      "bytes": 1755,
-      "sha256": "16c05a3fa4eefdd0238b53dc219f00a85c0046dea675834576ae1f67e301f8c1"
+      "bytes": 2053,
+      "sha256": "68d24e90270d466c77be21657bd52bf45f5d9062c1a6abfe2f97017e52049a2b"
     },
     {
       "path": "Automation/luxury-arcade-furniture.mjs",
@@ -164,6 +190,11 @@
       "sha256": "dd58750e186df27a00ea2ec0740f1f33e5d9aecd5ea598f71c4cb1079c34a4c8"
     },
     {
+      "path": "Automation/pack-city-shrubs.mjs",
+      "bytes": 4207,
+      "sha256": "2bc25baafac2b68f784310dac610e3a5a4c425b1bc5091a926b9346f1b98dfc3"
+    },
+    {
       "path": "Automation/prepare-relocated-town.mjs",
       "bytes": 2314,
       "sha256": "6982fc2abd6f8e9b24b5a2fdcf05ddf2267a6569bc25729b4baa40588a0bf34f"
@@ -179,6 +210,11 @@
       "sha256": "a202e7d8d9945684fcf4b389e07189a58328045cbd624e3de7d9d4cd624a3e89"
     },
     {
+      "path": "Automation/publish-r006.mjs",
+      "bytes": 3831,
+      "sha256": "25f292fc815d8fbee6e7db7b65bd373e4a5ca99a36cf1a6231d70b90c9f7553f"
+    },
+    {
       "path": "Automation/README.md",
       "bytes": 1760,
       "sha256": "ab78a9da3516cbb9635b7f2f09465f46e1241e9bfa26e29a85447f2e9f583165"
@@ -189,9 +225,19 @@
       "sha256": "ac6c63a906a123d567f02c723cbf75d4255980cbfe07dff0dbc5c90922d59e06"
     },
     {
+      "path": "Automation/record-r006.mjs",
+      "bytes": 3985,
+      "sha256": "dd191579d04bdbaea266e2025df60f8520e6c214931f8fbf86e0f721b0484e04"
+    },
+    {
       "path": "Automation/relocate-town-castle.mjs",
       "bytes": 6720,
       "sha256": "0c1356e7d6f503a526f9270046b000747a5caa08c942fb3f9a3cf394e9044e01"
+    },
+    {
+      "path": "Automation/remove-royal-stairs.mjs",
+      "bytes": 6296,
+      "sha256": "ebff865e08638526863cd8ae367ec23d64e8c3a68d31e49fccdd63b00b0cef6c"
     },
     {
       "path": "Automation/repair-town-landing.mjs",
@@ -202,6 +248,26 @@
       "path": "Automation/review-r005.mjs",
       "bytes": 2307,
       "sha256": "c3bad2d8854b30fd42fecdabda28fb84b91657c36f22a036d55ef5eac23c3dc9"
+    },
+    {
+      "path": "Automation/tower-dishes.mjs",
+      "bytes": 8614,
+      "sha256": "4685e8cce30e5451de739f3de2e1798c94ec4a90b4937cbeaedcb2dfea582a48"
+    },
+    {
+      "path": "Automation/update-city-hall-town.mjs",
+      "bytes": 2886,
+      "sha256": "57740cd0847fd25e9cc02618d69e434ea34ae45cf5d8f15d23c4f107e403bec2"
+    },
+    {
+      "path": "Automation/update-royal-court-town.mjs",
+      "bytes": 6519,
+      "sha256": "d2309506f441f3b3ccafa8a323b1c702144d7c0c7ea96a700069898b90f88176"
+    },
+    {
+      "path": "Automation/update-tower-town.mjs",
+      "bytes": 2364,
+      "sha256": "3f4c0cc6b7f3025ac67dd8ee1d51541cfdc24eeed119b4c0e24252fab0acd26b"
     },
     {
       "path": "Automation/validate-m01.mjs",
@@ -216,7 +282,7 @@
     {
       "path": "castle.glb",
       "bytes": 46803820,
-      "sha256": "7d4202d2e3ccead62693bb9664b6e38fec584ab90ce122b5ef1b5ca3a3745b10"
+      "sha256": "9163a036b5015dbc53db20741ed0b9a4157bb7e160c7dcb37737e4f33f791a1a"
     },
     {
       "path": "Castle.sm3d.json",
@@ -394,6 +460,136 @@
       "sha256": "5a6ee589210be94206ee00779cdceb9f991fdae9c7d801d397d1111ac7b40db2"
     },
     {
+      "path": "Checkpoints/M06-r006/checkpoint.md",
+      "bytes": 4031,
+      "sha256": "74e00aad9f17c0127cb82aafefe57aa3d66331bd9373ae7b6686934b953ca7ca"
+    },
+    {
+      "path": "Checkpoints/M06-r006/City-Hall-r001/checks.json",
+      "bytes": 1117,
+      "sha256": "a62e584dd0e73fd186b39bec0db3932275a0aa835061eeb9041a866de2fa282e"
+    },
+    {
+      "path": "Checkpoints/M06-r006/City-Hall-r001/city-hall-shrubs.png",
+      "bytes": 1380692,
+      "sha256": "293dfd52b96353d05fea0b5e86a52a5e6b5055a36617b3b4f2a2a98801da0ad5"
+    },
+    {
+      "path": "Checkpoints/M06-r006/City-Hall-r001/packing.json",
+      "bytes": 1137,
+      "sha256": "451750bc9536ed755d56f7287a659469d364ef39ad790534836285f7a6779c6c"
+    },
+    {
+      "path": "Checkpoints/M06-r006/City-Hall-r001/town-update-fixed.log",
+      "bytes": 937,
+      "sha256": "6877a08f852c808f3d2d86d95286e77f1e6d60317491f8d0bc72b7b9bdf072f2"
+    },
+    {
+      "path": "Checkpoints/M06-r006/entrance-checks.json",
+      "bytes": 1068,
+      "sha256": "c94a883cfa55c0f26f5522bfc72bcdca127df8b70daa41744ffd6096b983d028"
+    },
+    {
+      "path": "Checkpoints/M06-r006/entrance-day.png",
+      "bytes": 1294550,
+      "sha256": "45a0b085b6333be02a464370824be92033e5d3d36ca0e1c9245b5964b13c16b4"
+    },
+    {
+      "path": "Checkpoints/M06-r006/entrance-night.png",
+      "bytes": 1357736,
+      "sha256": "e45e941030164e37488df79869596346ff440e8764a15c18a44f172bca818826"
+    },
+    {
+      "path": "Checkpoints/M06-r006/native-checks.txt",
+      "bytes": 230,
+      "sha256": "65f27bc29d14feb27e9fd0aba0422496f3aeda2897027d86953101f8a112079d"
+    },
+    {
+      "path": "Checkpoints/M06-r006/native-night.jpg",
+      "bytes": 225782,
+      "sha256": "49e27a7ab340a558ce95d107fbae0637d92fc3fd2db26b4df0bdb69b6b4c1f44"
+    },
+    {
+      "path": "Checkpoints/M06-r006/offline-validation.json",
+      "bytes": 1715,
+      "sha256": "fde84c48543e8df23264cb8cc6541ede404df628ca23af1eeb45d4ff1e6ab142"
+    },
+    {
+      "path": "Checkpoints/M06-r006/pbr-tests.log",
+      "bytes": 39,
+      "sha256": "864da2ad054f89ee08804648e595cfd4f89fa59c70559968cd1948a622096cb9"
+    },
+    {
+      "path": "Checkpoints/M06-r006/publish-checks.json",
+      "bytes": 273,
+      "sha256": "c03344ee16916200d0dc945189269a92b15059f0eb4df2e8acd7a78c72a809c4"
+    },
+    {
+      "path": "Checkpoints/M06-r006/round-trip.log",
+      "bytes": 768,
+      "sha256": "bee73241a17e6de7ba2a03b994e19cc0c08c497d22755dd15e47fc9350fe5406"
+    },
+    {
+      "path": "Checkpoints/M06-r006/style-check.log",
+      "bytes": 42,
+      "sha256": "ee91006eab62f20cf17ca9a63fd4850f9fb62f0d42822631aa41c02d98529396"
+    },
+    {
+      "path": "Checkpoints/M06-r006/Tower-r001/checks.json",
+      "bytes": 861,
+      "sha256": "ef1f0921ede6b334a88ce625879b6911605173b3df2c8031385316a893842aed"
+    },
+    {
+      "path": "Checkpoints/M06-r006/Tower-r001/tower-dishes.png",
+      "bytes": 1498964,
+      "sha256": "70b47b3817c02d18e9587c6e0ea00042ea921f9aef89dae26cca70d85a6d68c1"
+    },
+    {
+      "path": "Checkpoints/M06-r006/Tower-r001/town-update-baked.log",
+      "bytes": 503,
+      "sha256": "9bbe03ecd9ccc51ae191a7c30917108568b2746f6bb830f91d40f8adea43f277"
+    },
+    {
+      "path": "Checkpoints/M06-r006/town-checks.json",
+      "bytes": 370,
+      "sha256": "45394e8cd6cc056e0019bc3ad673e1a87ed2ec7063e89d732b84ab998a9708a7"
+    },
+    {
+      "path": "Checkpoints/M06-r006/town-day.png",
+      "bytes": 1544895,
+      "sha256": "60bbb44ae6947c56fcc097b220680f7749cf0b19a4c97c93e5e6b77c3803e26b"
+    },
+    {
+      "path": "Checkpoints/M06-r006/town-foundations.log",
+      "bytes": 30,
+      "sha256": "2ea187b6b0a196ffc846dde1bdea5f24fcdc287367921329514170036b6ada2a"
+    },
+    {
+      "path": "Checkpoints/M06-r006/town-render.log",
+      "bytes": 57,
+      "sha256": "5f4376c137b6eedbd290c8e0532f828199d7573b1dbc13e19cb696298b8a3d43"
+    },
+    {
+      "path": "Checkpoints/M06-r006/town-routes.log",
+      "bytes": 53,
+      "sha256": "e3b4c90031eefa98542f0d9b524d6ed8e468432d8acd3b9c30a490488d53fbca"
+    },
+    {
+      "path": "Checkpoints/M06-r006/town-session.log",
+      "bytes": 103,
+      "sha256": "a9be7c95c62a439fcca94c040f44e5d7a2b8bf0b6f6028f3add891b7d3949418"
+    },
+    {
+      "path": "Checkpoints/M06-r006/vsix-check.log",
+      "bytes": 363,
+      "sha256": "0ad932c711572c276e0f7681fbbfd2ad449134342c6fe6528ef2d26959ca4461"
+    },
+    {
+      "path": "Checkpoints/M06-r006/water-tests.log",
+      "bytes": 1064,
+      "sha256": "0d4fd32f13bfa241cb9f0dd2948fc3ab343b6a9639cbebbbcc9bea637dd6cd88"
+    },
+    {
       "path": "Checkpoints/main-window-progress.png",
       "bytes": 1679362,
       "sha256": "f73f0d610b868433b7812ccc9001648884ed3f6a0b7b3019ec573bd4a0e45be1"
@@ -450,8 +646,8 @@
     },
     {
       "path": "export-settings.json",
-      "bytes": 4405,
-      "sha256": "f95500df5a9a119ccdcd97c7a5c5275fe73b22688e0757738d9f361712e56fea"
+      "bytes": 4290,
+      "sha256": "ad67e71f06008d73bd14256fe824fc4d8e0f4233385be49eb5f2657c772155f9"
     },
     {
       "path": "Native/castle-00.glb",
@@ -461,12 +657,12 @@
     {
       "path": "Native/castle-01.glb",
       "bytes": 4659404,
-      "sha256": "364138dd2e7bc8557dcfdcc79685a730a24ce1d97bd77c9df98c6fa7785d1320"
+      "sha256": "495f93a9f6edf36bb5c2ed4d7400ad2936f1262b75f3089afa45a4a63c529762"
     },
     {
       "path": "Native/castle-02.glb",
       "bytes": 4662340,
-      "sha256": "baf9d0aa5251cfd8b54a227e5b582c03fa3464fce5a4e7291279ac9dfdf1eb77"
+      "sha256": "119129dcedc2df2e158e0dd604a1d1fb5e9e42bc3058f522e78f2a5dfe905be3"
     },
     {
       "path": "Native/castle-03.glb",
@@ -476,17 +672,17 @@
     {
       "path": "Native/castle-04.glb",
       "bytes": 4741884,
-      "sha256": "b4d5895d7fa76defbf3611b138cea7530f8a7e8bc9f96894f7f418226705c5e1"
+      "sha256": "4b67b6a739355ee6468a10c890d7d38bcf39ed49abac11159c3f49393b7bb78d"
     },
     {
       "path": "Native/castle-05.glb",
       "bytes": 4670968,
-      "sha256": "eaba7fd0021c523063a66f90bfcedbb1739c887029a043892e2a161f3d099ee5"
+      "sha256": "2434522d81e2d6567d4391318083186217e9560dd637719c0083a518d85404e3"
     },
     {
       "path": "Native/castle-06.glb",
       "bytes": 4697804,
-      "sha256": "d44ec8e01db204017847d4643dac96b02469dc98315ebeb65fe05cd630ef2908"
+      "sha256": "0e7a776188dcbe842dceb6efaac79e9a160e009ba7cc6fdffb31ac80a85021d2"
     },
     {
       "path": "Native/castle-07.glb",
@@ -516,7 +712,7 @@
     {
       "path": "Native/native-layout.json",
       "bytes": 6499,
-      "sha256": "ca0f2586091b11379118605a0c22d9f68e19d9f76d64127c59d581bbea41935a"
+      "sha256": "27b4404f132b1e444b5d3b80e720df65c6886d261ed68b86ca4d60865e34b760"
     },
     {
       "path": "Native/neris-ivory-courses-1024.png",
@@ -526,17 +722,17 @@
     {
       "path": "neris-castle.glb",
       "bytes": 47943196,
-      "sha256": "ec15a328cbbcc367daa580ce8d0d450eb92cd7fe207745c520876a9ab8dd7ff6"
+      "sha256": "c075ca27d3e14710336fdb7449f0fae1d28f5d872ba7be573d8ef8e97c035afc"
     },
     {
       "path": "prepare-native.mjs",
       "bytes": 3584,
-      "sha256": "58367e5f22f9372d059fec2f8b0ba9435d664f5da6f4c77c46a2dde10df2feaf"
+      "sha256": "0e91babf107ecd2f8b2dc95689032ff60dca78587fd9220a1ad2320cf094d5af"
     },
     {
       "path": "README.md",
-      "bytes": 4338,
-      "sha256": "8f609877576fb5e6f8c3ab09776a963a93d7d80aa598177d31099f8dd18e820b"
+      "bytes": 4826,
+      "sha256": "240bf12ebd490641b9435a777c66e5dfb0baef2884572904823506c0c69663be"
     },
     {
       "path": "review-cameras.json",
@@ -552,6 +748,11 @@
       "path": "Source/neris-castle-M06-r005.blend",
       "bytes": 31011720,
       "sha256": "0f8c2cac461aa62fd5e948ed760c40e5308228c7e58c98329f96ed38bbe57899"
+    },
+    {
+      "path": "Source/neris-castle-M06-r006.blend",
+      "bytes": 31069691,
+      "sha256": "fc3db55f3889aa87afe5d1be4f72f8021655b05ddf9954785ffb4dc5d55cd272"
     },
     {
       "path": "specification.json",

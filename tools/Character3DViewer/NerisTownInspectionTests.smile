@@ -16,7 +16,6 @@ Import Smile.Simple3D.ArenaCamera3D As Motion
 Import Smile.Simple3D.PrecisionCamera3D As Camera
 Import Smile.Tools.TownPicking As Picking
 Import Smile.Tools.TownEditorSession As Authoring
-Import Smile.Tools.NerisTownTour As Tour
 Import Smile.Tools.NerisTownNavigation As Navigation
 
 Public Sub Run(ByRef Value As Town.State, ByRef Failures As Number)
@@ -37,7 +36,7 @@ Public Sub Run(ByRef Value As Town.State, ByRef Failures As Number)
     Call ShiftMiddlePan(Value, Failures)
     Call KeyboardModes(Value, Failures)
     Call CursorOrbit(Value, Failures)
-    Call LandmarkTour(Value, Failures)
+    Call MapOrbit(Value, Failures)
 
     Call Party.Teleport(Value.People, SavedPosition)
     Call Party.Update(Value.People, SavedPosition, 0)
@@ -99,53 +98,54 @@ Private Sub CursorOrbit(ByRef Value As Town.State, ByRef Failures As Number)
 
 End Sub
 
-Private Sub LandmarkTour(ByRef Value As Town.State, ByRef Failures As Number)
+Private Sub MapOrbit(ByRef Value As Town.State, ByRef Failures As Number)
 
-    Dim View As P.Camera3D
     Dim Before As P.Camera3D
+    Dim Expected As P.Camera3D
+    Dim Offset As P.Vector3
     Dim Index As Number
-    Dim Previous As Number
-    Dim Changes As Number
-    Dim MaximumStep As Double
-    Dim Closest As Double
+    Dim Steady As Boolean
 
-    If Not Value.Edited Then
-        Return
+    Call Town.StartOrbit(Value)
+
+    Before = Value.View.LiveCamera
+    Expected = Before
+
+    If Value.Edited Then
+        Call Authoring.FrameDocument(Expected, True)
     End If
 
-    Call Town.ResetOverview(Value)
-    Call Authoring.ReadTour(Value.TourState, True)
+    Offset = M.Subtract(Before.Position, Before.Target)
 
-    View = Value.View.LiveCamera
+    Call Check(M.Distance(Before.Target, Expected.Target) < 0.01 And Not Value.Follow,
+        "Orbit Starts At The Map Center Instead Of A Party Or Building", Failures)
+    Call Check(Abs(M.Length(Offset) - 8725.0) < 0.01 And
+        Abs(M.Degrees(Atan2(Offset.Y, Sqrt(Offset.X * Offset.X + Offset.Z * Offset.Z))) - 33.0) < 0.001 And
+        Before.FovDegrees = 32.0,
+        "Map Orbit Uses The Approved 33 Degree 8725 Distance Perspective", Failures)
 
-    Call Tour.Start(Value.TourState, View, 5742)
+    Value.OrbitPaused = True
 
-    Previous = Value.TourState.Selected
-    Before = View
-    View = Tour.Advance(Value.TourState, View, 100, True)
+    Call Town.Update(Value, 16)
+    Call Check(M.Distance(Before.Position, Value.View.LiveCamera.Position) < 0.01,
+        "Space Pause Holds Map Orbit Framing", Failures)
 
-    Call Check(M.Distance(Before.Position, View.Position) = 0.0 And Value.TourState.Clock = 0,
-        "Paused Tour Holds Both Framing And Its Shot Clock", Failures)
+    Value.OrbitPaused = False
+    Steady = True
 
-    Closest = 100000.0
+    ' Sample the composed camera across one complete revolution, without waiting.
 
-    For Index = 0 To 999
+    For Index = 1 To 1440
+        Call Town.Update(Value, 100)
 
-        Before = View
-        View = Tour.Advance(Value.TourState, View, 100, False)
-        MaximumStep = Max(MaximumStep, M.Distance(Before.Position, View.Position))
-        Closest = Min(Closest, M.Distance(View.Position, View.Target))
-
-        If Previous <> Value.TourState.Selected Then
-            Changes = Changes + 1
-            Previous = Value.TourState.Selected
-        End If
-
+        Steady = (Steady And M.Distance(Before.Target, Value.View.LiveCamera.Target) < 0.01 And
+            Abs(Before.Position.Y - Value.View.LiveCamera.Position.Y) < 0.01 And
+            Abs(M.Distance(Value.View.LiveCamera.Position, Value.View.LiveCamera.Target) - 8725.0) < 0.01)
     End For
 
-    Call Check(Value.TourState.SubjectCount > 20 And Changes >= 2 And Closest < 3000.0,
-        "Tour Visits Different Placed Buildings And Includes Close Views", Failures)
-    Call Check(MaximumStep < 600.0, "Continuous Tour Never Cuts Between Building Shots", Failures)
+    Call Check(Steady, "Full Map Orbit Keeps Height Zoom And Center Without Building Detours", Failures)
+    Call Check(M.Distance(Before.Position, Value.View.LiveCamera.Position) < 0.01,
+        "Steady Map Orbit Completes One Revolution At 2.5 Degrees Per Second", Failures)
     Call Town.ResetOverview(Value)
 
 End Sub
@@ -325,7 +325,7 @@ Private Sub InspectionPitch(ByRef Value As Town.State, ByRef Failures As Number)
     Offset = M.Subtract(Value.View.LiveCamera.Position, Value.View.LiveCamera.Target)
     Pitch = M.Degrees(Atan2(Offset.Y, Sqrt(Offset.X * Offset.X + Offset.Z * Offset.Z)))
 
-    Call Check(Abs(Pitch - 8.0) < 0.01 And Value.View.LiveCamera.Target.Y < 1000.0,
+    Call Check(Abs(Pitch) < 0.01 And Value.View.LiveCamera.Target.Y < 1000.0,
         "Inspection Cannot Lift Its Aim Into The Sky At Maximum Zoom", Failures)
 
     Value.Follow = True
@@ -339,8 +339,8 @@ Private Sub InspectionPitch(ByRef Value As Town.State, ByRef Failures As Number)
     Offset = M.Subtract(Value.View.LiveCamera.Position, Value.View.LiveCamera.Target)
     Pitch = M.Degrees(Atan2(Offset.Y, Sqrt(Offset.X * Offset.X + Offset.Z * Offset.Z)))
 
-    Call Check(Abs(Pitch - 8.0) < 0.01,
-        "Inspection Orbit Around The Party Also Rejects Sky-Facing Pitch", Failures)
+    Call Check(Abs(Pitch) < 0.01,
+        "Manual Orbit Around The Party Reaches Zero But Rejects Sky-Facing Pitch", Failures)
 
     Value.Follow = False
     Value.Flight.OrbitAtParty = False
@@ -355,6 +355,24 @@ Private Sub InspectionPitch(ByRef Value As Town.State, ByRef Failures As Number)
         "Inspection Keeps Its Upper Orbit Bound", Failures)
     Call Check(Drone.MinimumPitch(True) = -20.0,
         "Party Following Retains Its Low Horizon Range", Failures)
+    Call Town.ResetOverview(Value)
+
+    Value.Cinematic = False
+    Value.Keys.FlyInspect = True
+    Value.View.Controls.OrbitPitch = -120.0
+    Value.View.Zoom.Current = 18000.0
+    Value.View.Zoom.Target = 18000.0
+
+    Call Town.Update(Value, 0)
+
+    Offset = M.Subtract(Value.View.LiveCamera.Position, Value.View.LiveCamera.Target)
+    Pitch = M.Degrees(Atan2(Offset.Y, Sqrt(Offset.X * Offset.X + Offset.Z * Offset.Z)))
+
+    Call Check(Abs(Pitch) < 0.01 And Value.View.LiveCamera.Target.Y < 1000.0,
+        "Fly Inspect Orbit Stops At Horizon Without Lifting The Town Out Of View", Failures)
+
+    Value.Keys.FlyInspect = False
+
     Call Town.ResetOverview(Value)
 
 End Sub

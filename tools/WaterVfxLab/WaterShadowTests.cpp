@@ -190,5 +190,43 @@ int main()
     water_scene.reset();
     printf("Local scene-color reflections without distortion: %s\n", localized ? "PASS" : "FAIL");
     passed = passed && localized;
+    // Fully opaque blue water must not reveal a black or white submerged bed.
+    // Reflection is independently tested above; leave depth disabled here so
+    // only the unwanted transmitted background changes between the two draws.
+    auto opaque_source = pixel;
+    marker = opaque_source.find("waterParameters=float4(1,.6,0,0)");
+    opaque_source.replace(marker, strlen("waterParameters=float4(1,.6,0,0)"), "waterParameters=float4(1,.6,0,1)");
+    marker = opaque_source.find("float4(.8,.8,.8,1)");
+    opaque_source.replace(marker, strlen("float4(.8,.8,.8,1)"), "float4(.118,.392,.941,1)");
+    auto opaque_code = compile(opaque_source, "ps_5_0");
+    ComPtr<ID3D11PixelShader> opaque_shader;
+    require(device->CreatePixelShader(opaque_code->GetBufferPointer(), opaque_code->GetBufferSize(), 0, &opaque_shader));
+    float colors[2][4] = {};
+    float disabled[] = {0, 1.f/64, .001f, 0, -1, 0, 0, 0};
+    context->UpdateSubresource(constants.Get(), 0, 0, disabled, 0, 0);
+    for (int background=0; background<2; ++background)
+    {
+        float color[] = {(float)background, (float)background, (float)background, 1};
+        context->ClearRenderTargetView(rtv.Get(), color);
+        require(water_scene.capture(device.Get(), context.Get(), rtv.Get()) ? S_OK : E_FAIL);
+        context->OMSetRenderTargets(1, rtv.GetAddressOf(), 0);
+        context->PSSetShader(opaque_shader.Get(), 0, 0);
+        {
+            SmileWaterTextureBinding3D binding(context.Get(), water_scene.view, color_sampler.Get(), 0, 0);
+            context->Draw(3, 0);
+        }
+        context->CopyResource(staging.Get(), target.Get());
+        D3D11_MAPPED_SUBRESOURCE mapped = {};
+        require(context->Map(staging.Get(), 0, D3D11_MAP_READ, 0, &mapped));
+        const float* row = (const float*)((const char*)mapped.pData + 32*mapped.RowPitch);
+        for (int channel=0; channel<4; ++channel) colors[background][channel]=row[32*4+channel];
+        context->Unmap(staging.Get(), 0);
+    }
+    bool opaque_blue = colors[0][2] > .1f && colors[0][2] > colors[0][0]*3 && colors[0][3] > .999f;
+    for (int channel=0; channel<4; ++channel)
+        opaque_blue = opaque_blue && fabsf(colors[0][channel]-colors[1][channel]) < .00001f;
+    water_scene.reset();
+    printf("Opaque blue water hides black/white submerged beds: %s\n", opaque_blue ? "PASS" : "FAIL");
+    passed = passed && opaque_blue;
     return passed ? 0 : 1;
 }

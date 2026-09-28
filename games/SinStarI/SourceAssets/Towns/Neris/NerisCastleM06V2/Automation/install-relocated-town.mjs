@@ -11,6 +11,11 @@ const bytes = fs.readFileSync(source);
 if (bytes.toString('ascii', 0, 4) !== 'SMD4' || bytes.readUInt32LE(8) !== bytes.length - 44 ||
     hash(bytes.subarray(44)) !== bytes.subarray(12, 44).toString('hex')) throw Error('Invalid portable document');
 const folder = path.join(process.env.LOCALAPPDATA, 'SMILE 2.0/Games', hash('smile.tools.character3d-viewer'), 'Data');
+if (process.argv[3]) {
+  const expected = fs.readFileSync(process.argv[3], 'utf8').trim();
+  const current = fs.readFileSync(path.join(folder, hash('TownEditor.PermanentNeris') + '.bin'));
+  if (hash(current) !== expected) throw Error('The live town changed; recapture it before installation.');
+}
 const backup = root + '/before-royal-relocation-' + new Date().toISOString().replaceAll(':', '-');
 fs.mkdirSync(backup);
 const keys = ['TownEditor.PermanentNeris', 'TownEditor.Working', 'TownEditor.Current', 'TownEditor.Recovery.Neris Town', 'TownEditor.Town.Neris Town'];

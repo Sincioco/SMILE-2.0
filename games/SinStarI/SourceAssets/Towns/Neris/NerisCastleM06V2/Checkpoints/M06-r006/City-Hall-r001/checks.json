@@ -1,0 +1,43 @@
+{
+  "planters": 4,
+  "changedObjects": [
+    "Clipped Cypress.040",
+    "Clipped Cypress.041",
+    "Clipped Cypress.042",
+    "Clipped Cypress.043",
+    "Clipped Cypress.044",
+    "Clipped Cypress.045",
+    "Clipped Cypress.046",
+    "Clipped Cypress.047",
+    "Clipped Cypress.048",
+    "Clipped Cypress.049",
+    "Clipped Cypress.060",
+    "Clipped Cypress.061",
+    "Clipped Cypress.062",
+    "Clipped Cypress.063",
+    "Clipped Cypress.064",
+    "Clipped Cypress.065",
+    "Clipped Cypress.066",
+    "Clipped Cypress.067",
+    "Clipped Cypress.068",
+    "Clipped Cypress.069"
+  ],
+  "source": "D:/Projects/Sin-Star-I-Assets/Neris-Castle/source/neris-castle-M06-r006.blend",
+  "height": 1.75,
+  "width": 1.05,
+  "matchedOldTriangles": 1360,
+  "changes": [
+    {
+      "file": "Templates/Catalog-14.glb",
+      "removedTriangles": 816
+    },
+    {
+      "file": "Templates/Catalog-15.glb",
+      "removedTriangles": 544
+    }
+  ],
+  "newChunk": "Templates/Catalog-30.glb",
+  "triangles": 97704,
+  "vertices": 80848,
+  "stableDocumentFingerprint": "a0be1e73b6bd14876474e016d063eb257fd031c2de7ad2a332cbac25d8541d9d"
+}

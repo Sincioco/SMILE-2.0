@@ -42,7 +42,11 @@ def import_document(path, catalog):
             members = [o for o in anchor.children_recursive if 'town_member' in o]
             if not members:
                 continue  # Deleting a complete assembly removes it from the town.
-            if sorted(o['town_member'] for o in members) != sorted(samples[original['template']]['members']):
+            sample = samples[original['template']]
+            actual_members = sorted(o['town_member'] for o in members)
+            expected_members = sorted(sample['members'])
+            previous_members = sorted(sample['members'] + sample.get('compatible_retired_members', []))
+            if actual_members not in (expected_members, previous_members):
                 raise ValueError('Incomplete assembly; move/delete the whole Town Assembly.')
             for member in members:
                 values = member['town_local_matrix']
@@ -72,7 +76,7 @@ def import_document(path, catalog):
 
 
 def export_document(document, catalog, target, request_id, status):
-    source = TOWN / 'Authoring/Catalog.blend'
+    source = TOWN / catalog.get('blend_source', 'Authoring/Catalog.blend')
     if hashlib.sha256(source.read_bytes()).hexdigest() != catalog['source_sha256']:
         raise ValueError('Immutable template scene checksum differs.')
     bpy.ops.wm.open_mainfile(filepath=str(source), use_scripts=False)

@@ -6,10 +6,10 @@ The native Viewer opens on **Neris Town**, restoring the latest Town Editor work
 copy. Its initial catalog/layout came from
 `games/SinStarI/SourceAssets/Towns/Neris/NerisTownV1/Blend/Neris-Town-Waterfront.blend`;
 that Blender file does not replace your current editor changes.
-The new royal castle replaces the Tripo placement on the northern street circuit,
+Royal Court replaces the Tripo placement on the northern street circuit,
 beside the existing Royal Castle and military HQ. Tripo remains a reusable palette
 building and loads its geometry/materials only while placed. The saved relocation
-is `NerisTownV1/Blend/Neris-Town-Royal-Castle-r002.blend`; the live document remains
+is `NerisTownV1/Blend/Neris-Town-Royal-Castle-r005.blend`; the live document remains
 authoritative for subsequent town edits. Eight
 estates occupy the northwest residential area, sixteen homes the southwest,
 fourteen smaller homes the northeast, and three shops the southeast. House/shop
@@ -26,6 +26,20 @@ Filtered low-contrast grass reduces shimmer. Closed surface sides prevent the
 background showing through beneath roads and water edges.
 All water uses the deep-blue moat tint. Moats use subtle, slower ripples and a
 rougher surface to soften the repeating wave highlights; fountains retain movement.
+Opaque water hides submerged geometry while retaining local reflections and shadows.
+Royal Court appears on the minimap and its front promenade meets the drawbridge.
+The original Royal Castle retains its central entrance stairs; the unused side
+stairs have been removed from the current catalog.
+City Hall's four front planters reuse smaller Royal Court evergreen shrubs,
+with layered leaf sprays and branches instead of the former pointed clusters.
+The Communication Tower's dishes occupy opposite front/back faces; its crystal
+poles remain on the opposite left/right sides, with clear separation.
+
+Day defaults to azimuth 207 degrees. Night defaults to RGB 140/174/255, intensity
+8%, ambient 8%, azimuth 207, elevation 25 and shadow opacity 65%. Both presets use
+the existing saved Sun fields. Native night lighting follows placed street lamps
+and the Royal Castle, Military HQ, Comm Tower and City Hall. Royal Court retains
+its own four architectural washes. Removing a lamp removes its emitted light.
 
 | Control | Action |
 | --- | --- |
@@ -42,8 +56,8 @@ rougher surface to soften the repeating wave highlights; fountains retain moveme
 | Shift + Middle Drag | Pan in every Viewer tab; gesture stays pan until mouse release |
 | Wheel | Ease zoom without stopping orbit |
 | F / G / B | Floor / grid / shared background |
-| O / C or Orbit | Start/resume orbit at the current zoom |
-| Right Click | Start at the map center, then continue the varied landmark tour |
+| O / C or Orbit | Start a simple map-centered orbit at 33 degrees and 8,725 distance |
+| Right Click | Reset to the same map-centered orbit perspective |
 | Fit | Fit the entire town; preserve active orbit |
 | M | Show / hide minimap |
 | 1 | North-up top-down view in and out of Edit Town |
@@ -54,15 +68,19 @@ Directly above them, a compact panel with an 80% opaque background shows sampled
 camera position and target XYZ, yaw/pitch, fixed lens FOV and eye-to-target distance.
 FPS uses actual frame time rather than the capped animation clock.
 Town entry opens centered behind Arin through the Kingdom of Neris sign. After
-20 seconds without keyboard or mouse activity, inspection orbit starts. The continuous
-tour varies its chosen houses, civic signs, castle exteriors and courtyards, with
-changing height/range and smooth transitions. Space pauses/resumes its clock. Any input
-stops that automatic orbit and restarts the idle countdown. WASD moves the party by default, independent of mouse gestures.
-The V Orbit slider spans 8 to 80 degrees in inspection. Party control and the initial
+20 seconds without keyboard or mouse activity, inspection orbit starts. The camera
+turns steadily around the map at 2.5 degrees per second, keeping its height,
+target and distance fixed. The starting perspective is 33 degrees vertical,
+8,725 units from the map center, a 32-degree lens and a -179-degree bearing.
+There is no random building selection, close-up tour or automatic zoom change.
+Space pauses/resumes the orbit. Any input stops an idle-started orbit and
+restarts the idle countdown. WASD moves the party independently of mouse gestures.
+The V Orbit slider spans 0 to 80 degrees in inspection, including Fly Inspect and
+manual orbit after Party Follow. Party control and the initial
 arrival shot retain -20 to 80 degrees. Orbiting around the party is inspection,
-so it cannot aim up into the sky at maximum zoom.
+so it stops at the horizon instead of lifting the town out of view at maximum zoom.
 The minimap shows the selected
-leader's name and X/Y/Z, **Old Castle** and **Comm Tower** labels. Movement fades
+leader's name and X/Y/Z, **Royal Court** and **Comm Tower** labels. Movement fades
 it to 80%, with a ten-second hold after stopping; M explicitly overrides visibility.
 Automatic orbit hides it until orbit stops.
 
@@ -99,14 +117,15 @@ subject to user review.
 
 ### Native loading and validation
 
-The relocated town with its party and detailed M06-r005 castle uses 468 meshes,
-432 materials and 50/64 model slots. Its castle uses 15 models/98 parts. The absent
+The relocated town with its party and detailed M06-r006 castle uses 473 meshes,
+442 materials and 50/64 model slots. Its castle uses 15 models/98 parts. The absent
 Tripo castle contributes none of its 14 geometry models, materials or draw objects.
 Placing it loads those incrementally; removing the last instance releases them.
 Tree/flower templates reuse draw objects. Original Tripo sources remain preserved.
 Native water keeps its blue tint, receives configurable sun shadows and reflects
 visible nearby geometry through a shared opaque-scene snapshot. Offscreen geometry
-uses an environment fallback. No resource capacities are raised.
+uses an environment fallback. Model/resource capacities stay unchanged; native
+local lights have an explicit 64-slot capacity (Web remains at four).
 
 Build/launch: `pwsh -File tools/Character3DViewer/Launch.ps1 -Build`.
 Checks: `scripts/test-neris-town.ps1`, `test-neris-waterfront.py`,

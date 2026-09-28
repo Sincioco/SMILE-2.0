@@ -1,232 +1,25 @@
-''' Continuous landmark tour. Owns shot selection and timing, never input or rendering.
+''' Simple map-wide orbit framing from the approved overview perspective.
 Module Smile.Tools.NerisTownTour
 
 Option Explicit
 
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PrecisionMath3D As M
-Import Smile.Simple3D.ArenaCamera3D As Motion
-Import Smile.Tools.TownDocument As Document
-Import Smile.Tools.TownCatalogData As Catalog
-Import Smile.Tools.TownGeometry As Geometry
-Import Smile.Tools.NerisCastleRoute As Castle
 
-Public Type Subject
-    Center As P.Vector3
-    Front As P.Vector3
-    Radius As Double
-    Height As Double
-    Yaw As Double
-    Kind As Number
-End Type
+Public Sub Frame(ByRef Camera As P.Camera3D, Center As P.Vector3)
 
-Public Type State
-    Subjects[1024] As Subject
-    SubjectCount As Number
-    Selected As Number
-    Seed As Number
-    Clock As Number
-    Duration As Number
-    BlendTime As Number
-    Bearing As Double
-    Sweep As Double
-    Phase As Double
-    Detail As Boolean
-    FromView As P.Camera3D
-    Skyline As Double
-End Type
+    Dim Pitch As Double
+    Dim Bearing As Double
+    Dim Radius As Double
 
-Private Function RandomValue(ByRef Value As State) As Number
-
-    Dim ReturnValue As Number
-
-    Value.Seed = (Value.Seed * 48271) Mod 2147483647
-
-    ReturnValue = Value.Seed
-
-    Return ReturnValue
-
-End Function
-
-''' Snapshot current placed buildings so moved/scaled landmarks remain authoritative.
-Public Sub ReadTown(ByRef Value As State, ByRef Town As Document.State, WestCastle As Boolean)
-
-    Dim Index As Number
-    Dim Item As Document.Item
-    Dim Shape As Catalog.Template
-    Dim Target As Subject
-
-    Value.SubjectCount = 0
-    Value.Skyline = 200.0
-
-    For Index = 0 To Town.ItemCount - 1
-
-        Item = Town.Items[Index]
-
-        If Item.Active And Item.Category = Document.CATEGORY_BUILDINGS And Value.SubjectCount < 1023 Then
-
-            Shape = Catalog.TemplateAt(Item.Template)
-            Target.Center = Geometry.ToWorld(Item, M.Scale(M.Add(Shape.Low, Shape.High), 0.5))
-            Target.Front = Geometry.ToWorld(Item, P.Vector(0.0, Shape.High.Y * 0.46, Shape.Low.Z))
-            Target.Radius = Max((Shape.High.X - Shape.Low.X) * Item.Scale.X,
-                (Shape.High.Z - Shape.Low.Z) * Item.Scale.Z) / 2000.0
-            Target.Height = (Shape.High.Y - Shape.Low.Y) * Item.Scale.Y / 1000.0
-            Target.Yaw = Item.Yaw + 180.0
-            Target.Kind = 0
-
-            If Shape.Label = "City Hall" Or Shape.Label = "Comm Tower" Then
-                Target.Kind = 1
-            Else If Shape.Label = "Royal Castle" Or Shape.Label = "Old Castle" Then
-                Target.Kind = 2
-            End If
-
-            Value.Subjects[Value.SubjectCount] = Target
-            Value.SubjectCount = Value.SubjectCount + 1
-            Value.Skyline = Max(Value.Skyline, Item.Position.Y + Target.Height)
-
-        End If
-
-    End For
-
-    If WestCastle Then
-
-        Target.Center = P.Vector(Castle.ORIGIN_X, Castle.DECK_Y + 20.0 * Castle.SCALE, Castle.ORIGIN_Z)
-        Target.Front = P.Vector(Castle.ORIGIN_X, Castle.DECK_Y + 5.0 * Castle.SCALE,
-            Castle.ORIGIN_Z - 18.0 * Castle.SCALE)
-        Target.Radius = 70.0 * Castle.SCALE
-        Target.Height = 75.0 * Castle.SCALE
-        Target.Yaw = 180.0
-        Target.Kind = 3
-        Value.Subjects[Value.SubjectCount] = Target
-        Value.SubjectCount = Value.SubjectCount + 1
-        Value.Skyline = Max(Value.Skyline, Castle.DECK_Y + Target.Height)
-
-    End If
+    Pitch = M.Radians(33.0)
+    Bearing = M.Radians(-179.0)
+    Radius = 8725.0
+    Camera.FovDegrees = 32.0
+    Camera.Target = Center
+    Camera.Position = M.Add(Center, P.Vector(Sin(Bearing) * Cos(Pitch) * Radius,
+        Sin(Pitch) * Radius, Cos(Bearing) * Cos(Pitch) * Radius))
 
 End Sub
-
-Private Sub Choose(ByRef Value As State, Displayed As P.Camera3D)
-
-    Dim Index As Number
-    Dim Candidate As Number
-    Dim Previous As Number
-    Dim Kind As Number
-    Dim Matches As Number
-    Dim Target As Subject
-
-    Previous = Value.Selected
-    Kind = RandomValue(Value) Mod 4
-    Candidate = RandomValue(Value) Mod Max(1, Value.SubjectCount)
-
-    For Index = 0 To Value.SubjectCount - 1
-
-        If Value.Subjects[Index].Kind = Kind And Index <> Previous Then
-
-            Matches = Matches + 1
-
-            If RandomValue(Value) Mod Matches = 0 Then
-                Candidate = Index
-            End If
-
-        End If
-
-    End For
-
-    If Candidate = Previous And Value.SubjectCount > 1 Then
-        Candidate = (Candidate + 1) Mod Value.SubjectCount
-    End If
-
-    Value.Selected = Candidate
-    Value.FromView = Displayed
-    Value.Clock = 0
-    Value.Duration = 26000 + RandomValue(Value) Mod 10000
-    Value.BlendTime = 10000 + RandomValue(Value) Mod 3000
-    Value.Detail = RandomValue(Value) Mod 2 = 0
-    Value.Phase = ToDouble(RandomValue(Value) Mod 6283) / 1000.0
-    Target = Value.Subjects[Candidate]
-    Value.Bearing = Target.Yaw - 35.0
-    Value.Sweep = 70.0
-
-    If Target.Kind = 0 Or (Target.Kind >= 2 And Not Value.Detail) Then
-        Value.Bearing = ToDouble(RandomValue(Value) Mod 360)
-        Value.Sweep = 140.0 + ToDouble(RandomValue(Value) Mod 100)
-    End If
-
-    If RandomValue(Value) Mod 2 = 0 Then
-        Value.Bearing = Value.Bearing + Value.Sweep
-        Value.Sweep = -Value.Sweep
-    End If
-
-End Sub
-
-Public Sub Start(ByRef Value As State, Displayed As P.Camera3D, Seed As Number)
-
-    Value.Seed = Max(1, Abs(Seed) Mod 2147483646)
-    Value.Selected = -1
-
-    Call Choose(Value, Displayed)
-
-End Sub
-
-''' Orbit changes distance/height gently; moves between subjects blend without cuts.
-Public Function Advance(ByRef Value As State, Displayed As P.Camera3D,
-    Elapsed As Number, Paused As Boolean) As P.Camera3D
-
-    Dim Result As P.Camera3D
-    Dim Target As Subject
-    Dim Progress As Double
-    Dim Angle As Double
-    Dim Distance As Double
-    Dim Height As Double
-    Dim Blend As Double
-    Dim Lift As Double
-
-    If Paused Or Value.SubjectCount = 0 Or Elapsed <= 0 Then
-        Return Displayed
-    End If
-
-    If Value.Clock >= Value.Duration Then
-        Call Choose(Value, Displayed)
-    End If
-
-    Value.Clock = Min(Value.Duration, Value.Clock + Min(100, Elapsed))
-    Progress = ToDouble(Value.Clock) / ToDouble(Value.Duration)
-    Target = Value.Subjects[Value.Selected]
-    Result = Displayed
-    Result.Target = Target.Center
-    Distance = Max(220.0, Target.Radius * 3.3)
-    Height = Max(100.0, Target.Height * 0.65)
-
-    If Target.Kind = 1 Then
-
-        Result.Target = Target.Front
-        Distance = Max(190.0, Target.Radius * 2.0)
-        Height = Distance * 0.22
-
-    Else If Target.Kind >= 2 And Value.Detail Then
-
-        Result.Target = Target.Front
-        Distance = Target.Radius * 0.78
-        Height = Target.Height * 0.52
-
-        If Target.Kind = 2 Then
-            Result.Target = M.Lerp(Target.Front, Target.Center, 0.55)
-        End If
-
-    End If
-
-    Distance = Distance * (0.92 + 0.12 * Sin(Progress * 6.283185307179586 + Value.Phase))
-    Height = Height * (1.0 + 0.16 * Sin(Progress * 3.141592653589793 + Value.Phase))
-    Angle = M.Radians(Value.Bearing + Value.Sweep * Progress)
-    Result.Position = M.Add(Result.Target, P.Vector(Sin(Angle) * Distance, Height, Cos(Angle) * Distance))
-    Blend = Clamp(ToDouble(Value.Clock) / ToDouble(Value.BlendTime), 0.0, 1.0)
-    Lift = Max(0.0, Value.Skyline + 200.0 - Min(Value.FromView.Position.Y, Result.Position.Y))
-    Lift = Lift * 16.0 * Blend * Blend * (1.0 - Blend) * (1.0 - Blend)
-    Result = Motion.BlendFraming(Value.FromView, Result, Blend)
-    Result.Position.Y = Result.Position.Y + Lift
-
-    Return Result
-
-End Function
 
 End Module

@@ -98,6 +98,7 @@ Call Check(G.LightValue3D(G.LIGHT_QUERY_DIRECTIONAL, 0, 3) > 0,
     "Town Sun And Its Shadow Camera Stay Above The Ground")
 
 Call Check(Ok, "Surface, Light And Door Resources")
+Call CheckLocalLighting()
 Call Terrain.BeginBuild(Ground, Town.Surface)
 
 Do
@@ -276,6 +277,11 @@ Call Check(G.LiveModelCount3D() = WithoutCastle[0] And G.LiveMeshCount3D() = Wit
     G.LiveObjectCount3D() = WithoutCastle[4], "Removing Old Castle Releases Models Meshes Materials Textures And Objects")
 Call Renderer.Destroy(Assets)
 
+Ok = G.ClearAdditionalLights3DChecked()
+
+Call Check(Ok And G.LightValue3D(G.LIGHT_QUERY_LOCAL, 63, 1) = G.LIGHT_DISABLED,
+    "Scene Light Cleanup Includes The Last Native Slot")
+
 ' A bare shore needs grass and road meshes plus water, never a thin trim mesh.
 Ok = Grid.Initialize(Town.Surface, 3, 1, 0.0, 0.0, 20.0, Grid.SURFACE_GROUND)
 
@@ -310,6 +316,87 @@ If Failures = 0 Then
 Else
     Print "FAIL Town Editor Rendering"
 End If
+
+Sub CheckLocalLighting()
+
+    Dim Draft As Document.State
+    Dim Shape As Catalog.Template
+    Dim ItemIndex As Number
+    Dim OriginalX As Number
+    Dim Expected As Number
+    Dim Ok As Boolean
+
+    Call Check(G.MaximumLocalLightCount3D() = 64, "Native Reports Its Local Light Capacity")
+
+    Ok = G.SetPointLight3D(63, 0, 100, 0, 255, 220, 170, 100, 200)
+
+    Call Check(Ok And Not G.SetPointLight3D(64, 0, 100, 0, 255, 220, 170, 100, 200),
+        "Last Local Light Is Usable And Out Of Range Slots Are Rejected")
+
+    Ok = G.ClearAdditionalLights3DChecked()
+
+    Call Check(Ok And G.ActiveLightCount3D() = 2, "General Cleanup Clears Every Local Light")
+    Call Document.NightSun(Draft.Light)
+
+    For ItemIndex = 0 To Town.ItemCount - 1
+
+        Shape = Catalog.TemplateAt(Town.Items[ItemIndex].Template)
+
+        If Shape.Label = "Crystal Lamp" Then
+            Draft.Items[0] = Town.Items[ItemIndex]
+            Exit For
+        End If
+
+    End For
+
+    Draft.ItemCount = 1
+    Ok = Lighting.ApplyLocal(Draft)
+    OriginalX = G.LightValue3D(G.LIGHT_QUERY_LOCAL, 4, 2)
+
+    Call Check(Ok And G.ActiveLightCount3D() = 3 And
+        ToDouble(G.LightValue3D(G.LIGHT_QUERY_LOCAL, 4, 3)) > Draft.Items[0].Position.Y,
+        "Placed Lamp Emits Warm Light Above Its Base At Night")
+
+    Draft.Items[0].Position.X = Draft.Items[0].Position.X + 125.0
+    Ok = Lighting.ApplyLocal(Draft)
+
+    Call Check(Ok And G.LightValue3D(G.LIGHT_QUERY_LOCAL, 4, 2) = OriginalX + 125,
+        "Lamp Light Follows Edited Placement")
+
+    Draft.Items[0].Active = False
+    Ok = Lighting.ApplyLocal(Draft)
+
+    Call Check(Ok And G.ActiveLightCount3D() = 2, "Deleted Lamp Leaves No Light Behind")
+
+    Draft = Town
+    Expected = 2
+
+    Call Document.NightSun(Draft.Light)
+
+    For ItemIndex = 0 To Draft.ItemCount - 1
+
+        Shape = Catalog.TemplateAt(Draft.Items[ItemIndex].Template)
+
+        If Shape.Label = "Crystal Lamp" Then
+            Expected = Expected + 1
+        Else If (Shape.Label = "Royal Castle" Or Shape.Label = "Military HQ" Or
+            Shape.Label = "Comm Tower" Or Shape.Label = "City Hall") Then
+            Expected = Expected + 2
+        End If
+
+    End For
+
+    Ok = Lighting.ApplyLocal(Draft)
+
+    Call Check(Ok And G.ActiveLightCount3D() = Expected And Expected > 10,
+        "All Placed Lamps And Four Landmarks Receive Night Lighting")
+    Call Document.DefaultSun(Draft.Light)
+
+    Ok = Lighting.ApplyLocal(Draft)
+
+    Call Check(Ok And G.ActiveLightCount3D() = 2, "Town Accent Lights Switch Off In Daylight")
+
+End Sub
 
 Sub Check(Condition As Boolean, Label As Text)
 

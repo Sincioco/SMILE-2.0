@@ -2,14 +2,18 @@
 
 ## September 28 royal castle, town inspection and water
 
-NerisCastleM06V2 owns source M06-r005, the complete portable GLB, actual fixed-camera
+NerisCastleM06V2 owns source M06-r006, the complete portable GLB, actual fixed-camera
 Blender evidence, masonry texture and native derivatives. NerisCastlePreview loads
 12 static model chunks, one seven-part bridge and two three-part palace doors:
 15 models and 98 draw objects. NerisCastleRoute owns the placement, courtyard
 clearance, stairs, proximity bridge and palace-door trigger. Native terrain owns
 the moat. The native foundation exports its top only, omitting buried faces.
-The r002 town document puts this castle at the former Tripo site; the original
-Royal Castle and other buildings remain. The source Tripo package/palette remain
+The r003 town document names this castle Royal Court at the former Tripo site.
+It completes 470 road cells across the front promenade up to the bridge at Z=1012,
+preserving all 361 live placements and Sun settings. The original Royal Castle's
+side stairs are removed from the versioned Catalog-r002; central stairs remain.
+The catalog retains its saved-document fingerprint and permits the specifically
+retired members when importing an older Blender assembly. The source Tripo package/palette remain
 available. TownCatalogRenderer admits its 14 models only while a Tripo placement
 exists; TownEditorSession loads additions incrementally and the last removal
 releases those models/parts. Document removal never deletes the source asset.
@@ -22,14 +26,15 @@ one complete GLB with embedded texture. Native source textures use relative path
 the normal project cooker owns publication.
 
 NerisTownKeyboard owns explicit Fly Inspect and held-key mapping. NerisTownCamera
-owns the eight-degree inspection floor, ground-level Fly Inspect and temporary
+owns the zero-degree manual inspection floor, ground-level Fly Inspect and temporary
 cursor-orbit anchor. TownPicking unprojects the last rendered opaque depth with
 a ground fallback; ray construction respects the current near plane. Releasing
 an off-center orbit absorbs the displayed camera without snapping its target.
-NerisTownTour owns only landmark selection and continuous shot timing/framing.
-It reads active document bounds and the placed new castle through the session;
-it does not own rendering, input, document mutation or party movement. Reset
-starts at the actual map center; the tour then varies buildings, height and range.
+NerisTownTour now owns only the approved fixed overview framing: 33 degrees,
+8,725 distance, 32-degree FOV and -179-degree starting bearing. TownEditorSession
+supplies the actual document center. NerisTown advances only horizontal bearing
+at 2.5 degrees per second; there is no landmark state, randomness or shot transition.
+Manual orbit in either keyboard mode stops at zero; party shots may look up.
 
 water_surface3d.h owns water shading, directional shadow opacity and a bounded
 screen-space reflection search. water_scene3d.h owns one reusable opaque-color
@@ -41,21 +46,45 @@ appear in screen-space reflections; missing hits use the environment fallback.
 Sun shadow opacity lives in TownLighting and the TWN2 document field; TWN1 and
 legacy Blender checksums remain compatible. Studio/Web adoption is held.
 
-Current evidence is NerisCastleM06V2/Checkpoints/M06-r005. Native session checks
-exercise 468 meshes, 432 materials, 50/64 models, 98 castle parts, actual rendered
-cursor depth, continuous tour, Fly Inspect floor and preserved 24 Arin keyframes.
+Opaque water now ignores submerged scene color while retaining reflections,
+directional shadows and sheen. The existing shader/GPU regression owns this behavior.
+TownLighting owns placed lamp/landmark light positions and night intensity, with
+no rendering or input state added to the document. Royal Court reserves slots 0–3;
+town placements use 4 onward. Native Graphics3D has 64 bounded local slots and
+reports their capacity through LIGHT_QUERY_MAX_LOCAL. Shared clearing, LightPool
+range validation and Scene shadow-slot validation use that capacity; LightPool
+still leases at most four slots. Web retains four slots and remains on hold.
+Town release and Day clear local lights. Night uses RGB 140/174/255, intensity and
+ambient 8%, azimuth 207, elevation 25 and shadow opacity 65%; Day also uses azimuth 207.
+
+Current evidence is NerisCastleM06V2/Checkpoints/M06-r006. Native session checks
+exercise 473 meshes, 442 materials, 50/64 models, 98 castle parts, actual rendered
+cursor depth, a complete constant-framing map orbit, Fly Inspect floor and preserved 24 Arin keyframes.
 WARP executes the production shader for shadow opacity 0/50/100, local reflection
 colors without distortion, capture reuse and SRV release. Town rendering tests
 remove/re-add/remove Tripo and require every live resource count to return to its
 baseline. The main native Viewer is also inspected visually; this is not Web evidence.
 
-No architecture limits, exclusions, baselines, Studio or Web scope changed.
+Catalog-r004 and town r005 retain stable member identities. City Hall's four front
+planters reuse scaled Royal Court foliage. Five small parts move from catalog 29
+to spare slots in catalog 0, freeing five slots for the shrubs in catalog 29.
+The catalog remains 30 models; the complete party/castle scene retains room for
+14 optional Tripo models. The Communication Tower's dishes rotate to front/back
+with baked geometry transforms and updated native normals, bounds and camera
+volumes; its left/right crystal poles stay unchanged. These are asset changes,
+not new runtime owners.
 
-Current changed-owner sizes: NerisTown 815→906 lines (scene/input coordination),
-NerisTownCamera 360→424, TownEditorSession 660→680, TownCatalogRenderer 144→185,
-TownPicking 159→179. The added tour, keyboard, fountain and glow owners retain their
-own bounded state. No behavior algorithm moved into NativeViewerHost; it only
-passes header hover separately so global camera keys remain reachable.
+No architecture limits, exclusions or baselines changed. Native local-light capacity
+is the explicit reusable renderer extension for this task. Model/resource limits,
+Studio and Web scope remain unchanged.
+
+Current changed-owner sizes: NerisTown 906→854 lines (scene/input coordination),
+NerisTownCamera 424→426, NerisTownTour 232→25, TownEditorSession 680→690 and
+TownLighting 35→110. Native graphics3d_directx.cpp is 10,717→10,718 lines: fixed
+array/loop bounds and one capacity query, with no new feature algorithm in that
+legacy coordinator. Generated catalog features shrink after stair removal.
+NativeViewerHost has no growth. Tests cover light capacity/cleanup, placed-light
+movement/removal, day/night presets, fixed map orbit, zero pitch and opaque-water beds.
 
 
 ## September 28 Decor palette and Sun sliders

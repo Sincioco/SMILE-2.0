@@ -26,7 +26,7 @@
       ],
       "vertices": 131058,
       "triangles": 63580,
-      "sha256": "364138dd2e7bc8557dcfdcc79685a730a24ce1d97bd77c9df98c6fa7785d1320"
+      "sha256": "495f93a9f6edf36bb5c2ed4d7400ad2936f1262b75f3089afa45a4a63c529762"
     },
     {
       "file": "castle-02.glb",
@@ -40,7 +40,7 @@
       ],
       "vertices": 131046,
       "triangles": 64164,
-      "sha256": "baf9d0aa5251cfd8b54a227e5b582c03fa3464fce5a4e7291279ac9dfdf1eb77"
+      "sha256": "119129dcedc2df2e158e0dd604a1d1fb5e9e42bc3058f522e78f2a5dfe905be3"
     },
     {
       "file": "castle-03.glb",
@@ -69,7 +69,7 @@
       ],
       "vertices": 131039,
       "triangles": 77102,
-      "sha256": "b4d5895d7fa76defbf3611b138cea7530f8a7e8bc9f96894f7f418226705c5e1"
+      "sha256": "4b67b6a739355ee6468a10c890d7d38bcf39ed49abac11159c3f49393b7bb78d"
     },
     {
       "file": "castle-05.glb",
@@ -82,7 +82,7 @@
       ],
       "vertices": 131072,
       "triangles": 65600,
-      "sha256": "eaba7fd0021c523063a66f90bfcedbb1739c887029a043892e2a161f3d099ee5"
+      "sha256": "2434522d81e2d6567d4391318083186217e9560dd637719c0083a518d85404e3"
     },
     {
       "file": "castle-06.glb",
@@ -95,7 +95,7 @@
       ],
       "vertices": 131065,
       "triangles": 70142,
-      "sha256": "d44ec8e01db204017847d4643dac96b02469dc98315ebeb65fe05cd630ef2908"
+      "sha256": "0e7a776188dcbe842dceb6efaac79e9a160e009ba7cc6fdffb31ac80a85021d2"
     },
     {
       "file": "castle-07.glb",

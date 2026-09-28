@@ -362,7 +362,7 @@ Public Function GroundShot(Value As State, PartyCamera As Boolean) As Boolean
 
 End Function
 
-''' Inspection stays above its target; the party shot retains its low horizon.
+''' Manual inspection reaches the horizon; automatic party/building shots may look up.
 Public Function MinimumPitch(LowShot As Boolean) As Double
 
     Dim ReturnValue As Double
@@ -373,7 +373,7 @@ Public Function MinimumPitch(LowShot As Boolean) As Double
         Return ReturnValue
     End If
 
-    Return 8.0
+    Return 0.0
 
 End Function
 
@@ -390,7 +390,9 @@ Private Sub Constrain(ByRef View As Arena.State, Base As P.Camera3D, LowShot As 
         M.Radians(MinimumPitch(LowShot)), Max(M.Radians(80.0), View.MaximumPitch))
 
     If FreeInspect Then
-        Pitch = Clamp(BasePitch + M.Radians(View.Controls.OrbitPitch), M.Radians(-80.0), M.Radians(80.0))
+        ' Ground-level flight stays available; orbit must not rotate below the
+        ' horizon and then lift the target thousands of units to clear the floor.
+        Pitch = Clamp(BasePitch + M.Radians(View.Controls.OrbitPitch), 0.0, M.Radians(80.0))
     End If
 
     View.Controls.OrbitPitch = M.Degrees(Pitch - BasePitch)

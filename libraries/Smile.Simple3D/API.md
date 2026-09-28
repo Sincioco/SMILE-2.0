@@ -135,9 +135,9 @@ PBR blend draws use straight source alpha, read depth, do not write depth, and a
 
 PBR lighting:
 
-- `ResetLights3D` restores ambient white at 25%, directional white at 100%, and disables all four local slots.
+- `ResetLights3D` restores ambient white at 25%, directional white at 100%, and disables every local slot.
 - `SetAmbientLight3D` and `SetDirectionalLight3D` accept RGB `0`–`255`; light intensity is a percentage (`0`–`100` ambient, `0`–`1600` directional/local).
-- `SetPointLight3D` and `SetSpotLight3D` configure fixed slots `0`–`3`; positions/ranges are integer world units.
+- `SetPointLight3D` and `SetSpotLight3D` configure bounded local slots; positions/ranges are integer world units. Native supports slots `0`–`63`. `MaximumLocalLightCount3D()` / `LIGHT_QUERY_MAX_LOCAL` reports native capacity. Existing Web/legacy backends retain four slots; the shared capacity wrapper falls back to four when the query is unavailable. Web adoption is held.
 - `SetSpotLightCone3D` supplies a nonzero direction plus inner/outer degrees from `1` through `89` with inner no greater than outer.
 - `DisableLight3D`, `ClearAdditionalLights3D`, `ActiveLightCount3D`, and `LightValue3D` provide bounded lifecycle and deterministic diagnostics. Normalized direction and intensity queries use thousandths.
 

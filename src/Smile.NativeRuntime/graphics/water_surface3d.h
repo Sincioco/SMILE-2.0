@@ -190,7 +190,11 @@ float4 ShadeWater(float4 pixel, float2 uv, float4 base, float3 world, float3 sur
     reflection *= reflectionTint;
     highlight *= lerp(float3(1,1,1), reflectionTint, .55);
     float reflectedAmount = min(.34, fresnel * (1 - roughness * .65));
-    float3 result = lerp(transmission * ToLinear(saturate(base.rgb)) * illumination, reflection, reflectedAmount) + highlight;
+    // Material opacity also bounds optical transmission. At 100% the submerged
+    // bed cannot tint the surface black or expose underwater geometry. Reflection
+    // still samples nearby opaque scenery independently of this bulk water color.
+    float3 bulkColor = lerp(transmission * waterTint, waterTint * .45, saturate(base.a));
+    float3 result = lerp(bulkColor * illumination, reflection, reflectedAmount) + highlight;
     result = lerp(result, float3(.38,.61,.80) * illumination, foam);
     if (waterShadowStyle.x >= 0) result *= lerp(1, visibility, waterShadowStyle.x);
     float opacity = saturate(base.a * (1.15 + fresnel*.45 + foam*.5));

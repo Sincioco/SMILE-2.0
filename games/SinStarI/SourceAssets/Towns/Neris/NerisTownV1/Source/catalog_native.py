@@ -50,7 +50,7 @@ def item_fields(item, indent):
 
 
 def generate(catalog):
-    fingerprint = hashlib.sha256(json.dumps(catalog, sort_keys=True).encode('utf-8')).hexdigest()
+    fingerprint = catalog.get('document_fingerprint') or hashlib.sha256(json.dumps(catalog, sort_keys=True).encode('utf-8')).hexdigest()
     castle = json.loads((ROOT.parent / 'TripoCastleV1/Runtime/manifest.json').read_text(encoding='utf-8'))
     assert len(castle['chunks']) == 14 and all(p['parts'] == 2 for p in castle['chunks'])
     lines = begin('TownCatalogData', [

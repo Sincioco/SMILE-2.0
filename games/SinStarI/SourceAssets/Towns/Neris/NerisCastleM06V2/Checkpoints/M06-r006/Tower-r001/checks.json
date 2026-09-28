@@ -1,0 +1,41 @@
+{
+  "rotationDegrees": 90,
+  "clearance": [
+    2.8522685689926144,
+    2.852269165039062
+  ],
+  "parts": [
+    "Dish Central Receiver",
+    "Dish Central Receiver.001",
+    "Dish Feed Support",
+    "Dish Feed Support.001",
+    "Dish Feed Support.002",
+    "Dish Feed Support.003",
+    "Dish Feed Support.004",
+    "Dish Feed Support.005",
+    "Dish Gold Rim",
+    "Dish Gold Rim.001",
+    "Dish Lower Brace",
+    "Dish Lower Brace.001",
+    "Dish Mount Arm",
+    "Dish Mount Arm.001",
+    "Parabolic Relay Dish",
+    "Parabolic Relay Dish.001"
+  ],
+  "triangles": 7568,
+  "changes": [
+    {
+      "file": "Templates/Catalog-08.glb",
+      "movedTriangles": 4992
+    },
+    {
+      "file": "Templates/Catalog-12.glb",
+      "movedTriangles": 2400
+    },
+    {
+      "file": "Templates/Catalog-17.glb",
+      "movedTriangles": 176
+    }
+  ],
+  "modelsAdded": 0
+}

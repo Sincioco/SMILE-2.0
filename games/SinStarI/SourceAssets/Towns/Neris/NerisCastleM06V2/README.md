@@ -1,9 +1,13 @@
-# Neris Castle M06 V2 — r005
+# Royal Court — Neris Castle M06 V2, r006
 
-Editable source: [neris-castle-M06-r005.blend](Source/neris-castle-M06-r005.blend).
+Editable source: [neris-castle-M06-r006.blend](Source/neris-castle-M06-r006.blend).
 Portable complete model: [neris-castle.glb](neris-castle.glb).
 [Actual Blender contact sheet](Checkpoints/M06-r005/contact-sheet.png) and
 [night render](Checkpoints/M06-r005/courtyard-night.png).
+The r006 [entrance day](Checkpoints/M06-r006/entrance-day.png) and
+[entrance night](Checkpoints/M06-r006/entrance-night.png) renders show the now-flush
+gatehouse wall: the 40 cm vault recess is removed, with separated ornamental trim.
+The opening, bridge, palace, courtyard and fortification owners retain their geometry.
 
 Sin authorized autonomous continuation beyond the original M01 checkpoint and
 the native town integration. The proposed dimensions remain unapproved; execution
@@ -38,7 +42,8 @@ approach/occupancy, stairs, collision footprints and bump-triggered palace doors
 `NerisCastleFountain` owns animated jets, droplets, ripples and non-overlapping
 water surfaces. `NerisCastleGlow` owns halos and four broad native night washes;
 daytime lighting retains the warmer stone tone. Native scene lighting approximates
-the richer Blender light rig within the existing local-light budget.
+the richer Blender light rig. Its four slots remain reserved; placed town lamps
+and landmark washes use the additional native local-light capacity.
 
 The portable export retains the complete site and static fountain water. The
 native derivative omits the portable moat, buried foundation faces and static
@@ -49,8 +54,8 @@ preserves position/normal/UV seams; no decimation or cooker-limit increase is us
 
 ## Validation and limitations
 
-See [checkpoint](Checkpoints/M06-r005/checkpoint.md),
-[offline GLB checks](Checkpoints/M06-r005/offline-validation.json),
+See [checkpoint](Checkpoints/M06-r006/checkpoint.md),
+[offline GLB checks](Checkpoints/M06-r006/offline-validation.json),
 [measurements](Checkpoints/M06-r005/scene-measurements.json),
 [export settings](export-settings.json) and [checksums](package-manifest.json).
 All seven original review cameras retain their positions. Each versioned source
@@ -66,4 +71,4 @@ Khronos validation was not run because no installed offline validator was availa
 Studio and Web adoption/publication/browser acceptance remain on hold.
 
 Working source workspace: `D:/Projects/Sin-Star-I-Assets/Neris-Castle`.
-Current town source: `../NerisTownV1/Blend/Neris-Town-Royal-Castle-r002.blend`.
+Current town source: `../NerisTownV1/Blend/Neris-Town-Royal-Castle-r005.blend`.

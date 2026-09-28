@@ -11,6 +11,7 @@ Public Const ORIGIN_X = -3660.0
 Public Const ORIGIN_Z = 2440.0
 Public Const SCALE = 17.0
 Public Const DECK_Y = 23.12
+Public Const DISPLAY_NAME = "Royal Court"
 
 Private Dim Enabled As Boolean
 Private Dim Motion As Bridge.State
@@ -34,6 +35,16 @@ End Sub
 Public Function Active() As Boolean
 
     Return Enabled
+
+End Function
+
+Public Function MapLabel() As Text
+
+    If Enabled Then
+        Return DISPLAY_NAME
+    End If
+
+    Return ""
 
 End Function
 

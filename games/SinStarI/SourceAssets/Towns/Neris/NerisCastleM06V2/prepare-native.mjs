@@ -1,4 +1,4 @@
-// Mirror bounded native chunks derived from the full portable M06 r005 GLB.
+// Mirror bounded native chunks derived from the full portable M06 r006 GLB.
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
@@ -75,4 +75,4 @@ fs.writeFileSync(path.join(destination, layout.texture.file), texture);
 for (const input of inputs)
   fs.copyFileSync(path.join(source, input.from), path.join(destination, input.file));
 fs.copyFileSync(path.join(source, 'Castle.sm3d.json'), path.join(destination, 'Castle.sm3d.json'));
-console.log('Prepared Neris Castle M06 r005: 12 static chunks, 85 static parts, 7 bridge parts and 6 door parts.');
+console.log('Prepared Neris Castle M06 r006: 12 static chunks, 85 static parts, 7 bridge parts and 6 door parts.');

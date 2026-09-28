@@ -119,8 +119,5 @@
     -0.25
   ],
   "source_modified": false,
-  "texture_embedded": true,
-  "source": "Source/neris-castle-M06-r005.blend",
-  "gltf_triangles": 894499,
-  "exporter_omitted_triangles": 368
+  "texture_embedded": true
 }
