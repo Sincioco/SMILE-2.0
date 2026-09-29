@@ -21,4 +21,13 @@ Public Sub Frame(ByRef Camera As P.Camera3D, Center As P.Vector3,
 
 End Sub
 
+''' Sin's September 29 reference view, read from the camera HUD in the approved image.
+Public Sub TownOverview(ByRef Camera As P.Camera3D, Center As P.Vector3)
+
+    Camera.FovDegrees = 32.0
+    Camera.Target = Center
+    Camera.Position = M.Add(Center, P.Vector(4475.0, 2907.0, -6616.0))
+
+End Sub
+
 End Module

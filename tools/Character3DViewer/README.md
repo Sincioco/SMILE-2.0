@@ -2,6 +2,39 @@
 
 ## Native Neris Town
 
+The current r009 layout has three linked tabs: **Neris Spaceport** west,
+compact **Neris Town** in the middle, and **Horizon Airport** east. All 362 town
+placements remain. Walk through either town road gateway to travel with all four
+party members. Airport tabs immediately start a centered map orbit; walking and
+Visit Horizon Airport retain the party arrival view. The terminal's gold-framed
+glass doors open on approach, with a one-shot entry event reserved for a future
+cutscene. No cutscene is played yet.
+
+The sun/moon icon in the header switches day/night in each selected map. Horizon
+has 27 concealed night lights and stronger runway guide lights. Its two banners
+hang on clear facade windows. The fine floor grid is removed; gold inlays, compass
+medallions and floor fixtures remain. The connecting road ends at the apron edge,
+eliminating the coplanar overlap.
+
+Each arena floor and grid follows the active document bounds, including resizing.
+Automatic map orbit uses that same center. Right-click restores the approved
+Neris viewing angle (about 146° bearing, 20° elevation, 8,500 distance), centered
+on the map. O/Orbit retains the eye position while anchoring to the map center;
+Follow Party continues to use the leader. Ctrl+click outside the editor relocates
+the whole party to the nearest walkable road. Bottom diagnostics show map triangles
+and render vertices per submitted mesh instance, including offscreen geometry and
+actors, excluding particles and repeated shadow/reflection passes.
+
+Current Blender files and portable snapshots are in
+`games/SinStarI/SourceAssets/Towns/Neris/NerisHorizonV1/Town/r009`.
+The following r008 description is historical; the r009 layout above supersedes it.
+
+Neris Spaceport has four different alien visitors on its four elevated pads:
+Aster Saucer, Vesper Manta, Khepri Tri-Pod and Vanta Prism. Each pad independently
+randomizes its ground time (18–28 seconds), ascent/descent (5–7 seconds), and
+completely clear time (10–15 seconds before the next descent begins). They are
+native animated model instances; the matching Blender town shows all four parked.
+
 Horizon r008 has castle-matched teal wave roofs, gold trim, arched ivory details
 and Spaceport 01 paving with gold inlays, compass medallions and flush cyan lights.
 Plain terminal windows are partially transparent; ornamented bays remain opaque.

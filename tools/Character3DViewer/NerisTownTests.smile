@@ -22,20 +22,29 @@ Dim Flights As Traffic.State
 
 Call Spaceport.Enable(True)
 
-Position = Navigation.Move(P.Vector(-5500.0, 23.12, 1250.0), -2400.0, 0.0)
+Call Trail.Reset(Path, Spaceport.ToWorld(P.Vector(0.0, 0.8, -20.0)), 4, 22.0)
+Call Check(Not Spaceport.CanStand(7390.0, 1250.0), "Closed Terminal Door Blocks Crossing")
 
-Call Check(Abs(Position.X + 7900.0) < 0.001 And Abs(Position.Y - 31.12) < 0.001,
+For Index = 1 To 12
+    Call Spaceport.Update(Path, 4, 100)
+End For
+
+Call Check(Spaceport.DoorAngle() = 95.0, "Party Approach Opens Both Terminal Leaves")
+
+Position = Navigation.Move(P.Vector(5500.0, 23.12, 1250.0), 2400.0, 0.0)
+
+Call Check(Abs(Position.X - 7900.0) < 0.001 And Abs(Position.Y - 31.12) < 0.001,
     "Horizon Arrival Reaches The Central Promenade")
-Call Check(Not Navigation.CanStand(-8480.0, -2400.0), "Pedestrian Route Excludes The Hangar")
-Call Check(Not Navigation.CanStand(-9700.0, 1250.0), "Pedestrian Route Excludes The Control Tower")
-Call Check(Spaceport.CanStand(-7800.0, 2750.0), "Terminal Ground Floor Is Open Beyond The Center Aisle")
-Call Check(Not Spaceport.CanStand(-7710.0, 2050.0), "Passenger Counter Blocks Walking")
-Call Check(Not Spaceport.CanStand(-8000.0, 2050.0), "Waiting Seats Block Walking")
-Call Check(Not Spaceport.CanStand(-7410.0, 1450.0), "Closed Glass Beside The Entrance Blocks Walking")
-Call Check(Not Spaceport.CanStand(-7420.0, 1450.0), "Party Cannot Pass Through Front Glazing")
-Call Check(Not Spaceport.CanStand(-10950.0, 1250.0), "Runway Is Outside The Passenger Route")
+Call Check(Not Navigation.CanStand(8480.0, -2400.0), "Pedestrian Route Excludes The Hangar")
+Call Check(Not Navigation.CanStand(9700.0, 1250.0), "Pedestrian Route Excludes The Control Tower")
+Call Check(Spaceport.CanStand(7800.0, 2750.0), "Terminal Ground Floor Is Open Beyond The Center Aisle")
+Call Check(Not Spaceport.CanStand(7710.0, 2050.0), "Passenger Counter Blocks Walking")
+Call Check(Not Spaceport.CanStand(8000.0, 2050.0), "Waiting Seats Block Walking")
+Call Check(Not Spaceport.CanStand(7410.0, 1450.0), "Closed Glass Beside The Entrance Blocks Walking")
+Call Check(Not Spaceport.CanStand(7420.0, 1450.0), "Party Cannot Pass Through Front Glazing")
+Call Check(Not Spaceport.CanStand(10950.0, 1250.0), "Runway Is Outside The Passenger Route")
 Call Spaceport.Enable(False)
-Call Check(Not Spaceport.Contains(-7900.0, 1250.0), "Spaceport Navigation Releases With Its Asset")
+Call Check(Not Spaceport.Contains(7900.0, 1250.0), "Spaceport Navigation Releases With Its Asset")
 Call CheckRunway()
 
 Position = Traffic.Position(Flights, False)
@@ -245,7 +254,7 @@ Sub CheckRunway()
     Point = Runway.Position(Flight)
 
     Call Check(Abs(Point.X - 402.5) < 0.01 And Abs(Point.Z - 312.5) < 0.01 And
-        Runway.Heading(Flight) = 270.0, "Aircraft Uses The Connecting U Turn Road")
+        Runway.Heading(Flight) = 90.0, "Aircraft Uses The Connecting U Turn Road")
 
     Flight.Time = 60000
     Point = Runway.Position(Flight)

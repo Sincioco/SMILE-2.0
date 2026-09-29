@@ -48,14 +48,14 @@ Public Function Create(ByRef Value As State) As Boolean
 
     For Index = 0 To PARTICLE_COUNT - 1
 
-        Size = 16.0
+        Size = 65.0
 
         Lamp = (Index - 3) Mod 71 + 1
         Depth = 355.0 - Floor(ToDouble(Index - 3) / 71.0) * 85.0
 
         If Index >= 145 Then
             Point = FloorLight(Index - 145)
-            Size = 24.0
+            Size = 42.0
         Else If Index = 0 Then
             Point = P.Vector(0.0, 285.6, 194.0)
             Size = 80.0
@@ -67,12 +67,12 @@ Public Function Create(ByRef Value As State) As Boolean
             Size = 70.0
         Else If Lamp <= 30 Then
             Point = P.Vector(-420.0 + ToDouble((Lamp - 1) Mod 15) * 60.0,
-                0.24, Depth - 26.0 + Floor(ToDouble(Lamp - 1) / 15.0) * 52.0)
+                0.65, Depth - 26.0 + Floor(ToDouble(Lamp - 1) / 15.0) * 52.0)
         Else If Lamp <= 53 Then
-            Point = P.Vector(-330.0 + ToDouble(Lamp - 31) * 30.0, 0.25, Depth)
+            Point = P.Vector(-330.0 + ToDouble(Lamp - 31) * 30.0, 0.65, Depth)
         Else
             Point = P.Vector(-426.0 + Floor(ToDouble(Lamp - 54) / 9.0) * 852.0,
-                0.25, Depth - 20.0 + ToDouble((Lamp - 54) Mod 9) * 5.0)
+                0.65, Depth - 20.0 + ToDouble((Lamp - 54) Mod 9) * 5.0)
         End If
 
         Point = Route.ToWorld(Point)
@@ -81,11 +81,11 @@ Public Function Create(ByRef Value As State) As Boolean
         If Index < 3 Then
             Ok = G.SetParticleColor3D(Value.Particles, Index, 255, 35, 20, 0) And Ok
         Else If Index >= 145 Then
-            Ok = G.SetParticleColor3D(Value.Particles, Index, 75, 225, 255, 60) And Ok
+            Ok = G.SetParticleColor3D(Value.Particles, Index, 75, 225, 255, 95) And Ok
         Else If Lamp >= 54 Then
-            Ok = G.SetParticleColor3D(Value.Particles, Index, 60, 255, 135, 75) And Ok
+            Ok = G.SetParticleColor3D(Value.Particles, Index, 60, 255, 135, 100) And Ok
         Else
-            Ok = G.SetParticleColor3D(Value.Particles, Index, 255, 239, 211, 68) And Ok
+            Ok = G.SetParticleColor3D(Value.Particles, Index, 255, 239, 211, 100) And Ok
         End If
 
     End For

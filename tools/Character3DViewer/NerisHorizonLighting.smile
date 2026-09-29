@@ -20,7 +20,7 @@ Public Function Apply(ByRef Slot As Number, Night As Double) As Boolean
         Return Ok
     End If
 
-    For Index = 0 To 12
+    For Index = 0 To 26
 
         If Slot >= G.MaximumLocalLightCount3D() Then
             Return False
@@ -37,14 +37,24 @@ Public Function Apply(ByRef Slot As Number, Night As Double) As Boolean
             Range = 650
         Else If Index < 11 Then
             Point = P.Vector(-195.0 + ToDouble(Index - 7) * 130.0, 12.0, -18.0)
-        Else
+        Else If Index < 13 Then
             Point = P.Vector(-235.0 + ToDouble(Index - 11) * 470.0, 5.0, -108.0)
-            Range = 1000
+            Range = 1700
+        Else If Index < 23 Then
+            Point = P.Vector(-360.0 + ToDouble((Index - 13) Mod 5) * 180.0, 32.0,
+                270.0 + Floor(ToDouble(Index - 13) / 5.0) * 85.0)
+            Range = 1500
+        Else If Index < 26 Then
+            Point = P.Vector(-180.0 + ToDouble(Index - 23) * 180.0, 95.0, 70.0)
+            Range = 2200
+        Else
+            Point = P.Vector(0.0, 95.0, -28.0)
+            Range = 1500
         End If
 
         Point = Route.ToWorld(Point)
         Ok = G.SetPointLight3D(Slot, ToNumber(Point.X), ToNumber(Point.Y), ToNumber(Point.Z),
-            255, 222, 175, ToNumber(Night * 900.0), Range) And Ok
+            255, 222, 175, ToNumber(Night * 1300.0), Range) And Ok
         Slot = Slot + 1
     End For
 

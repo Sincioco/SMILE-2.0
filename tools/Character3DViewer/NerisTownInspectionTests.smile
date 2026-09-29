@@ -328,9 +328,13 @@ Private Sub RightClickOrbit(ByRef Value As Town.State, ByRef Failures As Number)
         "Right Click Restores Bird Eye Zoom And Starts Orbit", Failures)
 
     If Value.Horizon.Ready Then
-        Call Check(Abs(Radius - 12000.0) < 0.01 And
-            M.Distance(Point, P.Vector(-1075.0, 650.0, 0.0)) < 0.01,
+        Call Check(Abs(Radius - 20000.0) < 0.01 And
+            M.Distance(Point, P.Vector(8400.0, 700.0, 1250.0)) < 0.01,
             "Horizon Town Overview Frames The Civic Town At The Requested Distance", Failures)
+    Else If Not Value.Harbor.Ready Then
+        Call Check(M.Distance(Point, P.Vector(-1225.0, 150.0, 375.0)) < 0.01 And
+            M.Distance(M.Subtract(Before.Position, Point), P.Vector(4475.0, 2907.0, -6616.0)) < 0.01,
+            "Neris Town Right Click Keeps Approved Angle Around Map Center", Failures)
     End If
 
     For Index = 1 To 4
@@ -356,12 +360,13 @@ Private Sub MapOrbit(ByRef Value As Town.State, ByRef Failures As Number)
 
     Call Town.StartOrbit(Value)
 
+    Before.Target = Authoring.MapCenter(Before.Target.Y)
     Offset = M.Subtract(Before.Position, Before.Target)
     ExpectedRadius = M.Length(Offset)
 
     Call Check(M.Distance(Before.Position, Value.BaseCamera.Position) < 0.001 And
         M.Distance(Before.Target, Value.BaseCamera.Target) < 0.001 And Not Value.Follow,
-        "Orbit Starts At Exactly The Current Camera And Target", Failures)
+        "Orbit Keeps The Current Eye And Uses The Arena Center", Failures)
     Call Check(Before.FovDegrees = Value.BaseCamera.FovDegrees And
         Value.View.Controls.PanX = 0.0 And Value.View.Controls.Zoom = ToDouble(Motion.DEFAULT_ZOOM),
         "Current Zoom And Pan Are Baked Into The Orbit Without Changing The Shot", Failures)

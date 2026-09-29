@@ -226,4 +226,30 @@ Public Sub Draw(Light As Document.Sun, X As Number)
 
 End Sub
 
+''' Header icon uses native drawing, so no font glyph or external image is required.
+Public Sub DrawDayNight(Night As Boolean)
+
+    Fill Rectangle 616, 10, 38, 29, RGB(20, 90, 108)
+
+    If Night Then
+
+        Fill Circle 634, 24, 10, RGB(235, 240, 255)
+        Fill Circle 639, 20, 9, RGB(20, 90, 108)
+
+    Else
+
+        Fill Circle 635, 24, 6, RGB(255, 220, 105)
+        Draw Line 635, 12, 635, 15, RGB(255, 220, 105)
+        Draw Line 635, 33, 635, 36, RGB(255, 220, 105)
+        Draw Line 623, 24, 626, 24, RGB(255, 220, 105)
+        Draw Line 644, 24, 647, 24, RGB(255, 220, 105)
+        Draw Line 627, 16, 629, 18, RGB(255, 220, 105)
+        Draw Line 641, 30, 643, 32, RGB(255, 220, 105)
+        Draw Line 627, 32, 629, 30, RGB(255, 220, 105)
+        Draw Line 641, 18, 643, 16, RGB(255, 220, 105)
+
+    End If
+
+End Sub
+
 End Module

@@ -1,0 +1,53 @@
+{
+  "source_sha256": "aa9f4c3ca5d928719a6ce69cc27a3a2f9b7502c25b5a3e2b0711550af3ece093",
+  "preserved_items": 362,
+  "towns": {
+    "Neris Town": {
+      "file": "Neris-Town-r009.town",
+      "bounds": [
+        -5200.0,
+        2750.0,
+        -3450.0,
+        4200.0
+      ],
+      "grid": [
+        432,
+        439
+      ],
+      "items": 362,
+      "sha256": "c47fa2bd8c610dc68cbe3d917326a9ff1eb78692a23c850b1105172dc8b0eec6"
+    },
+    "Neris Spaceport": {
+      "file": "Neris-Spaceport-r002.town",
+      "bounds": [
+        -9300,
+        -1300,
+        -10100,
+        -3300
+      ],
+      "grid": [
+        80,
+        68
+      ],
+      "items": 0,
+      "sha256": "e15065069004f3fe7d4d256a95aec263412a4ef824d7275cdf7de93dcd33e0cc"
+    },
+    "Horizon Airport": {
+      "file": "Horizon-Airport-r009.town",
+      "bounds": [
+        5200,
+        11600,
+        -3750,
+        6250
+      ],
+      "grid": [
+        64,
+        100
+      ],
+      "items": 0,
+      "sha256": "528753f7df8156d64e439aeb0c07c6c13d2f132bfca02b5d822b04dde575dceb"
+    }
+  },
+  "road_join": "Road ends at platform west edge X=5400; no coplanar overlap",
+  "spaceport_road_join": "Road ends at original causeway Z=-3700; no coplanar overlap"
+}

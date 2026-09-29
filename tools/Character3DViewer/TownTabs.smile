@@ -41,6 +41,16 @@ Public Sub Ensure(ByRef Value As State, ByRef Town As Document.State)
             Value.TabCount = 2
         End If
 
+        Ok = Storage.LoadDocument(Value.Documents[Value.TabCount], "TownEditor.Recovery.Horizon Airport", True)
+
+        If Not Ok Then
+            Ok = Storage.LoadDocument(Value.Documents[Value.TabCount], "TownEditor.Town.Horizon Airport")
+        End If
+
+        If Ok Then
+            Value.TabCount = Value.TabCount + 1
+        End If
+
     End If
 
 End Sub

@@ -83,7 +83,7 @@ Public Function Heading(Value As State) As Double
         Result = 180.0 + 180.0 * Fraction(Value.Time, 32000, 10000)
     End If
 
-    Result = M.WrapDegrees(Result)
+    Result = M.WrapDegrees(Result + 180.0)
 
     Return Result
 

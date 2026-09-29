@@ -17,6 +17,8 @@ Public Type ArenaFloor
     ReflectionSoftnessPercent As Number
     ReflectionScalePercent As Number
     FloorHeight As Number
+    Width As Number
+    Depth As Number
     Ready As Boolean
 End Type
 
@@ -65,6 +67,8 @@ Public Function Create(Width As Number, Depth As Number,
     Result.ReflectionSoftnessPercent = 5
     Result.ReflectionScalePercent = 100
     Result.FloorHeight = -1
+    Result.Width = Width
+    Result.Depth = Depth
     Result.Floor = Graphics3D.CreatePlane3D(Width, Depth)
 
     Call Graphics3D.SetObjectPosition(Result.Floor, 0, -1, 0)

@@ -1,5 +1,57 @@
 # Character Viewer Architecture
 
+## Current: Horizon r009 and centered linked maps (September 29)
+
+NerisTownConnections owns four west/east foot gateways and arrival poses. TownTabs
+retains three independent documents. TownEditorSession owns tab arrival intent,
+the existing saved sun presets, and applies committed document dimensions to the
+shared Arena3D floor/grid. ArenaFloor now records its authored width/depth; the
+existing Create/Place operations perform resizing only when bounds change.
+NerisTownTour owns the approved 146°/20° overview offset. The town coordinator
+wires tab orbit, map-centered framing, door updates and UI actions; no bootstrap
+algorithm or renderer API was added. Follow Party still anchors on the leader.
+
+TownDocumentNavigation finds the nearest traversable road in its committed surface
+for Ctrl+click party placement. NerisTownCameraPanel reads existing native submission
+mesh snapshots twice per second before EndScene, counting each mesh instance once.
+The totals include offscreen objects and actors, omit particles and duplicate
+shadow/reflection passes, and report renderer vertices rather than welded positions.
+
+NerisHorizonEntrance owns one four-part door model and four objects, while the route
+owner controls proximity motion, clearance and a consumable entry event. Horizon
+now uses five models, 35 parts and 89 draw objects; the main preview owns 85 and
+Entrance owns four. Glow retains 201 fixtures, with brighter runway halos. Lighting
+owns 27 concealed sources. Native model/material/pool limits remain unchanged.
+
+The r009 source removes 129 fine paving-joint meshes while retaining gold floor
+decoration, and moves two banners below the roof onto clear windows. Immutable
+fleet GLBs are copied from validated r008 exports. Three portable documents and
+Blender assemblies preserve all 362 central-town placements. Live saves were
+backed up before migration; the later two-cell road fix preserves user objects
+and lighting, and ends at the airport deck instead of overlapping it.
+
+NerisAlienFleet owns four static models, twelve instances and four independent
+parked/lifting/clear/landing schedules. It uses the existing Random statement and
+elapsed frame time. Each pad stays completely clear for 10–15 seconds before the
+next descent starts. NerisSpaceportPreview handles incremental loading/destruction;
+NerisTown adds only the update delegation. Blender export places the same four
+models at the original elevated pads. The Spaceport entrance road now ends at
+the original causeway edge instead of overlapping six terrain cells.
+
+Validation is recorded in artifacts/neris-fleet-tests-final.log,
+artifacts/horizon-r009-hardening-final.log and the versioned r009 validation report.
+The focused native session covers linked walking, entry, day/night, geometry
+instances, camera regressions and resource release. Studio and all Web adoption
+remain on hold. No size baseline, exclusions, save format or dependency changed.
+
+Current change review: Arena3D adds four metadata lines; NerisTown adds 100 and
+removes 17 coordinator lines, TownEditorSession adds 92 and removes three. The
+new alien fleet owner is 197 lines and the terminal door owner is 85 lines.
+Neither NativeProgram nor ViewerWorkflow grows. The existing focused hardening
+source ownership checks pass; no baseline or exclusion was changed.
+
+Earlier checkpoint sections below are historical.
+
 ## Current checkpoint: Horizon r008 (September 29)
 
 The versioned Horizon package owns Spaceport 01 paving, gold inlays and floor

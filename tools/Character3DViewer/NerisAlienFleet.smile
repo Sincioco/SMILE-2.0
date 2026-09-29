@@ -1,0 +1,197 @@
+''' Four distinct visitors with independent pad schedules and a guaranteed clear interval.
+Module Smile.Tools.NerisAlienFleet
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Tools.NerisSpaceportRoute As Route
+Import Smile.Tools.Character3DViewerCalibration As Numbers
+
+Public Type State
+    Models[4] As Core.Model3D
+    Objects[12] As Core.Object3D
+    Loaded As Number
+    Stage[4] As Number
+    Clock[4] As Number
+    Duration[4] As Number
+    Ready As Boolean
+    Failed As Boolean
+End Type
+
+Public Sub Schedule(ByRef Value As State, Ship As Number)
+
+    Dim Duration As Number
+
+    If Value.Stage[Ship] = 0 Then
+        Random Duration From 18000 To 28000
+    Else If Value.Stage[Ship] = 2 Then
+        Random Duration From 10000 To 15000
+    Else
+        Random Duration From 5000 To 7000
+    End If
+
+    Value.Duration[Ship] = Duration
+
+End Sub
+
+Public Function Position(ByRef Value As State, Ship As Number) As P.Vector3
+
+    Dim Result As P.Vector3
+    Dim Height As Double
+    Dim Amount As Double
+    Dim Stage As Number
+
+    Stage = Value.Stage[Ship]
+    Result = P.Vector(Route.ORIGIN_X + 3060.0, Route.DECK_Y + 650.0, Route.ORIGIN_Z - 440.0)
+
+    If Ship >= 2 Then
+        Result.X = Route.ORIGIN_X - 3060.0
+    End If
+
+    If Ship Mod 2 = 1 Then
+        Result.Y = Route.DECK_Y + 1050.0
+        Result.Z = Route.ORIGIN_Z - 1560.0
+    End If
+
+    If Stage = 3 Then
+        Amount = 1.0 - ToDouble(Value.Clock[Ship]) / ToDouble(Value.Duration[Ship])
+    Else If Stage = 1 Then
+        Amount = ToDouble(Value.Clock[Ship]) / ToDouble(Value.Duration[Ship])
+    Else If Stage = 2 Then
+        Amount = 1.0
+    End If
+
+    Height = 7000.0 * Amount * Amount * (3.0 - 2.0 * Amount)
+    Result.Y = Result.Y + Height
+
+    Return Result
+
+End Function
+
+Public Function Visible(ByRef Value As State, Ship As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Value.Stage[Ship] <> 2
+
+    Return Result
+
+End Function
+
+Public Sub LoadNext(ByRef Value As State)
+
+    Dim Part As Number
+    Dim Ok As Boolean
+    Dim Delay As Number
+
+    If Value.Ready Or Value.Failed Then
+        Return
+    End If
+
+    Value.Models[Value.Loaded] = G.LoadModelGeometry3D("Assets/Neris/Spaceport01/Alien-" +
+        Numbers.NumberText(Value.Loaded) + ".sm3d")
+    Ok = Value.Models[Value.Loaded].GeometryReady And Value.Models[Value.Loaded].PartCount = 3
+    Ok = G.PrepareModelPbr3D(Value.Models[Value.Loaded], G.TEXTURE_FILTER_ANISOTROPIC, 1, 16) And Ok
+
+    For Part = 0 To 2
+        Value.Objects[Value.Loaded * 3 + Part] = G.CreateModelPart3D(Value.Models[Value.Loaded], Part)
+        Ok = Value.Objects[Value.Loaded * 3 + Part].Handle <> 0 And Ok
+        Ok = P.SetScale(Value.Objects[Value.Loaded * 3 + Part], 1000.0, 1000.0, 1000.0) And Ok
+    End For
+
+    Random Delay From 5000 To 25000
+    Value.Duration[Value.Loaded] = Delay
+    Value.Loaded = Value.Loaded + 1
+    Value.Ready = Value.Loaded = 4 And Ok
+    Value.Failed = Not Ok
+
+End Sub
+
+Public Sub Update(ByRef Value As State, Elapsed As Number)
+
+    Dim Ship As Number
+
+    If Not Value.Ready Then
+        Return
+    End If
+
+    For Ship = 0 To 3
+
+        Value.Clock[Ship] = Value.Clock[Ship] + Max(0, Elapsed)
+
+        Do
+
+            If Value.Clock[Ship] < Value.Duration[Ship] Then
+                Exit Do
+            End If
+
+            Value.Clock[Ship] = Value.Clock[Ship] - Value.Duration[Ship]
+            Value.Stage[Ship] = (Value.Stage[Ship] + 1) Mod 4
+
+            Call Schedule(Value, Ship)
+
+        Loop
+
+    End For
+
+End Sub
+
+Public Function Draw(ByRef Value As State) As Boolean
+
+    Dim Ship As Number
+    Dim Part As Number
+    Dim Point As P.Vector3
+    Dim Heading As Double
+    Dim Ok As Boolean
+
+    Ok = True
+
+    If Not Value.Ready Then
+        Return Ok
+    End If
+
+    For Ship = 0 To 3
+
+        If Visible(Value, Ship) Then
+
+            Point = Position(Value, Ship)
+            Heading = 270.0
+
+            If Ship >= 2 Then
+                Heading = 90.0
+            End If
+
+            For Part = 0 To 2
+                Ok = P.SetPosition(Value.Objects[Ship * 3 + Part], Point.X, Point.Y, Point.Z) And Ok
+                Ok = P.SetRotation(Value.Objects[Ship * 3 + Part], 0.0, Heading, 0.0) And Ok
+                Ok = G.DrawObject3D(Value.Objects[Ship * 3 + Part]) And Ok
+            End For
+
+        End If
+
+    End For
+
+    Return Ok
+
+End Function
+
+Public Sub Destroy(ByRef Value As State)
+
+    Dim Index As Number
+    Dim Empty As State
+
+    For Index = 0 To 11
+        Call G.DestroyObject3D(Value.Objects[Index])
+    End For
+
+    For Index = 0 To 3
+        Call G.DestroyModel3D(Value.Models[Index])
+    End For
+
+    Value = Empty
+
+End Sub
+
+End Module

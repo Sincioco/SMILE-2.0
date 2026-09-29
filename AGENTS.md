@@ -184,6 +184,12 @@ The SMILE 2.0 - 3D Viewer, Animation Editor is allowed to evolve into a lightwei
 
 ### Permanent smooth 3D camera interaction rule
 
+- Sin's September 29 map-centering rule: every current and future town/map must
+  share its center with its arena floor and grid. Size and position the floor/grid
+  from the active map bounds, updating them when the map expands or contracts.
+  Map overview/automatic orbit uses that shared center. Preserve explicit
+  Follow Party leader anchoring and keep unrelated maps independent.
+
 - Sin's September 20 arena rule: the Character Viewer's arena is the visual and
   interaction authority for current and future SMILE games/tools that use a 3D
   arena. Keep its floor/grid appearance and consistent pan, zoom and orbit in

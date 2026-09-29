@@ -4,18 +4,27 @@ Module Smile.Tools.NerisHorizonRoute
 Option Explicit
 
 Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PartyTrail3D As Trail
 
-Public Const ORIGIN_X = -7400.0
+Public Const ORIGIN_X = 7400.0
 Public Const ORIGIN_Z = 1250.0
 Public Const DECK_Y = 23.12
 Public Const SCALE = 10.0
-Public Const YAW = -90.0
+Public Const YAW = 90.0
 
 Private Dim Enabled As Boolean
+Private Dim DoorRotation As Double
+Private Dim DoorHold As Number
+Private Dim Entered As Boolean
+Private Dim PendingEntry As Boolean
 
 Public Sub Enable(Value As Boolean)
 
     Enabled = Value
+    DoorRotation = 0.0
+    DoorHold = 0
+    Entered = False
+    PendingEntry = False
 
 End Sub
 
@@ -29,7 +38,7 @@ Public Function Contains(X As Double, Z As Double) As Boolean
 
     Dim Result As Boolean
 
-    Result = Enabled And X >= -11400.0 And X <= -5400.0 And Z >= -3550.0 And Z <= 6050.0
+    Result = Enabled And X >= 5400.0 And X <= 11400.0 And Z >= -3550.0 And Z <= 6050.0
 
     Return Result
 
@@ -41,14 +50,20 @@ Public Function CanStand(X As Double, Z As Double) As Boolean
     Dim LocalZ As Double
     Dim Result As Boolean
 
-    LocalX = (Z - ORIGIN_Z) / SCALE
-    LocalZ = (ORIGIN_X - X) / SCALE
+    LocalX = (ORIGIN_Z - Z) / SCALE
+    LocalZ = (X - ORIGIN_X) / SCALE
 
     Result = Enabled And Abs(LocalX) <= 475.0 And LocalZ >= -195.0 And LocalZ < -3.0
     Result = Result Or (Enabled And Abs(LocalX) <= 11.0 And LocalZ >= -36.0 And LocalZ <= 4.0)
     Result = Result Or (Enabled And GroundFloor(LocalX, LocalZ))
     Result = Result Or (Enabled And Abs(LocalX) >= 272.0 And Abs(LocalX) <= 292.0 And
         LocalZ >= -195.0 And LocalZ <= 185.0)
+
+    If (Abs(LocalX) <= 11.7 And
+        LocalZ > -2.5 And
+        LocalZ < 1.5) Then
+        Result = Result And DoorRotation >= 80.0
+    End If
 
     Return Result
 
@@ -107,8 +122,8 @@ Public Function ToWorld(Point As P.Vector3) As P.Vector3
 
     Dim Result As P.Vector3
 
-    Result = P.Vector(ORIGIN_X - Point.Z * SCALE, DECK_Y + Point.Y * SCALE,
-        ORIGIN_Z + Point.X * SCALE)
+    Result = P.Vector(ORIGIN_X + Point.Z * SCALE, DECK_Y + Point.Y * SCALE,
+        ORIGIN_Z - Point.X * SCALE)
 
     Return Result
 
@@ -120,7 +135,7 @@ Public Function GroundHeight(X As Double, Z As Double) As Double
     Dim Depth As Double
 
     Result = DECK_Y
-    Depth = (ORIGIN_X - X) / SCALE
+    Depth = (X - ORIGIN_X) / SCALE
 
     If (Abs(Z - ORIGIN_Z) <= 2600.0 And
         Depth >= 0.0 And
@@ -135,6 +150,74 @@ Public Function GroundHeight(X As Double, Z As Double) As Double
         Depth < 0.0) Then
         Result = DECK_Y + 0.8 * SCALE
     End If
+
+    Return Result
+
+End Function
+
+''' Proximity includes every follower; crossing queues one event for a future cutscene.
+Public Sub Update(ByRef Path As Trail.State, ActorCount As Number, Elapsed As Number)
+
+    Dim Index As Number
+    Dim X As Double
+    Dim Z As Double
+    Dim NearDoor As Boolean
+
+    If Not Enabled Then
+        Return
+    End If
+
+    For Index = 0 To Min(ActorCount, 5) - 1
+        X = (ORIGIN_Z - Path.Positions[Index].Z) / SCALE
+        Z = (Path.Positions[Index].X - ORIGIN_X) / SCALE
+        NearDoor = NearDoor Or (Abs(X) < 15.0 And Z > -32.0 And Z < 18.0)
+    End For
+
+    If NearDoor Then
+
+        DoorHold = 1800
+        DoorRotation = Min(95.0, DoorRotation + ToDouble(Elapsed) * 0.09)
+
+    Else
+
+        DoorHold = Max(0, DoorHold - Elapsed)
+
+        If DoorHold = 0 Then
+            DoorRotation = Max(0.0, DoorRotation - ToDouble(Elapsed) * 0.06)
+        End If
+
+    End If
+
+    X = (ORIGIN_Z - Path.Positions[0].Z) / SCALE
+    Z = (Path.Positions[0].X - ORIGIN_X) / SCALE
+
+    If Z < -8.0 Then
+        Entered = False
+    End If
+
+    If (Abs(X) < 11.0 And
+        Z > 1.5 And
+        Z < 18.0 And
+        DoorRotation >= 80.0 And
+        Not Entered) Then
+        PendingEntry = True
+        Entered = True
+    End If
+
+End Sub
+
+Public Function DoorAngle() As Double
+
+    Return DoorRotation
+
+End Function
+
+Public Function ConsumeEntry() As Boolean
+
+    Dim Result As Boolean
+
+    Result = PendingEntry
+    PendingEntry = False
 
     Return Result
 

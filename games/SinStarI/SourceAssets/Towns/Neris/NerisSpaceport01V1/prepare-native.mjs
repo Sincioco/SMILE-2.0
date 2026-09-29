@@ -26,4 +26,21 @@ fs.mkdirSync(destination, {recursive:true});
 for (const chunk of layout.native_chunks)
   fs.copyFileSync(path.join(root, 'Native', chunk.file), path.join(destination, chunk.file));
 fs.copyFileSync(path.join(root, 'Spaceport.sm3d.json'), path.join(destination, 'Spaceport.sm3d.json'));
-console.log('Prepared Neris Spaceport r08: 6 models, 21 static parts, 473528 static triangles.');
+const fleet = JSON.parse(fs.readFileSync(path.join(root, 'Fleet/manifest.json')));
+for (const ship of fleet.ships) {
+  const bytes = fs.readFileSync(path.join(root, 'Fleet/Native', ship.file));
+  if (createHash('sha256').update(bytes).digest('hex') !== ship.sha256 || ship.parts !== 3 || ship.vertices > 131072)
+    throw Error('Alien fleet contract changed: ' + ship.name);
+  const glb = JSON.parse(bytes.toString('utf8', 20, 20 + bytes.readUInt32LE(12)));
+  let vertices = 0, indices = 0;
+  for (const mesh of glb.meshes) for (const part of mesh.primitives) {
+    const v = glb.accessors[part.attributes.POSITION].count, i = glb.accessors[part.indices].count;
+    if (v > 65535 || i > 196608 || part.attributes.TEXCOORD_0 === undefined)
+      throw Error('Alien part exceeds the native mesh budget: ' + ship.name);
+    vertices += v; indices += i;
+  }
+  if (glb.meshes.length !== ship.parts || vertices !== ship.vertices || indices !== ship.triangles * 3)
+    throw Error('Alien manifest does not match its mesh: ' + ship.name);
+  fs.writeFileSync(path.join(destination, ship.file), bytes);
+}
+console.log('Prepared Neris Spaceport r08: 6 models, 21 static parts, 473528 static triangles; four alien visitors in 12 additional parts.');

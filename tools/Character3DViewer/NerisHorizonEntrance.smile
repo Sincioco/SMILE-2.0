@@ -1,0 +1,85 @@
+''' Own the terminal glass door model and four hinged draw objects.
+Module Smile.Tools.NerisHorizonEntrance
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Tools.NerisHorizonRoute As Route
+
+Public Type State
+    Model As Core.Model3D
+    Objects[4] As Core.Object3D
+    Ready As Boolean
+End Type
+
+Public Function Create(ByRef Value As State) As Boolean
+
+    Dim Part As Number
+    Dim Point As P.Vector3
+    Dim Ok As Boolean
+
+    Value.Model = G.LoadModelGeometry3D("Assets/Neris/Horizon/Door.sm3d")
+    Ok = Value.Model.GeometryReady And Value.Model.PartCount = 4
+    Ok = G.PrepareModelPbr3D(Value.Model, G.TEXTURE_FILTER_ANISOTROPIC, 1, 16) And Ok
+    Point = Route.ToWorld(P.Vector(0.0, 0.8, -1.5))
+
+    For Part = 0 To 3
+
+        Value.Objects[Part] = G.CreateModelPart3D(Value.Model, Part)
+        Ok = Value.Objects[Part].Handle <> 0 And Ok
+        Ok = P.SetScale(Value.Objects[Part], 1000.0, 1000.0, 1000.0) And Ok
+        Ok = P.SetPosition(Value.Objects[Part], Point.X, Point.Y, Point.Z) And Ok
+        Ok = P.SetRotation(Value.Objects[Part], 0.0, Route.YAW, 0.0) And Ok
+    End For
+
+    Value.Ready = Ok
+
+    Return Ok
+
+End Function
+
+Public Function Draw(ByRef Value As State) As Boolean
+
+    Dim Part As Number
+    Dim Side As Double
+    Dim Pivot As P.Vector3
+    Dim Ok As Boolean
+
+    Ok = Value.Ready
+
+    For Part = 0 To 3
+
+        Side = -1.0
+
+        If Part >= 2 Then
+            Side = 1.0
+        End If
+
+        Pivot = Route.ToWorld(P.Vector(Side * 11.7, 0.8, -1.5))
+        Ok = P.SetPivotRotation(Value.Objects[Part], Pivot,
+            P.Vector(0.0, Side * Route.DoorAngle(), 0.0)) And Ok
+        Ok = G.DrawObject3D(Value.Objects[Part]) And Ok
+    End For
+
+    Return Ok
+
+End Function
+
+Public Sub Destroy(ByRef Value As State)
+
+    Dim Part As Number
+    Dim Empty As State
+
+    For Part = 0 To 3
+        Call G.DestroyObject3D(Value.Objects[Part])
+    End For
+
+    Call G.DestroyModel3D(Value.Model)
+
+    Value = Empty
+
+End Sub
+
+End Module

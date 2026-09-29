@@ -33,6 +33,8 @@ Import Smile.Tools.NerisHorizonPreview As Horizon
 Import Smile.Tools.NerisHorizonRoute As HorizonRoute
 Import Smile.Tools.NerisTownLandmarks As Landmarks
 Import Smile.Tools.NerisTownConnections As Connections
+Import Smile.Tools.TownSunControls As SunControls
+Import Smile.Tools.TownDocumentNavigation As DocumentNavigation
 
 Public Type State
     Town As Assets.State
@@ -130,7 +132,7 @@ Public Sub LoadNext(ByRef Value As State)
     If Value.Edited Then
 
         Ok = Landmarks.LoadNext(Value.Landmarks, Authoring.TownName(),
-            Authoring.CoversArea(-11400.0, -3550.0, -5400.0, 6050.0),
+            Authoring.TownName() = "Horizon Airport",
             Value.Comparison, Value.Harbor, Value.Horizon)
         Value.Failed = Value.Landmarks.Failed
 
@@ -144,6 +146,12 @@ Public Sub LoadNext(ByRef Value As State)
         Value.View = Arena.Create(11000, 10000, 6.0)
         Ok = TownMap.Create(Value.Map) And Ok
     End If
+
+    If Value.Edited Then
+        Call Authoring.SizeArena(Value.View.Floor)
+    End If
+
+    Value.Panel.GeometryTime = 0
 
     Value.View.MinimumDistance = 80.0
     Value.View.MaximumDistance = 18000.0
@@ -161,13 +169,17 @@ Public Sub LoadNext(ByRef Value As State)
         Value.BaseCamera.FarPlane = 55000.0
         Ok = Scene.SetShadowArea(-2650, 1500, -3200, 15200, 15500, 1, 22000) And Ok
 
+        If Value.Horizon.Ready Then
+            Ok = Scene.SetShadowArea(8100, 1500, 1250, 11000, 11000, 1, 22000) And Ok
+        End If
+
     Else
         Ok = Scene.SetShadowArea(-1000, 650, 0, 8000, 7600, 1, 11000) And Ok
 
     End If
 
     Ok = Scene.SetShadowBias(25, 60) And Ok
-    Value.Ready = Value.View.Ready And Value.People.Ready And Ok
+    Value.Ready = Value.View.Ready And Value.View.Floor.Ready And Value.People.Ready And Ok
     Value.Failed = Not Value.Ready
 
     Call Party.Update(Value.People, Value.People.Path.Positions[0], 0)
@@ -214,7 +226,35 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
 
     End If
 
+    If (Value.Edited And
+        Pointer_Pressed(POINTER_PRIMARY) And
+        Pointer_X() >= 616 And
+        Pointer_X() < 654 And
+        Pointer_Y() >= 10 And
+        Pointer_Y() < 39) Then
+        Call Authoring.ToggleDayNight()
+
+        Return
+    End If
+
     Blocked = Blocked Or HeaderHovered
+
+    If (Not Blocked And
+        Not Authoring.Editing() And
+        Not Authoring.CameraBlocked() And
+        Not CameraPanel.Hovered() And
+        Pointer_Y() >= 126 And
+        Pointer_Pressed(POINTER_PRIMARY) And
+        Key_Held(KEY_CONTROL)) Then
+
+        If Picking.Ground(Value.View.LiveCamera, Pointer_X(), Pointer_Y(),
+            Window_Width(), Window_Height(), OrbitPoint) Then
+            Call MoveToRoad(Value, OrbitPoint)
+        End If
+
+        Return
+
+    End If
 
     If (Pointer_Pressed(POINTER_PRIMARY) And
         Pointer_X() >= 665 And
@@ -281,7 +321,7 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
         Return
     End If
 
-    If (HorizonRoute.Active() And
+    If (Value.Edited And
         Not Authoring.Editing() And
         Not Authoring.CameraBlocked() And
         Pointer_Pressed(POINTER_PRIMARY) And
@@ -463,10 +503,18 @@ Public Sub StartOrbit(ByRef Value As State)
     Call Keyboard.Capture(Value.Keys, Value.View, Value.BaseCamera)
 
     If Value.Follow And Not Value.Keys.FlyInspect Then
+
         Call Drone.AnchorParty(Value.Flight, Value.View, Value.BaseCamera, Value.People.Path.Positions[0])
+
     Else
         Value.Follow = False
         Value.PartyCamera = False
+
+        If Value.Edited Then
+            Call Drone.AnchorPoint(Value.Flight, Value.View, Value.BaseCamera,
+                Authoring.MapCenter(Value.BaseCamera.Target.Y))
+        End If
+
     End If
 
     Value.Flight.CursorOrbit = False
@@ -481,6 +529,16 @@ Public Sub StartOrbit(ByRef Value As State)
 
 End Sub
 
+Public Sub MoveToRoad(ByRef Value As State, Point As P.Vector3)
+
+    Dim Destination As P.Vector3
+
+    If DocumentNavigation.NearestRoad(Point, Destination) Then
+        Call Party.Teleport(Value.People, Destination, Value.People.Members[0].Yaw)
+    End If
+
+End Sub
+
 ''' Right-click restores the town overview; party-follow orbit remains leader-centered.
 Public Sub StartOverviewOrbit(ByRef Value As State)
 
@@ -492,8 +550,8 @@ Public Sub StartOverviewOrbit(ByRef Value As State)
 
     Call ResetOverview(Value)
 
-    If Value.Horizon.Ready Then
-        Call Tour.Frame(Value.BaseCamera, P.Vector(-1075.0, 650.0, 0.0), 12000.0, 160.0)
+    If Authoring.TownName() = "Neris Town" Then
+        Call Tour.TownOverview(Value.BaseCamera, Authoring.MapCenter())
         Call Arena.ComposeCamera(Value.View, Value.BaseCamera)
     End If
 
@@ -504,8 +562,12 @@ End Sub
 
 Public Sub VisitAirport(ByRef Value As State)
 
+    Dim Ok As Boolean
+
     If HorizonRoute.Active() Then
-        Call VisitLandmark(Value, HorizonRoute.ToWorld(P.Vector(0.0, 0.0, -45.0)), 90.0)
+        Call VisitLandmark(Value, HorizonRoute.ToWorld(P.Vector(0.0, 0.0, -45.0)), 270.0)
+    Else
+        Ok = Authoring.TravelTo("Horizon Airport", HorizonRoute.ToWorld(P.Vector(0.0, 0.0, -45.0)))
     End If
 
 End Sub
@@ -596,10 +658,10 @@ Public Sub ResetOverview(ByRef Value As State, Optional Harbor As Boolean = Fals
 
     Call Tour.Frame(Value.BaseCamera, P.Vector(-1075.0, 150.0, 0.0))
 
-    If Harbor And Value.Horizon.Ready Then
-        Call Tour.Frame(Value.BaseCamera, P.Vector(-8100.0, 700.0, 1250.0), 20000.0, 90.0)
-    Else If Harbor Then
-        Call Tour.Frame(Value.BaseCamera, P.Vector(-5500.0, 900.0, -7350.0), 18000.0, -165.0)
+    If Value.Horizon.Ready Then
+        Call Tour.Frame(Value.BaseCamera, Authoring.MapCenter(700.0), 20000.0, -90.0)
+    Else If Value.Harbor.Ready Then
+        Call Tour.Frame(Value.BaseCamera, Authoring.MapCenter(900.0), 18000.0, -165.0)
     Else If Value.Edited Then
         Call Authoring.FrameDocument(Value.BaseCamera, Not Value.Harbor.Ready)
     End If
@@ -739,7 +801,7 @@ Public Sub MoveParty(ByRef Value As State, Direction As P.Vector3, Elapsed As Nu
         Destination = Connections.Destination(Authoring.TownName(), Leader, M.Length(Direction) > 0.001)
 
         If Text_Length(Destination) > 0 Then
-            Ok = Authoring.TravelTo(Destination, Connections.Arrival(Destination))
+            Ok = Authoring.TravelTo(Destination, Connections.Arrival(Destination, Authoring.TownName()))
         End If
 
     End If
@@ -751,6 +813,9 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
     Dim Held As Keyboard.HeldKeys
     Dim Leader As P.Vector3
     Dim ArrivalHeading As Double
+    Dim TabOverview As Boolean
+    Dim MapCenter As P.Vector3
+    Dim CenterOffset As P.Vector3
 
     If Value.Edited And Value.Landmarks.Town <> Authoring.TownName() Then
         Call Authoring.Update(Value.People.Path.Positions[0], Elapsed)
@@ -778,7 +843,9 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
         Call SpaceportRoute.Update(Value.People.Path, Value.People.MemberCount, Elapsed)
     End If
 
+    Call HorizonRoute.Update(Value.People.Path, Value.People.MemberCount, Elapsed)
     Call Horizon.Update(Value.Horizon, Elapsed)
+    Call Spaceport.Update(Value.Harbor, Elapsed)
     Call AdvanceKeyboard(Value, Held, Elapsed)
 
     Leader = Value.People.Path.Positions[0]
@@ -786,20 +853,30 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
     If Value.Edited Then
 
         Call Authoring.Update(Leader, Elapsed)
+        Call Authoring.SizeArena(Value.View.Floor)
 
-        If Authoring.TakeSpawn(Leader) Then
+        If Value.Cinematic And Not Value.Follow Then
 
-            ArrivalHeading = 180.0
+            MapCenter = Authoring.MapCenter(Value.BaseCamera.Target.Y)
+            CenterOffset = M.Subtract(MapCenter, Value.BaseCamera.Target)
+            Value.BaseCamera.Position = M.Add(Value.BaseCamera.Position, CenterOffset)
+            Value.BaseCamera.Target = MapCenter
 
-            If Authoring.TownName() = "Neris Spaceport" Then
-                ArrivalHeading = 0.0
-            End If
+        End If
+
+        If Authoring.TakeSpawn(Leader, TabOverview) Then
+
+            ArrivalHeading = Connections.ArrivalHeading(Authoring.TownName(), Leader)
 
             Call Party.Teleport(Value.People, Leader, ArrivalHeading)
 
             If Authoring.Editing() Then
 
                 Call FitTown(Value)
+
+            Else If TabOverview Then
+
+                Call ResetOverview(Value)
 
             Else
 
@@ -940,6 +1017,9 @@ Public Sub Draw(ByRef Value As State)
         Ok = Castle.Draw(Value.Comparison) And Ok
         Ok = Spaceport.Draw(Value.Harbor) And Ok
         Ok = Horizon.Draw(Value.Horizon) And Ok
+
+        Call CameraPanel.CaptureGeometry(Value.Panel)
+
         Ok = Scene.EndScene() And Ok
 
     End If
@@ -953,6 +1033,9 @@ Public Sub Overlay(ByRef Value As State)
     Fill Rectangle 0, 0, Window_Width(), 94, RGB(12, 20, 32)
     Draw Text Text_Slice(Authoring.TownName(), 0, 20) At 18, 12 Size 18 Color WHITE
     Draw Text "Speed: " + Numbers.NumberText(Value.People.SpeedPercent) + "%  (+ / -)" At 405, 18 Size 16 Color WHITE
+
+    Call SunControls.DrawDayNight(Authoring.IsNight())
+
     Fill Rectangle 665, 10, 90, 29, RGB(20, 90, 108)
     Draw Text "Edit Town" At 675, 17 Size 15 Color WHITE
 
@@ -984,7 +1067,7 @@ Public Sub Overlay(ByRef Value As State)
         Draw Text "Orbit Airport" At 964, 17 Size 14 Color WHITE
     End If
 
-    If HorizonRoute.Active() And Not Authoring.Editing() Then
+    If Value.Edited And Not Authoring.Editing() Then
         Fill Rectangle 1138, 10, 230, 29, RGB(20, 90, 108)
         Draw Text "Visit Horizon Airport" At 1148, 17 Size 14 Color WHITE
     End If

@@ -11,6 +11,7 @@ Import Smile.Tools.NerisSpaceportTraffic As Traffic
 Import Smile.Tools.NerisRunwayTraffic As Runway
 Import Smile.Tools.NerisHorizonGlow As Glow
 Import Smile.Tools.NerisHorizonDownwash As Downwash
+Import Smile.Tools.NerisHorizonEntrance As Entrance
 
 Public Type State
     Models[4] As Core.Model3D
@@ -21,6 +22,7 @@ Public Type State
     RunwayFlight As Runway.State
     Lights As Glow.State
     Dust As Downwash.State
+    Doors As Entrance.State
     RunwayFirst As Number
     Loaded As Number
     ObjectCount As Number
@@ -42,10 +44,10 @@ Public Sub LoadNext(ByRef Value As State)
 
     If Value.Loaded = 0 Then
 
-        If (G.LiveModelCount3D() + 4 > G.MaximumModelCount3D() Or
-            G.LiveMeshCount3D() + 32 > G.MaximumMeshCount3D() Or
-            G.LiveMaterialCount3D() + 35 > G.MaximumMaterialCount3D() Or
-            G.LiveObjectCount3D() + 86 > G.MaximumObjectCount3D()) Then
+        If (G.LiveModelCount3D() + 5 > G.MaximumModelCount3D() Or
+            G.LiveMeshCount3D() + 35 > G.MaximumMeshCount3D() Or
+            G.LiveMaterialCount3D() + 38 > G.MaximumMaterialCount3D() Or
+            G.LiveObjectCount3D() + 89 > G.MaximumObjectCount3D()) Then
             Value.Failed = True
 
             Return
@@ -68,7 +70,7 @@ Public Sub LoadNext(ByRef Value As State)
     Ok = G.PrepareModelPbr3D(Value.Models[Value.Loaded], G.TEXTURE_FILTER_ANISOTROPIC, 1, 16) And Ok
     Value.FirstPart[Value.Loaded] = Value.ObjectCount
 
-    If Value.ObjectCount + Value.Models[Value.Loaded].PartCount > 32 Then
+    If Value.ObjectCount + Value.Models[Value.Loaded].PartCount > 31 Then
         Value.Failed = True
 
         Return
@@ -110,11 +112,12 @@ Public Sub LoadNext(ByRef Value As State)
 
         Ok = Glow.Create(Value.Lights) And Ok
         Ok = Downwash.Create(Value.Dust) And Ok
+        Ok = Entrance.Create(Value.Doors) And Ok
 
     End If
 
     Value.Failed = Not Ok
-    Value.Ready = Ok And Value.Loaded = 4 And Value.ObjectCount = 86
+    Value.Ready = Ok And Value.Loaded = 4 And Value.ObjectCount = 85
 
     Call Route.Enable(Value.Ready)
 
@@ -198,6 +201,7 @@ Public Function Draw(ByRef Value As State) As Boolean
 
         Ok = Glow.Draw(Value.Lights) And Ok
         Ok = Downwash.Draw(Value.Dust) And Ok
+        Ok = Entrance.Draw(Value.Doors) And Ok
 
     End If
 
@@ -218,6 +222,7 @@ Public Sub Destroy(ByRef Value As State)
         Call G.DestroyModel3D(Value.Models[Index])
     End For
 
+    Call Entrance.Destroy(Value.Doors)
     Call Route.Enable(False)
     Call Glow.Destroy(Value.Lights)
     Call Downwash.Destroy(Value.Dust)

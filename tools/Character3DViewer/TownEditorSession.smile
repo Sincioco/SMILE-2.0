@@ -25,6 +25,8 @@ Import Smile.Tools.TownWorldEditor As World
 Import Smile.Tools.TownSelection As Selection
 Import Smile.Simple3D.SurfaceGrid3D As Grid
 Import Smile.Tools.NerisTownTour As Tour
+Import Smile.Tools.NerisTownConnections As Connections
+Import Smile.Simple3D.Arena3D As Arena
 
 Private Dim Town As Document.State
 Private Dim Transfers As Files.State
@@ -44,6 +46,7 @@ Private Dim RecoveryClock As Number
 Private Dim TeleportPending As Boolean
 Private Dim TravelPending As Boolean
 Private Dim TravelArrival As P.Vector3
+Private Dim TabOverviewPending As Boolean
 Private Dim LiveSurface As Grid.State
 
 Public Function Available() As Boolean
@@ -175,6 +178,47 @@ Public Function LoadNext() As Boolean
     Return Ready
 
 End Function
+
+Public Function HasTown(Name As Text) As Boolean
+
+    Dim Index As Number
+
+    For Index = 0 To OpenTabs.TabCount - 1
+
+        If OpenTabs.Documents[Index].Name = Name Then
+            Return True
+        End If
+
+    End For
+
+    Return False
+
+End Function
+
+Public Function IsNight() As Boolean
+
+    Dim Result As Boolean
+
+    Result = Town.Light.Intensity < 100
+
+    Return Result
+
+End Function
+
+Public Sub ToggleDayNight()
+
+    Dim Action As Number
+    Dim Ignored As Number
+
+    Action = 222
+
+    If IsNight() Then
+        Action = 221
+    End If
+
+    Ignored = Editor.Command(Controls, Town, Action)
+
+End Sub
 
 Public Function TravelTo(Name As Text, Arrival As P.Vector3) As Boolean
 
@@ -439,6 +483,7 @@ Public Sub Input(View As P.Camera3D, Key As Number, Blocked As Boolean)
     If Tabs.Input(OpenTabs, Town) Then
 
         TeleportPending = True
+        TabOverviewPending = Town.Name = "Neris Spaceport" Or Town.Name = "Horizon Airport"
         Controls.Ui.Message = "Town tab opened. Right-click to close."
 
         Call Editor.ResetDocument(Controls, Town)
@@ -602,7 +647,7 @@ Public Sub Overlay(View As P.Camera3D)
 
 End Sub
 
-Public Function TakeSpawn(ByRef Position As P.Vector3) As Boolean
+Public Function TakeSpawn(ByRef Position As P.Vector3, ByRef Overview As Boolean) As Boolean
 
     Dim X As Number
     Dim Z As Number
@@ -613,6 +658,8 @@ Public Function TakeSpawn(ByRef Position As P.Vector3) As Boolean
     End If
 
     TeleportPending = False
+    Overview = TabOverviewPending
+    TabOverviewPending = False
 
     If TravelPending Then
 
@@ -623,8 +670,8 @@ Public Function TakeSpawn(ByRef Position As P.Vector3) As Boolean
 
     End If
 
-    If Town.Name = "Neris Spaceport" Then
-        Position = P.Vector(-5500.0, 23.12, -3650.0)
+    If Town.Name = "Neris Spaceport" Or Town.Name = "Horizon Airport" Then
+        Position = Connections.Arrival(Town.Name)
         Return True
     End If
 
@@ -670,6 +717,48 @@ Public Function TakeSpawn(ByRef Position As P.Vector3) As Boolean
     Return True
 
 End Function
+
+''' The active saved surface owns both the floor extent and the map orbit center.
+Public Function MapCenter(Optional Height As Double = 150.0) As P.Vector3
+
+    Dim Result As P.Vector3
+
+    Result = P.Vector((Town.Surface.OriginX + Town.Surface.XEdges[Town.Surface.Columns]) * 0.5,
+        Height, (Town.Surface.OriginZ + Town.Surface.ZEdges[Town.Surface.Rows]) * 0.5)
+
+    Return Result
+
+End Function
+
+Public Sub SizeArena(ByRef Floor As Arena.ArenaFloor)
+
+    Dim Center As P.Vector3
+    Dim Width As Number
+    Dim Depth As Number
+
+    If Ground.LiveRevision <> Town.Surface.Revision Then
+        Return
+    End If
+
+    Center = MapCenter()
+    Width = ToNumber(Town.Surface.XEdges[Town.Surface.Columns] - Town.Surface.OriginX)
+    Depth = ToNumber(Town.Surface.ZEdges[Town.Surface.Rows] - Town.Surface.OriginZ)
+
+    If (Floor.Ready And
+        Floor.Width = Width And
+        Floor.Depth = Depth And
+        Floor.Floor.Position.X = ToNumber(Center.X) And
+        Floor.Floor.Position.Z = ToNumber(Center.Z)) Then
+        Return
+    End If
+
+    Call Arena.Destroy(Floor)
+
+    Floor = Arena.Create(Width, Depth, 24, 150, 255, 200, 2)
+
+    Call Arena.Place(Floor, ToNumber(Center.X), -1, ToNumber(Center.Z))
+
+End Sub
 
 Public Sub Release()
 

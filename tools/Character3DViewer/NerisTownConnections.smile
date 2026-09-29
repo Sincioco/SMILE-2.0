@@ -1,4 +1,4 @@
-''' Authored walking gateways between Neris Town and its separate original spaceport.
+''' Three authored pedestrian gateways; each arrival is safely inside its destination.
 Module Smile.Tools.NerisTownConnections
 
 Option Explicit
@@ -11,33 +11,65 @@ Public Function Destination(Town As Text, Position As P.Vector3, Moving As Boole
         Return ""
     End If
 
-    If (Town = "Neris Town" And
-        Abs(Position.X + 5000.0) <= 95.0 And
-        Position.Z <= -3450.0) Then
-        Return "Neris Spaceport"
-    End If
+    If Town = "Neris Town" Then
 
-    If (Town = "Neris Spaceport" And
-        Abs(Position.X + 5500.0) <= 95.0 And
-        Position.Z >= -3420.0) Then
-        Return "Neris Town"
+        If Position.X <= -5130.0 And Abs(Position.Z - 900.0) <= 90.0 Then
+            Return "Neris Spaceport"
+        End If
+
+        If Position.X >= 2680.0 And Abs(Position.Z + 1000.0) <= 90.0 Then
+            Return "Horizon Airport"
+        End If
+
+    Else If Town = "Neris Spaceport" Then
+
+        If Position.X >= -1370.0 And Abs(Position.Z + 3500.0) <= 90.0 Then
+            Return "Neris Town"
+        End If
+
+    Else If Town = "Horizon Airport" Then
+
+        If Position.X <= 5270.0 And Abs(Position.Z - 1250.0) <= 90.0 Then
+            Return "Neris Town"
+        End If
+
     End If
 
     Return ""
 
 End Function
 
-Public Function Arrival(Town As Text) As P.Vector3
+Public Function Arrival(Town As Text, Optional FromTown As Text = "") As P.Vector3
 
     Dim Result As P.Vector3
 
-    Result = P.Vector(-5000.0, 23.12, -3250.0)
+    Result = P.Vector(-4950.0, 23.12, 900.0)
 
     If Town = "Neris Spaceport" Then
-        Result = P.Vector(-5500.0, 23.12, -3650.0)
+        Result = P.Vector(-1550.0, 23.12, -3500.0)
+    Else If Town = "Horizon Airport" Then
+        Result = P.Vector(5500.0, 23.12, 1250.0)
+    Else If FromTown = "Horizon Airport" Then
+        Result = P.Vector(2500.0, 23.12, -1000.0)
     End If
 
     Return Result
+
+End Function
+
+Public Function ArrivalHeading(Town As Text, Position As P.Vector3) As Double
+
+    If Town = "Horizon Airport" Then
+        Return 270.0
+    Else If Town = "Neris Spaceport" Then
+        Return 90.0
+    Else If Position.X < -4900.0 Then
+        Return 270.0
+    Else If Position.X > 2450.0 Then
+        Return 90.0
+    End If
+
+    Return 180.0
 
 End Function
 

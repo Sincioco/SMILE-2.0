@@ -7,7 +7,7 @@ const root = path.dirname(fileURLToPath(import.meta.url));
 const destination = path.resolve(root, '../../../../../../tools/Character3DViewer/BuildAssets/Neris/Horizon');
 const report = JSON.parse(fs.readFileSync(path.join(root,'asset-manifest.json')));
 const checksums = JSON.parse(fs.readFileSync(path.join(root,'checksums.json')));
-for (const family of ['Horizon','Transport','Royal','Cargo']) {
+for (const family of ['Horizon','Transport','Royal','Cargo','Door']) {
   const file = `Native/${family}.glb`, bytes = fs.readFileSync(path.join(root,file));
   if (createHash('sha256').update(bytes).digest('hex') !== checksums[file]) throw Error(`Changed asset: ${file}`);
   const doc = JSON.parse(bytes.toString('utf8',20,20+bytes.readUInt32LE(12)));
@@ -30,7 +30,7 @@ for (const family of ['Horizon','Transport','Royal','Cargo']) {
     if (bytes.readUInt32BE(offset+16) !== 4096 || bytes.readUInt32BE(offset+20) !== 640)
       throw Error('Runway paint atlas resolution changed.');
   }
-  if (family !== 'Horizon') {
+  if (family !== 'Horizon' && family !== 'Door') {
     // Regression: smoothing the replacement hull must retain the native -Z nose.
     // The cooker reflects GLB Z; elevated cockpit vertices must therefore be +Z.
     const cockpit = doc.meshes.find(m => m.name === 'GW Glass Dark').primitives[0];
@@ -45,6 +45,6 @@ for (const family of ['Horizon','Transport','Royal','Cargo']) {
   }
 }
 fs.mkdirSync(destination,{recursive:true});
-for(const family of ['Horizon','Transport','Royal','Cargo']) fs.copyFileSync(path.join(root,`Native/${family}.glb`),path.join(destination,`${family}.glb`));
+for(const family of ['Horizon','Transport','Royal','Cargo','Door']) fs.copyFileSync(path.join(root,`Native/${family}.glb`),path.join(destination,`${family}.glb`));
 fs.copyFileSync(path.join(root,'Horizon.sm3d.json'),path.join(destination,'Horizon.sm3d.json'));
-console.log(`Prepared Neris Horizon ${report.revision}: 4 models, ${Object.values(report.parts).reduce((a,b)=>a+b,0)} parts, ${Object.values(report.triangles).reduce((a,b)=>a+b,0)} triangles, including the cargo ship.`);
+console.log(`Prepared Neris Horizon ${report.revision}: 5 models, ${Object.values(report.parts).reduce((a,b)=>a+b,0)} parts, ${Object.values(report.triangles).reduce((a,b)=>a+b,0)} triangles, including the cargo ship.`);

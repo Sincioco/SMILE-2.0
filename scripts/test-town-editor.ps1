@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([switch]$SkipRendering, [string]$SavedTown, [string]$LinkedTown)
+param([switch]$SkipRendering, [string]$SavedTown, [string]$LinkedTown, [string]$AirportTown)
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
@@ -77,6 +77,11 @@ if (-not $SkipRendering) {
         $fixtureData = Join-Path $env:LOCALAPPDATA "SMILE 2.0\Games\$applicationHash\Data"
         $null = New-Item -ItemType Directory -Path $fixtureData -Force
         Copy-Item -LiteralPath $SavedTown -Destination (Join-Path $fixtureData "$keyHash.bin")
+        if ($AirportTown) {
+            $airportHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData(
+                [Text.Encoding]::UTF8.GetBytes('TownEditor.Town.Horizon Airport'))).ToLowerInvariant()
+            Copy-Item -LiteralPath $AirportTown -Destination (Join-Path $fixtureData "$airportHash.bin")
+        }
         if ($LinkedTown) {
             $linkedHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData(
                 [Text.Encoding]::UTF8.GetBytes('TownEditor.Town.Neris Spaceport'))).ToLowerInvariant()

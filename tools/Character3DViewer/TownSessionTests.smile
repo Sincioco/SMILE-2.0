@@ -20,6 +20,7 @@ Import Smile.Simple3D.ArenaCamera3D As Motion
 Import Smile.Tools.NerisCastleRoute As Castle
 Import Smile.Tools.NerisSpaceportRoute As Spaceport
 Import Smile.Tools.NerisSpaceportPreview As Harbor
+Import Smile.Tools.NerisAlienFleet As Visitors
 Import Smile.Tools.NerisHorizonRoute As Airport
 Import Smile.Tools.NerisRunwayTraffic As Runway
 Import Smile.Tools.NerisHorizonGlow As AirportGlow
@@ -29,6 +30,9 @@ Import Smile.Tools.NerisTownLandmarks As Landmarks
 Import Smile.Tools.NerisTownParty As Party
 Import Smile.Tools.NerisTownNavigation As Navigation
 Import Smile.Tools.NerisSpaceportTraffic As Traffic
+Import Smile.Tools.TownDocumentNavigation As DocumentNavigation
+Import Smile.Tools.NerisTownCameraPanel As CameraPanel
+Import Smile.Simple3D.Core As Core
 
 Dim Value As Town.State
 Dim Index As Number
@@ -100,14 +104,14 @@ End If
 
 If Value.Horizon.Ready Then
 
-    Call Check(Value.Horizon.Loaded = 4 And Value.Horizon.ObjectCount = 86 And
+    Call Check(Value.Horizon.Loaded = 4 And Value.Horizon.ObjectCount = 85 And
         Not Value.Harbor.Ready, "Gentle Wave Loads In Town Without Original Spaceport")
     Call Check(Value.Comparison.Ready, "Royal Court Is Preserved Beside Horizon")
 
     AirportMapPoint = Landmarks.AirportMapPosition()
 
-    Call Check(Landmarks.AirportMapLabel() = "Horizon Spaceport" And
-        AirportMapPoint.X = -8150.0 And AirportMapPoint.Z = 1250.0,
+    Call Check(Landmarks.AirportMapLabel() = "Horizon Airport" And
+        AirportMapPoint.X = 8150.0 And AirportMapPoint.Z = 1250.0,
         "Minimap Includes Horizon At Its Actual Terminal Position")
     Call CheckFleetFrames(Value)
     Call CheckAirportEntry(Value)
@@ -158,6 +162,10 @@ If Value.Ready Then
     Call Town.Draw(Value)
     Call Town.Overlay(Value)
     Call Check(Not Value.Failed, "Editor Scene With Actors And Overlay Draws")
+    Call Check(Value.Panel.MapTriangles > 100000 And Value.Panel.MapVertices > 100000,
+        "Map Geometry Statistics Include The Loaded Town")
+    Call CheckGeometryStatistics()
+    Call CheckRoadArrival(Value)
 
     Show Screen
     Value.People.Keys.KeyBase = 0
@@ -191,7 +199,7 @@ If Value.Ready Then
     Call Inspection.Run(Value, Failures)
     Call CheckVisibleDepth()
 
-    If Value.Horizon.Ready Then
+    If Editor.HasTown("Horizon Airport") Then
         Call CheckWalkingConnection(Value)
     End If
 
@@ -355,20 +363,21 @@ Sub CheckAirportEntry(ByRef Value As Town.State)
 
     Point = Value.People.Path.Positions[0]
 
-    Call Check(Abs(Point.X + 6950.0) < 0.01 And Abs(Point.Z - 1250.0) < 0.01 And
+    Call Check(Abs(Point.X - 6950.0) < 0.01 And Abs(Point.Z - 1250.0) < 0.01 And
         Value.Follow And Value.PartyCamera And Not Value.Cinematic,
         "Visit Horizon Airport Places Arin At The Entrance In Party Follow Mode")
-    Call Check(Value.BaseCamera.Position.X > Point.X And Value.BaseCamera.Target.X < Point.X,
+    Call Check(Value.BaseCamera.Position.X < Point.X And Value.BaseCamera.Target.X > Point.X,
         "Airport Arrival Camera Looks From Arins Back Toward The Entrance")
 
     For Step = 1 To 37
-        Call Town.MoveParty(Value, P.Vector(-1.0, 0.0, 0.0), 200)
+        Call Town.MoveParty(Value, P.Vector(1.0, 0.0, 0.0), 200)
+        Call Airport.Update(Value.People.Path, 4, 200)
     End For
 
     For Step = 0 To 3
         Point = Value.People.Path.Positions[Step]
 
-        Call Check(Point.X < -7900.0 And Abs(Point.Y - 31.12) < 0.01 And
+        Call Check(Point.X > 7800.0 And Abs(Point.Y - 31.12) < 0.01 And
             Navigation.CanStand(Point.X, Point.Z), "Arin And Each Follower Enter The Terminal From The Town Road")
     End For
 
@@ -424,53 +433,215 @@ Sub CheckWalkingConnection(ByRef Value As Town.State)
     Dim Step As Number
     Dim BeforeModels As Number
     Dim BeforeMeshes As Number
-    Dim Destination As Text
 
     BeforeModels = G.LiveModelCount3D()
     BeforeMeshes = G.LiveMeshCount3D()
 
-    Call Town.Input(Value, KEY_TAB, False)
-    Call Party.Teleport(Value.People, P.Vector(-5000.0, 23.12, -3435.0))
-    Call Town.MoveParty(Value, P.Vector(0.0, 0.0, -1.0), 200)
-
-    Call Check(Editor.TownName() = "Neris Spaceport", "Walking South Takes The Linked Town Road")
-
-    For Step = 0 To 180
-        Call Town.Update(Value, 16)
-    End For
-
-    Call Check(Value.Ready And Not Value.Failed And Value.Harbor.Ready And
-        Not Value.Horizon.Ready And Not Value.Comparison.Ready,
-        "Separate Spaceport Loads Original Only And Releases Town Landmarks")
-    Call Check(Value.Harbor.Doors.Ready And Value.Harbor.Light.Ready,
-        "Original Spaceport Keeps Swinging Doors And Crystal Halos")
-    Call Check(Landmarks.AirportMapLabel() = "Spaceport 01", "Minimap Switches To The Selected Airport")
-    Call Check(Value.People.Path.Positions[0].X = -5500.0 And
-        Value.People.Path.Positions[0].Z = -3650.0 And Value.People.Members[0].Yaw = 0.0,
-        "Party Arrives On Causeway Facing The Original Spaceport")
-
-    Destination = Connections.Destination(Editor.TownName(), Value.People.Path.Positions[0], True)
-
-    Call Check(Destination = "", "Arrival Does Not Immediately Travel Back")
-    Call Town.Draw(Value)
-    Call Check(Not Value.Failed, "Separate Spaceport Actually Draws")
-    Call Party.Teleport(Value.People, P.Vector(-5500.0, 23.12, -3440.0))
-    Call Town.MoveParty(Value, P.Vector(0.0, 0.0, 1.0), 200)
-    Call Check(Editor.TownName() = "Neris Town", "Walking North Returns To Neris Town")
-
-    For Step = 0 To 180
-        Call Town.Update(Value, 16)
-    End For
-
-    Call Town.Draw(Value)
-    Call Check(Value.Ready And Not Value.Failed And Value.Horizon.Ready And
-        Value.Comparison.Ready And Not Value.Harbor.Ready, "Return Restores Horizon And Royal Court")
+    Call Check(Not Value.Horizon.Ready And Value.Comparison.Ready,
+        "Compact Town Has Royal Court Without Airport")
+    Call CheckNightToggle(Value)
+    Call Party.Teleport(Value.People, P.Vector(-5120.0, 23.12, 900.0))
+    Call Town.MoveParty(Value, P.Vector(-1.0, 0.0, 0.0), 200)
+    Call Check(Editor.TownName() = "Neris Spaceport", "West Road Travels To Neris Spaceport")
+    Call LoadArrival(Value)
+    Call Check(Value.Harbor.Ready And Not Value.Horizon.Ready And Not Value.Comparison.Ready,
+        "West Map Loads Only The Original Spaceport")
+    Call Check(Value.Harbor.Doors.Ready And Value.Harbor.Light.Ready, "Original Doors And Crystals Remain Ready")
+    Call CheckAlienVisitors(Value)
+    Call CheckNightToggle(Value)
+    Call Check(Connections.Destination(Editor.TownName(), Value.People.Path.Positions[0], True) = "",
+        "Spaceport Arrival Does Not Bounce Back")
+    Call Party.Teleport(Value.People, P.Vector(-1380.0, 23.12, -3500.0))
+    Call Town.MoveParty(Value, P.Vector(1.0, 0.0, 0.0), 200)
+    Call Check(Editor.TownName() = "Neris Town", "Spaceport East Road Returns To Town")
+    Call LoadArrival(Value)
+    Call Check(Value.People.Path.Positions[0].X = -4950.0, "Party Returns At The West Town Gate")
+    Call Party.Teleport(Value.People, P.Vector(2670.0, 23.12, -1000.0))
+    Call Town.MoveParty(Value, P.Vector(1.0, 0.0, 0.0), 200)
+    Call Check(Editor.TownName() = "Horizon Airport", "East Road Travels To Horizon Airport")
+    Call LoadArrival(Value)
+    Call Check(Value.Horizon.Ready And Value.Horizon.Doors.Ready And
+        Not Value.Harbor.Ready And Not Value.Comparison.Ready, "East Map Loads Horizon And Operable Doors")
+    Call Check(Landmarks.AirportMapLabel() = "Horizon Airport", "Airport Has Its Minimap Marker")
+    Call CheckNightToggle(Value)
+    Call CheckFleetFrames(Value)
+    Call CheckBeaconPattern()
+    Call CheckAirportEntry(Value)
+    Call Check(Airport.ConsumeEntry(), "Terminal Crossing Emits A Cutscene Entry Event")
+    Call Check(Not Airport.ConsumeEntry(), "Terminal Entry Event Is Consumed Only Once")
+    Call Party.Teleport(Value.People, P.Vector(5280.0, 23.12, 1250.0))
+    Call Town.MoveParty(Value, P.Vector(-1.0, 0.0, 0.0), 200)
+    Call Check(Editor.TownName() = "Neris Town", "Airport West Road Returns To Town")
+    Call LoadArrival(Value)
+    Call Check(Value.People.MemberCount = 4 And Value.People.Path.Positions[0].X = 2500.0,
+        "All Four Party Members Return At The East Town Gate")
     Call Check(G.LiveModelCount3D() = BeforeModels And G.LiveMeshCount3D() = BeforeMeshes,
-        "Round Trip Does Not Leak Landmark Resources")
-    Call Check(Value.People.MemberCount = 4 And Value.People.Path.Positions[0].Z = -3250.0,
-        "All Four Party Members Return To Town Road")
+        "Three Map Round Trip Releases All Airport Resources")
 
-    Print "Walking Round Trip: Four Party Members, Horizon And Original Spaceport, No Resource Growth"
+    Print "Walking: West Spaceport And East Horizon Round Trips, Four Members, Door Entry, Day Night, No Resource Growth"
+
+End Sub
+
+Sub CheckAlienVisitors(ByRef Value As Town.State)
+
+    Dim Ship As Number
+    Dim Stage As Number
+    Dim Point As P.Vector3
+    Dim Ground As P.Vector3
+    Dim Pose As P.Transform3D
+    Dim Ok As Boolean
+
+    Call Check(Value.Harbor.Visitors.Ready And Value.Harbor.Visitors.Loaded = 4,
+        "Four Distinct Alien Models Load With The Original Spaceport")
+
+    For Ship = 0 To 3
+
+        Value.Harbor.Visitors.Stage[Ship] = 2
+        Value.Harbor.Visitors.Clock[Ship] = 0
+
+        Call Visitors.Schedule(Value.Harbor.Visitors, Ship)
+        Call Check(Value.Harbor.Visitors.Duration[Ship] >= 10000 And
+            Value.Harbor.Visitors.Duration[Ship] <= 15000,
+            "Each Pad Has Ten To Fifteen Seconds Completely Clear Before Approach")
+    End For
+
+    Call Visitors.Update(Value.Harbor.Visitors, 9999)
+
+    For Ship = 0 To 3
+        Call Check(Not Visitors.Visible(Value.Harbor.Visitors, Ship),
+            "No Craft Appears During The Minimum Clear Interval")
+    End For
+
+    For Ship = 0 To 3
+
+        For Stage = 0 To 3
+
+            Value.Harbor.Visitors.Stage[Ship] = Stage
+            Value.Harbor.Visitors.Duration[Ship] = 6000
+            Value.Harbor.Visitors.Clock[Ship] = 3000
+            Point = Visitors.Position(Value.Harbor.Visitors, Ship)
+
+            If Stage = 0 Then
+                Ground = Point
+            Else If Stage = 1 Or Stage = 3 Then
+                Call Check(Abs(Point.Y - Ground.Y - 3500.0) < 0.01,
+                    "Visitor Ascends And Descends Vertically Above Its Own Pad")
+            End If
+
+            Call Town.Draw(Value)
+
+            Ok = P.TryTransform(Value.Harbor.Visitors.Objects[Ship * 3], Pose)
+
+            If Stage <> 2 Then
+                Call Check(Ok And Abs(Pose.Position.Y - Point.Y) < 0.01,
+                    "Alien Model Draws At Its Current Flight Position")
+            End If
+
+        End For
+
+        Value.Harbor.Visitors.Stage[Ship] = 0
+        Value.Harbor.Visitors.Clock[Ship] = 0
+
+        Call Visitors.Schedule(Value.Harbor.Visitors, Ship)
+    End For
+
+    Print "Alien Visitors: Four Models, Four Pads, Independent Random Schedules, Guaranteed Clear Interval"
+
+End Sub
+
+Sub LoadArrival(ByRef Value As Town.State)
+
+    Dim Step As Number
+    Dim Center As P.Vector3
+
+    For Step = 0 To 180
+        Call Town.Update(Value, 16)
+    End For
+
+    Call Town.Draw(Value)
+    Call Check(Value.Ready And Not Value.Failed, "Destination And Party Draw After Travel")
+
+    Center = Editor.MapCenter()
+
+    Call Check(Abs(ToDouble(Value.View.Floor.Floor.Position.X) - Center.X) < 0.01 And
+        Abs(ToDouble(Value.View.Floor.Grid.Position.Z) - Center.Z) < 0.01,
+        "Floor And Grid Follow The Selected Map Center")
+
+    If Editor.TownName() = "Horizon Airport" Then
+        Call Check(Value.View.Floor.Width = 6400 And Value.View.Floor.Depth = 10000,
+            "Horizon Floor Exactly Matches Its Map Dimensions")
+    Else If Editor.TownName() = "Neris Spaceport" Then
+        Call Check(Value.View.Floor.Width = 8000 And Value.View.Floor.Depth = 6800,
+            "Spaceport Floor Exactly Matches Its Map Dimensions")
+    Else
+
+        Call Check(Value.View.Floor.Width = 7950 And Value.View.Floor.Depth = 7650,
+            "Neris Floor Exactly Matches Its Compact Map Dimensions")
+    End If
+
+End Sub
+
+Sub CheckRoadArrival(ByRef Value As Town.State)
+
+    Dim Point As P.Vector3
+    Dim Arrival As P.Vector3
+    Dim Found As Boolean
+
+    Point = P.Vector(-4000.0, 23.12, -1000.0)
+    Found = DocumentNavigation.NearestRoad(Point, Arrival)
+
+    Call Check(Found And DocumentNavigation.CanStand(Arrival.X, Arrival.Z),
+        "Click In Empty Western Field Finds A Walkable Road")
+    Call Town.MoveToRoad(Value, Point)
+    Call Check(Value.People.Path.Positions[0].X = Arrival.X And
+        Value.People.Path.Positions[0].Z = Arrival.Z And Value.People.MemberCount = 4,
+        "Road Click Relocates Arin And The Party")
+
+End Sub
+
+Sub CheckGeometryStatistics()
+
+    Dim Plane As Core.Object3D
+    Dim Stats As CameraPanel.State
+    Dim Ok As Boolean
+
+    Plane = G.CreatePlane3D(100, 100)
+    Ok = G.BeginAcceptedCamera3D(0, 0, 0)
+
+    Call G.SetObjectPosition(Plane, 0, 0, 0)
+
+    Ok = G.DrawObject3D(Plane) And Ok
+
+    Call G.SetObjectPosition(Plane, 50000, 0, 0)
+
+    Ok = G.DrawObject3D(Plane) And Ok
+
+    Call CameraPanel.CaptureGeometry(Stats)
+    Call Check(Ok And Stats.MapTriangles = 4 And Stats.MapVertices = 8,
+        "Geometry Counts Both Mesh Instances Including Offscreen Without Extra Passes")
+
+    Ok = G.End3DChecked() And Ok
+
+    Call G.DestroyObject3D(Plane)
+
+End Sub
+
+Sub CheckNightToggle(ByRef Value As Town.State)
+
+    Dim Before As Boolean
+    Dim Position As P.Vector3
+
+    Before = Editor.IsNight()
+    Position = Value.People.Path.Positions[0]
+
+    Call Editor.ToggleDayNight()
+    Call Town.Update(Value, 16)
+    Call Town.Draw(Value)
+    Call Check(Editor.IsNight() <> Before And Not Value.Failed, "Header Toggle Changes Day And Night")
+    Call Editor.ToggleDayNight()
+    Call Town.Update(Value, 16)
+    Call Check(Editor.IsNight() = Before And Value.People.Path.Positions[0].X = Position.X,
+        "Day Night Toggle Restores Lighting Without Moving The Party")
 
 End Sub
 

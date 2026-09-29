@@ -53,6 +53,55 @@ Public Function Active() As Boolean
 
 End Function
 
+''' Closest point inside a traversable road cell, using the committed map surface.
+Public Function NearestRoad(Point As P.Vector3, ByRef Result As P.Vector3) As Boolean
+
+    Dim X As Number
+    Dim Z As Number
+    Dim Candidate As P.Vector3
+    Dim Distance As Double
+    Dim Best As Double
+    Dim MarginX As Double
+    Dim MarginZ As Double
+    Dim Found As Boolean
+
+    If Not Enabled Then
+        Return False
+    End If
+
+    Best = 1.0E+20
+
+    For Z = 0 To Surface.Rows - 1
+
+        For X = 0 To Surface.Columns - 1
+
+            If Grid.ReadCell(Surface, X, Z) = Grid.SURFACE_ROAD Then
+
+                MarginX = Min(12.0, (Surface.XEdges[X + 1] - Surface.XEdges[X]) * 0.25)
+                MarginZ = Min(12.0, (Surface.ZEdges[Z + 1] - Surface.ZEdges[Z]) * 0.25)
+                Candidate.X = Clamp(Point.X, Surface.XEdges[X] + MarginX, Surface.XEdges[X + 1] - MarginX)
+                Candidate.Z = Clamp(Point.Z, Surface.ZEdges[Z] + MarginZ, Surface.ZEdges[Z + 1] - MarginZ)
+                Distance = ((Candidate.X - Point.X) * (Candidate.X - Point.X) +
+                    (Candidate.Z - Point.Z) * (Candidate.Z - Point.Z))
+
+                If Distance < Best And CanStand(Candidate.X, Candidate.Z) Then
+
+                    Candidate.Y = GroundHeight(Candidate.X, Candidate.Z)
+                    Result = Candidate
+                    Best = Distance
+                    Found = True
+
+                End If
+
+            End If
+
+        End For
+    End For
+
+    Return Found
+
+End Function
+
 Public Sub SurfaceBounds(ByRef Low As P.Vector3, ByRef High As P.Vector3)
 
     Low = P.Vector(-4900.0, 23.12, -3550.0)

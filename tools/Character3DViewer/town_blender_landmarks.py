@@ -1,6 +1,7 @@
 """Append the same versioned landmark assemblies selected by the native town owner."""
 from pathlib import Path
 import bpy
+import math
 
 ROOT = Path(__file__).resolve().parents[2] / 'games/SinStarI/SourceAssets/Towns/Neris'
 
@@ -17,17 +18,67 @@ def append_collection(source, name):
     return len(collection.all_objects)
 
 
+def append_airport():
+    scene = bpy.context.scene
+    source = ROOT / 'NerisHorizonV1/Source/Neris-Horizon-Gentle-Wave-r009.blend'
+    with bpy.data.libraries.load(str(source), link=False) as (_, loaded):
+        loaded.scenes = ['Horizon Gentle Wave r009']
+    incoming = loaded.scenes[0]
+    collection = bpy.data.collections.new('Horizon Airport - East')
+    scene.collection.children.link(collection)
+    anchor = bpy.data.objects.new('Horizon Full Size Placement', None)
+    collection.objects.link(anchor)
+    anchor.location = (740, 125, .212)
+    anchor.rotation_euler.z = -math.pi / 2
+    count = 0
+    for obj in list(incoming.objects):
+        if not (obj.get('horizon_asset') or obj.get('horizon_internal_light') or obj.get('runway_aircraft_preview')):
+            continue
+        collection.objects.link(obj)
+        if obj.parent is None:
+            obj.parent = anchor
+        count += 1
+    bpy.data.scenes.remove(incoming)
+    bpy.context.window.scene = scene
+    return count
+
+
+def append_visitors():
+    """Use the native pad anchors, with all visitors parked for Blender inspection."""
+    from mathutils import Vector, Matrix
+    source = ROOT / 'NerisSpaceport01V1/Fleet/Alien-Visitors-r001.blend'
+    with bpy.data.libraries.load(str(source), link=False) as (_, loaded):
+        loaded.objects = [name for name in _.objects]
+    collection = bpy.data.collections.new('Alien Visitors - Four Landing Pads')
+    bpy.context.scene.collection.children.link(collection)
+    count = 0
+    for obj in loaded.objects:
+        if 'alien_ship' not in obj:
+            bpy.data.objects.remove(obj)
+            continue
+        ship = int(obj['alien_ship'])
+        display = Vector(((ship % 2) * 95 - 47.5, (ship // 2) * 100 - 50, 0))
+        pad = Vector((-244 if ship < 2 else -856,
+                      -804 if ship % 2 == 0 else -916,
+                      67.312 if ship % 2 == 0 else 107.312))
+        heading = math.pi / 2 if ship < 2 else -math.pi / 2
+        placement = Matrix.Translation(pad) @ Matrix.Rotation(heading, 4, 'Z')
+        obj.matrix_world = placement @ Matrix.Translation(-display) @ obj.matrix_basis.copy()
+        collection.objects.link(obj)
+        count += 1
+    return count
+
+
 def populate(document):
     original = ROOT / 'NerisSpaceport01V1/Town/Neris-Town-Spaceport-SW-r003.blend'
     counts = {}
     if document['name'] == 'Neris Spaceport':
         counts['Spaceport01'] = append_collection(original, 'Neris Spaceport 01 - Southwest')
+        counts['AlienVisitors'] = append_visitors()
     elif document['name'].startswith('Neris Town'):
         counts['RoyalCourt'] = append_collection(original, 'Royal Court — M06-r006')
-        if (document['xs'][0] <= -11400 and document['xs'][-1] >= -5400
-                and document['zs'][0] <= -3550 and document['zs'][-1] >= 6050):
-            source = ROOT / 'NerisHorizonV1/Town/r008/Neris-Town-Horizon-r008.blend'
-            counts['Horizon'] = append_collection(source, 'Horizon Airport - West')
+    elif document['name'] == 'Horizon Airport':
+        counts['Horizon'] = append_airport()
     for name, count in counts.items():
         bpy.context.scene['town_landmark_' + name] = count
     return counts

@@ -22,7 +22,7 @@ End Type
 Public Function AirportMapLabel() As Text
 
     If AirportRoute.Active() Then
-        Return "Horizon Spaceport"
+        Return "Horizon Airport"
     Else If OriginalRoute.Active() Then
         Return "Spaceport 01"
     End If
@@ -107,21 +107,21 @@ Public Function LoadNext(ByRef Value As State, Name As Text, HasAirport As Boole
 
     End If
 
+    If Name = "Horizon Airport" Then
+
+        Call Horizon.LoadNext(Airport)
+
+        Value.Failed = Airport.Failed
+        ReturnValue = Airport.Ready
+
+        Return ReturnValue
+
+    End If
+
     If Text_Slice(Name, 0, 10) = "Neris Town" Then
 
         Ok = Castle.Create(Court)
         Value.Failed = Not Ok
-
-        If HasAirport And Ok Then
-
-            Call Horizon.LoadNext(Airport)
-
-            Value.Failed = Airport.Failed
-            ReturnValue = Airport.Ready
-
-            Return ReturnValue
-
-        End If
 
         Return Ok
 

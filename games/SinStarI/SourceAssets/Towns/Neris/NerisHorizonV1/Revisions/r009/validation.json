@@ -1,0 +1,46 @@
+{
+  "revision": "r009",
+  "native_geometry": {
+    "Cargo": {
+      "vertices": 4513,
+      "triangles": 4592,
+      "sha256": "7b690f807d3df984430efcef901b033ff2aa69c2d47d210442e7c40e927d4354"
+    },
+    "Door": {
+      "vertices": 264,
+      "triangles": 144,
+      "sha256": "ea8ebf724ebfb0b8981c269d2cd4fbcdd4820f20c830f09880766145cc3720d6"
+    },
+    "Horizon": {
+      "vertices": 122673,
+      "triangles": 63664,
+      "sha256": "15a652cc91554c315b1559e4a9f45174e40d1ffa1725a0b0727c202dd42345a7"
+    },
+    "Royal": {
+      "vertices": 5137,
+      "triangles": 4860,
+      "sha256": "e277857ee8045d419c55ba81e00f613c92ab4afc4622c15d704ab39f4a1054b1"
+    },
+    "Transport": {
+      "vertices": 5137,
+      "triangles": 4860,
+      "sha256": "3c93dfb9069fc503ce6ad6a8590c8e49e79a235e86fa668b854dd08c2ea0176c"
+    }
+  },
+  "town_items_preserved": 362,
+  "tests": {
+    "native_build": "PASS \u2014 333 published assets",
+    "native_town_session": "PASS \u2014 artifacts/neris-fleet-tests-final.log",
+    "native_hardening": "PASS \u2014 58 checks, artifacts/horizon-r009-hardening-final.log",
+    "style": "PASS \u2014 changed SMILE sources",
+    "blender": "Three matching town scenes and four visitors rendered; Horizon r009 opened interactively"
+  },
+  "native_manual_review": [
+    "Three tab views; airport tabs automatically orbit their map centers",
+    "Four alien spacecraft parked, departing and returning on their own pads",
+    "Brighter Horizon night lighting and runways",
+    "Removed paving joints, retained gold decoration",
+    "Road overlaps removed at Horizon apron and original Spaceport causeway"
+  ],
+  "limits": "No native pool, source baseline or save-format changes. Web and Studio remain on hold. Visual review is a brief native inspection, not an exhaustive aliasing guarantee."
+}

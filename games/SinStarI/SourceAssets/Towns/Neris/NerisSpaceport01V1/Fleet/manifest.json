@@ -1,0 +1,77 @@
+{
+  "ships": [
+    {
+      "name": "Aster Saucer",
+      "file": "Alien-0.glb",
+      "parts": 3,
+      "vertices": 7588,
+      "triangles": 15108,
+      "sha256": "caf46987716b9cb74231e493281e93ba45031e89273dea5da7e2bee7c9c04793"
+    },
+    {
+      "name": "Vesper Manta",
+      "file": "Alien-1.glb",
+      "parts": 3,
+      "vertices": 4650,
+      "triangles": 9236,
+      "sha256": "9b07d1eadf0b0fbe1c686aa19b3d283573a8e803201cce8e3b6f3beed31aacc7"
+    },
+    {
+      "name": "Khepri Tri-Pod",
+      "file": "Alien-2.glb",
+      "parts": 3,
+      "vertices": 5464,
+      "triangles": 10884,
+      "sha256": "d2f3313014f48363a6c3bf961604b186158df32a32d8ff3c3c7ed2b752e3e46f"
+    },
+    {
+      "name": "Vanta Prism",
+      "file": "Alien-3.glb",
+      "parts": 3,
+      "vertices": 2938,
+      "triangles": 5816,
+      "sha256": "0512315d0ecfaa7988536a518a805a1282af0d0be249601160655e70e5143348"
+    }
+  ],
+  "pads_blender_m": [
+    [
+      -306,
+      44,
+      64
+    ],
+    [
+      -306,
+      156,
+      104
+    ],
+    [
+      306,
+      44,
+      64
+    ],
+    [
+      306,
+      156,
+      104
+    ]
+  ],
+  "traffic": {
+    "independent_pads": true,
+    "parked_seconds": [
+      18,
+      28
+    ],
+    "takeoff_seconds": [
+      5,
+      7
+    ],
+    "clear_before_approach_seconds": [
+      10,
+      15
+    ],
+    "landing_seconds": [
+      5,
+      7
+    ]
+  }
+}
