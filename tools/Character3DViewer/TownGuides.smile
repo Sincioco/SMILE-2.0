@@ -7,6 +7,7 @@ Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PrecisionMath3D As M
 Import Smile.Simple3D.PrecisionCamera3D As Camera
 Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Tools.TownPicking As Picking
 
 Public Const MAX_MARKERS = 128
 
@@ -24,18 +25,150 @@ End Type
 
 Public Type State
     Ink As Drawing
+    Selected[128] As Boolean
     ShowGrid As Boolean
+    ShowTileGrid As Boolean
+    TileTarget As Number
+    SnapTiles As Boolean
     SnapMode As Number
-    Spacing As Number
+    Spacing As Double
+    VisibleSpacing As Double
 End Type
 
 Public Sub Start(ByRef Value As State)
 
-    If Value.Spacing < 1 Then
-        Value.Spacing = 2
+    If Value.Spacing <= 0.0 Then
+        Value.Spacing = 2.0
     End If
 
 End Sub
+
+''' Accept bounded decimal meters without passing invalid user input to a checked conversion.
+Public Function SetSpacing(ByRef Value As State, InputText As Text) As Boolean
+
+    Dim Index As Number
+    Dim Code As Number
+    Dim Digits As Number
+    Dim FractionDigits As Number
+    Dim DecimalSeen As Boolean
+    Dim Parsed As Double
+    Dim Divisor As Double
+
+    Divisor = 1.0
+
+    For Index = 0 To Text_Length(InputText) - 1
+
+        Code = Text_Code_At(InputText, Index)
+
+        If Code = 46 And Not DecimalSeen Then
+
+            DecimalSeen = True
+
+        Else If Code >= 48 And Code <= 57 Then
+
+            Digits = Digits + 1
+            Parsed = Parsed * 10.0 + ToDouble(Code - 48)
+
+            If DecimalSeen Then
+                FractionDigits = FractionDigits + 1
+                Divisor = Divisor * 10.0
+            End If
+
+            If Digits > 11 Or FractionDigits > 6 Then
+                Return False
+            End If
+
+        Else
+            Return False
+
+        End If
+
+    End For
+
+    Parsed = Parsed / Divisor
+
+    If (Digits = 0 Or
+        Parsed < 0.001 Or
+        Parsed > 10000.0) Then
+        Return False
+    End If
+
+    Value.Spacing = Parsed
+
+    Return True
+
+End Function
+
+Private Function DigitsText(Units As Number) As Text
+
+    Dim Result As Text
+
+    Do
+        Result = Text_From_Code(48 + Units Mod 10) + Result
+        Units = Units / 10
+
+    Loop Until Units = 0
+
+    Return Result
+
+End Function
+
+Public Function SpacingLabel(Spacing As Double) As Text
+
+    Dim Result As Text
+    Dim Part As Text
+    Dim Units As Number
+    Dim Fraction As Number
+
+    Units = ToNumber(Round(Spacing * 1000000.0))
+    Fraction = Units Mod 1000000
+    Result = DigitsText(Units / 1000000)
+
+    If Fraction > 0 Then
+
+        Part = DigitsText(1000000 + Fraction)
+        Part = Text_Slice(Part, 1, 6)
+
+        Do
+
+            If Text_Code_At(Part, Text_Length(Part) - 1) <> 48 Then
+                Exit Do
+            End If
+
+            Part = Text_Slice(Part, 0, Text_Length(Part) - 1)
+
+        Loop Until Text_Length(Part) = 0
+
+        Result = Result + "." + Part
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Function SnapTile(ByRef Surface As Grid.State, Point As P.Vector3) As P.Vector3
+
+    Dim X As Number
+    Dim Z As Number
+
+    X = Max(0, Min(Surface.Columns - 1, Grid.CellX(Surface, Point.X)))
+    Z = Max(0, Min(Surface.Rows - 1, Grid.CellZ(Surface, Point.Z)))
+
+    If Abs(Point.X - Surface.XEdges[X + 1]) < Abs(Point.X - Surface.XEdges[X]) Then
+        X = X + 1
+    End If
+
+    If Abs(Point.Z - Surface.ZEdges[Z + 1]) < Abs(Point.Z - Surface.ZEdges[Z]) Then
+        Z = Z + 1
+    End If
+
+    Point.X = Surface.XEdges[X]
+    Point.Z = Surface.ZEdges[Z]
+
+    Return Point
+
+End Function
 
 Public Function Add(ByRef Value As Drawing, First As P.Vector3,
     Last As P.Vector3, IsRectangle As Boolean) As Boolean
@@ -143,7 +276,7 @@ Public Function Snap(ByRef Value As State, Point As P.Vector3, Radius As Double)
     Dim Found As Boolean
 
     Result = Point
-    StepSize = ToDouble(Max(1, Value.Spacing) * 10)
+    StepSize = Max(0.001, Value.Spacing) * 10.0
 
     If Value.SnapMode = 1 Or Value.SnapMode = 3 Then
         Result.X = Round(Point.X / StepSize) * StepSize
@@ -201,7 +334,7 @@ Public Function Snap(ByRef Value As State, Point As P.Vector3, Radius As Double)
 
 End Function
 
-Private Sub Segment(First As P.Vector3, Last As P.Vector3, View As P.Camera3D, ColorValue As Number)
+Public Sub Segment(First As P.Vector3, Last As P.Vector3, View As P.Camera3D, ColorValue As Number)
 
     Dim FirstPoint As Camera.ProjectedPoint
     Dim LastPoint As Camera.ProjectedPoint
@@ -260,37 +393,60 @@ Public Sub Draw(ByRef Value As State, ByRef Surface As Grid.State, View As P.Cam
     Dim Extent As Double
     Dim AtValue As Double
     Dim Point As Camera.ProjectedPoint
+    Dim Low As P.Vector3
+    Dim High As P.Vector3
+    Dim ViewLow As P.Vector3
+    Dim ViewHigh As P.Vector3
 
     Clip Rectangle 0, 128, Max(0, RightEdge), Max(0, Window_Height() - 128)
 
     If Value.ShowGrid Then
 
-        StepSize = ToDouble(Max(1, Value.Spacing) * 10)
+        StepSize = Max(0.001, Value.Spacing) * 10.0
         Point = Camera.ProjectViewerPoint(View.Target, View, Window_Width(), Window_Height())
-        PixelStep = Camera.WorldSizeForPixels(12, Max(View.NearPlane, Point.Depth), View.FovDegrees, Window_Height())
-        Extent = Max(Surface.XEdges[Surface.Columns] - Surface.XEdges[0],
-            Surface.ZEdges[Surface.Rows] - Surface.ZEdges[0])
-        ' Retain the chosen snap spacing; omit intermediate lines when zoomed far out.
-        StepSize = StepSize * Max(1.0, Ceiling(Max(PixelStep, Extent / 128.0) / StepSize))
+        PixelStep = Camera.WorldSizeForPixels(3, Max(View.NearPlane, Point.Depth), View.FovDegrees, Window_Height())
+        Low = P.Vector(Surface.XEdges[0], 23.12, Surface.ZEdges[0])
+        High = P.Vector(Surface.XEdges[Surface.Columns], 23.12, Surface.ZEdges[Surface.Rows])
 
-        For Index = ToNumber(Ceiling(Surface.XEdges[0] / StepSize)) To ToNumber(Floor(Surface.XEdges[Surface.Columns] / StepSize))
+        If Picking.GroundBounds(View, Window_Width(), Window_Height(), RightEdge, 128, ViewLow, ViewHigh) Then
+
+            Low.X = Max(Low.X, ViewLow.X)
+            Low.Z = Max(Low.Z, ViewLow.Z)
+            High.X = Min(High.X, ViewHigh.X)
+            High.Z = Min(High.Z, ViewHigh.Z)
+
+        End If
+
+        Extent = Max(High.X - Low.X, High.Z - Low.Z)
+        ' Retain the chosen snap spacing; omit intermediate lines when zoomed far out.
+        StepSize = StepSize * Max(1.0, Ceiling(Max(PixelStep, Extent / 1024.0) / StepSize))
+        Value.VisibleSpacing = StepSize / 10.0
+
+        For Index = ToNumber(Ceiling(Low.X / StepSize)) To ToNumber(Floor(High.X / StepSize))
             AtValue = ToDouble(Index) * StepSize
 
-            Call Segment(P.Vector(AtValue, 23.12, Surface.ZEdges[0]),
-                P.Vector(AtValue, 23.12, Surface.ZEdges[Surface.Rows]), View, RGB(73, 120, 138))
+            Call Segment(P.Vector(AtValue, 23.12, Low.Z),
+                P.Vector(AtValue, 23.12, High.Z), View, RGB(73, 120, 138))
         End For
 
-        For Index = ToNumber(Ceiling(Surface.ZEdges[0] / StepSize)) To ToNumber(Floor(Surface.ZEdges[Surface.Rows] / StepSize))
+        For Index = ToNumber(Ceiling(Low.Z / StepSize)) To ToNumber(Floor(High.Z / StepSize))
             AtValue = ToDouble(Index) * StepSize
 
-            Call Segment(P.Vector(Surface.XEdges[0], 23.12, AtValue),
-                P.Vector(Surface.XEdges[Surface.Columns], 23.12, AtValue), View, RGB(73, 120, 138))
+            Call Segment(P.Vector(Low.X, 23.12, AtValue),
+                P.Vector(High.X, 23.12, AtValue), View, RGB(73, 120, 138))
         End For
 
     End If
 
     For Index = 0 To Value.Ink.EntryCount - 1
-        Call DrawMarker(Value.Ink.Markers[Index], View, RGB(255, 209, 94))
+
+        If Value.Selected[Index] Then
+            Call DrawMarker(Value.Ink.Markers[Index], View, RGB(70, 230, 215))
+        Else
+
+            Call DrawMarker(Value.Ink.Markers[Index], View, RGB(255, 209, 94))
+        End If
+
     End For
 
     End Clip

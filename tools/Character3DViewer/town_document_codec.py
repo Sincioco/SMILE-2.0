@@ -1,4 +1,4 @@
-"""Bounded TWN1/TWN2 codec shared by the existing Blender document worker."""
+"""Bounded TWN1–TWN4 codec shared by the existing Blender document worker."""
 import hashlib
 import json
 import struct
@@ -80,13 +80,29 @@ class Reader:
             raise ValueError('Invalid name')
         return ''.join(map(chr, values))
 
+    def sun(self, version):
+        light = [self.integer() for _ in range(5)] + [self.precise(), self.precise(), self.byte()]
+        if version >= 2:
+            light.append(self.byte() - 1)
+        if (any(not 0 <= value <= 255 for value in light[:3])
+                or not 0 <= light[3] <= 1000 or not 0 <= light[4] <= 100
+                or light[7] not in (0, 1) or (version >= 2 and not -1 <= light[8] <= 100)):
+            raise ValueError('Invalid sun settings')
+        return light
+
+    def flag(self):
+        flag = self.byte()
+        if flag not in (0, 1):
+            raise ValueError('Invalid preset flag')
+        return bool(flag)
+
 
 def decode(payload, catalog, request=False):
     r = Reader(payload)
     if bytes(r.byte() for _ in range(3)) != b'TWN':
         raise ValueError('Unsupported town format')
     version = r.byte()
-    if version not in (1, 2):
+    if version not in (1, 2, 3, 4):
         raise ValueError('Unsupported town format')
     fingerprint = catalog.get('document_fingerprint') or hashlib.sha256(json.dumps(catalog, sort_keys=True).encode()).hexdigest()
     if r.name() != fingerprint:
@@ -127,11 +143,23 @@ def decode(payload, catalog, request=False):
         items.append(dict(identity=identity, template=template, source=source,
                           position=position, scale=scale, yaw=yaw))
     result['items'] = items
-    result['sun'] = [r.integer() for _ in range(5)] + [r.precise(), r.precise(), r.byte()]
-    if version == 2:
-        result['sun'].append(r.byte() - 1)
-        if not -1 <= result['sun'][8] <= 100:
-            raise ValueError('Invalid shadow opacity')
+    result['sun'] = r.sun(version)
+    if version >= 3:
+        count = r.integer()
+        if not 0 <= count <= 4096:
+            raise ValueError('Too many map-load tiles')
+        tiles, occupied = [], set()
+        for _ in range(count):
+            x, z, destination = r.integer(), r.integer(), r.name()
+            if not (0 <= x < columns and 0 <= z < rows) or (x, z) in occupied:
+                raise ValueError('Invalid or duplicate map-load tile')
+            occupied.add((x, z))
+            tiles.append(dict(x=x, z=z, destination=destination))
+        result['map_tiles'] = tiles
+    if version >= 4:
+        result['presets'] = {'night_active': r.flag(),
+                             'day': r.sun(4) if r.flag() else None,
+                             'night': r.sun(4) if r.flag() else None}
     result['payload'] = payload[:r.offset]
     if request:
         result['mode'], result['request_id'] = r.integer(), r.integer()
@@ -145,7 +173,8 @@ def decode(payload, catalog, request=False):
 def encode(document, catalog):
     fingerprint = catalog.get('document_fingerprint') or hashlib.sha256(json.dumps(catalog, sort_keys=True).encode()).hexdigest()
     # Eight-value legacy snapshots must retain their checksum when opened.
-    version = 2 if len(document['sun']) == 9 else 1
+    version = (4 if 'presets' in document else 3 if 'map_tiles' in document
+               else 2 if len(document['sun']) == 9 else 1)
     result = bytearray(b'TWN') + bytes([version]) + name(fingerprint) + name(document['name']) + b'\0'
     precise = lambda value: integer(round(value * 1000000))
     result += integer(document['columns']) + integer(document['rows']) + precise(document['cell_size'])
@@ -162,8 +191,22 @@ def encode(document, catalog):
     for value in document['sun'][:5]:
         result += integer(value)
     result += precise(document['sun'][5]) + precise(document['sun'][6]) + bytes([document['sun'][7]])
-    if version == 2:
+    if version >= 2:
         result += bytes([document['sun'][8] + 1])
+    if version >= 3:
+        result += integer(len(document.get('map_tiles', [])))
+        for tile in document.get('map_tiles', []):
+            result += integer(tile['x']) + integer(tile['z']) + name(tile['destination'])
+    if version >= 4:
+        presets = document['presets']
+        result += bytes([int(presets['night_active'])])
+        for key in ('day', 'night'):
+            light = presets[key]
+            result += bytes([int(light is not None)])
+            if light is not None:
+                for value in light[:5]:
+                    result += integer(value)
+                result += precise(light[5]) + precise(light[6]) + bytes([light[7], light[8] + 1])
     decode(result, catalog)  # Same format/range checks apply in both directions.
     return bytes(result)
 

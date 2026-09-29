@@ -129,7 +129,7 @@ Private Function RowY(Row As Number) As Number
 
     Dim Result As Number
 
-    Result = 212 + Row * Min(32, Max(16, (Window_Height() - 537) / 8))
+    Result = 212 + Row * Min(32, Max(16, (Window_Height() - 572) / 8))
 
     Return Result
 

@@ -112,7 +112,8 @@ Public Sub DragSnapped(ByRef Value As State, ByRef Town As Document.State,
 
     ' Selecting an off-grid item must not move it until the pointer starts a drag.
 
-    If (Guide.SnapMode > 0 And Not Value.Changed And
+    If ((Guide.SnapMode > 0 Or Guide.SnapTiles) And
+        Not Value.Changed And
         M.Length(M.Subtract(Current, Value.Anchor)) < Max(0.001, Radius / 7.0)) Then
         Return
     End If
@@ -123,6 +124,11 @@ Public Sub DragSnapped(ByRef Value As State, ByRef Town As Document.State,
 
             Desired = M.Add(Value.Original[Index], M.Subtract(Current, Value.Anchor))
             Desired = Guides.Snap(Guide, Desired, Radius)
+
+            If Guide.SnapTiles Then
+                Desired = Guides.SnapTile(Town.Surface, Desired)
+            End If
+
             Current = M.Add(Value.Anchor, M.Subtract(Desired, Value.Original[Index]))
             Exit For
 
@@ -233,7 +239,8 @@ Public Function Duplicate(ByRef Value As State, ByRef Town As Document.State, Of
 
     End For
 
-    If (Free < Value.SelectedCount Or Geometry.DrawCost(Town) + Cost > 3500 Or
+    If (Free < Value.SelectedCount Or
+        Geometry.DrawCost(Town) + Cost > 3500 Or
         Geometry.WaterCount(Town) + Water > 160) Then
         Return False
     End If

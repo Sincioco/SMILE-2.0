@@ -1,4 +1,4 @@
-''' Caller-owned asynchronous file transfer; chosen paths are never implicit save targets.
+''' Caller-owned native town transfers; only Blender conversion uses the external worker.
 Module Smile.Tools.TownFileJobs
 
 Option Explicit
@@ -6,6 +6,7 @@ Option Explicit
 Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownDocumentStore As Storage
 Import Smile.Tools.TownLibrary As Library
+Import Smile.Tools.TownFileLocations As Locations
 
 Public Const SAVE_VIEWER = 1
 Public Const OPEN_VIEWER = 2
@@ -19,9 +20,9 @@ Public Type State
     Operation As Number
     Clock As Number
     WaitingTime As Number
-    WorkerPulse As Number
-    WorkerAge As Number
-    WorkerSeen As Boolean
+    NativeJob As Number
+    DialogVisible As Boolean
+    Failed As Boolean
     OriginRevision As Number
     OriginName As Text
     Path As Text
@@ -33,6 +34,16 @@ Public Type State
     RecentCount As Number
     Pending As Document.State
 End Type
+
+Public Function BlocksEditing(ByRef Value As State) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Value.RequestId > 0 And (Value.Operation = OPEN_VIEWER Or Value.Operation = OPEN_BLENDER)
+
+    Return Result
+
+End Function
 
 Private Dim Bytes[170000] As Number
 Private Dim Offset As Number
@@ -97,6 +108,12 @@ Public Function Queue(ByRef Value As State, ByRef Town As Document.State,
         Return False
     End If
 
+    Value.Operation = Operation
+    Value.Path = Path
+    Value.DialogVisible = Operation = SAVE_VIEWER Or Operation = SAVE_BLENDER
+    Value.Failed = False
+    Value.Progress = 0
+
     Load Id From "TownEditor.File.Sequence" Default 0
     Id = Id + 1
     Save Id To "TownEditor.File.Sequence"
@@ -107,36 +124,60 @@ Public Function Queue(ByRef Value As State, ByRef Town As Document.State,
     End If
 
     If Not Ok Then
-        Value.Message = "Could not preserve the current town."
+
+        Value.Failed = True
+        Value.Message = "Could not preserve the current town; edits retained."
         Return False
+
     End If
 
-    Offset = 0
+    Value.NativeJob = 0
 
-    Call PutInteger(21387092)
-    Call PutInteger(Operation)
-    Call PutInteger(Id)
-    Call PutInteger(Text_Length(Path))
+    If Operation = SAVE_VIEWER Then
 
-    For Index = 0 To Text_Length(Path) - 1
-        Call PutInteger(Text_Code_At(Path, Index))
-    End For
+        Value.NativeJob = Data_FileStart(True, SnapshotKey(Id), Path)
 
-    Call PutInteger(Text_Length(Town.Name))
+    Else If Operation = OPEN_VIEWER Then
 
-    For Index = 0 To Text_Length(Town.Name) - 1
-        Call PutInteger(Text_Code_At(Town.Name, Index))
-    End For
+        Value.NativeJob = Data_FileStart(False, OpenedKey(Id), Path)
 
-    Save Data Bytes Count Offset To "TownEditor.File.Request" Status Status
+    Else If Operation <> LIST_VIEWER Then
 
-    If Status <> DATA_STATUS_OK Then
-        Value.Message = "Could not queue the file operation."
-        Return False
+        Offset = 0
+
+        Call PutInteger(21387092)
+        Call PutInteger(Operation)
+        Call PutInteger(Id)
+        Call PutInteger(Text_Length(Path))
+
+        For Index = 0 To Text_Length(Path) - 1
+            Call PutInteger(Text_Code_At(Path, Index))
+        End For
+
+        Call PutInteger(Text_Length(Town.Name))
+
+        For Index = 0 To Text_Length(Town.Name) - 1
+            Call PutInteger(Text_Code_At(Town.Name, Index))
+        End For
+
+        Save Data Bytes Count Offset To "TownEditor.File.Request" Status Status
+
+        If Status <> DATA_STATUS_OK Then
+
+            Value.Failed = True
+            Value.Message = "Could not start Blender conversion; edits retained."
+            Return False
+
+        End If
+
     End If
 
-    If Operation = LIST_VIEWER Then
-        Value.RecentCount = 0
+    If (Operation = SAVE_VIEWER Or Operation = OPEN_VIEWER) And Value.NativeJob = 0 Then
+
+        Value.Failed = True
+        Value.Message = "Another native file transfer is still running."
+        Return False
+
     End If
 
     Value.SaveAsCopy = False
@@ -167,15 +208,9 @@ Public Sub Choose(ByRef Value As State, ByRef Town As Document.State, Operation 
     Dim Suggested As Text
     Dim Path As Text
     Dim Ok As Boolean
-    Dim ClockStatus As Storage.BridgeStatus
 
     If Value.RequestId > 0 Then
         Value.Message = "A file operation is still running."
-        Return
-    End If
-
-    If Not Value.WorkerSeen Or Value.WorkerAge > 3000 Then
-        Value.Message = "File helper is starting; retry in a moment."
         Return
     End If
 
@@ -199,22 +234,7 @@ Public Sub Choose(ByRef Value As State, ByRef Town As Document.State, Operation 
     End If
 
     If Saving Then
-
-        Suggested = SafeName(Town.Name) + "." + Extension
-
-        If Operation = SAVE_VIEWER Then
-
-            ClockStatus = Storage.ReadBridgeStatus("TownEditor.File.Clock")
-
-            If Text_Length(ClockStatus.Message) = 0 Then
-                Value.Message = "Start with Launch.ps1 to enable saves."
-                Return
-            End If
-
-            Suggested = ClockStatus.Message + " - " + Suggested
-
-        End If
-
+        Suggested = Local_Timestamp() + " - " + SafeName(Town.Name) + "." + Extension
     End If
 
     Path = File_Pick(Saving, Title, Extension, Suggested)
@@ -235,38 +255,48 @@ Public Function Update(ByRef Value As State, ByRef Town As Document.State, Elaps
     Dim Ok As Boolean
     Dim Opened As Boolean
 
-    Value.WorkerAge = Min(60000, Value.WorkerAge + Elapsed)
     Value.WaitingTime = Value.WaitingTime + Elapsed
     Value.Clock = Value.Clock + Elapsed
 
-    If Value.Clock < 500 Then
+    ' Keep the initial 0% frame visible before polling a fast local write.
+
+    If Value.Clock < 100 Then
         Return False
     End If
 
     Value.Clock = 0
-    Status = Storage.ReadBridgeStatus("TownEditor.File.Clock")
-
-    If Status.Progress <> Value.WorkerPulse Then
-
-        Value.WorkerSeen = Value.WorkerPulse <> 0
-        Value.WorkerAge = 0
-        Value.WorkerPulse = Status.Progress
-
-    End If
 
     If Value.RequestId = 0 Then
         Return False
     End If
 
-    Status = Storage.ReadBridgeStatus("TownEditor.File.Response")
+    If Value.NativeJob > 0 Then
+
+        Status.RequestId = Value.RequestId
+        Status.Status = Data_FileStatus(Value.NativeJob)
+        Status.Progress = Data_FileProgress(Value.NativeJob)
+        Status.Message = Data_FileMessage(Value.NativeJob)
+
+    Else If Value.Operation = LIST_VIEWER Then
+
+        Status.RequestId = Value.RequestId
+        Status.Status = 1
+
+    Else
+        Status = Storage.ReadBridgeStatus("TownEditor.File.Response")
+
+    End If
 
     If Status.RequestId <> Value.RequestId Then
 
-        Value.Message = "Waiting for file helper to respond..."
+        Value.Message = "Starting Blender conversion..."
 
         If Value.WaitingTime > 15000 Then
-            Value.Message = "File helper unavailable; town retained. Retry Save."
+
+            Value.Failed = True
+            Value.Message = "Blender conversion did not respond; edits retained. Try Save For Viewer."
             Value.RequestId = 0
+
         End If
 
         Return False
@@ -274,7 +304,8 @@ Public Function Update(ByRef Value As State, ByRef Town As Document.State, Elaps
     End If
 
     Value.Message = Status.Message
-    Value.Progress = Status.Progress
+    Value.Progress = Min(99, Max(0, Status.Progress))
+    Value.Failed = Status.Status <> 0 And Status.Status <> 1
 
     If Status.Status = 0 Then
         Return False
@@ -294,18 +325,22 @@ Public Function Update(ByRef Value As State, ByRef Town As Document.State, Elaps
                 Opened = True
                 Value.Message = "Town opened in a new tab."
             Else
+                Value.Failed = True
                 Value.Message = "Invalid town; current edits retained."
             End If
 
         Else If Value.Operation = LIST_VIEWER Then
 
-            Call ReadRecent(Value)
+            Call ReadRecent(Value, Town.Name)
 
         Else
 
-            Ok = Library.SaveCurrent(Value.Pending)
+            ' Publishing an older snapshot must never overwrite a newer working recovery,
+            ' including when the user switched to another map while this save ran.
+            Ok = Storage.SaveDocument(Value.Pending, "TownEditor.Town." + Value.Pending.Name)
 
-            If (Not Value.SaveAsCopy And
+            If (Ok And
+                Not Value.SaveAsCopy And
                 Town.Name = Value.OriginName And
                 Town.Revision = Value.OriginRevision) Then
                 Town.Name = Value.Pending.Name
@@ -313,11 +348,29 @@ Public Function Update(ByRef Value As State, ByRef Town As Document.State, Elaps
             End If
 
             Ok = Library.Remember(Town) And Ok
-            Value.Message = "Saved chosen file."
+            Value.Message = "Saved and verified."
+
+            If Town.Name = Value.OriginName And Town.Revision <> Value.OriginRevision Then
+                Value.Message = "Snapshot saved. Newer edits are still unsaved."
+            End If
+
+            If Value.Operation = SAVE_VIEWER Then
+                Ok = RememberFile(Value) And Ok
+            End If
+
+            Ok = File_Reveal(Value.Path) And Ok
+            Ok = Locations.Remember(Value.Path, Value.Operation = SAVE_BLENDER) And Ok
             Opened = Value.SaveAsCopy
 
             If Not Ok Then
-                Value.Message = "File saved; local recovery failed."
+
+                Value.Failed = True
+                Value.Progress = 99
+                Value.Message = "File saved and verified; recovery, recent files or Explorer could not finish."
+
+            Else
+                Value.Progress = 100
+
             End If
 
         End If
@@ -329,6 +382,7 @@ Public Function Update(ByRef Value As State, ByRef Town As Document.State, Elaps
     End If
 
     Value.RequestId = 0
+    Value.NativeJob = 0
 
     Return Opened
 
@@ -339,7 +393,10 @@ Public Function FileLabel(Path As Text) As Text
     Dim Index As Number
     Dim Start As Number
     Dim Letter As Number
+    Dim Ending As Number
     Dim Result As Text
+
+    Ending = Text_Length(Path)
 
     For Index = 0 To Text_Length(Path) - 1
 
@@ -347,11 +404,14 @@ Public Function FileLabel(Path As Text) As Text
 
         If Letter = 47 Or Letter = 92 Then
             Start = Index + 1
+            Ending = Text_Length(Path)
+        Else If Letter = 46 Then
+            Ending = Index
         End If
 
     End For
 
-    Result = Text_Slice(Path, Start, Text_Length(Path) - Start - 5)
+    Result = Text_Slice(Path, Start, Ending - Start)
 
     Return Result
 
@@ -405,7 +465,7 @@ Private Function GetInteger() As Number
 
 End Function
 
-Private Sub ReadRecent(ByRef Value As State)
+Private Sub ReadRecent(ByRef Value As State, TownName As Text)
 
     Dim ByteCount As Number
     Dim Status As Number
@@ -416,7 +476,7 @@ Private Sub ReadRecent(ByRef Value As State)
     Dim Path As Text
 
     Value.RecentCount = 0
-    Load Data "TownEditor.File.Recent" Into Bytes Count ByteCount Status Status
+    Load Data "TownEditor.File.History." + TownName Into Bytes Count ByteCount Status Status
 
     If Status <> DATA_STATUS_OK Or ByteCount < 12 Then
         Return
@@ -432,8 +492,7 @@ Private Sub ReadRecent(ByRef Value As State)
     Id = GetInteger()
     Length = GetInteger()
 
-    If (Id <> Value.RequestId Or
-        Length < 0 Or
+    If (Length < 0 Or
         Length > 10) Then
         Return
     End If
@@ -464,5 +523,59 @@ Private Sub ReadRecent(ByRef Value As State)
     Value.RecentCount = Length
 
 End Sub
+
+Private Function RememberFile(ByRef Value As State) As Boolean
+
+    Dim Index As Number
+    Dim Letter As Number
+    Dim Status As Number
+    Dim PathCount As Number
+    Dim Path As Text
+
+    Call ReadRecent(Value, Value.Pending.Name)
+
+    ' Keep ten selectable versions; older user-owned files remain on disk.
+    Offset = 0
+
+    Call PutInteger(21780308)
+    Call PutInteger(0)
+    Call PutInteger(0)
+
+    For Index = -1 To Value.RecentCount - 1
+
+        Path = Value.Path
+
+        If Index >= 0 Then
+            Path = Value.RecentPaths[Index]
+        End If
+
+        If Index = -1 Or Path <> Value.Path Then
+
+            Call PutInteger(Text_Length(Path))
+
+            For Letter = 0 To Text_Length(Path) - 1
+                Call PutInteger(Text_Code_At(Path, Letter))
+            End For
+
+            PathCount = PathCount + 1
+
+            If PathCount = 10 Then
+                Exit For
+            End If
+
+        End If
+
+    End For
+
+    Bytes[8] = PathCount
+    Save Data Bytes Count Offset To "TownEditor.File.History." + Value.Pending.Name Status Status
+
+    If Status <> DATA_STATUS_OK Then
+        Return False
+    End If
+
+    Return True
+
+End Function
 
 End Module

@@ -1,3 +1,9 @@
+> **Current direction - September 29, 2026:** The existing native Character Viewer is
+> **SMILE 2.0 - Sin Star I - Game Engine and Studio** ("Sin Star Studio" or "Studio").
+> Existing paths remain under `tools/Character3DViewer`. The separate Studio concept
+> below is abandoned for now; Web development is paused indefinitely. Desktop Sin Star I
+> development continues in this existing application.
+
 <p align="center">
   <img src="assets/branding/smile-2.0-logo.png" alt="Official SMILE 2.0 logo" width="160">
 </p>

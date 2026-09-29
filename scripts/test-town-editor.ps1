@@ -102,12 +102,24 @@ if (-not $SkipRendering) {
     }
     $sessionProject = Join-Path $viewer 'Character3DViewer.TownSessionTests.smileproj'
     $project.Save($sessionProject)
-    # The session fixture reuses prepared native assets, including newly added UI images.
-    $images = Join-Path $viewer 'bin/Release/Assets/Neris'
+    # A fixture must never publish into the user's running Studio folder, even with a
+    # different ApplicationId. Reuse immutable prepared assets in isolated test output.
+    $sessionOutput = Join-Path $output 'session'
+    $null = New-Item -ItemType Directory -Path $sessionOutput -Force
+    $publication = Join-Path $viewer 'bin/Release'
+    & (Join-Path $viewer 'Check-Publication.ps1') -Directory $publication
+    [xml]$assetProject = Get-Content (Join-Path $viewer 'Character3DViewer.smileproj') -Raw
+    $manifestPath = Join-Path $publication ($assetProject.SmileProject.PropertyGroup.ApplicationId + '.smile-assets.json')
+    foreach ($asset in (Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json).assets) {
+        $target = Join-Path $sessionOutput $asset
+        $null = New-Item -ItemType Directory -Path (Split-Path $target -Parent) -Force
+        Copy-Item -LiteralPath (Join-Path $publication $asset) -Destination $target -Force
+    }
+    $images = Join-Path $sessionOutput 'Assets/Neris'
     $null = New-Item -ItemType Directory -Path $images -Force
     foreach ($name in @('Town-Palette.png', 'Neris-Grass-Color.png')) {
         Copy-Item -LiteralPath (Join-Path $viewer ('Assets/Neris/' + $name)) -Destination $images -Force
     }
-    Invoke-Check $sessionProject (Join-Path $viewer 'bin\Release\TownSessionTests.exe') 'PASS Town Editor Session'
+    Invoke-Check $sessionProject (Join-Path $sessionOutput 'TownSessionTests.exe') 'PASS Town Editor Session'
 }
 Write-Host 'PASS Native Town Editor'

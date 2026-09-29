@@ -342,6 +342,7 @@ public static class SmileCompletionService
                 var parameters = string.Join(", ", SyntaxFacts.GetBuiltInFunctionParameters(kind));
                 var description = kind switch
                 {
+                    _ when DataFileSemantics.IsIntrinsic(kind) => DataFileSemantics.Signature(kind),
                     _ when Renderer3DPrecisionSemantics.IsIntrinsic(kind) => Renderer3DPrecisionSemantics.Signature(kind),
                     _ when DoubleSemantics.IsIntrinsic(kind) || DoubleSemantics.IsPolymorphic(kind) => DoubleSemantics.Signature(kind),
                     SyntaxKind.TextLengthKeyword => "Text_Length(Value As Text) As Number - Unicode scalar count",

@@ -1,4 +1,55 @@
-# SMILE 2.0 - 3D Viewer, Animation Editor
+# SMILE 2.0 - Sin Star I - Game Engine and Studio
+
+## Safe native builds and launch
+
+Use the complete `Character3DViewer.smileproj` and `Build.ps1 -Target Native`.
+For background development while Sin edits, add `-OutputDirectory <staging-folder>`.
+Never compile a project with removed Asset/Model3DAsset declarations into a live
+publication with the same ApplicationId: publication deliberately removes assets
+no longer declared. A September 29 stripped test publication removed all 333
+runtime assets, breaking later tab loads and startup; the assets were restored
+without changing town saves. Code-only experiments require their own output folder.
+
+Build refuses to overwrite the folder of a running Studio. `Check-Publication.ps1`
+checks the manifest, declared assets and every published file. `Launch.ps1`
+requests a complete rebuild when the standard publication is incomplete, checks
+prerequisites before closing an existing session, and checks publication again
+before launch. It never force-terminates an editor. Use `Launch.ps1 -Build` for a
+normal graceful rebuild/restart; preserve user edits before replacing a build.
+
+Guides have separate **Save Guides... / Load Guides...** commands for `.guide`
+files, containing markers, fractional grid spacing, visibility, tile filter and
+snap choices. They remain excluded from town and Blender documents. Loading
+replaces guides only after complete validation; Undo restores the previous markers.
+
+The native parent tabs are **Characters**, **Battles**, **Battle System**, and
+**Sin Star I**. The last group shows the independently saved **Neris Town**,
+**Neris Spaceport**, and **Horizon Airport**. Isolated test applications have their
+own saves; do not substitute a test executable for the user's working publication.
+The standard window starts at 1440 × 960 when there is no remembered placement.
+Use a taller window for the full editor palette; very short windows can crowd it.
+
+**Guides:** enter grid spacing from 0.001 to 10,000 metres; `/2` and `x2` adjust it.
+Actual Tile Grid can show all cells, Ground, Water, Road, Buildings or Decor.
+The imported town has nonuniform terrain cell boundaries. That guide shows those
+actual boundaries; the regular Guide Grid provides a uniform alignment lattice.
+Markers support selection, dragging, duplication and undo. `R` turns the editor
+view clockwise 90 degrees. Surfaces starts with Rectangle. Automatic idle orbit
+is suspended while editing; explicit Orbit remains available.
+
+**Sun:** Save As Day and Save As Night preserve custom presets in the town document.
+Map statistics use U.S. grouping and include area, length and width in metres.
+They move left of the open editor so they remain readable.
+
+**Travel:** click a connected road on the minimap to request a road/bridge-only
+route. The destination is marked and the camera follows the party. Manual movement,
+editing, a map change or a blocked route cancels the trip. Map Load surface markers
+store a named destination; connected painted markers inherit it. They can be
+reassigned or deleted and are saved separately from the underlying terrain material.
+
+**Remaining authoring work:** bulk Move Sections / Copy Sections is not yet exposed.
+The terrain transfer foundation does not move complete districts, fixed landmark
+assemblies or their navigation. Do not describe it as a completed editing tool.
 
 ## Native Neris Town
 
@@ -17,10 +68,15 @@ medallions and floor fixtures remain. The connecting road ends at the apron edge
 eliminating the coplanar overlap.
 
 Each arena floor and grid follows the active document bounds, including resizing.
-Automatic map orbit uses that same center. Right-click restores the approved
+Tab-opening and reset orbit use that same center. Right-click restores the approved
 Neris viewing angle (about 146° bearing, 20° elevation, 8,500 distance), centered
-on the map. O/Orbit retains the eye position while anchoring to the map center;
-Follow Party continues to use the leader. Ctrl+click outside the editor relocates
+on the map, including when leaving Follow Party. O/Orbit instead picks the visible
+world point at the exact viewport center and starts rotating without changing the
+displayed eye, direction or lens. If the center shows sky, the floor intersection
+or existing viewing distance supplies the pivot. Follow Party middle/arrow orbit
+keeps Arin as its pivot without moving him to the middle of the screen. Tab switches
+show only the retained static background and loading status until the whole map
+and its initial camera are ready. Ctrl+click outside the editor relocates
 the whole party to the nearest walkable road. Bottom diagnostics show map triangles
 and render vertices per submitted mesh instance, including offscreen geometry and
 actors, excluding particles and repeated shadow/reflection passes.
@@ -51,9 +107,9 @@ painted markings; the three tower antenna lights flash red one at a time in an
 irregular sequence. **Visit Horizon Airport** brings Arin and the party to its
 entrance, facing into the terminal with the camera behind Arin.
 Horizon now has a labelled marker at its terminal's position on the minimap.
-In Follow Party mode, O/Orbit, mouse orbit and arrow orbit stay centered on the
-leader. In Free Camera, right-click restores the bird's-eye town overview and slow
-orbit. O/Orbit retains the current view and pivot. Middle-drag still uses the
+In Follow Party mode, mouse orbit and arrow orbit keep the leader as their pivot.
+Right-click restores the active tab's bird's-eye overview and slow orbit.
+O/Orbit retains the current view and uses its center. Free-camera middle-drag uses the
 visible point under the cursor for manual orbit.
 
 The current layout has **Horizon — Gentle Wave** at full size west of the town.
@@ -65,11 +121,17 @@ See `games/SinStarI/SourceAssets/Towns/Neris/NerisHorizonV1/README.md` for curre
 Blender files, actual renders, dimensions and the versioned saves. Future Blender
 exports include the selected town's airport and Royal Court assemblies.
 
-Launching `Character3DViewer.exe` directly now starts the file worker if it is
-missing and restarts it if it exits while the Viewer remains open. Launch.ps1 can
-still be used for character calibration synchronization. A per-process guard
-prevents duplicate workers. Save For Viewer writes the small town document;
-Save For Blender starts a separate conversion that may take several minutes.
+Save For Viewer and portable town opening now run inside the application using
+the native checked data-file transfer API; they do not require a File Helper.
+The worker is used only for Blender conversion. That conversion reconstructs
+catalog instances at saved transforms, rebuilds surfaces and lights, embeds the
+town snapshot, packs textures, and verifies the temporary Blender file before
+replacing the chosen destination. It does not modify an open Blender session.
+Save progress stays in the editor's lower-right area and reaches 100% only after
+successful completion. Edits made after clicking Save remain unsaved working edits.
+Successful saves reveal the chosen file in Explorer; separate Town and Blender
+buttons retain the last path for each format. Suggested names use local
+`yyyy-MM-dd HHmm - Town Name.town` / `.blend`.
 
 The following southwest-layout description records the earlier Spaceport 01 build;
 that airport now lives in its own map.

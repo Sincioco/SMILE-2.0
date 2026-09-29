@@ -1,0 +1,314 @@
+''' Independent, checked .guide snapshots. No town, Blender or renderer data is stored.
+Module Smile.Tools.TownGuideFiles
+
+Option Explicit
+
+Import Smile.Tools.TownGuides As Guides
+
+Public Type State
+    Job As Number
+    Saving As Boolean
+    Message As Text
+    Progress As Number
+    Path As Text
+End Type
+
+Private Dim Bytes[8192] As Number
+Private Dim Offset As Number
+Private Dim ByteCount As Number
+Private Dim Valid As Boolean
+Private Dim Candidate As Guides.State
+
+Private Sub Put(Value As Number)
+
+    Dim Index As Number
+
+    Value = Value * 2
+
+    If Value < 0 Then
+        Value = -Value - 1
+    End If
+
+    For Index = 0 To 6
+        Bytes[Offset] = Value Mod 256
+        Offset = Offset + 1
+        Value = Value / 256
+    End For
+
+End Sub
+
+Private Sub PutFlag(Value As Boolean)
+
+    If Value Then
+        Call Put(1)
+    Else
+
+        Call Put(0)
+    End If
+
+End Sub
+
+Private Function Read() As Number
+
+    Dim Index As Number
+    Dim Factor As Number
+    Dim Encoded As Number
+    Dim Result As Number
+
+    If Offset + 7 > ByteCount Then
+        Valid = False
+        Return 0
+    End If
+
+    Factor = 1
+
+    For Index = 0 To 6
+        Encoded = Encoded + Bytes[Offset] * Factor
+        Factor = Factor * 256
+        Offset = Offset + 1
+    End For
+
+    Result = Encoded / 2
+
+    If Encoded Mod 2 <> 0 Then
+        Result = -Result - 1
+    End If
+
+    Return Result
+
+End Function
+
+Private Function ReadFlag() As Boolean
+
+    Dim Value As Number
+    Dim Result As Boolean
+
+    Value = Read()
+    Valid = Valid And Value >= 0 And Value <= 1
+    Result = Value = 1
+
+    Return Result
+
+End Function
+
+Private Function Coordinate() As Double
+
+    Dim Result As Double
+
+    Result = ToDouble(Read()) / 1000000.0
+    Valid = Valid And Abs(Result) <= 1000000000.0
+
+    Return Result
+
+End Function
+
+Public Function SaveSnapshot(ByRef Value As Guides.State, Key As Text) As Boolean
+
+    Dim Index As Number
+    Dim Status As Number
+    Dim Result As Boolean
+    Dim Marker As Guides.Marker
+
+    If (Value.Spacing < 0.001 Or
+        Value.Spacing > 10000.0 Or
+        Value.SnapMode < 0 Or
+        Value.SnapMode > 3 Or
+        Value.TileTarget < 0 Or
+        Value.TileTarget > 5 Or
+        Value.Ink.EntryCount < 0 Or
+        Value.Ink.EntryCount > Guides.MAX_MARKERS) Then
+        Return False
+    End If
+
+    Offset = 0
+
+    Call Put(1196771633)
+    Call Put(ToNumber(Round(Value.Spacing * 1000000.0)))
+    Call Put(Value.SnapMode)
+    Call Put(Value.TileTarget)
+    Call PutFlag(Value.ShowGrid)
+    Call PutFlag(Value.ShowTileGrid)
+    Call PutFlag(Value.SnapTiles)
+    Call Put(Value.Ink.EntryCount)
+
+    For Index = 0 To Value.Ink.EntryCount - 1
+
+        Marker = Value.Ink.Markers[Index]
+
+        If (Abs(Marker.First.X) > 1000000000.0 Or
+            Abs(Marker.First.Y) > 1000000000.0 Or
+            Abs(Marker.First.Z) > 1000000000.0 Or
+            Abs(Marker.Last.X) > 1000000000.0 Or
+            Abs(Marker.Last.Y) > 1000000000.0 Or
+            Abs(Marker.Last.Z) > 1000000000.0) Then
+            Return False
+        End If
+
+        Call PutFlag(Marker.IsRectangle)
+        Call Put(ToNumber(Round(Marker.First.X * 1000000.0)))
+        Call Put(ToNumber(Round(Marker.First.Y * 1000000.0)))
+        Call Put(ToNumber(Round(Marker.First.Z * 1000000.0)))
+        Call Put(ToNumber(Round(Marker.Last.X * 1000000.0)))
+        Call Put(ToNumber(Round(Marker.Last.Y * 1000000.0)))
+        Call Put(ToNumber(Round(Marker.Last.Z * 1000000.0)))
+    End For
+
+    Save Data Bytes Count Offset To Key Status Status
+
+    Result = Status = DATA_STATUS_OK
+
+    Return Result
+
+End Function
+
+Public Function LoadSnapshot(ByRef Value As Guides.State, Key As Text) As Boolean
+
+    Dim Index As Number
+    Dim Status As Number
+    Dim Empty As Guides.State
+
+    Load Data Key Into Bytes Count ByteCount Status Status
+
+    If Status <> DATA_STATUS_OK Then
+        Return False
+    End If
+
+    Candidate = Empty
+    Offset = 0
+    Valid = True
+    Valid = Read() = 1196771633 And Valid
+    Candidate.Spacing = Coordinate()
+    Candidate.SnapMode = Read()
+    Candidate.TileTarget = Read()
+    Candidate.ShowGrid = ReadFlag()
+    Candidate.ShowTileGrid = ReadFlag()
+    Candidate.SnapTiles = ReadFlag()
+    Candidate.Ink.EntryCount = Read()
+
+    If (Not Valid Or
+        Candidate.Spacing < 0.001 Or
+        Candidate.Spacing > 10000.0 Or
+        Candidate.SnapMode < 0 Or
+        Candidate.SnapMode > 3 Or
+        Candidate.TileTarget < 0 Or
+        Candidate.TileTarget > 5 Or
+        Candidate.Ink.EntryCount < 0 Or
+        Candidate.Ink.EntryCount > Guides.MAX_MARKERS) Then
+        Return False
+    End If
+
+    For Index = 0 To Candidate.Ink.EntryCount - 1
+
+        Candidate.Ink.Markers[Index].IsRectangle = ReadFlag()
+        Candidate.Ink.Markers[Index].First.X = Coordinate()
+        Candidate.Ink.Markers[Index].First.Y = Coordinate()
+        Candidate.Ink.Markers[Index].First.Z = Coordinate()
+        Candidate.Ink.Markers[Index].Last.X = Coordinate()
+        Candidate.Ink.Markers[Index].Last.Y = Coordinate()
+        Candidate.Ink.Markers[Index].Last.Z = Coordinate()
+    End For
+
+    If Not Valid Or Offset <> ByteCount Then
+        Return False
+    End If
+
+    Candidate.Ink.Revision = Value.Ink.Revision + 1
+    Value = Candidate
+
+    Return True
+
+End Function
+
+Public Sub Choose(ByRef Value As State, ByRef Guide As Guides.State, Saving As Boolean)
+
+    Dim Path As Text
+    Dim Suggested As Text
+    Dim Title As Text
+    Dim Ok As Boolean
+
+    If Value.Job > 0 Then
+        Return
+    End If
+
+    Title = "Load Guides"
+
+    If Saving Then
+        Title = "Save Guides"
+        Suggested = Local_Timestamp() + " - Town Guides.guide"
+    End If
+
+    Path = File_Pick(Saving, Title, "guide", Suggested)
+
+    If Path = "" Then
+        Value.Message = "Canceled; guides unchanged."
+        Return
+    End If
+
+    If Saving Then
+
+        Ok = SaveSnapshot(Guide, "TownEditor.Guide.Transfer")
+
+        If Not Ok Then
+            Value.Message = "Could not save the guide snapshot."
+            Return
+        End If
+
+    End If
+
+    Value.Job = Data_FileStart(Saving, "TownEditor.Guide.Transfer", Path)
+    Value.Path = Path
+    Value.Saving = Saving
+    Value.Progress = 0
+    Value.Message = "Transferring guides..."
+
+    If Value.Job = 0 Then
+        Value.Message = "Another file operation is running."
+    End If
+
+End Sub
+
+Public Function Update(ByRef Value As State, ByRef Guide As Guides.State) As Boolean
+
+    Dim Status As Number
+    Dim Loaded As Boolean
+
+    If Value.Job = 0 Then
+        Return False
+    End If
+
+    Status = Data_FileStatus(Value.Job)
+    Value.Progress = Min(99, Data_FileProgress(Value.Job))
+
+    If Status = 0 Then
+        Return False
+    End If
+
+    Value.Message = Data_FileMessage(Value.Job)
+    Value.Job = 0
+
+    If Status = 1 Then
+
+        If Value.Saving Then
+
+            Value.Progress = 100
+            Value.Message = "Guides saved and verified."
+
+        Else
+
+            Loaded = LoadSnapshot(Guide, "TownEditor.Guide.Transfer")
+            Value.Message = "Invalid guide file; guides retained."
+
+            If Loaded Then
+                Value.Progress = 100
+                Value.Message = "Guides loaded. Ctrl+Z restores markers."
+            End If
+
+        End If
+
+    End If
+
+    Return Loaded
+
+End Function
+
+End Module

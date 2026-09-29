@@ -29,6 +29,7 @@ Public Type State
     WasMoving As Boolean
     OrbitAtParty As Boolean
     OrbitOffset As P.Vector3
+    OrbitLookOffset As P.Vector3
     Peeking As Boolean
     CursorOrbit As Boolean
     CursorAnchor As P.Vector3
@@ -36,6 +37,25 @@ Public Type State
     CursorY As Number
     CursorDepth As Double
 End Type
+
+''' Clockwise map-view turn; world placements and camera lens remain unchanged.
+Public Sub TurnClockwise(ByRef Value As State, ByRef View As Arena.State, ByRef Base As P.Camera3D)
+
+    Base = View.LiveCamera
+    Base.Position = M.Add(Base.Target, M.Rotate(M.Subtract(Base.Position, Base.Target), P.Vector(0.0, -90.0, 0.0)))
+    Base.UpDirection = M.Rotate(Base.UpDirection, P.Vector(0.0, -90.0, 0.0))
+    Value.Suspended = True
+    Value.Focusing = False
+    Value.Arrival = False
+    Value.Peeking = False
+    Value.CursorOrbit = False
+    Value.OrbitAtParty = False
+
+    Call Motion.Reset(View.Controls, View.Zoom)
+    Call Arena.BeginTransition(View, 0)
+    Call Arena.ComposeCamera(View, Base)
+
+End Sub
 
 Public Sub BeginCursorOrbit(ByRef Value As State, View As P.Camera3D,
     Point As P.Vector3, X As Number, Y As Number)
@@ -86,13 +106,18 @@ Public Sub AnchorPoint(ByRef Value As State, ByRef View As Arena.State,
 
 End Sub
 
-''' Follow-mode orbit keeps the displayed eye and places its pivot on the leader.
+''' The leader is the pivot, but keeps the same off-center place in the displayed shot.
 Public Sub AnchorParty(ByRef Value As State, ByRef View As Arena.State,
     ByRef Base As P.Camera3D, Leader As P.Vector3)
 
-    Call AnchorPoint(Value, View, Base, M.Add(Leader, P.Vector(0.0, 14.0, 0.0)))
+    Dim Anchor As P.Vector3
 
-    Value.OrbitOffset = M.Subtract(Base.Position, Base.Target)
+    Anchor = M.Add(Leader, P.Vector(0.0, 14.0, 0.0))
+
+    Call AnchorPoint(Value, View, Base, View.LiveCamera.Target)
+
+    Value.OrbitOffset = M.Subtract(Base.Position, Anchor)
+    Value.OrbitLookOffset = M.Subtract(Base.Target, Anchor)
     Value.OrbitAtParty = True
 
 End Sub
@@ -279,6 +304,7 @@ Public Function Frame(ByRef Value As State, Base As P.Camera3D, Leader As P.Vect
         Result = Base
         Result.Target = M.Add(Leader, P.Vector(0.0, 14.0, 0.0))
         Result.Position = M.Add(Result.Target, Value.OrbitOffset)
+        Result.Target = M.Add(Result.Target, Value.OrbitLookOffset)
 
         Return Result
 
@@ -377,6 +403,11 @@ Public Sub Compose(ByRef Value As State, ByRef View As Arena.State,
     View.FloorVisible = False
 
     Call Arena.ComposeCamera(View, Resolved)
+
+    If Following And Value.OrbitAtParty Then
+        View.LiveCamera = Camera.KeepOrbitAnchor(Resolved, View.LiveCamera,
+            M.Subtract(Resolved.Target, Value.OrbitLookOffset))
+    End If
 
     If Value.CursorOrbit Then
         View.LiveCamera = Camera.KeepCursorAnchor(View.LiveCamera, Value.CursorAnchor,

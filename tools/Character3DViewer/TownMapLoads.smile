@@ -1,0 +1,213 @@
+''' Transparent travel cells; terrain remains unchanged underneath each marker.
+Module Smile.Tools.TownMapLoads
+
+Option Explicit
+
+Import Smile.Tools.TownDocument As Document
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+
+Private Dim Lookup[512, 512] As Number
+Private Dim Queue[4096] As Number
+Private Dim Seen[4096] As Boolean
+
+Public Function Find(ByRef Town As Document.State, X As Number, Z As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Index As Number
+
+    For Index = 0 To Town.MapTileCount - 1
+
+        If Town.MapTiles[Index].X = X And Town.MapTiles[Index].Z = Z Then
+            Return Index
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+Public Function DestinationAt(ByRef Town As Document.State, X As Double, Z As Double) As Text
+
+    Dim Index As Number
+    Dim Result As Text
+
+    Index = Find(Town, Grid.CellX(Town.Surface, X), Grid.CellZ(Town.Surface, Z))
+
+    If Index >= 0 Then
+        Result = Town.MapTiles[Index].Destination
+    End If
+
+    Return Result
+
+End Function
+
+Public Function Neighbor(ByRef Town As Document.State, X As Number, Z As Number) As Text
+
+    Dim ReturnValue As Text
+
+    Dim Index As Number
+
+    For Index = 0 To Town.MapTileCount - 1
+
+        If Abs(Town.MapTiles[Index].X - X) + Abs(Town.MapTiles[Index].Z - Z) <= 1 Then
+            ReturnValue = Town.MapTiles[Index].Destination
+
+            Return ReturnValue
+        End If
+
+    End For
+
+    Return ""
+
+End Function
+
+Public Sub AssignConnected(ByRef Town As Document.State, First As Number, Destination As Text)
+
+    Dim Index As Number
+    Dim X As Number
+    Dim Z As Number
+    Dim Head As Number
+    Dim Tail As Number
+    Dim Side As Number
+    Dim NextX As Number
+    Dim NextZ As Number
+    Dim Adjacent As Number
+
+    If (First < 0 Or
+        First >= Town.MapTileCount Or
+        Not Document.ValidName(Destination)) Then
+        Return
+    End If
+
+    For Z = 0 To Town.Surface.Rows - 1
+
+        For X = 0 To Town.Surface.Columns - 1
+            Lookup[X, Z] = 0
+        End For
+    End For
+
+    For Index = 0 To Town.MapTileCount - 1
+        Lookup[Town.MapTiles[Index].X, Town.MapTiles[Index].Z] = Index + 1
+        Seen[Index] = False
+    End For
+
+    Queue[0] = First
+    Seen[First] = True
+    Tail = 1
+
+    Do
+
+        Index = Queue[Head]
+        Head = Head + 1
+        Town.MapTiles[Index].Destination = Destination
+        X = Town.MapTiles[Index].X
+        Z = Town.MapTiles[Index].Z
+
+        For Side = 0 To 3
+
+            NextX = X
+            NextZ = Z
+
+            If Side = 0 Then
+                NextX = X - 1
+            Else If Side = 1 Then
+                NextX = X + 1
+            Else If Side = 2 Then
+                NextZ = Z - 1
+            Else
+                NextZ = Z + 1
+            End If
+
+            If (NextX >= 0 And
+                NextX < Town.Surface.Columns And
+                NextZ >= 0 And
+                NextZ < Town.Surface.Rows) Then
+
+                Adjacent = Lookup[NextX, NextZ] - 1
+
+                If Adjacent >= 0 And Not Seen[Adjacent] Then
+
+                    Seen[Adjacent] = True
+                    Queue[Tail] = Adjacent
+                    Tail = Tail + 1
+
+                End If
+
+            End If
+
+        End For
+
+    Loop Until Head = Tail
+
+    Town.Revision = Town.Revision + 1
+
+End Sub
+
+Public Function Place(ByRef Town As Document.State, X As Number, Z As Number, Destination As Text) As Boolean
+
+    Dim Index As Number
+    Dim Inherited As Text
+
+    If (X < 0 Or
+        Z < 0 Or
+        X >= Town.Surface.Columns Or
+        Z >= Town.Surface.Rows) Then
+        Return False
+    End If
+
+    Inherited = Neighbor(Town, X, Z)
+
+    If Text_Length(Inherited) > 0 Then
+        Destination = Inherited
+    End If
+
+    If Not Document.ValidName(Destination) Then
+        Return False
+    End If
+
+    Index = Find(Town, X, Z)
+
+    If Index < 0 Then
+
+        If Town.MapTileCount = Document.MAX_MAP_TILES Then
+            Return False
+        End If
+
+        Index = Town.MapTileCount
+        Town.MapTileCount = Town.MapTileCount + 1
+        Town.MapTiles[Index].X = X
+        Town.MapTiles[Index].Z = Z
+
+    End If
+
+    Call AssignConnected(Town, Index, Destination)
+
+    Return True
+
+End Function
+
+Public Function Remove(ByRef Town As Document.State, X As Number, Z As Number) As Boolean
+
+    Dim Index As Number
+    Dim Last As Document.MapTile
+
+    Index = Find(Town, X, Z)
+
+    If Index < 0 Then
+        Return False
+    End If
+
+    Town.MapTileCount = Town.MapTileCount - 1
+    Town.MapTiles[Index] = Town.MapTiles[Town.MapTileCount]
+    Town.MapTiles[Town.MapTileCount] = Last
+    Town.Revision = Town.Revision + 1
+
+    Return True
+
+End Function
+
+End Module

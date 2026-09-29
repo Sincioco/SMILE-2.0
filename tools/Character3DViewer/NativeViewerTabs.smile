@@ -1,0 +1,234 @@
+''' Native parent navigation and the selected group's child tabs.
+Module Smile.Tools.NativeViewerTabs
+
+Option Explicit
+
+Import Smile.Tools.Character3DViewerProfiles As Profiles
+Import Smile.UI.Controls As UI
+
+Public Const BATTLE_TAB = 15
+Public Const TOWN_TAB = 16
+
+Public Type State
+    CharacterTab As Number
+    PartyTab As Number
+End Type
+
+Public Function RowY(Selected As Number) As Number
+
+    If Selected = TOWN_TAB Or Selected = BATTLE_TAB Then
+        Return 62
+    End If
+
+    Return 30
+
+End Function
+
+Public Function GroupOf(Tab As Number) As Number
+
+    If Tab = TOWN_TAB Then
+        Return 3
+    Else If Tab = BATTLE_TAB Then
+        Return 2
+    Else If (Tab = Profiles.CHARACTER_TAB_PARTY_DRAGON Or
+        Tab = Profiles.CHARACTER_TAB_PARTY_VRAX Or
+        Tab = Profiles.CHARACTER_TAB_PARTY_KAEL) Then
+        Return 1
+    End If
+
+    Return 0
+
+End Function
+
+Public Sub Remember(ByRef Value As State, Tab As Number)
+
+    If GroupOf(Tab) = 0 Then
+        Value.CharacterTab = Tab
+    Else If GroupOf(Tab) = 1 Then
+        Value.PartyTab = Tab
+    End If
+
+End Sub
+
+Public Function ChildAt(Group As Number, Position As Number) As Number
+
+    Dim ReturnValue As Number
+
+    If Group = 1 Then
+
+        Select Case Position
+            Case 0
+                Return Profiles.CHARACTER_TAB_PARTY_DRAGON
+            Case 1
+                Return Profiles.CHARACTER_TAB_PARTY_VRAX
+            Case 2
+                Return Profiles.CHARACTER_TAB_PARTY_KAEL
+        End Select
+
+    Else If Group = 0 Then
+
+        Select Case Position
+            Case 0
+                Return 0
+            Case 1
+                Return 1
+            Case 2
+                Return 4
+            Case 3
+                Return 5
+            Case 4
+                Return Profiles.CHARACTER_TAB_MIRA
+            Case 5
+                Return 2
+            Case 6
+                Return 6
+            Case 7
+                Return Profiles.CHARACTER_TAB_KAEL
+        End Select
+
+    End If
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+Private Function Label(Group As Number, Position As Number) As Text
+
+    If Group = 1 Then
+
+        Select Case Position
+            Case 0
+                Return "Party Dragon"
+            Case 1
+                Return "Party Vrax"
+        End Select
+
+        Return "Kael Party"
+
+    End If
+
+    Select Case Position
+        Case 0
+            Return "Arin"
+        Case 1
+            Return "Orin"
+        Case 2
+            Return "Valor"
+        Case 3
+            Return "Zara"
+        Case 4
+            Return "Mira"
+        Case 5
+            Return "Dragon"
+        Case 6
+            Return "Vrax"
+    End Select
+
+    Return "Kael"
+
+End Function
+
+Public Function Input(ByRef Value As State, Selected As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Index As Number
+    Dim Group As Number
+    Dim Width As Number
+    Dim Y As Number
+    Dim Child As Number
+
+    Group = GroupOf(Selected)
+    Y = RowY(Selected)
+
+    If UI.Clicked(18, Y, 106, 26) Then
+
+        ReturnValue = Value.CharacterTab
+
+        Return ReturnValue
+
+    Else If UI.Clicked(128, Y, 106, 26) Then
+
+        If GroupOf(Value.PartyTab) <> 1 Then
+            Return Profiles.CHARACTER_TAB_PARTY_DRAGON
+        End If
+
+        ReturnValue = Value.PartyTab
+
+        Return ReturnValue
+
+    Else If UI.Clicked(238, Y, 112, 26) Then
+
+        Return BATTLE_TAB
+
+    Else If UI.Clicked(354, Y, 106, 26) Then
+
+        Return TOWN_TAB
+
+    End If
+
+    Width = 58
+
+    If Group = 1 Then
+        Width = 110
+    End If
+
+    For Index = 0 To 7
+
+        If ChildAt(Group, Index) < 0 Then
+            Exit For
+        End If
+
+        If UI.Clicked(478 + Index * Width, Y, Width - 4, 26) Then
+            Child = ChildAt(Group, Index)
+            Return Child
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+Public Sub Draw(Selected As Number)
+
+    Dim Index As Number
+    Dim Group As Number
+    Dim Width As Number
+    Dim Y As Number
+
+    Group = GroupOf(Selected)
+    Y = RowY(Selected)
+
+    Call UI.DrawButton(18, Y, 106, 26, "Characters", Group = 0)
+    Call UI.DrawButton(128, Y, 106, 26, "Battles", Group = 1)
+    Call UI.DrawButton(238, Y, 112, 26, "Battle System", Group = 2)
+    Call UI.DrawButton(354, Y, 106, 26, "Sin Star I", Group = 3)
+
+    Width = 58
+
+    If Group = 1 Then
+        Width = 110
+    End If
+
+    If Group < 2 Then
+        Draw Line 468, Y + 4, 468, Y + 22, RGB(70, 160, 170)
+    End If
+
+    For Index = 0 To 7
+
+        If ChildAt(Group, Index) < 0 Then
+            Exit For
+        End If
+
+        Call UI.DrawButton(478 + Index * Width, Y, Width - 4, 26,
+            Label(Group, Index), Selected = ChildAt(Group, Index))
+    End For
+
+End Sub
+
+End Module

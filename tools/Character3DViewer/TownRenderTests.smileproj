@@ -8,8 +8,13 @@
   <ItemGroup>
     <SmileSource Include="TownRenderTests.smile" StartupOnly="true" />
     <SmileSource Include="TownDocument.smile" />
+    <SmileSource Include="TownMapLoads.smile" />
+    <SmileSource Include="TownMapLoadTools.smile" />
     <SmileSource Include="TownSelection.smile" />
     <SmileSource Include="TownGuides.smile" />
+    <SmileSource Include="TownGuideFiles.smile" />
+    <SmileSource Include="TownTileGuides.smile" />
+    <SmileSource Include="TownMarkerTools.smile" />
     <SmileSource Include="TownHistory.smile" />
     <SmileSource Include="TownPicking.smile" />
     <SmileSource Include="TownEditorPanel.smile" />

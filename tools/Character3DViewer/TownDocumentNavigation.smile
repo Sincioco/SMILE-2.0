@@ -75,7 +75,8 @@ Public Function NearestRoad(Point As P.Vector3, ByRef Result As P.Vector3) As Bo
 
         For X = 0 To Surface.Columns - 1
 
-            If Grid.ReadCell(Surface, X, Z) = Grid.SURFACE_ROAD Then
+            If (Grid.ReadCell(Surface, X, Z) = Grid.SURFACE_ROAD Or
+                Grid.ReadCell(Surface, X, Z) = Grid.SURFACE_BRIDGE) Then
 
                 MarginX = Min(12.0, (Surface.XEdges[X + 1] - Surface.XEdges[X]) * 0.25)
                 MarginZ = Min(12.0, (Surface.ZEdges[Z + 1] - Surface.ZEdges[Z]) * 0.25)

@@ -13,13 +13,19 @@ Import Smile.Tools.TownGeometry As Geometry
 Import Smile.Tools.TownPicking As Picking
 Import Smile.Tools.TownEditorPanel As Panel
 Import Smile.Tools.TownGuides As Guides
+Import Smile.Tools.TownGuideFiles As GuideFiles
+Import Smile.Tools.TownTileGuides As TileGuides
+Import Smile.Tools.TownMarkerTools As MarkerTools
 Import Smile.Tools.TownHistory As History
+Import Smile.Tools.TownMapLoadTools As MapLoadTools
 Import Smile.Tools.TownSunControls As Sun
 
 Public Type State
     Ui As Panel.State
     Selected As Selection.State
     Guide As Guides.State
+    GuideTransfer As GuideFiles.State
+    MarkerGesture As MarkerTools.State
     HistoryState As History.State
     Enabled As Boolean
     Anchored As Boolean
@@ -47,16 +53,38 @@ Public Function CapturesMap(ByRef Value As State) As Boolean
 
     Dim Result As Boolean
 
-    Result = Value.Ui.Category <> 0 Or Value.Ui.Tool = 15 Or Value.Ui.Tool = 16
+    Result = Value.Ui.Category <> 0 Or Value.Ui.Tool = 15 Or Value.Ui.Tool = 16 Or Value.Ui.Tool = 70
 
     Return Result
 
 End Function
 
+Public Sub UpdateGuideFiles(ByRef Value As State, ByRef Town As Document.State)
+
+    Dim Loaded As Boolean
+
+    If Value.GuideTransfer.Job = 0 Then
+        Return
+    End If
+
+    Call History.Ensure(Value.HistoryState, Town, Value.Guide.Ink)
+
+    Loaded = GuideFiles.Update(Value.GuideTransfer, Value.Guide)
+    Value.Ui.Message = Value.GuideTransfer.Message
+    Value.Ui.Busy = Value.Ui.Busy Or Value.GuideTransfer.Job > 0
+    Value.Ui.ProgressPercent = Value.GuideTransfer.Progress
+
+    If Loaded Then
+        Call History.Record(Value.HistoryState, Town, Value.Guide.Ink)
+    End If
+
+End Sub
+
 Public Sub Cancel(ByRef Value As State, ByRef Town As Document.State)
 
     Call Selection.EndDrag(Value.Selected, Town, True)
     Call Sun.Cancel(Value.Ui.SunSlider, Town)
+    Call MarkerTools.Cancel(Value.MarkerGesture, Value.Guide)
 
     Value.Rubber = False
     Value.Anchored = False
@@ -74,6 +102,7 @@ End Sub
 Public Sub ResetDocument(ByRef Value As State, ByRef Town As Document.State)
 
     Call Guides.ClearMarkers(Value.Guide.Ink)
+    Call MarkerTools.ClearSelection(Value.Guide)
     Call ResetHistory(Value, Town)
 
 End Sub
@@ -85,6 +114,7 @@ Public Function Command(ByRef Value As State, ByRef Town As Document.State, Acti
     Dim Rows As Number
     Dim Shape As Catalog.Template
     Dim Ok As Boolean
+    Dim InputText As Text
 
     If Action = 0 Then
         Return 0
@@ -123,12 +153,12 @@ Public Function Command(ByRef Value As State, ByRef Town As Document.State, Acti
         End For
 
         If Action = 2 Then
-            Value.Ui.Tool = 12
+            Value.Ui.Tool = 13
         End If
 
         Call Selection.SetCategory(Value.Selected, Action)
 
-    Else If Action >= 10 And Action <= 16 Then
+    Else If Action >= 10 And Action <= 19 Then
 
         Value.Ui.Tool = Action
 
@@ -172,6 +202,7 @@ Public Function Command(ByRef Value As State, ByRef Town As Document.State, Acti
         If Ok Then
 
             Call Selection.ClearSelection(Value.Selected)
+            Call MarkerTools.ClearSelection(Value.Guide)
 
             Value.Ui.Message = "Undo applied."
 
@@ -183,7 +214,7 @@ Public Function Command(ByRef Value As State, ByRef Town As Document.State, Acti
 
     Else If Action = 34 Then
 
-        Ok = Selection.Duplicate(Value.Selected, Town, ToDouble(Max(1, Value.Guide.Spacing) * 10))
+        Ok = Selection.Duplicate(Value.Selected, Town, Max(0.001, Value.Guide.Spacing) * 10.0)
         Value.Ui.Message = "Select an item; copies need free space."
 
         If Ok Then
@@ -194,12 +225,19 @@ Public Function Command(ByRef Value As State, ByRef Town As Document.State, Acti
     Else If Action >= 40 And Action <= 42 Then
 
         Value.Ui.Surface = Grid.SURFACE_GROUND
+        Value.Ui.Tool = 13
 
         If Action = 41 Then
             Value.Ui.Surface = Grid.SURFACE_ROAD
         Else If Action = 42 Then
             Value.Ui.Surface = Grid.SURFACE_WATER
         End If
+
+    Else If Action = 46 Then
+
+        Value.Ui.Surface = 5
+        Value.Ui.Tool = 17
+        Value.Ui.Message = "Click to place. Adjacent Map Load tiles share their destination."
 
     Else If Action = 44 Then
 
@@ -216,12 +254,62 @@ Public Function Command(ByRef Value As State, ByRef Town As Document.State, Acti
     Else If Action = 72 Then
 
         Call Guides.ClearMarkers(Value.Guide.Ink)
+        Call MarkerTools.ClearSelection(Value.Guide)
 
         Value.Ui.Message = "All markers cleared."
+
+    Else If Action = 86 Then
+
+        Value.Ui.Tool = 70
+        Value.Ui.Message = "Click a marker edge. Ctrl-click adds to selection. Drag to move."
+
+    Else If Action = 87 Then
+
+        Ok = MarkerTools.Duplicate(Value.Guide)
+        Value.Ui.Message = "Select markers first; maximum 128 markers."
+
+        If Ok Then
+            Value.Ui.Tool = 70
+            Value.Ui.Message = "Markers duplicated. Drag the selected copies."
+        End If
+
+    Else If Action = 88 Then
+
+        Call MarkerTools.RemoveSelected(Value.Guide)
+
+        Value.Ui.Message = "Selected markers deleted."
 
     Else If Action = 73 Then
 
         Value.Guide.ShowGrid = Not Value.Guide.ShowGrid
+
+    Else If Action = 77 Then
+
+        Value.Guide.ShowTileGrid = Not Value.Guide.ShowTileGrid
+
+    Else If Action >= 80 And Action <= 85 Then
+
+        Value.Guide.TileTarget = Action - 80
+
+    Else If Action = 79 Then
+
+        Value.Guide.SnapTiles = Not Value.Guide.SnapTiles
+
+    Else If Action = 78 Then
+
+        InputText = Text_Prompt("Guide Grid Size", "Spacing in meters (0.001 to 10000). Example: 0.25",
+            Guides.SpacingLabel(Value.Guide.Spacing))
+
+        If Text_Length(InputText) > 0 Then
+
+            Ok = Guides.SetSpacing(Value.Guide, InputText)
+            Value.Ui.Message = "Grid and snap spacing updated."
+
+            If Not Ok Then
+                Value.Ui.Message = "Enter 0.001 to 10000 m, up to 6 decimal places."
+            End If
+
+        End If
 
     Else If Action = 74 Then
 
@@ -229,11 +317,11 @@ Public Function Command(ByRef Value As State, ByRef Town As Document.State, Acti
 
     Else If Action = 75 Then
 
-        Value.Guide.Spacing = Max(1, Value.Guide.Spacing - 1)
+        Value.Guide.Spacing = Max(0.001, Value.Guide.Spacing * 0.5)
 
     Else If Action = 76 Then
 
-        Value.Guide.Spacing = Min(20, Value.Guide.Spacing + 1)
+        Value.Guide.Spacing = Min(10000.0, Value.Guide.Spacing * 2.0)
 
     Else If Action >= 100 And Action < 100 + Catalog.TEMPLATE_COUNT Then
 
@@ -247,15 +335,21 @@ Public Function Command(ByRef Value As State, ByRef Town As Document.State, Acti
 
     Else If Action = 221 Then
 
-        Call Document.DefaultSun(Town.Light)
-
-        Town.Revision = Town.Revision + 1
+        Call Document.ApplySunPreset(Town, False)
 
     Else If Action = 222 Then
 
-        Call Document.NightSun(Town.Light)
+        Call Document.ApplySunPreset(Town, True)
 
-        Town.Revision = Town.Revision + 1
+    Else If Action = 223 Or Action = 224 Then
+
+        Call Document.SaveSunPreset(Town, Action = 224)
+
+        Value.Ui.Message = "Day preset stored; save town to keep it."
+
+        If Action = 224 Then
+            Value.Ui.Message = "Night preset stored; save town to keep it."
+        End If
 
     Else
         Return Action
@@ -399,7 +493,13 @@ Public Function Input(ByRef Value As State, ByRef Town As Document.State,
 
     Else If Key_Event_Held(KEY_CONTROL) And Key = KEY_D Then
 
-        Action = Command(Value, Town, 34)
+        Index = 34
+
+        If Value.Ui.Section = 3 Then
+            Index = 87
+        End If
+
+        Action = Command(Value, Town, Index)
 
     Else If Key = KEY_ESCAPE Then
 
@@ -407,7 +507,13 @@ Public Function Input(ByRef Value As State, ByRef Town As Document.State,
 
     Else If Key = KEY_DELETE Then
 
-        Action = Command(Value, Town, 24)
+        Index = 24
+
+        If Value.Ui.Section = 3 Then
+            Index = 88
+        End If
+
+        Action = Command(Value, Town, Index)
 
     End If
 
@@ -420,6 +526,29 @@ Public Function Input(ByRef Value As State, ByRef Town As Document.State,
     Point = Camera.ProjectViewerPoint(RawPoint, View, Window_Width(), Window_Height())
     Radius = Camera.WorldSizeForPixels(14, Max(View.NearPlane, Point.Depth), View.FovDegrees, Window_Height())
     Value.Current = Guides.Snap(Value.Guide, RawPoint, Radius)
+
+    If Value.Guide.SnapTiles And Value.Ui.Category <> 2 Then
+        Value.Current = Guides.SnapTile(Town.Surface, RawPoint)
+    End If
+
+    If (Value.Ui.Category = 2 And
+        Value.Ui.Tool >= 12 And
+        Value.Ui.Tool <= 14) Then
+        Value.Current = RawPoint
+    End If
+
+    If Value.Ui.Tool = 70 Or Value.MarkerGesture.Dragging Then
+
+        Call MarkerTools.Input(Value.MarkerGesture, Value.Guide, RawPoint, Radius,
+            OnGround And Not Blocked And Not Panel.Hovered() And Not Key_Held(KEY_SHIFT))
+
+        If Not Value.MarkerGesture.Dragging Then
+            Call History.Record(Value.HistoryState, Town, Value.Guide.Ink)
+        End If
+
+        Return Action
+
+    End If
 
     If Value.Selected.Dragging Then
 
@@ -440,8 +569,10 @@ Public Function Input(ByRef Value As State, ByRef Town As Document.State,
 
                 Box = Picking.Project(Town.Items[Index], View, Window_Width(), Window_Height())
 
-                If (Box.Visible And Box.X1 >= Min(Value.StartX, Pointer_X()) And
-                    Box.X0 <= Max(Value.StartX, Pointer_X()) And Box.Y1 >= Min(Value.StartY, Pointer_Y()) And
+                If (Box.Visible And
+                    Box.X1 >= Min(Value.StartX, Pointer_X()) And
+                    Box.X0 <= Max(Value.StartX, Pointer_X()) And
+                    Box.Y1 >= Min(Value.StartY, Pointer_Y()) And
                     Box.Y0 <= Max(Value.StartY, Pointer_Y())) Then
                     Ok = Selection.Add(Value.Selected, Town, Index)
                 End If
@@ -452,8 +583,11 @@ Public Function Input(ByRef Value As State, ByRef Town As Document.State,
 
         Value.Rubber = False
 
-    Else If (CapturesMap(Value) And Not Blocked And Not Panel.Hovered() And
-        Not Key_Held(KEY_SHIFT) And Pointer_Pressed(POINTER_PRIMARY)) Then
+    Else If (CapturesMap(Value) And
+        Not Blocked And
+        Not Panel.Hovered() And
+        Not Key_Held(KEY_SHIFT) And
+        Pointer_Pressed(POINTER_PRIMARY)) Then
 
         If (Value.Ui.Tool = 15 Or Value.Ui.Tool = 16) And OnGround Then
 
@@ -472,6 +606,12 @@ Public Function Input(ByRef Value As State, ByRef Town As Document.State,
                 Value.Anchored = True
 
             End If
+
+        Else If (Value.Ui.Category = 2 And
+            Value.Ui.Surface = 5 And
+            OnGround) Then
+
+            Value.Ui.Message = MapLoadTools.Edit(Town, RawPoint, Value.Ui.Tool)
 
         Else If Value.Ui.Category = 2 And OnGround Then
 
@@ -548,6 +688,8 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State, View As P.Ca
     End If
 
     Call Guides.Draw(Value.Guide, Town.Surface, View, Panel.LeftEdge())
+    Call TileGuides.Draw(Value.Guide, Town, View, Panel.LeftEdge())
+    Call MapLoadTools.Draw(Town, View, Panel.LeftEdge())
 
     For Index = 0 To Town.ItemCount - 1
 
@@ -572,6 +714,10 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State, View As P.Ca
         Preview.First = Value.Anchor
         Preview.Last = Value.Current
         Preview.IsRectangle = Value.Ui.Tool <> 12 And Value.Ui.Tool <> 15
+
+        If Value.Ui.Category = 2 And (Value.Ui.Tool = 13 Or Value.Ui.Tool = 14) Then
+            Preview = TileGuides.CellRectangle(Town.Surface, Value.Anchor, Value.Current)
+        End If
 
         Call Guides.DrawMarker(Preview, View, RGB(70, 230, 215))
 

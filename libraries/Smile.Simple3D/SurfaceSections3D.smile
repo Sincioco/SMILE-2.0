@@ -1,0 +1,198 @@
+''' Exact rectangular terrain transfers, including nonuniform authored cell boundaries.
+Module Smile.Simple3D.SurfaceSections3D
+
+Option Explicit
+
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+
+Public Type Region
+    MinX As Double
+    MinZ As Double
+    MaxX As Double
+    MaxZ As Double
+End Type
+
+Public Function Contains(Area As Region, X As Double, Z As Double) As Boolean
+
+    Dim Result As Boolean
+
+    Result = X >= Area.MinX And X < Area.MaxX And Z >= Area.MinZ And Z < Area.MaxZ
+
+    Return Result
+
+End Function
+
+Public Function Shift(Area As Region, X As Double, Z As Double) As Region
+
+    Area.MinX = Area.MinX + X
+    Area.MaxX = Area.MaxX + X
+    Area.MinZ = Area.MinZ + Z
+    Area.MaxZ = Area.MaxZ + Z
+
+    Return Area
+
+End Function
+
+Public Function Fits(ByRef Surface As Grid.State, Area As Region) As Boolean
+
+    Dim Result As Boolean
+
+    Result = (Area.MinX < Area.MaxX And Area.MinZ < Area.MaxZ And
+        Area.MinX >= Surface.XEdges[0] And Area.MaxX <= Surface.XEdges[Surface.Columns] And
+        Area.MinZ >= Surface.ZEdges[0] And Area.MaxZ <= Surface.ZEdges[Surface.Rows])
+
+    Return Result
+
+End Function
+
+Private Function InsertEdge(ByRef Target As Grid.State, Coordinate As Double, Horizontal As Boolean) As Boolean
+
+    Dim Index As Number
+    Dim EdgeCount As Number
+    Dim Value As Double
+
+    EdgeCount = Target.Rows
+
+    If Horizontal Then
+        EdgeCount = Target.Columns
+    End If
+
+    For Index = 0 To EdgeCount
+
+        Value = Target.ZEdges[Index]
+
+        If Horizontal Then
+            Value = Target.XEdges[Index]
+        End If
+
+        If Abs(Value - Coordinate) < 0.00001 Then
+            Return True
+        End If
+
+    End For
+
+    If EdgeCount >= Grid.MAX_COLUMNS Then
+        Return False
+    End If
+
+    Index = EdgeCount
+
+    Do
+
+        Value = Target.ZEdges[Index]
+
+        If Horizontal Then
+            Value = Target.XEdges[Index]
+        End If
+
+        If Value < Coordinate Then
+            Exit Do
+        End If
+
+        If Horizontal Then
+            Target.XEdges[Index + 1] = Value
+        Else
+            Target.ZEdges[Index + 1] = Value
+        End If
+
+        Index = Index - 1
+
+    Loop Until Index < 0
+
+    If Horizontal Then
+        Target.XEdges[Index + 1] = Coordinate
+        Target.Columns = EdgeCount + 1
+    Else
+        Target.ZEdges[Index + 1] = Coordinate
+        Target.Rows = EdgeCount + 1
+    End If
+
+    Return True
+
+End Function
+
+''' Destination overwrites source on overlaps, using the unchanged source snapshot.
+Public Function Transfer(ByRef Source As Grid.State, ByRef Target As Grid.State,
+    Area As Region, DeltaX As Double, DeltaZ As Double, Move As Boolean) As Boolean
+
+    Dim Destination As Region
+    Dim Index As Number
+    Dim X As Number
+    Dim Z As Number
+    Dim WorldX As Double
+    Dim WorldZ As Double
+    Dim ReadX As Double
+    Dim ReadZ As Double
+    Dim Surface As Number
+    Dim Ok As Boolean
+
+    Destination = Shift(Area, DeltaX, DeltaZ)
+
+    If Not Fits(Source, Area) Or Not Fits(Source, Destination) Then
+        Return False
+    End If
+
+    Target = Source
+    Ok = InsertEdge(Target, Destination.MinX, True)
+    Ok = InsertEdge(Target, Destination.MaxX, True) And Ok
+    Ok = InsertEdge(Target, Destination.MinZ, False) And Ok
+    Ok = InsertEdge(Target, Destination.MaxZ, False) And Ok
+
+    For Index = 0 To Source.Columns
+
+        If Source.XEdges[Index] >= Area.MinX And Source.XEdges[Index] <= Area.MaxX Then
+            Ok = InsertEdge(Target, Source.XEdges[Index] + DeltaX, True) And Ok
+        End If
+
+    End For
+
+    For Index = 0 To Source.Rows
+
+        If Source.ZEdges[Index] >= Area.MinZ And Source.ZEdges[Index] <= Area.MaxZ Then
+            Ok = InsertEdge(Target, Source.ZEdges[Index] + DeltaZ, False) And Ok
+        End If
+
+    End For
+
+    If Not Ok Then
+        Return False
+    End If
+
+    For Index = 0 To (Target.Columns * Target.Rows + 15) / 16 - 1
+        Target.Cells[Index] = 0
+    End For
+
+    For Z = 0 To Target.Rows - 1
+
+        WorldZ = (Target.ZEdges[Z] + Target.ZEdges[Z + 1]) * 0.5
+
+        For X = 0 To Target.Columns - 1
+
+            WorldX = (Target.XEdges[X] + Target.XEdges[X + 1]) * 0.5
+            ReadX = WorldX
+            ReadZ = WorldZ
+
+            If Contains(Destination, WorldX, WorldZ) Then
+                ReadX = WorldX - DeltaX
+                ReadZ = WorldZ - DeltaZ
+            End If
+
+            Surface = Grid.ReadCell(Source, Grid.CellX(Source, ReadX), Grid.CellZ(Source, ReadZ))
+
+            If (Move And
+                Contains(Area, WorldX, WorldZ) And
+                Not Contains(Destination, WorldX, WorldZ)) Then
+                Surface = Grid.SURFACE_GROUND
+            End If
+
+            Call Grid.PaintRectangle(Target, X, Z, X, Z, Surface)
+        End For
+    End For
+
+    Target.Revision = Source.Revision + 1
+
+    Return True
+
+End Function
+
+End Module

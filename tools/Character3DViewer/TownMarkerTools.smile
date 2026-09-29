@@ -1,0 +1,250 @@
+''' Selection, copying and one undoable drag of temporary construction markers.
+Module Smile.Tools.TownMarkerTools
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Tools.TownGuides As Guides
+
+Public Type State
+    Dragging As Boolean
+    Changed As Boolean
+    Anchor As P.Vector3
+    Before As Guides.Drawing
+End Type
+
+Public Sub ClearSelection(ByRef Guide As Guides.State)
+
+    Dim Index As Number
+
+    For Index = 0 To Guides.MAX_MARKERS - 1
+        Guide.Selected[Index] = False
+    End For
+
+End Sub
+
+Public Function SelectedCount(ByRef Guide As Guides.State) As Number
+
+    Dim Index As Number
+    Dim Result As Number
+
+    For Index = 0 To Guide.Ink.EntryCount - 1
+
+        If Guide.Selected[Index] Then
+            Result = Result + 1
+        End If
+
+    End For
+
+    Return Result
+
+End Function
+
+Public Function Duplicate(ByRef Guide As Guides.State) As Boolean
+
+    Dim Index As Number
+    Dim Total As Number
+    Dim Copies As Number
+    Dim Mark As Guides.Marker
+    Dim Shift As P.Vector3
+
+    Total = Guide.Ink.EntryCount
+    Copies = SelectedCount(Guide)
+
+    If Copies = 0 Or Total + Copies > Guides.MAX_MARKERS Then
+        Return False
+    End If
+
+    Shift = P.Vector(Max(0.001, Guide.Spacing) * 10.0, 0.0, Max(0.001, Guide.Spacing) * 10.0)
+
+    For Index = 0 To Total - 1
+
+        If Guide.Selected[Index] Then
+
+            Mark = Guide.Ink.Markers[Index]
+            Mark.First = M.Add(Mark.First, Shift)
+            Mark.Last = M.Add(Mark.Last, Shift)
+            Guide.Ink.Markers[Guide.Ink.EntryCount] = Mark
+            Guide.Selected[Guide.Ink.EntryCount] = True
+            Guide.Ink.EntryCount = Guide.Ink.EntryCount + 1
+
+        End If
+
+        Guide.Selected[Index] = False
+    End For
+
+    Guide.Ink.Revision = Guide.Ink.Revision + 1
+
+    Return True
+
+End Function
+
+Public Sub RemoveSelected(ByRef Guide As Guides.State)
+
+    Dim Index As Number
+    Dim WriteIndex As Number
+
+    For Index = 0 To Guide.Ink.EntryCount - 1
+
+        If Not Guide.Selected[Index] Then
+            Guide.Ink.Markers[WriteIndex] = Guide.Ink.Markers[Index]
+            WriteIndex = WriteIndex + 1
+        End If
+
+    End For
+
+    If WriteIndex <> Guide.Ink.EntryCount Then
+        Guide.Ink.Revision = Guide.Ink.Revision + 1
+        Guide.Ink.EntryCount = WriteIndex
+    End If
+
+    Call ClearSelection(Guide)
+
+End Sub
+
+Public Function Hit(ByRef Guide As Guides.State, Point As P.Vector3, Radius As Double) As Number
+
+    Dim Index As Number
+    Dim Part As Number
+    Dim Parts As Number
+    Dim Found As Number
+    Dim Best As Double
+    Dim Distance As Double
+    Dim First As P.Vector3
+    Dim Last As P.Vector3
+    Dim Nearest As P.Vector3
+
+    Found = -1
+    Best = Radius
+    Point.Y = 23.12
+
+    For Index = 0 To Guide.Ink.EntryCount - 1
+
+        Parts = 1
+
+        If Guide.Ink.Markers[Index].IsRectangle Then
+            Parts = 4
+        End If
+
+        For Part = 0 To Parts - 1
+
+            First = Guide.Ink.Markers[Index].First
+            Last = Guide.Ink.Markers[Index].Last
+
+            If Parts = 4 Then
+                First = Guides.Corner(Guide.Ink.Markers[Index], Part)
+                Last = Guides.Corner(Guide.Ink.Markers[Index], (Part + 1) Mod 4)
+            End If
+
+            Nearest = Guides.Closest(Point, First, Last)
+            Distance = M.Distance(Point, Nearest)
+
+            If Distance <= Best Then
+                Best = Distance
+                Found = Index
+            End If
+
+        End For
+    End For
+
+    Return Found
+
+End Function
+
+Public Sub Cancel(ByRef Value As State, ByRef Guide As Guides.State)
+
+    If Value.Dragging Then
+        Guide.Ink = Value.Before
+        Value.Dragging = False
+    End If
+
+End Sub
+
+Public Sub Input(ByRef Value As State, ByRef Guide As Guides.State,
+    Point As P.Vector3, Radius As Double, Available As Boolean)
+
+    Dim Index As Number
+    Dim Found As Number
+    Dim Offset As P.Vector3
+    Dim Desired As P.Vector3
+
+    If Value.Dragging Then
+
+        If Pointer_Held(POINTER_PRIMARY) Then
+
+            If Available Then
+
+                Offset = M.Subtract(Point, Value.Anchor)
+
+                If Not Value.Changed And M.Length(Offset) < Max(0.001, Radius / 7.0) Then
+                    Return
+                End If
+
+                Value.Changed = True
+
+                For Index = 0 To Guide.Ink.EntryCount - 1
+
+                    If Guide.Selected[Index] Then
+
+                        Desired = M.Add(Value.Before.Markers[Index].First, Offset)
+                        Desired = Guides.Snap(Guide, Desired, 0.0)
+                        Offset = M.Subtract(Desired, Value.Before.Markers[Index].First)
+                        Exit For
+
+                    End If
+
+                End For
+
+                For Index = 0 To Guide.Ink.EntryCount - 1
+
+                    If Guide.Selected[Index] Then
+                        Guide.Ink.Markers[Index].First = M.Add(Value.Before.Markers[Index].First, Offset)
+                        Guide.Ink.Markers[Index].Last = M.Add(Value.Before.Markers[Index].Last, Offset)
+                    End If
+
+                End For
+
+            End If
+
+        Else
+            Value.Dragging = False
+
+            If Value.Changed Then
+                Guide.Ink.Revision = Guide.Ink.Revision + 1
+            End If
+
+        End If
+
+    Else If Available And Pointer_Pressed(POINTER_PRIMARY) Then
+
+        Found = Hit(Guide, Point, Radius)
+
+        If Found < 0 Then
+
+            Call ClearSelection(Guide)
+
+        Else If Key_Held(KEY_CONTROL) Then
+
+            Guide.Selected[Found] = Not Guide.Selected[Found]
+
+        Else
+
+            If Not Guide.Selected[Found] Then
+                Call ClearSelection(Guide)
+
+                Guide.Selected[Found] = True
+            End If
+
+            Value.Anchor = Point
+            Value.Before = Guide.Ink
+            Value.Dragging = True
+            Value.Changed = False
+
+        End If
+
+    End If
+
+End Sub
+
+End Module

@@ -988,6 +988,8 @@ internal sealed class WebEmitter
                 _ => throw UnsupportedExpression(call, call.Identifier.Text)
             };
         }
+        if (DataFileSemantics.IsIntrinsic(call.Identifier.Kind))
+            throw UnsupportedExpression(call, "native file transfer (Web adoption is not implemented)");
         return call.Identifier.Kind switch
         {
             SyntaxKind.TimerKeyword => "smile.timer()",

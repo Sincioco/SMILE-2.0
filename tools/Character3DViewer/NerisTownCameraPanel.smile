@@ -52,6 +52,52 @@ Public Sub CaptureGeometry(ByRef Value As State)
 
 End Sub
 
+''' Explicit U.S. grouping, independent of the Windows regional setting.
+Public Function CountLabel(Value As Number) As Text
+
+    Dim Digits As Text
+    Dim Result As Text
+    Dim Index As Number
+
+    Digits = Numbers.NumberText(Value)
+
+    For Index = 0 To Text_Length(Digits) - 1
+
+        If Index > 0 And (Text_Length(Digits) - Index) Mod 3 = 0 Then
+            Result = Result + ","
+        End If
+
+        Result = Result + Text_Slice(Digits, Index, 1)
+    End For
+
+    Return Result
+
+End Function
+
+Public Function MeasureLabel(Value As Double) As Text
+
+    Dim Hundredths As Number
+    Dim Fraction As Number
+    Dim Result As Text
+
+    Hundredths = ToNumber(Round(Value * 100.0))
+    Fraction = Hundredths Mod 100
+    Result = CountLabel(Hundredths / 100)
+
+    If Fraction > 0 Then
+
+        Result = Result + "." + Numbers.NumberText(Fraction / 10)
+
+        If Fraction Mod 10 > 0 Then
+            Result = Result + Numbers.NumberText(Fraction Mod 10)
+        End If
+
+    End If
+
+    Return Result
+
+End Function
+
 Public Function Hovered() As Boolean
 
     Dim Result As Boolean
@@ -159,15 +205,25 @@ End Sub
 
 Public Sub Draw(ByRef Value As State, ByRef View As Arena.State,
     Orbiting As Boolean, PartyCamera As Boolean, DroneEnabled As Boolean, Following As Boolean,
-    FlyInspect As Boolean)
+    FlyInspect As Boolean, Optional Editing As Boolean = False)
 
     Dim Offset As P.Vector3
     Dim Horizontal As Double
     Dim Vertical As Double
+    Dim WidthMeters As Double
+    Dim LengthMeters As Double
+    Dim StatsX As Number
 
     Offset = M.Subtract(View.LiveCamera.Position, View.LiveCamera.Target)
     Horizontal = M.Degrees(Atan2(Offset.X, Offset.Z))
     Vertical = M.Degrees(Atan2(Offset.Y, Sqrt(Offset.X * Offset.X + Offset.Z * Offset.Z)))
+    WidthMeters = ToDouble(View.Floor.Width) / 10.0
+    LengthMeters = ToDouble(View.Floor.Depth) / 10.0
+    StatsX = Window_Width() - 338
+
+    If Editing Then
+        StatsX = StatsX - 306
+    End If
 
     Call Slider("H Orbit", 1, (Horizontal + 180.0) / 360.0, ToNumber(Round(Horizontal)))
     Call Slider("V Orbit", 2, (Vertical - Drone.MinimumPitch(Following)) /
@@ -179,11 +235,17 @@ Public Sub Draw(ByRef Value As State, ByRef View As Arena.State,
     Call Diagnostics(Value.FrameRate, View.LiveCamera, Horizontal, Vertical,
         Orbiting, PartyCamera, DroneEnabled, FlyInspect)
 
-    Fill Rectangle Window_Width() - 288, Window_Height() - 198, 276, 38, RGB(12, 20, 32) Opacity 80
-    Draw Text "Map Polygons (Triangles)" At Window_Width() - 280, Window_Height() - 194 Size 11 Color LIGHT_GRAY
-    Draw Number Value.MapTriangles At Window_Width() - 104, Window_Height() - 194 Size 11 Color CYAN
-    Draw Text "Map Vertices" At Window_Width() - 280, Window_Height() - 176 Size 11 Color LIGHT_GRAY
-    Draw Number Value.MapVertices At Window_Width() - 104, Window_Height() - 176 Size 11 Color CYAN
+    Fill Rectangle StatsX, Window_Height() - 252, 326, 92, RGB(12, 20, 32) Opacity 80
+    Draw Text "Map Polygons (Triangles)" At StatsX + 8, Window_Height() - 248 Size 11 Color LIGHT_GRAY
+    Draw Text CountLabel(Value.MapTriangles) At StatsX + 198, Window_Height() - 248 Size 11 Color CYAN
+    Draw Text "Map Vertices" At StatsX + 8, Window_Height() - 230 Size 11 Color LIGHT_GRAY
+    Draw Text CountLabel(Value.MapVertices) At StatsX + 198, Window_Height() - 230 Size 11 Color CYAN
+    Draw Text "Map Area (m²)" At StatsX + 8, Window_Height() - 212 Size 11 Color LIGHT_GRAY
+    Draw Text MeasureLabel(WidthMeters * LengthMeters) At StatsX + 198, Window_Height() - 212 Size 11 Color CYAN
+    Draw Text "Map Length (m)" At StatsX + 8, Window_Height() - 194 Size 11 Color LIGHT_GRAY
+    Draw Text MeasureLabel(LengthMeters) At StatsX + 198, Window_Height() - 194 Size 11 Color CYAN
+    Draw Text "Map Width (m)" At StatsX + 8, Window_Height() - 176 Size 11 Color LIGHT_GRAY
+    Draw Text MeasureLabel(WidthMeters) At StatsX + 198, Window_Height() - 176 Size 11 Color CYAN
 
 End Sub
 

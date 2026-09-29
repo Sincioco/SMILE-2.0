@@ -13,6 +13,59 @@ Import Smile.Tools.NerisTownMap As Heading
 Private Dim Cells[64, 64] As Number
 Private Dim Revision As Number
 
+Public Function Hovered() As Boolean
+
+    Dim Result As Boolean
+
+    Result = (Pointer_X() >= Window_Width() - 276 And Pointer_X() < Window_Width() - 20 And
+        Pointer_Y() >= 155 And Pointer_Y() < 411)
+
+    Return Result
+
+End Function
+
+Public Function Pick(ByRef Town As Document.State, X As Number, Y As Number) As P.Vector3
+
+    Dim Result As P.Vector3
+
+    Result = P.Vector(Town.Surface.OriginX + ToDouble(X - Window_Width() + 276) / 256.0 *
+        (Town.Surface.XEdges[Town.Surface.Columns] - Town.Surface.OriginX), 23.12,
+        Town.Surface.OriginZ + ToDouble(411 - Y) / 256.0 *
+        (Town.Surface.ZEdges[Town.Surface.Rows] - Town.Surface.OriginZ))
+
+    Return Result
+
+End Function
+
+Public Sub DrawDestination(ByRef Town As Document.State, Destination As P.Vector3,
+    Active As Boolean, Message As Text)
+
+    Dim X As Number
+    Dim Y As Number
+
+    If Active Then
+
+        X = Window_Width() - 276 + Coordinate(Destination.X, Town.Surface.OriginX,
+            Town.Surface.XEdges[Town.Surface.Columns]) * 4
+        Y = 155 + (63 - Coordinate(Destination.Z, Town.Surface.OriginZ,
+            Town.Surface.ZEdges[Town.Surface.Rows])) * 4
+
+        Draw Rectangle X - 5, Y - 5, 11, 11, YELLOW
+        Draw Line X - 8, Y, X + 8, Y, YELLOW
+        Draw Line X, Y - 8, X, Y + 8, YELLOW
+
+    End If
+
+    If Message <> "" Then
+
+        Fill Rectangle Window_Width() - 282, 429, 268, 38, RGB(10, 22, 35)
+        Draw Text Text_Slice(Message, 0, 38) At Window_Width() - 276, 433 Size 11 Color YELLOW
+        Draw Text Text_Slice(Message, 38, 38) At Window_Width() - 276, 449 Size 11 Color YELLOW
+
+    End If
+
+End Sub
+
 Private Function Coordinate(Value As Double, Low As Double, High As Double) As Number
 
     Dim Result As Number

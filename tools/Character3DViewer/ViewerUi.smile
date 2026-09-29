@@ -1451,7 +1451,9 @@ Public Sub DrawHeader(DisplayName As Text, PartyRole As Text,
         Subtitle = Subtitle + PartyRoleLabel(PartyRole) + "  •  Renderer3D PBR"
     End If
 
-    Draw Text "SMILE 2.0 - 3D Viewer, Animation Editor" At 18, 10 Size 22 Color WHITE
+    If Not ExternalTabs Then
+        Draw Text "SMILE 2.0 - 3D Viewer, Animation Editor" At 18, 10 Size 22 Color WHITE
+    End If
 
     If PartyEnabled Then
 
@@ -1475,11 +1477,12 @@ Public Sub DrawHeader(DisplayName As Text, PartyRole As Text,
 
     End If
 
-    Draw Text Subtitle At 18, 42 Size 13 Color LIGHT_GRAY
-
     If ExternalTabs Then
+        Draw Text Subtitle At 18, 10 Size 13 Color LIGHT_GRAY
         Return
     End If
+
+    Draw Text Subtitle At 18, 42 Size 13 Color LIGHT_GRAY
 
     For Index = 0 To CharacterTabCount() - 1
         TabIndex = CharacterTabIndex(Index)

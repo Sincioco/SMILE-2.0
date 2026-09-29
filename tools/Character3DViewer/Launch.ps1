@@ -147,6 +147,16 @@ if ([string]::IsNullOrWhiteSpace($Executable)) {
 }
 
 $resolvedExecutable = [IO.Path]::GetFullPath($Executable)
+if (-not $Studio -and -not $Build -and
+    (Test-Path -LiteralPath $resolvedExecutable -PathType Leaf)) {
+    try {
+        & (Join-Path $toolRoot 'Check-Publication.ps1') -Directory (Split-Path $resolvedExecutable -Parent)
+    } catch {
+        if ($resolvedExecutable -ine $configurationExecutable) { throw }
+        Write-Warning "Studio assets require repair. Rebuilding the complete publication: $($_.Exception.Message)"
+        $Build = [switch]::new($true)
+    }
+}
 Assert-ViewerLaunchPrerequisites $resolvedExecutable $configurationExecutable $Build.IsPresent
 
 $orinProfile = Join-Path $repositoryRoot 'games\SinStarI\SourceAssets\Characters\Tank\OrinV13\Calibration\orin-v1.3-profile.json'
@@ -177,6 +187,10 @@ if (-not (Test-Path -LiteralPath $resolvedExecutable -PathType Leaf)) {
     throw "Character Viewer/editor executable is missing: $resolvedExecutable"
 }
 
+if (-not $Studio) {
+    & (Join-Path $toolRoot 'Check-Publication.ps1') -Directory (Split-Path $resolvedExecutable -Parent)
+}
+
 foreach ($character in $characters) {
     & $syncScript -Character $character -Mode Restore
 }
@@ -199,10 +213,7 @@ foreach ($character in $characters) {
 }
 
 if (-not $Studio) {
-    $townArguments = '-NoProfile -File "{0}" -ViewerProcessId {1}' -f `
-        (Join-Path $toolRoot 'Watch-TownSaves.ps1'), $viewerProcess.Id
-    Start-Process -FilePath $shellCommand.Source -ArgumentList $townArguments `
-        -WindowStyle Hidden | Out-Null
+    # Blender worker startup belongs solely to the native runtime, which supplies its actual storage.
     $recoveryArguments = '-NoProfile -File "{0}" -Mode Watch -ViewerProcessId {1}' -f `
         $recoveryScript, $viewerProcess.Id
     Start-Process -FilePath $shellCommand.Source -ArgumentList $recoveryArguments `

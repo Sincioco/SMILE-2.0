@@ -92,7 +92,7 @@ static long long smile_asset_manifest_length;
 static void smile_pump_messages(void);
 static void smile_toggle_fullscreen(void);
 static void smile_update_game_audio_active(void);
-static int smile_storage_data_path(const char* key, long long key_length, WCHAR* path, int capacity);
+int smile_storage_data_path(const char* key, long long key_length, WCHAR* path, int capacity);
 static uint32_t smile_data_u32(const unsigned char* value);
 static void smile_data_put_u32(unsigned char* value, uint32_t number);
 void smile_print_text(const char* text, long long length);
@@ -546,7 +546,7 @@ static void smile_sha_finish(SmileSha256* sha, unsigned char digest[32])
     }
 }
 
-static void smile_sha_bytes(const unsigned char* data, SIZE_T length, unsigned char digest[32])
+void smile_sha_bytes(const unsigned char* data, SIZE_T length, unsigned char digest[32])
 {
     SmileSha256 sha;
     smile_sha_initialize(&sha);
@@ -2698,7 +2698,7 @@ void smile_save_value(const char* key, long long key_length, long long value)
     CloseHandle(file);
 }
 
-static int smile_storage_data_path(const char* key, long long key_length, WCHAR* path, int capacity)
+int smile_storage_data_path(const char* key, long long key_length, WCHAR* path, int capacity)
 {
     static const char fallback_identity[] = "Program";
     static const WCHAR hex[] = L"0123456789abcdef";

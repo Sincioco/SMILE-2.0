@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([Parameter(Mandatory)][Alias("ParentProcessId")][int]$ViewerProcessId, [string]$DataFolder)
+param([Parameter(Mandatory)][Alias("ParentProcessId")][int]$ViewerProcessId, [Parameter(Mandatory)][string]$DataFolder)
 
 $ErrorActionPreference = 'Stop'
 # The executable supervisor and the launcher can race; only one worker owns a Viewer.
@@ -36,13 +36,6 @@ function ReportFailure([string]$RequestPath, [string]$Message) {
 $viewer = Get-Process -Id $ViewerProcessId -ErrorAction Stop
 $started = $viewer.StartTime.ToUniversalTime().Ticks
 $folder = $DataFolder
-if (-not $folder) {
-    $folder = Join-Path $env:LOCALAPPDATA ('SMILE 2.0\Games\' + (HashText 'smile.tools.character3d-viewer') + '\Data')
-    # An MSIX-hosted shell can see a redirected LocalCache while the native Viewer
-    # writes the physical profile. Prefer the location with the live working copy.
-    $physical = '\\localhost\' + $folder.Substring(0, 1) + '$' + $folder.Substring(2)
-    if (Test-Path -LiteralPath $physical) { $folder = $physical }
-}
 $null = New-Item -ItemType Directory -Path $folder -Force
 $request = Join-Path $folder ((HashText 'TownEditor.Blender.Request') + '.bin')
 $stamp = Join-Path $folder 'town-blender-worker.completed'

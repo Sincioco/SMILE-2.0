@@ -1,0 +1,98 @@
+''' Editor presentation for transparent map-load cells. Mutations stay in TownMapLoads.
+Module Smile.Tools.TownMapLoadTools
+
+Option Explicit
+
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownMapLoads As Links
+Import Smile.Tools.TownGuides As Guides
+Import Smile.Tools.TownDocumentStore As Storage
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.Precision3D As P
+
+Public Function Edit(ByRef Town As Document.State, Point As P.Vector3, Tool As Number) As Text
+
+    Dim X As Number
+    Dim Z As Number
+    Dim Index As Number
+    Dim Name As Text
+    Dim Ok As Boolean
+
+    X = Grid.CellX(Town.Surface, Point.X)
+    Z = Grid.CellZ(Town.Surface, Point.Z)
+    Index = Links.Find(Town, X, Z)
+
+    If Tool = 19 Then
+        Ok = Links.Remove(Town, X, Z)
+        Return "Map Load tile removed; terrain retained."
+    End If
+
+    Name = Links.Neighbor(Town, X, Z)
+
+    If Tool = 18 And Index < 0 Then
+        Return "Click a yellow Map Load tile to reassign its connected area."
+    End If
+
+    If Text_Length(Name) = 0 Or Tool = 18 Then
+
+        Name = Text_Prompt("Map Load Destination", "Enter the saved town/map name for this connected area.", Name)
+
+        If Text_Length(Name) = 0 Then
+            Return "Canceled; no map tiles changed."
+        End If
+
+        If Not Document.ValidName(Name) Or Name = Town.Name Then
+            Return "Choose a different saved town/map."
+        End If
+
+        If (Not Storage.Exists("TownEditor.Recovery." + Name) And
+            Not Storage.Exists("TownEditor.Town." + Name)) Then
+            Return "Map not found. Open or save that town in the editor first."
+        End If
+
+    End If
+
+    If Tool = 18 Then
+
+        Call Links.AssignConnected(Town, Index, Name)
+
+    Else
+        Ok = Links.Place(Town, X, Z, Name)
+
+        If Not Ok Then
+            Return "Could not place tile; check map bounds or the 4096-tile limit."
+        End If
+
+    End If
+
+    Name = "Map Load: " + Name
+
+    Return Name
+
+End Function
+
+Public Sub Draw(ByRef Town As Document.State, View As P.Camera3D, RightEdge As Number)
+
+    Dim Index As Number
+    Dim X As Number
+    Dim Z As Number
+    Dim Mark As Guides.Marker
+
+    Clip Rectangle 0, 128, Max(0, RightEdge), Max(0, Window_Height() - 128)
+
+    For Index = 0 To Town.MapTileCount - 1
+
+        X = Town.MapTiles[Index].X
+        Z = Town.MapTiles[Index].Z
+        Mark.First = P.Vector(Town.Surface.XEdges[X], 23.4, Town.Surface.ZEdges[Z])
+        Mark.Last = P.Vector(Town.Surface.XEdges[X + 1], 23.4, Town.Surface.ZEdges[Z + 1])
+        Mark.IsRectangle = True
+
+        Call Guides.DrawMarker(Mark, View, RGB(255, 220, 40))
+    End For
+
+    End Clip
+
+End Sub
+
+End Module

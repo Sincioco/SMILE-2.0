@@ -177,7 +177,9 @@ Private Function ReadName() As Text
 
         Code = ReadInteger()
 
-        If Code < 32 Or Code > 1114111 Or (Code >= 55296 And Code <= 57343) Then
+        If (Code < 32 Or
+            Code > 1114111 Or
+            (Code >= 55296 And Code <= 57343)) Then
             Valid = False
             Return ""
         End If
@@ -221,10 +223,15 @@ Private Function ReadItem() As Document.Item
     Result.Yaw = ReadPrecise()
     Result.Active = True
 
-    If (Result.Identity < 1 Or Result.Identity > 1000000000 Or
-        Result.Template < 0 Or Result.Template >= Catalog.TEMPLATE_COUNT Or
-        Result.SourceIndex < -1 Or Result.SourceIndex >= Catalog.INITIAL_ITEMS Or
-        Result.Scale.X <= 0.0 Or Result.Scale.Y <= 0.0 Or Result.Scale.Z <= 0.0) Then
+    If (Result.Identity < 1 Or
+        Result.Identity > 1000000000 Or
+        Result.Template < 0 Or
+        Result.Template >= Catalog.TEMPLATE_COUNT Or
+        Result.SourceIndex < -1 Or
+        Result.SourceIndex >= Catalog.INITIAL_ITEMS Or
+        Result.Scale.X <= 0.0 Or
+        Result.Scale.Y <= 0.0 Or
+        Result.Scale.Z <= 0.0) Then
         Valid = False
         Return Result
     End If
@@ -233,6 +240,68 @@ Private Function ReadItem() As Document.Item
     Result.Category = Template.Category
 
     Return Result
+
+End Function
+
+Private Sub WriteSun(Light As Document.Sun)
+
+    Call WriteInteger(Light.RedValue)
+    Call WriteInteger(Light.GreenValue)
+    Call WriteInteger(Light.BlueValue)
+    Call WriteInteger(Light.Intensity)
+    Call WriteInteger(Light.Ambient)
+    Call WritePrecise(Light.Azimuth)
+    Call WritePrecise(Light.Elevation)
+
+    If Light.Shadows Then
+        Call WriteByte(1)
+    Else
+
+        Call WriteByte(0)
+    End If
+
+    Call WriteByte(Light.ShadowOpacity + 1)
+
+End Sub
+
+Private Function ReadSun(Version As Number) As Document.Sun
+
+    Dim Light As Document.Sun
+    Dim Shadows As Number
+
+    Light.RedValue = ReadInteger()
+    Light.GreenValue = ReadInteger()
+    Light.BlueValue = ReadInteger()
+    Light.Intensity = ReadInteger()
+    Light.Ambient = ReadInteger()
+    Light.Azimuth = ReadPrecise()
+    Light.Elevation = ReadPrecise()
+    Shadows = ReadByte()
+    Light.Shadows = Shadows = 1
+    Light.ShadowOpacity = -1
+
+    If Version >= 2 Then
+        Light.ShadowOpacity = ReadByte() - 1
+    End If
+
+    If (Light.RedValue < 0 Or
+        Light.RedValue > 255 Or
+        Light.GreenValue < 0 Or
+        Light.GreenValue > 255 Or
+        Light.BlueValue < 0 Or
+        Light.BlueValue > 255 Or
+        Light.Intensity < 0 Or
+        Light.Intensity > 1000 Or
+        Light.Ambient < 0 Or
+        Light.Ambient > 100 Or
+        Light.ShadowOpacity < -1 Or
+        Light.ShadowOpacity > 100 Or
+        Shadows < 0 Or
+        Shadows > 1) Then
+        Valid = False
+    End If
+
+    Return Light
 
 End Function
 
@@ -247,7 +316,7 @@ Private Sub Encode(ByRef Value As Document.State, MarkSaved As Boolean)
     Call WriteByte(84)
     Call WriteByte(87)
     Call WriteByte(78)
-    Call WriteByte(2)
+    Call WriteByte(4)
     Call WriteName(Catalog.FINGERPRINT)
     Call WriteName(Value.Name)
 
@@ -292,22 +361,37 @@ Private Sub Encode(ByRef Value As Document.State, MarkSaved As Boolean)
 
     End For
 
-    Call WriteInteger(Value.Light.RedValue)
-    Call WriteInteger(Value.Light.GreenValue)
-    Call WriteInteger(Value.Light.BlueValue)
-    Call WriteInteger(Value.Light.Intensity)
-    Call WriteInteger(Value.Light.Ambient)
-    Call WritePrecise(Value.Light.Azimuth)
-    Call WritePrecise(Value.Light.Elevation)
+    Call WriteSun(Value.Light)
+    Call WriteInteger(Value.MapTileCount)
 
-    If Value.Light.Shadows Then
+    For Index = 0 To Value.MapTileCount - 1
+        Call WriteInteger(Value.MapTiles[Index].X)
+        Call WriteInteger(Value.MapTiles[Index].Z)
+        Call WriteName(Value.MapTiles[Index].Destination)
+    End For
+
+    If Value.Presets.NightActive Then
         Call WriteByte(1)
     Else
 
         Call WriteByte(0)
     End If
 
-    Call WriteByte(Value.Light.ShadowOpacity + 1)
+    If Value.Presets.HasDay Then
+        Call WriteByte(1)
+        Call WriteSun(Value.Presets.Day)
+    Else
+
+        Call WriteByte(0)
+    End If
+
+    If Value.Presets.HasNight Then
+        Call WriteByte(1)
+        Call WriteSun(Value.Presets.Night)
+    Else
+
+        Call WriteByte(0)
+    End If
 
     ByteCount = Offset
 
@@ -319,19 +403,22 @@ Private Function Decode() As Boolean
     Dim Other As Number
     Dim Packed As Number
     Dim Digit As Number
-    Dim Shadows As Number
+    Dim Flag As Number
     Dim Version As Number
+    Dim EmptyPresets As Document.SunPresets
 
     Offset = 0
     Valid = True
 
-    If ReadByte() <> 84 Or ReadByte() <> 87 Or ReadByte() <> 78 Then
+    If (ReadByte() <> 84 Or
+        ReadByte() <> 87 Or
+        ReadByte() <> 78) Then
         Return False
     End If
 
     Version = ReadByte()
 
-    If Version < 1 Or Version > 2 Then
+    If Version < 1 Or Version > 4 Then
         Return False
     End If
 
@@ -350,8 +437,11 @@ Private Function Decode() As Boolean
     Candidate.Surface.Rows = ReadInteger()
     Candidate.Surface.CellSize = ReadPrecise()
 
-    If (Not Valid Or Candidate.Surface.Columns < 1 Or Candidate.Surface.Columns > Grid.MAX_COLUMNS Or
-        Candidate.Surface.Rows < 1 Or Candidate.Surface.Rows > Grid.MAX_ROWS Or
+    If (Not Valid Or
+        Candidate.Surface.Columns < 1 Or
+        Candidate.Surface.Columns > Grid.MAX_COLUMNS Or
+        Candidate.Surface.Rows < 1 Or
+        Candidate.Surface.Rows > Grid.MAX_ROWS Or
         Candidate.Surface.CellSize <= 0.0) Then
         Return False
     End If
@@ -419,28 +509,68 @@ Private Function Decode() As Boolean
         End For
     End For
 
-    Candidate.Light.RedValue = ReadInteger()
-    Candidate.Light.GreenValue = ReadInteger()
-    Candidate.Light.BlueValue = ReadInteger()
-    Candidate.Light.Intensity = ReadInteger()
-    Candidate.Light.Ambient = ReadInteger()
-    Candidate.Light.Azimuth = ReadPrecise()
-    Candidate.Light.Elevation = ReadPrecise()
-    Shadows = ReadByte()
-    Candidate.Light.Shadows = Shadows = 1
-    Candidate.Light.ShadowOpacity = -1
+    Candidate.Light = ReadSun(Version)
+    Candidate.Presets = EmptyPresets
+    Candidate.Presets.NightActive = Candidate.Light.Intensity < 100
+    Candidate.MapTileCount = 0
 
-    If Version >= 2 Then
-        Candidate.Light.ShadowOpacity = ReadByte() - 1
+    If Version >= 3 Then
+
+        Candidate.MapTileCount = ReadInteger()
+
+        If Candidate.MapTileCount < 0 Or Candidate.MapTileCount > Document.MAX_MAP_TILES Then
+            Return False
+        End If
+
+        For Index = 0 To Candidate.MapTileCount - 1
+
+            Candidate.MapTiles[Index].X = ReadInteger()
+            Candidate.MapTiles[Index].Z = ReadInteger()
+            Candidate.MapTiles[Index].Destination = ReadName()
+
+            If (Candidate.MapTiles[Index].X < 0 Or
+                Candidate.MapTiles[Index].X >= Candidate.Surface.Columns Or
+                Candidate.MapTiles[Index].Z < 0 Or
+                Candidate.MapTiles[Index].Z >= Candidate.Surface.Rows) Then
+                Return False
+            End If
+
+            For Other = 0 To Index - 1
+
+                If (Candidate.MapTiles[Other].X = Candidate.MapTiles[Index].X And
+                    Candidate.MapTiles[Other].Z = Candidate.MapTiles[Index].Z) Then
+                    Return False
+                End If
+
+            End For
+        End For
+
     End If
 
-    If (Candidate.Light.RedValue < 0 Or Candidate.Light.RedValue > 255 Or
-        Candidate.Light.GreenValue < 0 Or Candidate.Light.GreenValue > 255 Or
-        Candidate.Light.BlueValue < 0 Or Candidate.Light.BlueValue > 255 Or
-        Candidate.Light.Intensity < 0 Or Candidate.Light.Intensity > 1000 Or
-        Candidate.Light.Ambient < 0 Or Candidate.Light.Ambient > 100 Or
-        Candidate.Light.ShadowOpacity < -1 Or Candidate.Light.ShadowOpacity > 100 Or
-        Shadows < 0 Or Shadows > 1 Or Offset <> ByteCount) Then
+    If Version >= 4 Then
+
+        Flag = ReadByte()
+        Candidate.Presets.NightActive = Flag = 1
+        Valid = Valid And Flag <= 1
+        Flag = ReadByte()
+        Candidate.Presets.HasDay = Flag = 1
+        Valid = Valid And Flag <= 1
+
+        If Candidate.Presets.HasDay Then
+            Candidate.Presets.Day = ReadSun(4)
+        End If
+
+        Flag = ReadByte()
+        Candidate.Presets.HasNight = Flag = 1
+        Valid = Valid And Flag <= 1
+
+        If Candidate.Presets.HasNight Then
+            Candidate.Presets.Night = ReadSun(4)
+        End If
+
+    End If
+
+    If Offset <> ByteCount Then
         Return False
     End If
 
@@ -564,7 +694,10 @@ Public Function ReadBridgeStatus(Optional Key As Text = "TownEditor.Blender.Resp
     Offset = 0
     Valid = True
 
-    If ReadByte() <> 84 Or ReadByte() <> 87 Or ReadByte() <> 82 Or ReadByte() <> 1 Then
+    If (ReadByte() <> 84 Or
+        ReadByte() <> 87 Or
+        ReadByte() <> 82 Or
+        ReadByte() <> 1) Then
         Return Result
     End If
 

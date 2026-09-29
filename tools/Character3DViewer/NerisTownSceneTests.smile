@@ -323,6 +323,8 @@ End Sub
 
 Sub CheckCamera(ByRef Scene As Town.State)
 
+    Dim Before As P.Camera3D
+
     Dim Pointer As Motion.PointerInput
     Dim Changed As Boolean
     Dim Distance As Double
@@ -410,26 +412,24 @@ Sub CheckCamera(ByRef Scene As Town.State)
 
     Call Town.Update(Scene, 0)
 
-    Distance = Math3D.Distance(Scene.View.LiveCamera.Position,
-        Math3D.Add(Scene.People.Path.Positions[0], P.Vector(0.0, 14.0, 0.0)))
+    Before = Scene.View.LiveCamera
 
     Call Town.StartOrbit(Scene)
     Call Town.Update(Scene, 0)
-    Call Check(Abs(Math3D.Length(Math3D.Subtract(Scene.View.LiveCamera.Position,
-        Scene.View.LiveCamera.Target)) - Distance) < 0.01, "O Uses The Close Eye To Leader Distance")
+    Call Check(Math3D.Distance(Before.Position, Scene.View.LiveCamera.Position) < 0.01 And
+        Not Scene.Follow, "O Preserves The Close Displayed Eye Without Retargeting The Leader")
 
     Scene.Follow = True
     Scene.View.Controls.Zoom = 100.0
 
     Call Town.Update(Scene, 0)
 
-    Distance = Math3D.Distance(Scene.View.LiveCamera.Position,
-        Math3D.Add(Scene.People.Path.Positions[0], P.Vector(0.0, 14.0, 0.0)))
+    Before = Scene.View.LiveCamera
 
     Call Town.StartOrbit(Scene)
     Call Town.Update(Scene, 0)
-    Call Check(Abs(Math3D.Length(Math3D.Subtract(Scene.View.LiveCamera.Position,
-        Scene.View.LiveCamera.Target)) - Distance) < 0.01, "O Uses The Distant Eye To Leader Distance")
+    Call Check(Math3D.Distance(Before.Position, Scene.View.LiveCamera.Position) < 0.01 And
+        Not Scene.Follow, "O Preserves The Distant Displayed Eye Without Retargeting The Leader")
 
     Scene.View.FloorVisible = True
 

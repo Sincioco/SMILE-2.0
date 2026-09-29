@@ -43,6 +43,7 @@ Public Sub Run(ByRef Value As Town.State, ByRef Failures As Number)
     Call CursorOrbit(Value, Failures)
     Call RightClickOrbit(Value, Failures)
     Call MapOrbit(Value, Failures)
+    Call QuarterTurn(Value, Failures)
 
     Call Party.Teleport(Value.People, SavedPosition)
     Call Party.Update(Value.People, SavedPosition, 0)
@@ -52,12 +53,50 @@ Public Sub Run(ByRef Value As Town.State, ByRef Failures As Number)
 
 End Sub
 
+Private Sub QuarterTurn(ByRef Value As Town.State, ByRef Failures As Number)
+
+    Dim Before As P.Camera3D
+    Dim Point As P.Vector3
+    Dim Pixel As Camera.ProjectedPoint
+    Dim Center As Camera.ProjectedPoint
+    Dim Index As Number
+
+    Call Town.TopDown(Value)
+
+    Before = Value.View.LiveCamera
+    Point = M.Add(Before.Target, P.Vector(100.0, 0.0, 0.0))
+
+    Call Drone.TurnClockwise(Value.Flight, Value.View, Value.BaseCamera)
+
+    Pixel = Camera.ProjectViewerPoint(Point, Value.View.LiveCamera, Window_Width(), Window_Height())
+    Center = Camera.ProjectViewerPoint(Before.Target, Value.View.LiveCamera, Window_Width(), Window_Height())
+
+    Call Check(Pixel.Y > Center.Y And Abs(Pixel.X - Center.X) < 0.1 And
+        M.Distance(Before.Target, Value.View.LiveCamera.Target) < 0.01 And
+        Abs(M.Distance(Before.Position, Before.Target) -
+        M.Distance(Value.View.LiveCamera.Position, Value.View.LiveCamera.Target)) < 0.01 And
+        Before.FovDegrees = Value.View.LiveCamera.FovDegrees,
+        "Clockwise Quarter Turn Moves Right To Down And Preserves Center Zoom Lens", Failures)
+
+    For Index = 1 To 3
+        Call Drone.TurnClockwise(Value.Flight, Value.View, Value.BaseCamera)
+    End For
+
+    Call Check(M.Distance(Before.Position, Value.View.LiveCamera.Position) < 0.01 And
+        M.Distance(Before.Target, Value.View.LiveCamera.Target) < 0.01,
+        "Four Quarter Turns Restore The Exact Camera", Failures)
+    Call Town.ResetOverview(Value)
+
+End Sub
+
 Private Sub FollowPartyOrbit(ByRef Value As Town.State, ByRef Failures As Number)
 
     Dim Before As P.Camera3D
     Dim Anchor As P.Vector3
     Dim Keys As Keyboard.HeldKeys
     Dim Index As Number
+    Dim Pixel As Camera.ProjectedPoint
+    Dim BeforePixel As Camera.ProjectedPoint
 
     Call Town.Input(Value, KEY_TAB, False)
     Call Arena.AdvanceTransition(Value.View, 1000)
@@ -65,39 +104,48 @@ Private Sub FollowPartyOrbit(ByRef Value As Town.State, ByRef Failures As Number
 
     Before = Value.View.LiveCamera
 
-    Call Town.StartOrbit(Value)
+    Call Town.BeginPointerOrbit(Value)
     Call Town.Update(Value, 0)
 
     Anchor = M.Add(Value.People.Path.Positions[0], P.Vector(0.0, 14.0, 0.0))
 
+    BeforePixel = Camera.ProjectViewerPoint(Anchor, Before, Window_Width(), Window_Height())
+
     Call Check(Value.Follow And Value.PartyCamera And Value.Flight.OrbitAtParty And
         M.Distance(Before.Position, Value.View.LiveCamera.Position) < 0.01 And
-        M.Distance(Anchor, Value.View.LiveCamera.Target) < 0.01,
-        "O And Orbit Button Keep The Eye And Orbit Arin In Follow Party", Failures)
-    Call Town.BeginPointerOrbit(Value)
+        M.Distance(Before.Target, Value.View.LiveCamera.Target) < 0.01,
+        "Middle Press After Tab Preserves Eye Aim Zoom And Off Center Leader", Failures)
 
     For Index = 0 To 1
 
         Call Motion.ApplyDrag(Value.View.Controls, True, False,
             1 + Index * 14, 1 + Index * 7, 400.0, 400.0)
         Call Town.Update(Value, 16)
+
+        Pixel = Camera.ProjectViewerPoint(Anchor, Value.View.LiveCamera, Window_Width(), Window_Height())
+
         Call Check(Value.Follow And Not Value.Flight.CursorOrbit And
-            M.Distance(Anchor, Value.View.LiveCamera.Target) < 0.01,
-            "Slow And Moderate Mouse Orbit Keep Arin As Pivot", Failures)
+            Abs(Pixel.X - BeforePixel.X) < 0.01 And Abs(Pixel.Y - BeforePixel.Y) < 0.01 And
+            Abs(M.Distance(Anchor, Before.Position) - M.Distance(Anchor, Value.View.LiveCamera.Position)) < 0.01,
+            "Slow And Moderate Mouse Orbit Keep Arin As Pivot Without Recentering Him", Failures)
     End For
 
     Keys.ArrowSide = 1.0
 
     Call Town.AdvanceKeyboard(Value, Keys, 100)
     Call Town.Update(Value, 16)
-    Call Check(Value.Follow And M.Distance(Anchor, Value.View.LiveCamera.Target) < 0.01,
+
+    Pixel = Camera.ProjectViewerPoint(Anchor, Value.View.LiveCamera, Window_Width(), Window_Height())
+
+    Call Check(Value.Follow And Abs(Pixel.Y - BeforePixel.Y) < 0.01,
         "Arrow Orbit Retains The Follow Party Anchor", Failures)
     Call Town.MoveParty(Value, P.Vector(0.0, 0.0, 1.0), 100)
     Call Town.Update(Value, 16)
 
     Anchor = M.Add(Value.People.Path.Positions[0], P.Vector(0.0, 14.0, 0.0))
+    Pixel = Camera.ProjectViewerPoint(Anchor, Value.View.LiveCamera, Window_Width(), Window_Height())
 
-    Call Check(M.Distance(Anchor, Value.View.LiveCamera.Target) < 0.01,
+    Call Check(Abs(Pixel.X - BeforePixel.X) < 0.01 And Abs(Pixel.Y - BeforePixel.Y) < 0.01,
         "Orbit Anchor Travels With Arin When The Party Walks", Failures)
     Call Town.ResetOverview(Value)
 
@@ -301,7 +349,7 @@ Private Sub CursorOrbit(ByRef Value As Town.State, ByRef Failures As Number)
 
 End Sub
 
-Private Sub RightClickOrbit(ByRef Value As Town.State, ByRef Failures As Number)
+Public Sub RightClickOrbit(ByRef Value As Town.State, ByRef Failures As Number)
 
     Dim Before As P.Camera3D
     Dim Point As P.Vector3
@@ -350,27 +398,60 @@ Private Sub RightClickOrbit(ByRef Value As Town.State, ByRef Failures As Number)
 
     Call Town.ResetOverview(Value)
 
+    Before = Value.View.LiveCamera
+    Value.Follow = True
+    Value.PartyCamera = True
+
+    Call Town.StartOverviewOrbit(Value)
+    Call Town.Update(Value, 0)
+    Call Check(Not Value.Follow And Value.Cinematic And Value.OverviewOrbit And
+        M.Distance(Before.Position, Value.View.LiveCamera.Position) < 0.01 And
+        M.Distance(Before.Target, Value.View.LiveCamera.Target) < 0.01,
+        "Right Click From Follow Restores The Newly Loaded Tab Overview", Failures)
+
 End Sub
 
-Private Sub MapOrbit(ByRef Value As Town.State, ByRef Failures As Number)
+Public Sub MapOrbit(ByRef Value As Town.State, ByRef Failures As Number)
 
     Dim Before As P.Camera3D
     Dim Offset As P.Vector3
     Dim Index As Number
     Dim Steady As Boolean
     Dim ExpectedRadius As Double
+    Dim Anchor As P.Vector3
+    Dim Forward As P.Vector3
+    Dim AfterForward As P.Vector3
+    Dim Ok As Boolean
+    Dim Pixel As Camera.ProjectedPoint
+
+    Call Town.ResetOverview(Value)
+
+    Value.Cinematic = False
+    Value.View.Controls.PanX = 437.0
+    Value.View.Controls.PanY = 92.0
+    Value.View.Controls.OrbitYaw = 17.0
+    Value.View.Zoom.Current = -55.0
+    Value.View.Zoom.Target = -90.0
+    Value.View.Controls.Zoom = -55.0
+
+    Call Town.Update(Value, 0)
+    Call Town.Draw(Value)
+
+    Show Screen
 
     Before = Value.View.LiveCamera
+    Anchor = Picking.OrbitCenter(Before, Window_Width(), Window_Height())
+    Ok = M.TryNormalize(M.Subtract(Before.Target, Before.Position), Forward)
 
     Call Town.StartOrbit(Value)
 
-    Before.Target = Authoring.MapCenter(Before.Target.Y)
+    Before.Target = Anchor
     Offset = M.Subtract(Before.Position, Before.Target)
     ExpectedRadius = M.Length(Offset)
 
     Call Check(M.Distance(Before.Position, Value.BaseCamera.Position) < 0.001 And
         M.Distance(Before.Target, Value.BaseCamera.Target) < 0.001 And Not Value.Follow,
-        "Orbit Keeps The Current Eye And Uses The Arena Center", Failures)
+        "Orbit Keeps The Current Eye And Uses The Visible Viewport Center", Failures)
     Call Check(Before.FovDegrees = Value.BaseCamera.FovDegrees And
         Value.View.Controls.PanX = 0.0 And Value.View.Controls.Zoom = ToDouble(Motion.DEFAULT_ZOOM),
         "Current Zoom And Pan Are Baked Into The Orbit Without Changing The Shot", Failures)
@@ -378,8 +459,18 @@ Private Sub MapOrbit(ByRef Value As Town.State, ByRef Failures As Number)
     Value.OrbitPaused = True
 
     Call Town.Update(Value, 16)
+
+    Ok = M.TryNormalize(M.Subtract(Value.View.LiveCamera.Target, Value.View.LiveCamera.Position), AfterForward)
+    Pixel = Camera.ProjectViewerPoint(Anchor, Value.View.LiveCamera, Window_Width(), Window_Height())
+
     Call Check(M.Distance(Before.Position, Value.View.LiveCamera.Position) < 0.01,
         "Space Pause Holds Map Orbit Framing", Failures)
+    Call Check(M.Distance(Forward, AfterForward) < 0.000001 And
+        Before.FovDegrees = Value.View.LiveCamera.FovDegrees And
+        Abs(Pixel.X - ToDouble(Window_Width()) * 0.5) < 0.001 And
+        Abs(Pixel.Y - ToDouble(Window_Height()) * 0.5) < 0.001 And
+        Not Value.OverviewOrbit And Value.View.TransitionDuration = 0,
+        "Orbit Starts Without Changing Direction Lens Or Screen Composition", Failures)
 
     Value.OrbitPaused = False
     Steady = True
@@ -583,6 +674,7 @@ Private Sub InspectionPitch(ByRef Value As Town.State, ByRef Failures As Number)
     Value.Flight.OrbitAtParty = True
     Value.Flight.Suspended = True
     Value.Flight.OrbitOffset = Offset
+    Value.Flight.OrbitLookOffset = P.Vector(0.0, 0.0, 0.0)
     Value.View.Controls.OrbitPitch = -75.0
 
     Call Town.Update(Value, 0)
@@ -640,6 +732,12 @@ Private Sub BridgeDepthPrecision(ByRef Value As Town.State, ByRef Failures As Nu
     Dim Separated As Boolean
 
     Call Town.ResetOverview(Value)
+
+    ' Evaluate the distant bridge range at the actual far-zoom camera, not the closer reset shot.
+    Value.View.Zoom.Current = ToDouble(Motion.ZOOM_OUT_LIMIT)
+    Value.View.Zoom.Target = Value.View.Zoom.Current
+    Value.View.Controls.Zoom = Value.View.Zoom.Current
+
     Call Town.Update(Value, 0)
 
     NearValue = Value.View.LiveCamera.NearPlane
@@ -727,6 +825,11 @@ Private Sub IdleOrbit(ByRef Value As Town.State, ByRef Failures As Number)
     Call Town.UpdateIdle(Value, True, 1)
     Call Check(Not Value.Cinematic And Not Value.IdleOrbit And Value.IdleTime = 0,
         "Input Immediately Stops Automatic Idle Orbit", Failures)
+    Call Authoring.BeginEditing()
+    Call Town.UpdateIdle(Value, False, 20000)
+    Call Check(Not Value.Cinematic And Not Value.IdleOrbit And Value.IdleTime = 0,
+        "Editor Remains Still After The Idle Orbit Interval", Failures)
+    Call Town.Input(Value, KEY_TAB, True)
 
 End Sub
 

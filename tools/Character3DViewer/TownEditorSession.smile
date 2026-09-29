@@ -18,8 +18,13 @@ Import Smile.Tools.TownDocumentNavigation As Navigation
 Import Smile.Tools.TownDocumentStore As Storage
 Import Smile.Tools.TownLibrary As Library
 Import Smile.Tools.TownFileJobs As Files
+Import Smile.Tools.TownFileDialog As FileDialog
+Import Smile.Tools.TownFileLocations As FileLocations
+Import Smile.Tools.TownGuideFiles As GuideFiles
+Import Smile.Tools.TownMapLoads As MapLoads
 Import Smile.Tools.TownTabs As Tabs
 Import Smile.Tools.TownDocumentMap As Map
+Import Smile.Tools.TownRoadTravel As RoadTravel
 Import Smile.Simple3D.PrecisionMath3D As Math3D
 Import Smile.Tools.TownWorldEditor As World
 Import Smile.Tools.TownSelection As Selection
@@ -30,6 +35,8 @@ Import Smile.Simple3D.Arena3D As Arena
 
 Private Dim Town As Document.State
 Private Dim Transfers As Files.State
+Private Dim MapLoadOccupied As Boolean
+Private Dim MapLoadCooldown As Number
 Private Dim OpenTabs As Tabs.State
 Private Dim Incoming As Document.State
 Private Dim Controls As Editor.State
@@ -56,6 +63,7 @@ Public Function Available() As Boolean
         AttemptedRecovery = True
         HaveDocument = Library.Recover(Town)
         TeleportPending = HaveDocument
+        TabOverviewPending = HaveDocument
 
         If HaveDocument Then
             Call Tabs.Ensure(OpenTabs, Town)
@@ -106,11 +114,51 @@ Public Function Editing() As Boolean
 
 End Function
 
+Public Function MapHovered() As Boolean
+
+    Dim Result As Boolean
+
+    Result = Map.Hovered()
+
+    Return Result
+
+End Function
+
+Public Function BeginRoadTrip(Leader As P.Vector3) As Boolean
+
+    Dim Result As Boolean
+    Dim Point As P.Vector3
+
+    If Ground.Stage <> 0 Then
+        Return False
+    End If
+
+    Point = Map.Pick(Town, Pointer_X(), Pointer_Y())
+    Result = RoadTravel.Begin(Town, Leader, Point)
+
+    Return Result
+
+End Function
+
+Public Function RoadDirection(Leader As P.Vector3, Distance As Double, Elapsed As Number) As P.Vector3
+
+    Dim Result As P.Vector3
+
+    If Controls.Enabled Then
+        Call RoadTravel.Cancel()
+    End If
+
+    Result = RoadTravel.Direction(Town, Leader, Distance, Elapsed)
+
+    Return Result
+
+End Function
+
 Public Function GestureActive() As Boolean
 
     Dim Result As Boolean
 
-    Result = (Controls.Selected.Dragging Or Controls.Rubber Or Controls.Anchored Or
+    Result = (Controls.Selected.Dragging Or Controls.MarkerGesture.Dragging Or Controls.Rubber Or Controls.Anchored Or
         Controls.Ui.SunSlider.DragOwner > 0 Or World.Active())
 
     Return Result
@@ -121,7 +169,7 @@ Public Function CameraBlocked(Optional CameraControl As Boolean = False) As Bool
 
     Dim Result As Boolean
 
-    Result = (World.Active() Or Controls.Ui.SunSlider.DragOwner > 0 Or
+    Result = (Files.BlocksEditing(Transfers) Or World.Active() Or Controls.Ui.SunSlider.DragOwner > 0 Or
         (Controls.Enabled And (Panel.Hovered() Or Pointer_Y() < 126 Or
         (Not CameraControl And ((Editor.CapturesMap(Controls) And Not Key_Held(KEY_SHIFT) And
         Pointer_Held(POINTER_PRIMARY)) Or GestureActive())))))
@@ -133,6 +181,9 @@ End Function
 Public Function LoadNext() As Boolean
 
     Dim Ok As Boolean
+
+    ' A previous document being ready must not publish this document's unfinished terrain.
+    Ready = False
 
     Call Renderer.SyncDocument(Assets, Town)
 
@@ -199,7 +250,7 @@ Public Function IsNight() As Boolean
 
     Dim Result As Boolean
 
-    Result = Town.Light.Intensity < 100
+    Result = Town.Presets.NightActive
 
     Return Result
 
@@ -219,6 +270,45 @@ Public Sub ToggleDayNight()
     Ignored = Editor.Command(Controls, Town, Action)
 
 End Sub
+
+Public Function TravelOnTile(Position As P.Vector3, Moving As Boolean) As Boolean
+
+    Dim Name As Text
+    Dim Ok As Boolean
+
+    Name = MapLoads.DestinationAt(Town, Position.X, Position.Z)
+
+    If Text_Length(Name) = 0 Then
+        MapLoadOccupied = False
+        Return False
+    End If
+
+    If (MapLoadOccupied Or
+        Not Moving Or
+        MapLoadCooldown > 0) Then
+        Return False
+    End If
+
+    MapLoadOccupied = True
+    Ok = Tabs.OpenNamed(OpenTabs, Town, Name)
+
+    If Ok Then
+
+        TeleportPending = True
+        TravelPending = False
+        TabOverviewPending = False
+        MapLoadCooldown = 1500
+
+        Call Editor.ResetDocument(Controls, Town)
+
+    Else
+        Controls.Ui.Message = "Could not load " + Name + "; current town retained."
+
+    End If
+
+    Return Ok
+
+End Function
 
 Public Function TravelTo(Name As Text, Arrival As P.Vector3) As Boolean
 
@@ -279,12 +369,16 @@ Private Sub FileCommand(Action As Number)
     Dim Mode As Number
     Dim OldName As Text
 
-    If Transfers.RequestId > 0 And Action <> 309 Then
+    If ((Transfers.RequestId > 0 Or Controls.GuideTransfer.Job > 0) And
+        Action <> 309 And
+        Action <> 311) Then
         Controls.Ui.Message = "A file operation is still running."
         Return
     End If
 
-    If Ground.Stage <> 0 Then
+    If (Ground.Stage <> 0 And
+        Action <> 309 And
+        Action <> 311) Then
         Controls.Ui.Message = "Finishing terrain; try saving when ready."
         Return
     End If
@@ -354,9 +448,18 @@ Private Sub FileCommand(Action As Number)
             Controls.Ui.Message = Transfers.Message
         End If
 
-    Else If Action = 309 Then
+    Else If Action = 309 Or Action = 311 Then
 
-        Ok = File_Reveal(Transfers.LastPath)
+        Name = FileLocations.Recall(Action = 309)
+        Ok = False
+
+        If Text_Length(Name) > 0 Then
+            Ok = File_Reveal(Name)
+        End If
+
+        If Not Ok Then
+            Controls.Ui.Message = "No saved file found for that format yet."
+        End If
 
     Else If Action = 303 Then
 
@@ -437,6 +540,14 @@ Public Sub Input(View As P.Camera3D, Key As Number, Blocked As Boolean)
     Dim Name As Text
     Dim Ok As Boolean
 
+    If Controls.GuideTransfer.Job > 0 And Not Controls.GuideTransfer.Saving Then
+        Return
+    End If
+
+    If FileDialog.Input(Transfers, Controls.Enabled And Controls.Ui.Section = 2) Then
+        Return
+    End If
+
     If World.Active() Then
 
         Name = World.Input(Key)
@@ -483,7 +594,7 @@ Public Sub Input(View As P.Camera3D, Key As Number, Blocked As Boolean)
     If Tabs.Input(OpenTabs, Town) Then
 
         TeleportPending = True
-        TabOverviewPending = Town.Name = "Neris Spaceport" Or Town.Name = "Horizon Airport"
+        TabOverviewPending = True
         Controls.Ui.Message = "Town tab opened. Right-click to close."
 
         Call Editor.ResetDocument(Controls, Town)
@@ -501,14 +612,28 @@ Public Sub Input(View As P.Camera3D, Key As Number, Blocked As Boolean)
 
     Action = Editor.Input(Controls, Town, View, Key, Blocked)
 
-    If Action = 400 Or Key = KEY_TAB Then
+    If Action = 89 Or Action = 90 Then
+
+        If Transfers.RequestId = 0 Then
+            Call GuideFiles.Choose(Controls.GuideTransfer, Controls.Guide, Action = 89)
+
+            Controls.Ui.Message = Controls.GuideTransfer.Message
+        Else
+            Controls.Ui.Message = "Finish the current file operation first."
+        End If
+
+    Else If Action = 400 Or Key = KEY_TAB Then
+
         Call Editor.Cancel(Controls, Town)
 
         Controls.Enabled = False
+
     Else If (Action >= 300 And
-        Action <= 310 Or
+        Action <= 311 Or
         (Action >= 500 And Action < 510)) Then
+
         Call FileCommand(Action)
+
     End If
 
 End Sub
@@ -521,6 +646,8 @@ Public Sub Update(Leader As P.Vector3, Elapsed As Number)
     If Not Ready Then
         Return
     End If
+
+    MapLoadCooldown = Max(0, MapLoadCooldown - Elapsed)
 
     If AppliedRevision <> Town.Revision Then
 
@@ -578,6 +705,7 @@ Public Sub Update(Leader As P.Vector3, Elapsed As Number)
     End If
 
     Call Attachments.Update(Details, Town, Leader, Elapsed)
+    Call Editor.UpdateGuideFiles(Controls, Town)
 
     RecoveryClock = RecoveryClock + Elapsed
 
@@ -594,7 +722,11 @@ Public Sub Update(Leader As P.Vector3, Elapsed As Number)
     If Transfers.RequestId > 0 Then
 
         Ok = Files.Update(Transfers, Town, Elapsed)
-        Controls.Ui.Message = Transfers.Message
+
+        If Transfers.RequestId = 0 Or Files.BlocksEditing(Transfers) Then
+            Controls.Ui.Message = Transfers.Message
+        End If
+
         Controls.Ui.ProgressPercent = Transfers.Progress
         Controls.Ui.RecentCount = Transfers.RecentCount
 
@@ -635,15 +767,25 @@ Public Function ApplyLocalLighting() As Boolean
 
     Ok = Lighting.ApplyLocal(Town)
 
+    If Not Ok Then
+        Controls.Ui.Message = "Night-light capacity reached; some lights are unavailable."
+    End If
+
     Return Ok
 
 End Function
 
-Public Sub Overlay(View As P.Camera3D)
+Public Sub Overlay(View As P.Camera3D, Optional Loading As Boolean = False)
 
     Call Tabs.Draw(OpenTabs, Town)
+
+    If Loading Then
+        Return
+    End If
+
     Call Editor.Draw(Controls, Town, View)
     Call World.Draw()
+    Call FileDialog.Draw(Transfers, Controls.Enabled And Controls.Ui.Section = 2)
 
 End Sub
 
@@ -764,6 +906,8 @@ Public Sub Release()
 
     Dim Ok As Boolean
 
+    Call RoadTravel.Cancel()
+
     If HaveDocument Then
         Call Editor.Cancel(Controls, Town)
 
@@ -781,6 +925,7 @@ Public Sub Release()
     Ready = False
     Prepared = False
     TeleportPending = HaveDocument
+    TabOverviewPending = HaveDocument
 
 End Sub
 
@@ -816,6 +961,10 @@ Public Sub DrawMap(Position As P.Vector3, Opacity As Number, LeaderName As Text,
 
     Call Map.Draw(Town, Position, Opacity, LeaderName, LandmarkName, LandmarkPosition,
         AirportName, AirportPosition, Headlight, Yaw)
+
+    If Opacity > 0 Then
+        Call Map.DrawDestination(Town, RoadTravel.Target(), RoadTravel.Active(), RoadTravel.Message())
+    End If
 
 End Sub
 

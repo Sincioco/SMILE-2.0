@@ -1,38 +1,22 @@
 # SMILE 2.0 Repository Instructions for Codex
 
-### Studio direction and current review policy
+### Permanent Sin Star Studio direction (September 29, 2026)
 
-The accepted [SMILE 2.0 Studio design](docs/architecture/2026-09-09%20-%20SMILE%202.0%20Studio.md)
-supersedes earlier battle-only editor plans, `.battle`, separate required editor
-applications and conflicting remembered handoffs. Studio is one thin modular host;
-Scene Editor is general-purpose; reusable scenes/VFX/audio remain runtime assets
-independent of Studio. Accepted design is not implemented capability. Consult the
-root README's Studio status for the next bounded slice; do not replay old phase plans.
-
-Review current source, reachable behavior and current contracts. A finding needs a
-present code path/counterexample, symptom or focused test; label unverified concerns.
-Do not resurrect completed work from old plans or require a historic fix certificate.
-Keep useful regression checks and report demonstrated regressions. Retire obsolete
-reports after preserving current rules, operating knowledge and unresolved work in
-their proper owners; Git history is the archive. Do not create closed-bug dossiers.
-
-These instructions apply to the entire SMILE 2.0 repository.
-
-### Permanent Studio working visual design
-
-Sin designated [the Studio working visual design](docs/architecture/studio-visual-design.md)
-and its [original reference image](docs/architecture/images/smile-2.0-studio-working-design-2026-09-10.jpg)
-on September 10, 2026. Read that breakdown before Studio UI design or implementation.
-This is the current visual authority until Sin explicitly revises or replaces it:
-one dark navy modular Studio window, top workspace navigation, left Scene Explorer
-and Asset Browser, central live viewport, adjacent Inspector, right Scene/Code/Visual
-panel, lower Timeline/Sequence and bottom status bar. Preserve that composition
-and visual direction as implementation advances in bounded slices.
-The September 9 architecture remains authoritative for ownership and runtime contracts.
-The image's `SMILE 3.0` code label is mockup wording, not a product rename or proof
-of supported grammar. Use SMILE 2.0 Studio branding and the canonical official logo.
-Visible controls and the documented interpretations describe design intent, not
-implemented capabilities or authorization to implement the entire product at once.
+- The existing native Character Viewer is now **SMILE 2.0 - Sin Star I - Game Engine and Studio**.
+  Conversationally, **Studio** or **Sin Star Studio** means that application under
+  `tools/Character3DViewer`. Keep its current folders, filenames and application identity.
+  The top-level game navigation tab is **Sin Star I**; individual map names stay unchanged.
+- Sin abandoned the separate SMILE Studio development concept for now. Its September 9
+  architecture and September 10 visual mockup are historical, not a mandate to resume
+  `tools/SmileStudio` or replace the current application's composition.
+- Develop Sin Star I on the desktop by evolving this existing native tool in bounded,
+  modular steps. This naming change does not authorize implementing every future Studio feature.
+- Web development, adoption, publication and browser acceptance are paused indefinitely
+  to prioritize desktop Sin Star I. Do not resume them without explicit direction.
+  Sin explicitly removed both the abandoned separate Studio and indefinitely paused Web
+  work from recurring **On Hold** status lists; retain their direction here instead.
+- Review current source, reachable behavior and current contracts. Findings need present
+  code paths, symptoms or focused tests. Git history retains superseded plans.
 
 ## Permanent task progress reporting
 
@@ -78,13 +62,8 @@ implemented capabilities or authorization to implement the entire product at onc
 
 ### Current on-hold tasks
 
-- SMILE Studio creation, development, acceptance and next phases. Existing shared
-  source inventory may stay aligned for native compilation, but do not resume a
-  Studio workstream or infer a next feature phase without Sin's direction.
-- All Web adoption, publication and browser validation, including the Beat Sequence
-  timeline follow-through, Mira/Water work and outstanding Chrome camera-gesture
-  acceptance. Track later adoption in
-  `docs/implementation/party-beat-camera-checkpoint.md`; resume Web only on direction.
+None in the recurring task list. See the permanent product direction above for the
+abandoned separate Studio concept and indefinite Web pause.
 
 ## Project identity
 
@@ -138,7 +117,7 @@ SMILE 2.0 evolves incrementally toward modern 3D games, including cinematic RPG 
 
 ### Permanent 3D Viewer, Animation Editor direction
 
-The SMILE 2.0 - 3D Viewer, Animation Editor is allowed to evolve into a lightweight character-animation editor. Viewing exposes rig, pose, attachment, collision, and animation defects; correcting those defects in the same focused tool is an approved long-term workflow.
+The SMILE 2.0 - Sin Star I - Game Engine and Studio (existing Character Viewer) is allowed to evolve into a lightweight character-animation editor. Viewing exposes rig, pose, attachment, collision, and animation defects; correcting those defects in the same focused tool is an approved long-term workflow.
 
 - Preserve fast inspection as the default experience while adding small, task-driven editing capabilities incrementally.
 - Prioritize direct correction of bones, wrists, sockets, weapons, shields, and other attachments at selected animation frames, with precise numeric controls and clear save/export actions.
@@ -187,8 +166,11 @@ The SMILE 2.0 - 3D Viewer, Animation Editor is allowed to evolve into a lightwei
 - Sin's September 29 map-centering rule: every current and future town/map must
   share its center with its arena floor and grid. Size and position the floor/grid
   from the active map bounds, updating them when the map expands or contracts.
-  Map overview/automatic orbit uses that shared center. Preserve explicit
-  Follow Party leader anchoring and keep unrelated maps independent.
+  Tab-opening/reset overview orbit uses that shared center. O and the Orbit button
+  preserve the displayed shot and use the viewport-center world point instead.
+  Follow Party manual orbit keeps the leader as its pivot without recentering the
+  shot. Right-click always restores the active tab's initial overview and orbit.
+  Keep unrelated maps independent.
 
 - Sin's September 20 arena rule: the Character Viewer's arena is the visual and
   interaction authority for current and future SMILE games/tools that use a 3D
@@ -196,8 +178,8 @@ The SMILE 2.0 - 3D Viewer, Animation Editor is allowed to evolve into a lightwei
   reusable SMILE library owners. F toggles Floor; G toggles Grid. B cycles the
   shared Viewer backgrounds: Black, Green, Purple, Landscape and Title. Keep grid color
   and grid spacing/size configurable. Consumers use the shared implementation;
-  do not copy private tool-specific arena/camera code into new programs. Existing
-  Studio and Web adoption holds remain in force until explicitly resumed.
+  do not copy private tool-specific arena/camera code into new programs. The separate Studio concept remains abandoned and Web development remains paused;
+  current Sin Star Studio is this native application.
 
 - Future SMILE games, viewers, examples, templates, and programs with pan, zoom, orbit, or rotation controls must make those controls smooth by default on native and Web targets.
 - For unchanged legacy integer camera APIs, use an integer-world scale large enough that camera and target movement does not visibly quantize around the subject. Meter-scale imported assets may use Character3D scale up to 25,000 percent when needed for camera precision or to match established world-scale actors.
@@ -482,3 +464,12 @@ Report commit hashes, files changed, syntax added, generated executables, VSIX p
 - Never print, paste, serialize, or otherwise expose base64 image data or `data:` image URLs in the chat on desktop or mobile.
 - Screenshots and other images must use only the normal rendered inline-image output supported by the Codex app.
 - If normal rendered inline delivery is unavailable, report the image file path or the delivery limitation instead of emitting encoded image text.
+
+### Permanent Town Editor save contract
+
+- Save For Viewer must save/open `.town` files inside the native application, without
+  a PowerShell helper or Blender dependency. Blender conversion is a separate operation.
+- Suggested filenames use local `YYYY-MM-DD HHmm - Town Name.town` or `.blend`.
+- Both save buttons show a persistent progress/completion dialog. Only verified success
+  reaches 100%; show errors and retain edits on failure. After success, reveal the exact
+  chosen file selected in File Explorer.

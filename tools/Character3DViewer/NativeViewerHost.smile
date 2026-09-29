@@ -12,91 +12,12 @@ Import Smile.Tools.ViewerBattleOutcome As Outcome
 Import Smile.Tools.ViewerBattleHud As Hud
 Import Smile.Tools.ViewerBattleCinematics As Cinematics
 Import Smile.Tools.NerisTown As Town
+Import Smile.Tools.NativeViewerTabs As Tabs
 Import Smile.UI.Controls As UI
 Import SinStarI.BattleRules As Rules
 
 Public Const BATTLE_TAB = 15
 Public Const TOWN_TAB = 16
-
-Public Function TabAt(Position As Number) As Number
-
-    Select Case Position
-        Case 0
-            Return 0
-        Case 1
-            Return 1
-        Case 2
-            Return 4
-        Case 3
-            Return 5
-        Case 4
-            Return Profiles.CHARACTER_TAB_MIRA
-        Case 5
-            Return 2
-        Case 6
-            Return 6
-        Case 7
-            Return Profiles.CHARACTER_TAB_PARTY_DRAGON
-        Case 8
-            Return Profiles.CHARACTER_TAB_PARTY_VRAX
-        Case 9
-            Return Profiles.CHARACTER_TAB_KAEL
-        Case 10
-            Return Profiles.CHARACTER_TAB_PARTY_KAEL
-        Case 12
-            Return TOWN_TAB
-    End Select
-
-    Return BATTLE_TAB
-
-End Function
-
-Public Function TabLabel(Position As Number) As Text
-
-    Select Case Position
-        Case 0
-            Return "Arin"
-        Case 1
-            Return "Orin"
-        Case 2
-            Return "Valor"
-        Case 3
-            Return "Zara"
-        Case 4
-            Return "Mira"
-        Case 5
-            Return "Dragon"
-        Case 6
-            Return "Vrax"
-        Case 7
-            Return "Party Dragon"
-        Case 8
-            Return "Party Vrax"
-        Case 9
-            Return "Kael"
-        Case 10
-            Return "Kael Party"
-        Case 12
-            Return "Neris Town"
-    End Select
-
-    Return "Battle System"
-
-End Function
-
-Public Function TabWidth(Position As Number) As Number
-
-    If Position = 11 Or Position = 12 Then
-        Return 106
-    Else If (Position = 7 Or
-        Position = 8 Or
-        Position = 10) Then
-        Return 84
-    End If
-
-    Return 52
-
-End Function
 
 Public Class Session
 
@@ -114,6 +35,7 @@ Public Class Session
     Private HeaderHidden As Boolean
     Private Paused As Boolean
     Private TownScene As Town.State
+    Private Navigation As Tabs.State
 
     Public Sub Start(Viewer As Workflow.Session, InitialTab As Number, Hosted As Boolean, Width As Number, Height As Number)
 
@@ -121,6 +43,9 @@ Public Class Session
 
         Me.Camera.Enabled = True
         Me.BattlePanel = True
+
+        Call Tabs.Remember(Me.Navigation, InitialTab)
+
         Me.SelectedTab = InitialTab
         ViewerTab = InitialTab
 
@@ -195,6 +120,8 @@ Public Class Session
             Return
         End If
 
+        Call Tabs.Remember(Me.Navigation, Index)
+
         Me.SelectedTab = Index
         Me.BattleActive = Index = BATTLE_TAB
         Me.HeaderHidden = False
@@ -253,15 +180,13 @@ Public Class Session
     Public Sub StandaloneInput(Viewer As Workflow.Session, Key As Number)
 
         Dim Index As Number
-        Dim X As Number
         Dim Blocked As Boolean
         Dim OptionsPanel As Boolean
         Dim ViewerKey As Number
         Dim WasPlanning As Boolean
         Dim Layout As Hud.Layout
 
-        X = 18
-        Blocked = Not Me.HeaderHidden And UI.Contains(18, 62, 980, 26)
+        Blocked = Not Me.HeaderHidden And UI.Contains(18, Tabs.RowY(Me.SelectedTab), 980, 26)
 
         Call BattleUi.ObserveActivity(Me.Menus, Key)
 
@@ -316,16 +241,13 @@ Public Class Session
 
         If Not Me.Menus.Stats.Visible And Not Me.HeaderHidden Then
 
-            For Index = 0 To 12
+            Index = Tabs.Input(Me.Navigation, Me.SelectedTab)
 
-                If UI.Clicked(X, 62, TabWidth(Index) - 4, 26) Then
-                    Call Me.SelectTab(Viewer, TabAt(Index))
+            If Index >= 0 Then
+                Call Me.SelectTab(Viewer, Index)
 
-                    Return
-                End If
-
-                X = X + TabWidth(Index)
-            End For
+                Return
+            End If
 
         End If
 
@@ -493,9 +415,6 @@ Public Class Session
 
     Public Sub DrawStandaloneOverlay(Viewer As Workflow.Session)
 
-        Dim Index As Number
-        Dim X As Number
-
         If Me.SelectedTab = TOWN_TAB Then
             Call Town.Overlay(Me.TownScene)
         Else
@@ -503,17 +422,8 @@ Public Class Session
             Call Viewer.DrawStandaloneOverlay()
         End If
 
-        X = 18
-
         If Not Me.HeaderHidden Then
-
-            For Index = 0 To 12
-                Call UI.DrawButton(X, 62, TabWidth(Index) - 4, 26,
-                    TabLabel(Index), Me.SelectedTab = TabAt(Index))
-
-                X = X + TabWidth(Index)
-            End For
-
+            Call Tabs.Draw(Me.SelectedTab)
         End If
 
         If Me.BattleActive Then

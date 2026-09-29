@@ -1,5 +1,38 @@
 # Native World and Town Authoring
 
+## Current September 29 update
+
+The active native application is **SMILE 2.0 - Sin Star I - Game Engine and Studio**,
+conversationally Sin Star Studio. The former separate Studio concept is abandoned
+for now; Web remains indefinitely paused. Current owners and checks are listed at
+the top of tools/Character3DViewer/ARCHITECTURE.md; earlier descriptions below are
+historical where they conflict with this section.
+
+- `.town` transfers run in-process through the native data-file API. The external
+  worker handles Blender conversion only. A save writes its immutable clicked
+  revision; subsequent edits and other open maps retain their own recovery state.
+  Progress and errors are nonmodal. Only verified completion displays 100%.
+- `.guide` files independently store up to 128 markers, fractional grid spacing,
+  tile filter, snapping and visibility. They never enter `.town` or `.blend`.
+  Marker selection/duplication/movement participates in undo.
+- Guide Grid accepts 0.001–10,000 metres. Actual Tile Grid exposes original cell
+  boundaries or object footprints by selected type. Imported cells remain nonuniform;
+  uniform macro alignment is supplied by Guide Grid. Surface painting defaults to
+  Rectangle. Editor-only R rotates the view clockwise 90 degrees.
+- TWN4 adds custom Day/Night presets and retains TWN1–3 reading. TWN3 stores Map
+  Load cells as destination metadata independent of the visible ground material.
+  Map-load triggers and minimap road-only journeys have separate state owners.
+- Minimap road clicks mark a destination and request incremental connected-road
+  routing, then follow the party. Manual movement or a map/document change cancels it.
+- Native night lighting admits 128 local sources; copied lamps rebuild that list.
+- Full district Move/Copy remains unfinished. SurfaceSections3D supplies terrain
+  transfer only; editor integration and fixed landmark ownership are still required.
+
+The complete native session and guides/file tests passed. Actual save/load of a
+`.guide`, all three map tabs, and the restored main publication were inspected.
+The latest native build and installed VSIX include these changes. Very short editor
+windows can still crowd controls; the initial window is 1440 × 960.
+
 ## Scope and implemented workflow
 
 The native Character Viewer now edits Neris, creates blank environments, and saves

@@ -151,6 +151,16 @@ Show Screen
 
 Call Editor.Start(Controls)
 
+Action = Editor.Command(Controls, Town, 2)
+
+Call Check(Controls.Ui.Tool = 13, "Surfaces Defaults To Rectangle")
+
+Action = Editor.Command(Controls, Town, 40)
+
+Call Check(Controls.Ui.Tool = 13, "Changing Surface Retains Rectangle Default")
+
+Action = Editor.Command(Controls, Town, 1)
+
 Town.Name = "Neris Town"
 Town.NextIdentity = Town.ItemCount + 1
 Before = Town.ItemCount
@@ -326,11 +336,11 @@ Sub CheckLocalLighting()
     Dim Expected As Number
     Dim Ok As Boolean
 
-    Call Check(G.MaximumLocalLightCount3D() = 64, "Native Reports Its Local Light Capacity")
+    Call Check(G.MaximumLocalLightCount3D() = 128, "Native Reports Its Local Light Capacity")
 
-    Ok = G.SetPointLight3D(63, 0, 100, 0, 255, 220, 170, 100, 200)
+    Ok = G.SetPointLight3D(G.MaximumLocalLightCount3D() - 1, 0, 100, 0, 255, 220, 170, 100, 200)
 
-    Call Check(Ok And Not G.SetPointLight3D(64, 0, 100, 0, 255, 220, 170, 100, 200),
+    Call Check(Ok And Not G.SetPointLight3D(G.MaximumLocalLightCount3D(), 0, 100, 0, 255, 220, 170, 100, 200),
         "Last Local Light Is Usable And Out Of Range Slots Are Rejected")
 
     Ok = G.ClearAdditionalLights3DChecked()
@@ -367,6 +377,20 @@ Sub CheckLocalLighting()
     Ok = Lighting.ApplyLocal(Draft)
 
     Call Check(Ok And G.ActiveLightCount3D() = 2, "Deleted Lamp Leaves No Light Behind")
+
+    Draft.Items[0].Active = True
+    Draft.ItemCount = 75
+
+    For ItemIndex = 1 To Draft.ItemCount - 1
+        Draft.Items[ItemIndex] = Draft.Items[0]
+        Draft.Items[ItemIndex].Position.X = ToDouble(ItemIndex) * 150.0
+    End For
+
+    Ok = Lighting.ApplyLocal(Draft)
+
+    Call Check(Ok And G.ActiveLightCount3D() = 77 And
+        G.LightValue3D(G.LIGHT_QUERY_LOCAL, 78, 2) = 11100,
+        "Duplicated Lamps Beyond The Former 64-Slot Budget Still Emit At Their Own Position")
 
     Draft = Town
     Expected = 2

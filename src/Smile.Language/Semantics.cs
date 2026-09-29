@@ -2334,6 +2334,8 @@ internal sealed class SemanticAnalyzer
             case CallExpressionSyntax call when DoubleSemantics.IsIntrinsic(call.Identifier.Kind) &&
                 _routines.TryGetValue(call.Identifier.Text, out var numericNamedRoutine):
                 return numericNamedRoutine.ReturnType;
+            case CallExpressionSyntax call when DataFileSemantics.IsIntrinsic(call.Identifier.Kind):
+                return DataFileSemantics.ResultType(call.Identifier.Kind);
             case CallExpressionSyntax call when Renderer3DPrecisionSemantics.IsIntrinsic(call.Identifier.Kind):
                 return Renderer3DPrecisionSemantics.ResultType(call.Identifier.Kind);
             case CallExpressionSyntax call when DoubleSemantics.IsIntrinsic(call.Identifier.Kind):
@@ -2524,6 +2526,8 @@ internal sealed class SemanticAnalyzer
             case CallExpressionSyntax call when DoubleSemantics.IsIntrinsic(call.Identifier.Kind) &&
                 _routines.TryGetValue(call.Identifier.Text, out var numericNamedRoutine):
                 return numericNamedRoutine.ReturnType;
+            case CallExpressionSyntax call when DataFileSemantics.IsIntrinsic(call.Identifier.Kind):
+                return DataFileSemantics.ResultType(call.Identifier.Kind);
             case CallExpressionSyntax call when Renderer3DPrecisionSemantics.IsIntrinsic(call.Identifier.Kind):
                 return Renderer3DPrecisionSemantics.ResultType(call.Identifier.Kind);
             case CallExpressionSyntax call when DoubleSemantics.IsIntrinsic(call.Identifier.Kind):
@@ -4183,6 +4187,13 @@ internal sealed class SemanticAnalyzer
         {
             Report("SML3021", identifier.Span, $"Unknown built-in function '{identifier.Text}'.");
             return SmileType.Error;
+        }
+        if (DataFileSemantics.IsIntrinsic(identifier.Kind))
+        {
+            for (var index = 0; index < arguments.Count; index++)
+                RequireType(arguments[index], DataFileSemantics.ArgumentType(identifier.Kind, index),
+                    "SML3003", $"Built-in '{identifier.Text}' has an incorrect argument type.");
+            return DataFileSemantics.ResultType(identifier.Kind);
         }
         if (Renderer3DPrecisionSemantics.IsIntrinsic(identifier.Kind))
         {

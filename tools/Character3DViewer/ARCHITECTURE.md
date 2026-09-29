@@ -1,5 +1,61 @@
 # Character Viewer Architecture
 
+## Current: Sin Star Studio authoring and publication safety (September 29)
+
+Sin Star Studio is the existing native Viewer, with unchanged folders and application
+identity. NativeViewerTabs owns parent/child navigation; NativeViewerHost delegates
+to it. Sin Star I retains the three saved map documents. Startup and map re-entry
+consume an overview intent in TownEditorSession; NerisTown applies the current
+document center. NerisTown also suppresses automatic idle tours while editing.
+The earlier separate Studio/Web direction below is historical; see root AGENTS.md.
+
+TownGuideFiles owns independent `.guide` serialization and transfer state. TownGuides,
+TownMarkerTools and TownTileGuides own guide geometry, marker manipulation and actual
+cell/footprint display. TownEditor routes commands; TownHistory retains marker undo.
+Guide data never enters town or Blender payloads. TownMapLoads/TownMapLoadTools own
+named map-trigger tiles. TownRoadTravel owns one incremental road/bridge BFS and its
+journey state; the session passes the selected document and party position.
+
+TownFileJobs owns immutable save snapshots and completion bookkeeping. TownFileDialog
+draws nonmodal progress; TownFileLocations persists separate format paths. Native
+storage/data_file.cpp performs bounded asynchronous checked SMD4 transfers with
+flushed temporary files and atomic replacement/backup. Compiler/language changes
+add typed Data_FileStart/Status/Progress/Message and Local_Timestamp intrinsics;
+Web reports native-only transfer rather than pretending to save. Only Blender
+conversion retains the worker. TWN4 adds custom day/night presets and reads TWN1–3.
+
+Build.ps1 supports isolated full staging and refuses a running publication folder.
+Check-Publication.ps1 verifies manifest identity, declared entries, and nonempty
+files before launch. Launch validates before closing an existing session. Session
+fixtures run with unique identities in artifacts, never the live publication.
+This prevents the demonstrated stripped-project cleanup of the live asset folder.
+
+Validation: full native solution/build; 327 language/compiler checks; native editor
+foundations/routes/rendering/three-map session; focused camera and publication checks;
+direct save failure/backup/checksum tests; immutable-save/newer-edit/tab-switch checks;
+TWN codec round trips; actual `.guide` save/remove/reload/undo in the working Studio.
+All three map tabs were clicked and rendered. Detailed current logs remain in
+artifacts/studio-*.log and artifacts/town-*.log. The VSIX was installed and its 35
+payload hashes verified. These results do not imply completion of the work below.
+
+Growth review against the previous commit: NativeProgram has one line replaced;
+NativeViewerHost shrinks by 90 lines. NerisTown adds 111 net lines, TownEditor 146,
+and TownEditorSession 149, chiefly input/update delegation. New bounded owners are
+NativeViewerTabs (234 lines), TownGuideFiles (314), TownRoadTravel (307), and native
+data_file.cpp (171). Native data transfer has one bounded application-owned job;
+route search has one bounded journey. No dependency, architecture exclusion or
+review baseline was raised. Native additional-light capacity changes from 64 to
+128 for the demonstrated duplicated-lamp failure, with a 75-lamp rendering check.
+
+Outstanding: complete district Move/Copy with destination replacement and undo;
+the SurfaceSections3D terrain foundation alone is not that feature. Fixed Royal
+Court/airport assemblies still have specialized placement/navigation ownership.
+Their document representation must be resolved before promising “everything”.
+The existing editor can crowd controls in very short windows; the fresh default
+is now 1440 × 960 while remembered user placement remains authoritative.
+
+Earlier checkpoint sections below are historical.
+
 ## Current: Horizon r009 and centered linked maps (September 29)
 
 NerisTownConnections owns four west/east foot gateways and arrival poses. TownTabs

@@ -7,6 +7,7 @@ Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.SurfaceGrid3D As Grid
 
 Public Const MAX_ITEMS = 1024
+Public Const MAX_MAP_TILES = 4096
 Public Const CATEGORY_BUILDINGS = 1
 Public Const CATEGORY_SURFACES = 2
 Public Const CATEGORY_DECORATIONS = 3
@@ -34,13 +35,30 @@ Public Type Sun
     ShadowOpacity As Number
 End Type
 
+Public Type MapTile
+    X As Number
+    Z As Number
+    Destination As Text
+End Type
+
+Public Type SunPresets
+    Day As Sun
+    Night As Sun
+    HasDay As Boolean
+    HasNight As Boolean
+    NightActive As Boolean
+End Type
+
 Public Type State
+    MapTiles[4096] As MapTile
+    MapTileCount As Number
     Name As Text
     Surface As Grid.State
     Items[1024] As Item
     ItemCount As Number
     NextIdentity As Number
     Light As Sun
+    Presets As SunPresets
     Revision As Number
     SavedRevision As Number
 End Type
@@ -72,6 +90,46 @@ Public Sub NightSun(ByRef Value As Sun)
 
 End Sub
 
+Public Sub ApplySunPreset(ByRef Value As State, Night As Boolean)
+
+    If Night Then
+
+        Call NightSun(Value.Light)
+
+        If Value.Presets.HasNight Then
+            Value.Light = Value.Presets.Night
+        End If
+
+    Else
+
+        Call DefaultSun(Value.Light)
+
+        If Value.Presets.HasDay Then
+            Value.Light = Value.Presets.Day
+        End If
+
+    End If
+
+    Value.Presets.NightActive = Night
+    Value.Revision = Value.Revision + 1
+
+End Sub
+
+Public Sub SaveSunPreset(ByRef Value As State, Night As Boolean)
+
+    If Night Then
+        Value.Presets.Night = Value.Light
+        Value.Presets.HasNight = True
+    Else
+        Value.Presets.Day = Value.Light
+        Value.Presets.HasDay = True
+    End If
+
+    Value.Presets.NightActive = Night
+    Value.Revision = Value.Revision + 1
+
+End Sub
+
 Public Function ValidName(Name As Text) As Boolean
 
     Dim Index As Number
@@ -85,7 +143,9 @@ Public Function ValidName(Name As Text) As Boolean
 
         Code = Text_Code_At(Name, Index)
 
-        If Code < 32 Or Code > 1114111 Or (Code >= 55296 And Code <= 57343) Then
+        If (Code < 32 Or
+            Code > 1114111 Or
+            (Code >= 55296 And Code <= 57343)) Then
             Return False
         End If
 
@@ -101,6 +161,7 @@ Public Function Blank(ByRef Value As State, Name As Text, Columns As Number,
     Dim Ok As Boolean
     Dim Index As Number
     Dim Empty As Item
+    Dim EmptyPresets As SunPresets
 
     If Not ValidName(Name) Then
         Return False
@@ -118,11 +179,13 @@ Public Function Blank(ByRef Value As State, Name As Text, Columns As Number,
         Value.Items[Index] = Empty
     End For
 
+    Value.MapTileCount = 0
     Value.Name = Name
     Value.ItemCount = 0
     Value.NextIdentity = 1
     Value.Revision = Value.Revision + 1
     Value.SavedRevision = -1
+    Value.Presets = EmptyPresets
 
     Call DefaultSun(Value.Light)
 

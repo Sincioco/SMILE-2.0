@@ -174,7 +174,7 @@ Private Sub BeginAssetLoad(ByRef Session As ViewerSession.State,
 
     If Not Settings.Hosted Then
         Session.Ready = Window_Title(
-            "SMILE 2.0 - 3D Viewer, Animation Editor - " +
+            "SMILE 2.0 - Sin Star I - Game Engine and Studio - " +
             ViewerProfiles.ModelFileName(Session.ProfileIndex)) And Session.Ready
     End If
 

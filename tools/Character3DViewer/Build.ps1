@@ -8,6 +8,7 @@ param(
     [string]$WebQuality = 'Full',
     [switch]$PublicRoster,
     [switch]$Studio,
+    [string]$OutputDirectory,
     [switch]$PrepareOnly
 )
 
@@ -30,8 +31,20 @@ $studioRoot = Join-Path $repositoryRoot 'tools\SmileStudio'
 if ($Studio) {
     $outputRoot = Join-Path $repositoryRoot "tools\SmileStudio\bin\$Configuration"
 }
+if ($OutputDirectory) {
+    if ($Target -ne 'Native') { throw '-OutputDirectory is for isolated native builds only.' }
+    $outputRoot = [IO.Path]::GetFullPath($OutputDirectory)
+}
+if ($Target -in @('Native', 'All')) {
+    foreach ($running in Get-Process -Name Character3DViewer -ErrorAction SilentlyContinue) {
+        if ($running.Path -and (Split-Path $running.Path -Parent) -ieq $outputRoot) {
+            throw 'Studio is running in this output folder. Build with -OutputDirectory into staging, or use Launch.ps1 -Build for a graceful restart.'
+        }
+    }
+}
 $nativeBattleSources = @(
     'NativeViewerHost.smile',
+    'NativeViewerTabs.smile',
     'NerisTown.smile',
     'NerisTownLandmarks.smile',
     'NerisTownConnections.smile',
@@ -54,19 +67,27 @@ $nativeBattleSources = @(
     'NerisHorizonLighting.smile',
     'ProximityDrawbridge.smile',
     'TownDocument.smile',
+    'TownMapLoads.smile',
+    'TownMapLoadTools.smile',
     'TownPicking.smile',
     'TownEditorPanel.smile',
     'TownSunControls.smile',
     'TownEditor.smile',
     'TownLibrary.smile',
     'TownDocumentMap.smile',
+    'TownRoadTravel.smile',
     'TownWorldDocument.smile',
     'TownWorldEditor.smile',
     'TownEditorSession.smile',
     'TownFileJobs.smile',
+    'TownFileLocations.smile',
+    'TownFileDialog.smile',
     'TownTabs.smile',
     'TownSelection.smile',
     'TownGuides.smile',
+    'TownGuideFiles.smile',
+    'TownTileGuides.smile',
+    'TownMarkerTools.smile',
     'TownHistory.smile',
     'TownCatalogData.smile',
     'TownCatalogFeatures.smile',
@@ -370,6 +391,7 @@ if ($Target -in @('Native', 'All')) {
         throw 'Character Viewer/editor native compilation failed.'
     }
     Assert-CharacterPublication $outputRoot
+    & (Join-Path $toolRoot 'Check-Publication.ps1') -Directory $outputRoot -Project $project
     Write-Host "Built Character Viewer/editor: $output"
 }
 

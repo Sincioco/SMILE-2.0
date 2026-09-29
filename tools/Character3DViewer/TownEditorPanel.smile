@@ -105,8 +105,10 @@ Public Function Input(ByRef Value As State) As Number
 
         Item = Value.Controls[Index]
 
-        If (Pointer_X() >= Item.X And Pointer_X() < Item.X + Item.Width And
-            Pointer_Y() >= Item.Y And Pointer_Y() < Item.Y + Item.Height) Then
+        If (Pointer_X() >= Item.X And
+            Pointer_X() < Item.X + Item.Width And
+            Pointer_Y() >= Item.Y And
+            Pointer_Y() < Item.Y + Item.Height) Then
             ReturnValue = Item.Action
 
             Return ReturnValue
@@ -189,16 +191,30 @@ Private Sub Library(ByRef Value As State, X As Number)
         Fill Rectangle X + 101, 270, 81, 18, RGB(144, 162, 171)
         Fill Rectangle X + 197, 270, 81, 18, RGB(18, 57, 126)
 
-        Call Button(Value, 12, X, 296, 91, "Line", Value.Tool = 12)
-        Call Button(Value, 13, X + 96, 296, 91, "Rectangle", Value.Tool = 13)
-        Call Button(Value, 14, X + 192, 296, 91, "Erase", Value.Tool = 14)
-        Call Button(Value, 44, X, 336, 34, "-")
-        Call Button(Value, 45, X + 248, 336, 34, "+")
+        Call Button(Value, 46, X, 295, 283, "Map Load (Yellow Border)", Value.Surface = 5)
 
-        Draw Text "Line Width: " + NumberLabel(Value.Width * 2) + " m" At X + 45, 341 Size 14 Color WHITE
-        Draw Text "Click the start, then the end." At X, 375 Size 14 Color WHITE
-        Draw Text "Esc cancels the preview." At X, 397 Size 14 Color WHITE
-        Draw Text "Erase restores grass." At X, 419 Size 14 Color WHITE
+        If Value.Surface = 5 Then
+
+            Call Button(Value, 17, X, 331, 91, "Place", Value.Tool = 17)
+            Call Button(Value, 18, X + 96, 331, 91, "Reassign", Value.Tool = 18)
+            Call Button(Value, 19, X + 192, 331, 91, "Delete", Value.Tool = 19)
+
+            Draw Text "Click a tile on the map." At X, 375 Size 14 Color WHITE
+            Draw Text "Connected tiles share a destination." At X, 397 Size 12 Color WHITE
+
+        Else
+
+            Call Button(Value, 12, X, 331, 91, "Line", Value.Tool = 12)
+            Call Button(Value, 13, X + 96, 331, 91, "Rectangle", Value.Tool = 13)
+            Call Button(Value, 14, X + 192, 331, 91, "Erase", Value.Tool = 14)
+            Call Button(Value, 44, X, 367, 34, "-")
+            Call Button(Value, 45, X + 248, 367, 34, "+")
+
+            Draw Text "Line Width: " + NumberLabel(Value.Width * 2) + " m" At X + 45, 372 Size 14 Color WHITE
+            Draw Text "Click the start, then the end." At X, 410 Size 14 Color WHITE
+            Draw Text "Esc cancels. Erase restores grass." At X, 432 Size 12 Color WHITE
+
+        End If
 
     Else
 
@@ -249,7 +265,13 @@ End Sub
 Private Sub Construction(ByRef Value As State, ByRef Guide As Guides.State, X As Number)
 
     Dim Label As Text
+    Dim RowY As Number
+    Dim StepY As Number
+    Dim Height As Number
 
+    StepY = Min(30, Max(20, (Window_Height() - 505) / 10))
+
+    Height = StepY - 3
     Label = "Snap: Off"
 
     If Guide.SnapMode = 1 Then
@@ -260,17 +282,59 @@ Private Sub Construction(ByRef Value As State, ByRef Guide As Guides.State, X As
         Label = "Snap: Grid + Markers"
     End If
 
-    Call Button(Value, 73, X, 212, 283, "Show Grid", Guide.ShowGrid)
-    Call Button(Value, 74, X, 246, 283, Label, Guide.SnapMode > 0)
-    Call Button(Value, 75, X, 280, 34, "-")
-    Call Button(Value, 76, X + 248, 280, 34, "+")
-    Call Button(Value, 15, X, 314, 139, "Marker Line", Value.Tool = 15)
-    Call Button(Value, 16, X + 144, 314, 139, "Rectangle", Value.Tool = 16)
-    Call Button(Value, 72, X, 348, 283, "Clear All Markers")
+    Call Button(Value, 73, X, 212, 139, "Guide Grid", Guide.ShowGrid, True, Height)
+    Call Button(Value, 77, X + 144, 212, 139, "Actual Tile Grid", Guide.ShowTileGrid, True, Height)
+    Call Button(Value, 74, X, 212 + StepY, 283, Label, Guide.SnapMode > 0, True, Height)
+    Call Button(Value, 75, X, 212 + StepY * 2, 34, "/2", False, True, Height)
+    Call Button(Value, 78, X + 39, 212 + StepY * 2, 204,
+        "Grid: " + Guides.SpacingLabel(Guide.Spacing) + " m", False, True, Height)
+    Call Button(Value, 76, X + 248, 212 + StepY * 2, 34, "x2", False, True, Height)
 
-    Draw Text "Grid: " + NumberLabel(Guide.Spacing) + " m" At X + 50, 286 Size 14 Color WHITE
-    Draw Text "Click the start, then the end." At X, 388 Size 14 Color WHITE
-    Draw Text "Temporary; excluded from saves." At X, 410 Size 13 Color RGB(240, 205, 140)
+    RowY = 212 + StepY * 3
+
+    If Guide.ShowTileGrid Then
+
+        Call Button(Value, 80, X, RowY, 91, "All Tiles", Guide.TileTarget = 0, True, Height)
+        Call Button(Value, 81, X + 96, RowY, 91, "Ground", Guide.TileTarget = 1, True, Height)
+        Call Button(Value, 82, X + 192, RowY, 91, "Water", Guide.TileTarget = 2, True, Height)
+        Call Button(Value, 83, X, RowY + StepY, 91, "Road", Guide.TileTarget = 3, True, Height)
+        Call Button(Value, 84, X + 96, RowY + StepY, 91, "Buildings", Guide.TileTarget = 4, True, Height)
+        Call Button(Value, 85, X + 192, RowY + StepY, 91, "Decor", Guide.TileTarget = 5, True, Height)
+        Call Button(Value, 79, X, RowY + StepY * 2, 283, "Snap Objects To Tile Corners", Guide.SnapTiles, True, Height)
+
+        RowY = RowY + StepY * 3
+
+    End If
+
+    Call Button(Value, 15, X, RowY, 139, "Marker Line", Value.Tool = 15, True, Height)
+    Call Button(Value, 16, X + 144, RowY, 139, "Rectangle", Value.Tool = 16, True, Height)
+    Call Button(Value, 86, X, RowY + StepY, 91, "Select/Move", Value.Tool = 70, True, Height)
+    Call Button(Value, 87, X + 96, RowY + StepY, 91, "Duplicate", False, True, Height)
+    Call Button(Value, 88, X + 192, RowY + StepY, 91, "Delete", False, True, Height)
+    Call Button(Value, 72, X, RowY + StepY * 2, 283, "Clear All Markers", False, True, Height)
+    Call Button(Value, 89, X, RowY + StepY * 3, 139, "Save Guides...", False, True, Height)
+    Call Button(Value, 90, X + 144, RowY + StepY * 3, 139, "Load Guides...", False, True, Height)
+
+    RowY = RowY + StepY * 4 + 4
+
+    If RowY + 32 < Window_Height() - 261 Then
+        Draw Text "Click Grid to type fractional meters." At X, RowY Size 12 Color WHITE
+        Draw Text "Ctrl-click: Select  Ctrl+D: Duplicate" At X, RowY + 16 Size 12 Color WHITE
+    End If
+
+    If RowY + 80 < Window_Height() - 261 Then
+
+        Draw Text "Actual cells may differ in size." At X, RowY + 34 Size 12 Color WHITE
+        Draw Text "Buildings / Decor show footprints." At X, RowY + 50 Size 12 Color WHITE
+        Draw Text ".guide files are separate from towns." At X, RowY + 66 Size 12 Color RGB(240, 205, 140)
+
+    End If
+
+    If (Guide.ShowGrid And
+        Guide.VisibleSpacing > Guide.Spacing * 1.001 And
+        RowY + 96 < Window_Height() - 261) Then
+        Draw Text "Visible lines: " + Guides.SpacingLabel(Guide.VisibleSpacing) + " m (zoom in)" At X, RowY + 84 Size 11 Color RGB(240, 205, 140)
+    End If
 
 End Sub
 
@@ -283,7 +347,7 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State,
     Dim Index As Number
 
     X = LeftEdge() + 10
-    LightBottom = 212 + 8 * Min(32, Max(16, (Window_Height() - 537) / 8))
+    LightBottom = 212 + 8 * Min(32, Max(16, (Window_Height() - 572) / 8))
     FileStep = Min(32, Max(22, (Window_Height() - 525) / 8))
 
     If Not Value.AtlasLoaded Then
@@ -312,6 +376,8 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State,
         Call Button(Value, 220, X, LightBottom, 283, "Shadows", Town.Light.Shadows)
         Call Button(Value, 221, X, LightBottom + 32, 139, "Day")
         Call Button(Value, 222, X + 144, LightBottom + 32, 139, "Night")
+        Call Button(Value, 223, X, LightBottom + 64, 139, "Save As Day", Town.Presets.HasDay)
+        Call Button(Value, 224, X + 144, LightBottom + 64, 139, "Save As Night", Town.Presets.HasNight)
 
     Else If Value.Section = 3 Then
 
@@ -336,20 +402,21 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State,
 
         Draw Text "Viewer (.town)" At X, 212 Size 15 Color WHITE
 
-        Call Button(Value, 300, X, 237, 139, "Save For Viewer")
-        Call Button(Value, 302, X + 144, 237, 139, "Save As...")
-        Call Button(Value, 305, X, 267, 139, "Open For Viewer")
-        Call Button(Value, 310, X + 144, 267, 139, "Open As...")
+        Call Button(Value, 300, X, 237, 139, "Save For Viewer", False, True, FileStep - 3)
+        Call Button(Value, 302, X + 144, 237, 139, "Save As...", False, True, FileStep - 3)
+        Call Button(Value, 305, X, 237 + FileStep, 139, "Open For Viewer", False, True, FileStep - 3)
+        Call Button(Value, 310, X + 144, 237 + FileStep, 139, "Open As...", False, True, FileStep - 3)
+        Call Button(Value, 311, X, 237 + FileStep * 2, 283, "Show Last Town File In Explorer", False, True, FileStep - 3)
 
-        Draw Text "Blender (.blend)" At X, 301 Size 15 Color WHITE
+        Draw Text "Blender (.blend)" At X, 241 + FileStep * 3 Size 15 Color WHITE
 
-        Call Button(Value, 301, X, 326, 139, "Save For Blender")
-        Call Button(Value, 307, X + 144, 326, 139, "Open Blender...")
-        Call Button(Value, 309, X, 358, 283, "Show Last File In Explorer")
-        Call Button(Value, 303, X, 390, 139, "New Town")
-        Call Button(Value, 308, X + 144, 390, 139, "Open Recovery...")
-        Call Button(Value, 304, X, 422, 139, "New World")
-        Call Button(Value, 306, X + 144, 422, 139, "Open World")
+        Call Button(Value, 301, X, 237 + FileStep * 4, 139, "Save For Blender", False, True, FileStep - 3)
+        Call Button(Value, 307, X + 144, 237 + FileStep * 4, 139, "Open Blender...", False, True, FileStep - 3)
+        Call Button(Value, 309, X, 237 + FileStep * 5, 283, "Show Last Blender File In Explorer", False, True, FileStep - 3)
+        Call Button(Value, 303, X, 237 + FileStep * 6, 139, "New Town", False, True, FileStep - 3)
+        Call Button(Value, 308, X + 144, 237 + FileStep * 6, 139, "Open Recovery...", False, True, FileStep - 3)
+        Call Button(Value, 304, X, 237 + FileStep * 7, 139, "New World", False, True, FileStep - 3)
+        Call Button(Value, 306, X + 144, 237 + FileStep * 7, 139, "Open World", False, True, FileStep - 3)
 
     End If
 

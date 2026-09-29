@@ -36,7 +36,7 @@ Public Function Apply(Light As Document.Sun) As Boolean
 
 End Function
 
-''' Slots 0-3 remain Royal Court's washes. Placed town lights own slots 4-63.
+''' Slots 0-3 remain Royal Court's washes. Placed lights use the reported native capacity.
 ''' Recompute from the document so moved/deleted lamps cannot leave phantom lights.
 Public Function ApplyLocal(ByRef Town As Document.State) As Boolean
 
@@ -64,20 +64,27 @@ Public Function ApplyLocal(ByRef Town As Document.State) As Boolean
 
         Item = Town.Items[Index]
 
-        If Item.Active And Night > 0.0 And Slot < Capacity Then
+        If Item.Active And Night > 0.0 Then
 
             Shape = Catalog.TemplateAt(Item.Template)
             Height = (Shape.High.Y - Shape.Low.Y) * Item.Scale.Y / 1000.0
 
             If Shape.Label = "Crystal Lamp" Then
 
-                Point = Geometry.ToWorld(Item, P.Vector(0.0, Shape.High.Y * 0.82, 0.0))
-                Ok = G.SetPointLight3D(Slot, ToNumber(Point.X), ToNumber(Point.Y), ToNumber(Point.Z),
-                    255, 211, 150, ToNumber(Night * 280.0), ToNumber(Max(100.0, Height * 3.5))) And Ok
+                If Slot < Capacity Then
+                    Point = Geometry.ToWorld(Item, P.Vector(0.0, Shape.High.Y * 0.82, 0.0))
+                    Ok = G.SetPointLight3D(Slot, ToNumber(Point.X), ToNumber(Point.Y), ToNumber(Point.Z),
+                        255, 211, 150, ToNumber(Night * 280.0), ToNumber(Max(100.0, Height * 3.5))) And Ok
+                Else
+                    Ok = False
+                End If
+
                 Slot = Slot + 1
 
-            Else If (Shape.Label = "Royal Castle" Or Shape.Label = "Military HQ" Or
-                Shape.Label = "Comm Tower" Or Shape.Label = "City Hall") Then
+            Else If (Shape.Label = "Royal Castle" Or
+                Shape.Label = "Military HQ" Or
+                Shape.Label = "Comm Tower" Or
+                Shape.Label = "City Hall") Then
 
                 Width = Shape.High.X - Shape.Low.X
                 Range = Max(Height * 1.8, Width * Item.Scale.X / 1000.0 * 1.5)
@@ -85,15 +92,15 @@ Public Function ApplyLocal(ByRef Town As Document.State) As Boolean
                 For Side = 0 To 1
 
                     If Slot < Capacity Then
-
                         Point = Geometry.ToWorld(Item, P.Vector((ToDouble(Side) * 2.0 - 1.0) * Width * 0.32,
                             Shape.Low.Y + (Shape.High.Y - Shape.Low.Y) * 0.28, Shape.Low.Z - Width * 0.08))
                         Ok = G.SetPointLight3D(Slot, ToNumber(Point.X), ToNumber(Point.Y), ToNumber(Point.Z),
                             255, 210, 157, ToNumber(Night * 380.0), ToNumber(Range)) And Ok
-                        Slot = Slot + 1
-
+                    Else
+                        Ok = False
                     End If
 
+                    Slot = Slot + 1
                 End For
 
             End If

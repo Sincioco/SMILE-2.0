@@ -18,6 +18,74 @@ Public Type ScreenBox
     Visible As Boolean
 End Type
 
+Public Function GroundBounds(View As P.Camera3D, Width As Number, Height As Number,
+    RightEdge As Number, TopEdge As Number, ByRef Low As P.Vector3, ByRef High As P.Vector3) As Boolean
+
+    Dim Index As Number
+    Dim Point As P.Vector3
+
+    For Index = 0 To 3
+
+        If Not Ground(View, (Index Mod 2) * RightEdge, TopEdge + (Index / 2) * (Height - TopEdge),
+            Width, Height, Point) Then
+            Return False
+        End If
+
+        If Index = 0 Then
+
+            Low = Point
+            High = Point
+
+        Else
+            Low.X = Min(Low.X, Point.X)
+            Low.Z = Min(Low.Z, Point.Z)
+            High.X = Max(High.X, Point.X)
+            High.Z = Max(High.Z, Point.Z)
+
+        End If
+
+    End For
+
+    Return True
+
+End Function
+
+''' The exact optical center stays on the viewing ray, including odd viewport sizes.
+Public Function OrbitCenter(View As P.Camera3D, Width As Number, Height As Number) As P.Vector3
+
+    Dim Forward As P.Vector3
+    Dim Point As P.Vector3
+    Dim Depth As Double
+    Dim GroundDepth As Double
+
+    Point = View.Target
+
+    If Not M.TryNormalize(M.Subtract(View.Target, View.Position), Forward) Then
+        Return Point
+    End If
+
+    If Not P.TryCursorDepth(Width / 2, Height / 2, Width, Height, Depth) Then
+
+        Depth = M.Distance(View.Position, View.Target)
+
+        If Forward.Y < -0.00001 Then
+
+            GroundDepth = (23.12 - View.Position.Y) / Forward.Y
+
+            If GroundDepth > View.NearPlane And GroundDepth <= View.FarPlane Then
+                Depth = GroundDepth
+            End If
+
+        End If
+
+    End If
+
+    Point = M.Add(View.Position, M.Scale(Forward, Depth))
+
+    Return Point
+
+End Function
+
 ''' Use the visible opaque surface; transparent water and sky fall back to the town floor.
 Public Function OrbitPoint(View As P.Camera3D, X As Number, Y As Number,
     Width As Number, Height As Number, ByRef Point As P.Vector3) As Boolean

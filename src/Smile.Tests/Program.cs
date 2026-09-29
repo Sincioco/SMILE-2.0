@@ -1066,11 +1066,11 @@ Run("Invalid Model3DAsset profile sample rate and logical path report stable SML
         var many = XElement.Parse(Project("LogicalPath=\"Assets/Model.sm3d\" Profile=\"Static\""));
         var group = many.Element("ItemGroup")!;
         group.Elements("Model3DAsset").Remove();
-        for (var index = 0; index < 128; index++)
+        for (var index = 0; index < 256; index++)
             group.Add(new XElement("Model3DAsset", new XAttribute("Include", "Model.glb"),
                 new XAttribute("LogicalPath", $"Assets/Model{index}.sm3d"), new XAttribute("Profile", "Static")));
         many.Save(projectPath);
-        Equal(128, SmileProjectSourceSet.Load(projectPath).Model3DAssets.Items.Count);
+        Equal(256, SmileProjectSourceSet.Load(projectPath).Model3DAssets.Items.Count);
         Equal(0, SmileProjectSourceSet.Load(projectPath).Model3DAssets.Diagnostics.Count);
         group.Add(new XElement("Model3DAsset", new XAttribute("Include", "Model.glb"),
             new XAttribute("LogicalPath", "Assets/Overflow.sm3d"), new XAttribute("Profile", "Static")));

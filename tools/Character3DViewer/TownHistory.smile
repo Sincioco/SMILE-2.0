@@ -133,9 +133,16 @@ Public Function Restore(ByRef Value As State, ByRef Town As Document.State,
 
         End If
 
+        Town.MapTileCount = Value.Entries[Index].Town.MapTileCount
+
+        For Item = 0 To Document.MAX_MAP_TILES - 1
+            Town.MapTiles[Item] = Value.Entries[Index].Town.MapTiles[Item]
+        End For
+
         Town.ItemCount = Value.Entries[Index].Town.ItemCount
         Town.NextIdentity = Max(Town.NextIdentity, Value.Entries[Index].Town.NextIdentity)
         Town.Light = Value.Entries[Index].Town.Light
+        Town.Presets = Value.Entries[Index].Town.Presets
         Town.Revision = Town.Revision + 1
 
         For Item = 0 To Document.MAX_ITEMS - 1

@@ -11,7 +11,14 @@ Import Smile.Tools.TownInitialSurface As Initial
 Import Smile.Tools.TownDocumentStore As Storage
 Import Smile.Tools.TownWorldDocument As World
 Import Smile.Tools.TownGuides As Guides
+Import Smile.Tools.TownTileGuides As TileGuides
+Import Smile.Tools.TownMarkerTools As MarkerTools
 Import Smile.Tools.TownHistory As History
+Import Smile.Tools.TownMapLoads As Links
+Import Smile.Tools.TownGuideFiles As GuideFiles
+Import Smile.Tools.TownRoadTravel As Roads
+Import Smile.Tools.TownDocumentNavigation As Navigation
+Import Smile.Simple3D.PrecisionMath3D As Math3D
 
 Dim Town As Document.State
 Dim Selected As Selection.State
@@ -32,8 +39,49 @@ Dim Journal As History.State
 Dim Point As P.Vector3
 Dim Identity As Number
 Dim BeforeSurface As Number
+Dim CellPreview As Guides.Marker
+
+Ok = Guides.SetSpacing(Guide, "0.25")
+Guide.SnapMode = 1
+Point = Guides.Snap(Guide, P.Vector(3.2, 7.0, -3.2), 0.0)
+
+Call Check(Ok And Guide.Spacing = 0.25 And Point.X = 2.5 And Point.Z = -2.5 And Point.Y = 7.0,
+    "Quarter Meter Grid Snaps At Exact World Spacing")
+Call Check(Guides.SpacingLabel(Guide.Spacing) = "0.25", "Fractional Grid Label Keeps Decimal Precision")
+
+Ok = Guides.SetSpacing(Guide, ".125")
+
+Call Check(Ok And Guide.Spacing = 0.125 And Guides.SpacingLabel(Guide.Spacing) = "0.125",
+    "Sub Meter Input Accepts A Leading Decimal Point")
+
+Ok = Guides.SetSpacing(Guide, "0") Or Guides.SetSpacing(Guide, "abc") Or Guides.SetSpacing(Guide, "1..2")
+
+Call Check(Not Ok And Guide.Spacing = 0.125, "Invalid Spacing Preserves The Previous Grid")
+
+Ok = Guides.SetSpacing(Guide, "0.001")
+
+Call Check(Ok And Guide.Spacing = 0.001, "Millimeter Guide Spacing Is Available")
+
+Guide.Spacing = 2.0
+Guide.SnapMode = 0
 
 Ok = Grid.Initialize(Surface, 12, 10, -40.0, -20.0, 20.0, Grid.SURFACE_GROUND)
+
+Surface.XEdges[1] = -35.0
+CellPreview = TileGuides.CellRectangle(Surface, P.Vector(-39.0, 0.0, -19.0), P.Vector(-36.0, 0.0, -1.0))
+
+Call Check(CellPreview.First.X = -40.0 And CellPreview.Last.X = -35.0 And
+    CellPreview.First.Z = -20.0 And CellPreview.Last.Z = 0.0,
+    "Paint Preview Uses Actual Narrow Cell Bounds")
+
+Point = Guides.SnapTile(Surface, P.Vector(-34.0, 77.0, -1.0))
+
+Call Check(Point.X = -35.0 And Point.Z = 0.0 And Point.Y = 77.0,
+    "Object Tile Snap Uses Actual Edges Without Changing Height")
+Call Check(TileGuides.Matches(Grid.SURFACE_BRIDGE, 2) And TileGuides.Matches(Grid.SURFACE_BRIDGE, 3) And
+    Not TileGuides.Matches(Grid.SURFACE_GROUND, 2), "Grid Filters Include Bridge In Both Water And Road")
+
+Surface.XEdges[1] = -20.0
 
 Call Check(Ok And Grid.CellX(Surface, -40.01) = -1 And
     Grid.CellZ(Surface, 0.0) = 1, "World Picking Uses Floor At Negative Coordinates")
@@ -213,6 +261,9 @@ RequestId = Storage.QueueBlender(Town, 2)
 Call Check(RequestId > 0, "Complete Blender Request Is Written Atomically")
 
 Call CheckEditing()
+Call CheckMapLoads()
+Call CheckPresetsAndGuideFiles()
+Call CheckRoadTrips()
 
 If Failures = 0 Then
     Print "PASS Town Editor Foundations"
@@ -226,6 +277,169 @@ Sub Check(Condition As Boolean, Label As Text)
         Failures = Failures + 1
         Print "FAIL " + Label
     End If
+
+End Sub
+
+Sub CheckRoadTrips()
+
+    Dim Leader As P.Vector3
+    Dim Direction As P.Vector3
+    Dim Frame As Number
+    Dim Kind As Number
+    Dim StayedOnRoad As Boolean
+
+    Ok = Document.Blank(Town, "Road Fixture", 20, 12, 20.0)
+    Ok = Grid.Initialize(Town.Surface, 20, 12, 0.0, 0.0, 20.0, Grid.SURFACE_GROUND) And Ok
+
+    Call Grid.PaintLine(Town.Surface, 1, 2, 8, 2, Grid.SURFACE_ROAD)
+    Call Grid.PaintLine(Town.Surface, 8, 2, 8, 8, Grid.SURFACE_ROAD)
+    Call Grid.PaintLine(Town.Surface, 8, 8, 15, 8, Grid.SURFACE_ROAD)
+    Call Grid.PaintRectangle(Town.Surface, 8, 4, 8, 4, Grid.SURFACE_WATER)
+    Call Grid.PaintRectangle(Town.Surface, 8, 4, 8, 4, Grid.SURFACE_ROAD)
+    Call Grid.PaintRectangle(Town.Surface, 12, 3, 12, 3, Grid.SURFACE_ROAD)
+    Call Navigation.Rebuild(Town)
+
+    Leader = P.Vector(30.0, 23.12, 50.0)
+    StayedOnRoad = True
+    Ok = Roads.Begin(Town, Leader, P.Vector(310.0, 23.12, 170.0)) And Ok
+
+    For Frame = 0 To 1000
+
+        Direction = Roads.Direction(Town, Leader, 3.0, 16)
+        Leader = Math3D.Add(Leader, Math3D.Scale(Direction, 3.0))
+        Kind = Grid.ReadCell(Town.Surface, Grid.CellX(Town.Surface, Leader.X), Grid.CellZ(Town.Surface, Leader.Z))
+        StayedOnRoad = StayedOnRoad And (Kind = Grid.SURFACE_ROAD Or Kind = Grid.SURFACE_BRIDGE)
+
+        If Not Roads.Active() Then
+            Exit For
+        End If
+
+    End For
+
+    Call Check(Ok And StayedOnRoad And Abs(Leader.X - 310.0) < 0.5 And Abs(Leader.Z - 170.0) < 0.5,
+        "Auto Run Follows Road Bends And Bridge Without Cutting Across Ground")
+
+    Ok = Roads.Begin(Town, Leader, P.Vector(250.0, 23.12, 70.0))
+
+    For Frame = 0 To 20
+        Direction = Roads.Direction(Town, Leader, 3.0, 16)
+    End For
+
+    Call Check(Ok And Not Roads.Active() And Math3D.Length(Direction) = 0.0,
+        "Disconnected Minimap Destination Does Not Move Party")
+
+    Ok = Roads.Begin(Town, Leader, P.Vector(30.0, 23.12, 50.0))
+    Town.Revision = Town.Revision + 1
+    Direction = Roads.Direction(Town, Leader, 3.0, 16)
+
+    Call Check(Ok And Not Roads.Active(), "An Edited Map Cancels The Old Journey")
+
+End Sub
+
+Sub CheckPresetsAndGuideFiles()
+
+    Dim LoadedGuide As Guides.State
+    Dim OriginalLight As Document.Sun
+
+    Ok = Document.Blank(Town, "Preset Fixture", 8, 8, 10.0)
+    Town.Light.Intensity = 123
+    Town.Light.Azimuth = 172.125
+    OriginalLight = Town.Light
+
+    Call Document.SaveSunPreset(Town, False)
+    Call Document.NightSun(Town.Light)
+
+    Town.Light.Intensity = 140
+
+    Call Document.SaveSunPreset(Town, True)
+
+    Ok = Storage.SaveDocument(Town, "TownEditor.PresetFixture", False) And Ok
+
+    Call Document.DefaultSun(Town.Light)
+
+    Ok = Storage.LoadDocument(Town, "TownEditor.PresetFixture") And Ok
+
+    Call Check(Ok And Town.Presets.HasDay And Town.Presets.HasNight And
+        Town.Presets.NightActive And Town.Light.Intensity = 140,
+        "Custom Bright Night Preset And Active Mode Survive Reload")
+    Call Document.ApplySunPreset(Town, False)
+    Call Check(Not Town.Presets.NightActive And Town.Light.Intensity = OriginalLight.Intensity And
+        Town.Light.Azimuth = OriginalLight.Azimuth, "Day Toggle Restores The Custom Day Exactly")
+    Call History.Reset(Journal, Town, Guide.Ink)
+
+    Town.Light.Intensity = 199
+
+    Call Document.SaveSunPreset(Town, False)
+    Call History.Record(Journal, Town, Guide.Ink)
+
+    Ok = History.Restore(Journal, Town, Guide.Ink, False)
+
+    Call Check(Ok And Town.Presets.Day.Intensity = 123, "Custom Preset Save Can Be Undone")
+
+    Guide.Spacing = 0.0125
+    Guide.SnapMode = 3
+    Guide.ShowGrid = True
+    Guide.ShowTileGrid = True
+    Guide.TileTarget = 4
+    Guide.SnapTiles = True
+    Guide.Ink.EntryCount = 2
+    Guide.Ink.Markers[0].First = P.Vector(-125.125, 23.0, 99.5)
+    Guide.Ink.Markers[0].Last = P.Vector(25.75, 23.0, -66.25)
+    Guide.Ink.Markers[1] = Guide.Ink.Markers[0]
+    Guide.Ink.Markers[1].IsRectangle = True
+    Ok = GuideFiles.SaveSnapshot(Guide, "TownEditor.GuideFixture")
+    Ok = GuideFiles.LoadSnapshot(LoadedGuide, "TownEditor.GuideFixture") And Ok
+
+    Call Check(Ok And LoadedGuide.Spacing = 0.0125 And LoadedGuide.SnapMode = 3 And
+        LoadedGuide.ShowGrid And LoadedGuide.ShowTileGrid And LoadedGuide.SnapTiles And
+        LoadedGuide.TileTarget = 4 And LoadedGuide.Ink.EntryCount = 2,
+        "Guide Files Preserve Grid Options And Every Marker")
+    Call Check(LoadedGuide.Ink.Markers[0].First.X = -125.125 And
+        LoadedGuide.Ink.Markers[1].Last.Z = -66.25 And LoadedGuide.Ink.Markers[1].IsRectangle,
+        "Guide Files Keep Signed Fractional Coordinates And Shapes")
+
+    Ok = GuideFiles.LoadSnapshot(LoadedGuide, "TownEditor.PresetFixture")
+
+    Call Check(Not Ok And LoadedGuide.Ink.EntryCount = 2 And LoadedGuide.Spacing = 0.0125,
+        "Rejecting A Different File Type Leaves Existing Guides Intact")
+
+End Sub
+
+Sub CheckMapLoads()
+
+    Ok = Document.Blank(Town, "Map Tile Fixture", 20, 20, 20.0)
+
+    Call Grid.PaintRectangle(Town.Surface, 2, 2, 4, 4, Grid.SURFACE_ROAD)
+    Call History.Reset(Journal, Town, Guide.Ink)
+
+    Ok = Links.Place(Town, 2, 2, "Neris Spaceport")
+    Ok = Links.Place(Town, 3, 2, "Horizon Airport") And Ok
+    Ok = Links.Place(Town, 4, 3, "Horizon Airport") And Ok
+
+    Call Check(Ok And Links.Neighbor(Town, 3, 2) = "Neris Spaceport" And
+        Links.Neighbor(Town, 4, 3) = "Horizon Airport", "Adjacent Tiles Inherit; Diagonal Tiles Remain Separate")
+    Call Links.AssignConnected(Town, 0, "Another Town")
+    Call Check(Town.MapTiles[0].Destination = "Another Town" And
+        Town.MapTiles[1].Destination = "Another Town" And Town.MapTiles[2].Destination = "Horizon Airport",
+        "Reassign Changes Only The Connected Tile Area")
+    Call History.Record(Journal, Town, Guide.Ink)
+
+    Ok = Links.Remove(Town, 2, 2)
+
+    Call History.Record(Journal, Town, Guide.Ink)
+    Call Check(Ok And Town.MapTileCount = 2 And Grid.ReadCell(Town.Surface, 2, 2) = Grid.SURFACE_ROAD,
+        "Deleting A Map Load Tile Retains Its Underlying Road")
+
+    Ok = History.Restore(Journal, Town, Guide.Ink, False)
+
+    Call Check(Ok And Town.MapTileCount = 3 And Links.Find(Town, 2, 2) >= 0, "Undo Restores Deleted Map Load Tile")
+
+    Ok = Storage.SaveDocument(Town, "TownEditor.MapTileFixture", False)
+    Town.MapTileCount = 0
+    Ok = Storage.LoadDocument(Town, "TownEditor.MapTileFixture") And Ok
+
+    Call Check(Ok And Town.MapTileCount = 3 And
+        Links.DestinationAt(Town, -150.0, -150.0) = "Another Town", "Map Load Destinations Survive Native Save/Open")
 
 End Sub
 
@@ -342,6 +556,25 @@ Sub CheckEditing()
     Call Check(Ok And Guide.Ink.EntryCount = 2 And Town.Revision = Revision And
         Town.Surface.Revision = BeforeSurface And Not Document.Dirty(Town),
         "Clear Markers Is Undoable Without Mutating The Saved Town Or Terrain")
+
+    Guide.Selected[0] = True
+    Guide.Selected[1] = True
+    Ok = MarkerTools.Duplicate(Guide)
+
+    Call History.Record(Journal, Town, Guide.Ink)
+    Call Check(Ok And Guide.Ink.EntryCount = 4 And Guide.Selected[2] And Guide.Selected[3] And
+        Not Guide.Selected[0] And Guide.Ink.Markers[3].IsRectangle And
+        Guide.Ink.Markers[2].Last.X - Guide.Ink.Markers[2].First.X = 100.0,
+        "Guide Duplicate Copies The Selected Shapes And Selects Only The Copies")
+
+    Ok = History.Restore(Journal, Town, Guide.Ink, False)
+
+    Call MarkerTools.ClearSelection(Guide)
+    Call Check(Ok And Guide.Ink.EntryCount = 2 And Town.Revision = Revision,
+        "Undo Marker Duplication Preserves The Saved Town")
+    Call Check(MarkerTools.Hit(Guide, P.Vector(50.0, 23.12, 1.0), 3.0) = 0 And
+        MarkerTools.Hit(Guide, P.Vector(200.0, 23.12, 200.0), 3.0) = -1,
+        "Marker Selection Hits A Line Near Its Edge And Rejects Empty Ground")
 
     Guide.SnapMode = 2
     Point = Guides.Snap(Guide, P.Vector(99.0, 47.0, 2.0), 5.0)

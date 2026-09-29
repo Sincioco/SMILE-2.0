@@ -1,0 +1,145 @@
+''' Nonmodal save progress: expanded under file controls, compact beside other editor tools.
+Module Smile.Tools.TownFileDialog
+
+Option Explicit
+
+Import Smile.Tools.TownFileJobs As Files
+Import Smile.Tools.TownEditorPanel As Panel
+
+Private Function Expanded(ShowDetails As Boolean) As Boolean
+
+    Dim Result As Boolean
+
+    Result = ShowDetails And Window_Height() >= 980
+
+    Return Result
+
+End Function
+
+Private Function TopEdge(ShowDetails As Boolean) As Number
+
+    Dim Result As Number
+
+    If Expanded(ShowDetails) Then
+        Return 490
+    End If
+
+    Result = Window_Height() - 205
+
+    Return Result
+
+End Function
+
+Public Function Input(ByRef Value As Files.State, ShowDetails As Boolean) As Boolean
+
+    Dim X As Number
+    Dim Y As Number
+    Dim Bottom As Number
+    Dim Hovered As Boolean
+
+    If Files.BlocksEditing(Value) Then
+        Return True
+    End If
+
+    If Not Value.DialogVisible Then
+        Return False
+    End If
+
+    X = Window_Width() - 296
+    Y = TopEdge(ShowDetails)
+    Bottom = Y + 44
+
+    If Expanded(ShowDetails) Then
+        Bottom = Window_Height() - 276
+    End If
+
+    Hovered = Pointer_X() >= X And Pointer_X() < X + 283 And Pointer_Y() >= Y And Pointer_Y() < Bottom
+
+    If (Value.RequestId = 0 And
+        Hovered And
+        Pointer_Pressed(POINTER_PRIMARY) And
+        Pointer_X() >= X + 252 And
+        Pointer_Y() < Y + 24) Then
+        Value.DialogVisible = False
+    End If
+
+    Return Hovered
+
+End Function
+
+Public Sub Draw(ByRef Value As Files.State, ShowDetails As Boolean)
+
+    Dim X As Number
+    Dim Y As Number
+    Dim Height As Number
+    Dim Line As Number
+    Dim Title As Text
+    Dim BarColor As Number
+
+    If Not Value.DialogVisible Then
+        Return
+    End If
+
+    X = Window_Width() - 296
+    Y = TopEdge(ShowDetails)
+    Height = 44
+    Title = "Town Save"
+    BarColor = RGB(50, 220, 205)
+
+    If Value.Operation = Files.SAVE_BLENDER Then
+        Title = "Blender Save"
+    End If
+
+    If Value.RequestId = 0 Then
+
+        If Value.Failed Then
+            Title = Title + " Failed"
+            BarColor = RGB(255, 130, 100)
+        Else
+            Title = Title + " Complete"
+        End If
+
+    End If
+
+    If Expanded(ShowDetails) Then
+        Height = Window_Height() - 276 - Y
+    End If
+
+    Fill Rectangle X, Y, 283, Height, RGB(11, 25, 39)
+    Draw Rectangle X, Y, 283, Height, BarColor
+    Draw Text Title At X + 8, Y + 7 Size 13 Color BarColor
+    Draw Text Panel.NumberLabel(Value.Progress) + "%" At X + 210, Y + 7 Size 12 Color WHITE
+    Fill Rectangle X + 8, Y + 29, 266, 7, RGB(31, 49, 65)
+    Fill Rectangle X + 8, Y + 29, 266 * Value.Progress / 100, 7, BarColor
+
+    If Value.RequestId = 0 Then
+        Fill Rectangle X + 253, Y + 2, 27, 23, RGB(26, 87, 105)
+        Draw Text "X" At X + 261, Y + 6 Size 13 Color WHITE
+    End If
+
+    If Expanded(ShowDetails) Then
+
+        For Line = 0 To 4
+            Draw Text Text_Slice(Value.Message, Line * 36, 36) At X + 8, Y + 48 + Line * 15 Size 12 Color WHITE
+        End For
+
+        Draw Text "You can continue editing." At X + 8, Y + Height - 58 Size 12 Color BarColor
+        Title = Files.FileLabel(Value.Path)
+
+        For Line = 0 To 1
+            Draw Text Text_Slice(Title, Line * 38, 38) At X + 8, Y + Height - 37 + Line * 14 Size 11 Color RGB(155, 200, 210)
+        End For
+
+    Else If Value.Failed Then
+
+        Fill Rectangle 12, Window_Height() - 228, Min(900, X - 24), 78, RGB(11, 25, 39)
+
+        For Line = 0 To 3
+            Draw Text Text_Slice(Value.Message, Line * 100, 100) At 20, Window_Height() - 220 + Line * 17 Size 12 Color BarColor
+        End For
+
+    End If
+
+End Sub
+
+End Module

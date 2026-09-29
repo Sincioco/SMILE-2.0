@@ -11,7 +11,7 @@ Dim Key As Number
 Dim CloseRequested As Boolean
 Dim CloseDeferred As Boolean
 
-Game Window "SMILE 2.0 - 3D Viewer, Animation Editor" Size 1600 By 640
+Game Window "SMILE 2.0 - Sin Star I - Game Engine and Studio" Size 1440 By 960
 
 Call Host.Start(Viewer, NativeHost.TOWN_TAB, False, Window_Width(), Window_Height())
 

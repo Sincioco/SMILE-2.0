@@ -1,0 +1,89 @@
+''' Last successfully written path for each export format, retained across launches.
+Module Smile.Tools.TownFileLocations
+
+Option Explicit
+
+Private Dim Bytes[16384] As Number
+
+Public Function Remember(Path As Text, Blender As Boolean) As Boolean
+
+    Dim Index As Number
+    Dim Part As Number
+    Dim Code As Number
+    Dim Status As Number
+    Dim ByteCount As Number
+    Dim Key As Text
+    Dim Result As Boolean
+
+    Key = "TownEditor.File.LastTown"
+
+    If Blender Then
+        Key = "TownEditor.File.LastBlender"
+    End If
+
+    ByteCount = Text_Length(Path) * 4
+
+    If ByteCount < 4 Or ByteCount > 16380 Then
+        Return False
+    End If
+
+    For Index = 0 To Text_Length(Path) - 1
+
+        Code = Text_Code_At(Path, Index)
+
+        For Part = 0 To 3
+            Bytes[Index * 4 + Part] = Code Mod 256
+            Code = Code / 256
+        End For
+    End For
+
+    Save Data Bytes Count ByteCount To Key Status Status
+
+    Result = Status = DATA_STATUS_OK
+
+    Return Result
+
+End Function
+
+Public Function Recall(Blender As Boolean) As Text
+
+    Dim Index As Number
+    Dim Code As Number
+    Dim Status As Number
+    Dim ByteCount As Number
+    Dim Key As Text
+    Dim Result As Text
+
+    Key = "TownEditor.File.LastTown"
+
+    If Blender Then
+        Key = "TownEditor.File.LastBlender"
+    End If
+
+    Load Data Key Into Bytes Count ByteCount Status Status
+
+    If (Status <> DATA_STATUS_OK Or
+        ByteCount < 4 Or
+        ByteCount Mod 4 <> 0) Then
+        Return ""
+    End If
+
+    For Index = 0 To ByteCount / 4 - 1
+
+        Code = (Bytes[Index * 4] + Bytes[Index * 4 + 1] * 256 +
+            Bytes[Index * 4 + 2] * 65536 + Bytes[Index * 4 + 3] * 16777216)
+
+        If (Code < 32 Or
+            Code > 1114111 Or
+            (Code >= 55296 And Code <= 57343)) Then
+            Return ""
+        End If
+
+        Result = Result + Text_From_Code(Code)
+    End For
+
+    Return Result
+
+End Function
+
+End Module

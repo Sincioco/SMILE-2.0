@@ -273,6 +273,9 @@ internal sealed class MasmEmitter
         Line("EXTERN smile_file_import:PROC");
         Line("EXTERN smile_text_prompt:PROC");
         Line("EXTERN smile_file_pick:PROC");
+        foreach (var kind in new[] { SyntaxKind.DataFileStartKeyword, SyntaxKind.DataFileStatusKeyword,
+            SyntaxKind.DataFileMessageKeyword, SyntaxKind.DataFileProgressKeyword, SyntaxKind.LocalTimestampKeyword })
+            Line("EXTERN " + DataFileSemantics.NativeName(kind) + ":PROC");
         Line("EXTERN smile_text_from_code:PROC");
         if (_nativeWorkerScript != null) Line("EXTERN smile_native_worker_configure:PROC");
         if (_rememberWindowPlacement) Line("EXTERN smile_window_persistence_configure:PROC");
@@ -1913,6 +1916,18 @@ internal sealed class MasmEmitter
                 EmitExpression(call.Arguments[0].Expression);
                 Line("    mov rcx, rax");
                 CallAligned("smile_file_reveal");
+                break;
+            case SyntaxKind.DataFileStartKeyword:
+            case SyntaxKind.DataFileStatusKeyword:
+            case SyntaxKind.DataFileMessageKeyword:
+            case SyntaxKind.DataFileProgressKeyword:
+            case SyntaxKind.LocalTimestampKeyword:
+                foreach (var argument in call.Arguments)
+                {
+                    EmitExpression(argument.Expression);
+                    PushRax();
+                }
+                EmitNativeCall(DataFileSemantics.NativeName(call.Identifier.Kind), call.Arguments.Count);
                 break;
             case SyntaxKind.FilePickKeyword:
             case SyntaxKind.TextPromptKeyword:

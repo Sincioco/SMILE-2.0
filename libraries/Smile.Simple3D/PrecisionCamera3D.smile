@@ -490,6 +490,40 @@ Public Function KeepCursorAnchor(Camera As Precision3D.Camera3D,
 
 End Function
 
+''' Move an already composed orbit around an off-center world pivot without retargeting the shot.
+Public Function KeepOrbitAnchor(Reference As Precision3D.Camera3D,
+    Composed As Precision3D.Camera3D, Anchor As Precision3D.Vector3) As Precision3D.Camera3D
+
+    Dim Forward As Precision3D.Vector3
+    Dim RightValue As Precision3D.Vector3
+    Dim UpValue As Precision3D.Vector3
+    Dim NextForward As Precision3D.Vector3
+    Dim NextRight As Precision3D.Vector3
+    Dim NextUp As Precision3D.Vector3
+    Dim Offset As Precision3D.Vector3
+    Dim Rotated As Precision3D.Vector3
+    Dim Translation As Precision3D.Vector3
+    Dim Scale As Double
+
+    If (Not Basis(Reference, Forward, RightValue, UpValue) Or
+        Not Basis(Composed, NextForward, NextRight, NextUp)) Then
+        Return Composed
+    End If
+
+    Offset = Math3D.Subtract(Anchor, Reference.Target)
+    Scale = (Math3D.Distance(Composed.Position, Composed.Target) /
+        Max(0.01, Math3D.Distance(Reference.Position, Reference.Target)))
+    Rotated = Math3D.Add(Math3D.Scale(NextForward, Math3D.Dot(Offset, Forward)),
+        Math3D.Add(Math3D.Scale(NextRight, Math3D.Dot(Offset, RightValue)),
+        Math3D.Scale(NextUp, Math3D.Dot(Offset, UpValue))))
+    Translation = Math3D.Subtract(Offset, Math3D.Scale(Rotated, Scale))
+    Composed.Position = Math3D.Add(Composed.Position, Translation)
+    Composed.Target = Math3D.Add(Composed.Target, Translation)
+
+    Return Composed
+
+End Function
+
 ''' Whole logical pixels are a display boundary; the camera/world inputs stay continuous.
 Public Function ProjectPixel(Point As Precision3D.Vector3, Camera As Precision3D.Camera3D,
     ViewWidth As Number, ViewHeight As Number) As Core.ProjectedPoint3D
