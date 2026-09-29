@@ -6,70 +6,139 @@ Option Explicit
 Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownMapLoads As Links
 Import Smile.Tools.TownGuides As Guides
-Import Smile.Tools.TownDocumentStore As Storage
 Import Smile.Simple3D.SurfaceGrid3D As Grid
 Import Smile.Simple3D.Precision3D As P
 
-Public Function Edit(ByRef Town As Document.State, Point As P.Vector3, Tool As Number) As Text
+Public Type State
+    Drawing As Boolean
+    Pending As Boolean
+    Reassign As Boolean
+    First As P.Vector3
+    Last As P.Vector3
+    Message As Text
+End Type
+
+Public Sub Gesture(ByRef Value As State, ByRef Town As Document.State,
+    Point As P.Vector3, Available As Boolean, Pressed As Boolean, Held As Boolean, Tool As Number)
 
     Dim X As Number
     Dim Z As Number
     Dim Index As Number
-    Dim Name As Text
     Dim Ok As Boolean
 
-    X = Grid.CellX(Town.Surface, Point.X)
-    Z = Grid.CellZ(Town.Surface, Point.Z)
-    Index = Links.Find(Town, X, Z)
-
-    If Tool = 19 Then
-        Ok = Links.Remove(Town, X, Z)
-        Return "Map Load tile removed; terrain retained."
+    If Value.Pending Then
+        Return
     End If
 
-    Name = Links.Neighbor(Town, X, Z)
+    If Value.Drawing Then
 
-    If Tool = 18 And Index < 0 Then
-        Return "Click a yellow Map Load tile to reassign its connected area."
+        If Available Then
+            Value.Last = Point
+        End If
+
+        If Not Held Then
+
+            Value.Drawing = False
+            Value.Pending = True
+            Value.Message = "Choose the destination map."
+
+        End If
+
+    Else If Available And Pressed Then
+
+        X = Grid.CellX(Town.Surface, Point.X)
+        Z = Grid.CellZ(Town.Surface, Point.Z)
+        Index = Links.Find(Town, X, Z)
+
+        If Tool = 19 Then
+
+            Ok = Links.Remove(Town, X, Z)
+            Value.Message = "Map Load tile removed; terrain retained."
+
+        Else If Tool = 18 And Index < 0 Then
+
+            Value.Message = "Click a yellow tile to reassign its area."
+
+        Else
+
+            Value.First = Point
+            Value.Last = Point
+            Value.Reassign = Tool = 18
+            Value.Pending = Value.Reassign
+            Value.Drawing = Not Value.Reassign
+
+        End If
+
     End If
 
-    If Text_Length(Name) = 0 Or Tool = 18 Then
+End Sub
 
-        Name = Text_Prompt("Map Load Destination", "Enter the saved town/map name for this connected area.", Name)
+Public Function Apply(ByRef Value As State, ByRef Town As Document.State, Name As Text) As Boolean
 
-        If Text_Length(Name) = 0 Then
-            Return "Canceled; no map tiles changed."
-        End If
+    Dim X0 As Number
+    Dim Z0 As Number
+    Dim X1 As Number
+    Dim Z1 As Number
+    Dim Index As Number
+    Dim Ok As Boolean
 
-        If Not Document.ValidName(Name) Or Name = Town.Name Then
-            Return "Choose a different saved town/map."
-        End If
-
-        If (Not Storage.Exists("TownEditor.Recovery." + Name) And
-            Not Storage.Exists("TownEditor.Town." + Name)) Then
-            Return "Map not found. Open or save that town in the editor first."
-        End If
-
+    If Not Value.Pending Then
+        Return False
     End If
 
-    If Tool = 18 Then
+    ' The session persists the chosen open map before applying this gesture.
 
-        Call Links.AssignConnected(Town, Index, Name)
+    If Not Document.ValidName(Name) Or Name = Town.Name Then
+        Value.Message = "Choose a different destination map."
+        Return False
+    End If
+
+    X0 = Grid.CellX(Town.Surface, Min(Value.First.X, Value.Last.X))
+    Z0 = Grid.CellZ(Town.Surface, Min(Value.First.Z, Value.Last.Z))
+    X1 = Grid.CellX(Town.Surface, Max(Value.First.X, Value.Last.X))
+    Z1 = Grid.CellZ(Town.Surface, Max(Value.First.Z, Value.Last.Z))
+
+    If Value.Reassign Then
+
+        Index = Links.Find(Town, X0, Z0)
+        Ok = Index >= 0
+
+        If Ok Then
+            Call Links.AssignConnected(Town, Index, Name)
+        End If
 
     Else
-        Ok = Links.Place(Town, X, Z, Name)
 
-        If Not Ok Then
-            Return "Could not place tile; check map bounds or the 4096-tile limit."
-        End If
+        Ok = Links.PlaceRectangle(Town, X0, Z0, X1, Z1, Name)
 
     End If
 
-    Name = "Map Load: " + Name
+    Value.Message = "Area exceeds map bounds or 4096 tiles."
 
-    Return Name
+    If Ok Then
+        Value.Pending = False
+        Value.Message = "Map Load: " + Name
+    End If
+
+    Return Ok
 
 End Function
+
+Public Sub DrawPreview(ByRef Value As State, View As P.Camera3D)
+
+    Dim Mark As Guides.Marker
+
+    If Value.Drawing Or Value.Pending Then
+
+        Mark.First = Value.First
+        Mark.Last = Value.Last
+        Mark.IsRectangle = True
+
+        Call Guides.DrawMarker(Mark, View, RGB(255, 220, 40))
+
+    End If
+
+End Sub
 
 Public Sub Draw(ByRef Town As Document.State, View As P.Camera3D, RightEdge As Number)
 

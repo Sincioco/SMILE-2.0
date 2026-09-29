@@ -1,5 +1,56 @@
 # Character Viewer Architecture
 
+## Current: explicit permanent map updates
+
+TownLibrary owns startup keys for Neris Town, Neris Spaceport and Horizon Airport.
+It preserves the previous destination under a named recovery key before atomically
+writing the permanent document. TownTabs owns replacement and activation of the
+chosen tab, preserving other maps and any source copy; failed persistence leaves
+the live document and destination unchanged. Startup and named map recovery prefer
+these keys, with existing recovery/named-save fallbacks for older installations.
+TownEditorPanel presents one destination chooser; TownEditorSession only delegates
+and refreshes rendering/history, preserving temporary guides. Blender remains an
+explicit immutable-snapshot export, independent of permanent map persistence.
+
+TownSessionTests exercises all three copied-map promotions, fresh startup recovery,
+previous-map backups, invalid destination and failed-serialization preservation.
+No runtime, compiler, bootstrap, dependencies or format changes are needed. The
+existing persistence owners grow by 63 lines (TownLibrary) and 71 (TownTabs).
+No guardrail was changed.
+
+## Current: guide gestures, map destinations and minimap travel
+
+TownMarkerTools owns rubber selection and grouped marker movement; TownHistory
+records one change on release. TownEditorPanel owns the temporary Hide Guides
+display preference. TownMapLoadTools owns the rectangle/reassignment gesture and
+preview, while TownMapLoads applies the connected tile mutation. The session lists
+other open maps and persists the chosen destination before committing its name;
+the gesture owner has no filesystem dependency. Cancel discards the preview.
+
+TownDocumentMap owns minimap zoom and visible bounds, shared by rendering and
+click conversion. TownRoadTravel owns the bounded goal-directed heap search and
+road-center waypoints; TownDocumentNavigation caches object world bounds to reject
+distant collision candidates before transforming points into object coordinates.
+The existing exact collision checks still decide traversability. No compiler,
+runtime, startup or dependency changes are required.
+
+Growth against 619ea1b4: TownEditor adds 57 net lines, the session 76 and panel 36.
+Focused owners add 94 (minimap), 56 (navigation), 176 (travel), 58 (markers),
+69 (map-load gesture) and 67 (map-load data); existing regression fixtures add 212.
+No architectural limits or exclusions changed. Full native foundations, routes,
+rendering and session checks pass, including all permanent map updates, group
+selection/Undo, rectangle-first map loading, zoom picking and wide-road centering.
+Physical multi-marker drag acceptance remains subject to the automation limitation
+documented below; gesture-state regressions do not substitute for that observation.
+
+Live acceptance verified the native file picker, promotion of Sin's 01:11 snapshot
+to Neris Town, the recovery backup, guide visibility, destination choice after a
+Map Load gesture and cancellation, minimap zoom in/out, and a marked road trip
+ending with `Destination reached` at road center X=0. A full decoded comparison
+confirmed every authored field in the permanent town matches the 01:11 snapshot.
+The complete native publication contains 333 verified assets; style and diff
+checks pass. Blender's unsaved session was not touched.
+
 ## Current: section edits and independent Royal Court placement
 
 TownDocument owns the single optional Royal Court placement. TWN5 appends its X/Z
@@ -71,7 +122,7 @@ TownGuideFiles owns independent `.guide` serialization and transfer state. TownG
 TownMarkerTools and TownTileGuides own guide geometry, marker manipulation and actual
 cell/footprint display. TownEditor routes commands; TownHistory retains marker undo.
 Guide data never enters town or Blender payloads. TownMapLoads/TownMapLoadTools own
-named map-trigger tiles. TownRoadTravel owns one incremental road/bridge BFS and its
+named map-trigger tiles. TownRoadTravel owns one incremental road/bridge search and its
 journey state; the session passes the selected document and party position.
 
 TownFileJobs owns immutable save snapshots and completion bookkeeping. TownFileDialog

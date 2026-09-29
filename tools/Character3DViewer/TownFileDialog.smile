@@ -21,7 +21,7 @@ Private Function TopEdge(ShowDetails As Boolean) As Number
     Dim Result As Number
 
     If Expanded(ShowDetails) Then
-        Return 490
+        Return 530
     End If
 
     Result = Window_Height() - 205

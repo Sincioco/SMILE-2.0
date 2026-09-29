@@ -1,5 +1,11 @@
 # Sin Star I
 
+Sin's September 30 direction: Sin Star I will contain **three worlds**. Each world
+can contain multiple playable town/location maps; a world is not synonymous with
+one map tab. World names and map membership have not yet been assigned. The current
+Town Editor World Map stores map references and connection diagrams; playable
+travel is configured separately through Map Load areas or existing road gateways.
+
 Sin Star I opens with **Characters**, **Battle**, **Battle Simulations**, **Legacy**, and **Exit**.
 The [playable native battle](Battle/README.md) provides turn-based orders, remembered
 attacks, magic, defense, LB and individual escape for four level-1 heroes against

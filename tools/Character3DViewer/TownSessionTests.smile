@@ -9,6 +9,11 @@ Import Smile.Tools.NerisTownInspectionTests As Inspection
 Import Smile.Tools.TownEditor As Commands
 Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownTabs As Tabs
+Import Smile.Tools.TownLibrary As Library
+Import Smile.Tools.TownDocumentStore As Storage
+Import Smile.Tools.TownMapLoadTools As MapLoadTools
+Import Smile.Tools.TownMapLoads As MapLoads
+Import Smile.Tools.TownDocumentMap As DocumentMap
 Import Smile.Tools.TownCatalogData As Catalog
 Import Smile.Tools.TownEditorPanel As Panel
 Import Smile.Tools.TownSunControls As Sun
@@ -49,6 +54,7 @@ Dim OpenTabs As Tabs.State
 Dim SecondTown As Document.State
 Dim AirportMapPoint As P.Vector3
 Dim DustFlights As Traffic.State
+Dim MapGesture As MapLoadTools.State
 
 Game Window "Town Editor Session Check" Size 1100 By 720
 
@@ -255,6 +261,8 @@ Call Check(OpenTabs.TabCount = 1 And Draft.Name = "Tab One", "Closing Other Tab 
 Ok = Tabs.SelectTab(OpenTabs, Draft, 0, True)
 
 Call Check(Not Ok And OpenTabs.TabCount = 1, "Permanent Neris Tab Cannot Close")
+Call CheckPermanentUpdates()
+Call CheckGuideAndMapControls()
 
 If Failures = 0 Then
     Print "PASS Town Editor Session"
@@ -268,6 +276,147 @@ Sub Check(Condition As Boolean, Label As Text)
         Print "FAIL " + Label
         Failures = Failures + 1
     End If
+
+End Sub
+
+Sub CheckPermanentUpdates()
+
+    Dim Destination As Text
+    Dim MapIndex As Number
+    Dim Saved As Boolean
+
+    ' Seed all startup maps without changing the real Studio application identity.
+
+    For MapIndex = 0 To 2
+
+        Destination = "Neris Town"
+
+        If MapIndex = 1 Then
+            Destination = "Neris Spaceport"
+        Else If MapIndex = 2 Then
+            Destination = "Horizon Airport"
+        End If
+
+        Saved = Document.Blank(Draft, Destination, 12, 12, 20.0)
+        Draft.Light.Ambient = 31 + MapIndex
+        Saved = Library.Remember(Draft) And Saved
+
+        Call Check(Saved, "Permanent Fixture Saves " + Destination)
+    End For
+
+    Saved = Library.Recover(Draft)
+    OpenTabs.TabCount = 0
+
+    Call Tabs.Ensure(OpenTabs, Draft)
+    Call Check(Saved And OpenTabs.TabCount = 3, "Startup Restores All Three Permanent Maps")
+
+    For MapIndex = 0 To 2
+
+        Destination = OpenTabs.Documents[MapIndex].Name
+        SecondTown = OpenTabs.Documents[MapIndex]
+        Saved = Tabs.Add(OpenTabs, Draft, SecondTown)
+        Draft.Light.Ambient = 61 + MapIndex
+        Draft.CourtOffsetX = 125.5 + ToDouble(MapIndex)
+        Draft.Revision = Draft.Revision + 1
+        Saved = Tabs.UpdatePermanent(OpenTabs, Draft, Destination) And Saved
+
+        Call Check(Saved And OpenTabs.Active = MapIndex And
+            Draft.Name = Destination And Not Document.Dirty(Draft),
+            "Reopened Copy Updates Its Permanent Tab: " + Destination)
+
+        Saved = Library.RecoverNamed(SecondTown, Destination)
+
+        Call Check(Saved And SecondTown.Light.Ambient = 61 + MapIndex And
+            SecondTown.CourtOffsetX = 125.5 + ToDouble(MapIndex),
+            "Permanent Contents Survive A Fresh Load: " + Destination)
+
+        Saved = Storage.LoadDocument(SecondTown,
+            "TownEditor.Recovery." + Destination + " Before Permanent Update")
+
+        Call Check(Saved And SecondTown.Light.Ambient = 31 + MapIndex,
+            "Previous Map Is Recoverable: " + Destination)
+    End For
+
+    Saved = Library.Recover(Draft)
+    OpenTabs.TabCount = 0
+
+    Call Tabs.Ensure(OpenTabs, Draft)
+    Call Check(Saved And OpenTabs.TabCount = 3 And
+        OpenTabs.Documents[0].Light.Ambient = 61 And
+        OpenTabs.Documents[1].Light.Ambient = 62 And
+        OpenTabs.Documents[2].Light.Ambient = 63,
+        "Fresh Startup Retains All Three Independent Permanent Updates")
+
+    Saved = Tabs.UpdatePermanent(OpenTabs, Draft, "Unknown Map")
+
+    Call Check(Not Saved And OpenTabs.Active = 0 And Draft.Name = "Neris Town",
+        "Invalid Permanent Destination Leaves Current Edits And Tabs Intact")
+
+    Draft.CourtOffsetX = 1000000001.0
+    Saved = Tabs.UpdatePermanent(OpenTabs, Draft, "Neris Spaceport")
+
+    Call Check(Not Saved And OpenTabs.Active = 0 And
+        Draft.CourtOffsetX = 1000000001.0 And OpenTabs.Documents[1].Light.Ambient = 62,
+        "Failed Permanent Serialization Retains Current Edits And Destination")
+
+    Saved = Library.RecoverNamed(SecondTown, "Neris Spaceport")
+
+    Call Check(Saved And SecondTown.CourtOffsetX = 126.5,
+        "Failed Update Does Not Replace Startup Data")
+
+End Sub
+
+Sub CheckGuideAndMapControls()
+
+    Dim Chosen As Boolean
+    Dim Point As P.Vector3
+    Dim Other As P.Vector3
+    Dim InkCount As Number
+    Dim Ignored As Number
+
+    Chosen = Document.Blank(Draft, "Map Choice Fixture", 12, 12, 20.0)
+    InkCount = Controls.Guide.Ink.EntryCount
+    Controls.Ui.HideGuides = False
+    Ignored = Commands.Command(Controls, Draft, 96)
+
+    Call Check(Controls.Ui.HideGuides And Controls.Guide.Ink.EntryCount = InkCount,
+        "Hide Guides Retains Every Guide And Its Settings")
+
+    Ignored = Commands.Command(Controls, Draft, 96)
+
+    Call Check(Not Controls.Ui.HideGuides, "Show Guides Restores Visibility")
+    Call MapLoadTools.Gesture(MapGesture, Draft, P.Vector(-110.0, 23.12, -110.0),
+        True, True, True, 17)
+    Call Check(MapGesture.Drawing And Not MapGesture.Pending And Draft.MapTileCount = 0,
+        "Map Load Starts A Rectangle Without Asking For A Destination")
+    Call MapLoadTools.Gesture(MapGesture, Draft, P.Vector(-90.0, 23.12, -90.0),
+        True, False, False, 17)
+    Call Check(MapGesture.Pending And Draft.MapTileCount = 0,
+        "Released Rectangle Waits For A Destination Choice Without Painting")
+
+    Chosen = MapLoadTools.Apply(MapGesture, Draft, "Neris Spaceport")
+
+    Call Check(Chosen And Draft.MapTileCount = 4 And Not MapGesture.Pending,
+        "Choosing An Available Map Commits The Complete Rectangle")
+    Call MapLoadTools.Gesture(MapGesture, Draft, P.Vector(-110.0, 23.12, -110.0),
+        True, True, True, 18)
+
+    Chosen = MapLoadTools.Apply(MapGesture, Draft, "Horizon Airport")
+
+    Call Check(Chosen And MapLoads.DestinationAt(Draft, -90.0, -90.0) = "Horizon Airport",
+        "Map Choice Reassigns The Existing Connected Area")
+    Call DocumentMap.SetZoom(Draft, P.Vector(0.0, 0.0, 0.0), 1)
+
+    Point = DocumentMap.Pick(Draft, Window_Width() - 148, 387)
+    Other = DocumentMap.Pick(Draft, Window_Width() - 20, 387)
+
+    Call Check(Abs(Point.X) < 0.01 And Abs(Point.Z) < 0.01 And Other.X = 120.0,
+        "Minimap Picks Match The Relocated Map At Full Extent")
+    Call DocumentMap.SetZoom(Draft, P.Vector(0.0, 0.0, 0.0), 4)
+
+    Other = DocumentMap.Pick(Draft, Window_Width() - 20, 387)
+
+    Call Check(Other.X = 30.0, "Zoomed Minimap Picks Use The Visible World Extent")
 
 End Sub
 

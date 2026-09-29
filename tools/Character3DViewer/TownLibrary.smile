@@ -6,6 +6,71 @@ Option Explicit
 Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownDocumentStore As Storage
 
+Public Function PermanentKey(Name As Text) As Text
+
+    Dim Key As Text
+
+    If Name = "Neris Town" Then
+        Return "TownEditor.PermanentNeris"
+    End If
+
+    If Name = "Neris Spaceport" Or Name = "Horizon Airport" Then
+        Key = "TownEditor.Permanent." + Name
+    End If
+
+    Return Key
+
+End Function
+
+Public Function RecoverNamed(ByRef Town As Document.State, Name As Text) As Boolean
+
+    Dim Ok As Boolean
+    Dim Key As Text
+
+    Key = PermanentKey(Name)
+
+    If Text_Length(Key) > 0 Then
+        Ok = Storage.LoadDocument(Town, Key, True)
+    End If
+
+    If Not Ok Then
+        Ok = Storage.LoadDocument(Town, "TownEditor.Recovery." + Name, True)
+    End If
+
+    If Not Ok Then
+        Ok = Storage.LoadDocument(Town, "TownEditor.Town." + Name)
+    End If
+
+    Return Ok
+
+End Function
+
+''' The single permanent key is the commit point; retain the previous map first.
+Public Function UpdatePermanent(ByRef Incoming As Document.State,
+    ByRef Previous As Document.State, Name As Text) As Boolean
+
+    Dim Key As Text
+    Dim Ok As Boolean
+
+    Key = PermanentKey(Name)
+
+    If Text_Length(Key) = 0 Or Incoming.Name <> Name Then
+        Return False
+    End If
+
+    Ok = Storage.SaveDocument(Previous,
+        "TownEditor.Recovery." + Name + " Before Permanent Update", False)
+
+    If Not Ok Then
+        Return False
+    End If
+
+    Ok = Storage.SaveDocument(Incoming, Key, False)
+
+    Return Ok
+
+End Function
+
 Public Function Recover(ByRef Town As Document.State) As Boolean
 
     Dim Ok As Boolean
@@ -31,12 +96,14 @@ End Function
 Public Function Remember(ByRef Town As Document.State) As Boolean
 
     Dim Ok As Boolean
+    Dim Key As Text
 
     Ok = Storage.SaveDocument(Town, "TownEditor.Recovery." + Town.Name, False)
     Ok = Storage.SaveDocument(Town, "TownEditor.Working", False) And Ok
+    Key = PermanentKey(Town.Name)
 
-    If Town.Name = "Neris Town" Then
-        Ok = Storage.SaveDocument(Town, "TownEditor.PermanentNeris", False) And Ok
+    If Text_Length(Key) > 0 Then
+        Ok = Storage.SaveDocument(Town, Key, False) And Ok
     End If
 
     Return Ok
@@ -77,11 +144,7 @@ Public Function OpenNamed(ByRef Town As Document.State, Name As Text) As Boolean
         Return False
     End If
 
-    Ok = Storage.LoadDocument(Town, "TownEditor.Recovery." + Name, True)
-
-    If Not Ok Then
-        Ok = Storage.LoadDocument(Town, "TownEditor.Town." + Name)
-    End If
+    Ok = RecoverNamed(Town, Name)
 
     Return Ok
 

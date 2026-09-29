@@ -29,22 +29,45 @@ own saves; do not substitute a test executable for the user's working publicatio
 The standard window starts at 1440 × 960 when there is no remembered placement.
 Use a taller window for the full editor palette; very short windows can crowd it.
 
+**Permanent maps:** Files → Update Permanent Map... → choose Neris Town,
+Neris Spaceport or Horizon Airport. This replaces that startup tab with the
+currently edited document, including a copy opened as "Neris Town 2". A copy tab
+remains available; the chosen permanent tab becomes active. The previous destination
+is available through Open Recovery... as `<map name> Before Permanent Update`.
+Only successful native persistence switches the live tab. Ordinary editing and
+Save For Viewer continue to preserve each permanent map independently.
+
+Save For Viewer writes a portable `.town` version. Open For Viewer presents the
+native `.town` file picker; Recent Versions lists previous exports. Opening a version creates a
+separate tab; use Update Permanent Map to adopt it as a startup map. Save For Blender
+rebuilds a separate `.blend` snapshot from the immutable authored templates plus
+the editor document, verifies it, and replaces the selected export. There is no
+automatic two-way synchronization with an open Blender scene. Later editor changes
+need another Blender export; permanent updates never overwrite Blender files.
+
 **Guides:** enter grid spacing from 0.001 to 10,000 metres; `/2` and `x2` adjust it.
 Actual Tile Grid can show all cells, Ground, Water, Road, Buildings or Decor.
 The imported town has nonuniform terrain cell boundaries. That guide shows those
 actual boundaries; the regular Guide Grid provides a uniform alignment lattice.
-Markers support selection, dragging, duplication and undo. `R` turns the editor
+Hide Guides / Show Guides toggles all guide overlays without deleting them.
+With Select/Move active, drag empty space to rubber-select markers, then drag a
+selected marker to move the group. Ctrl adds to the selection. Markers support
+duplication and undo. `R` turns the editor
 view clockwise 90 degrees. Surfaces starts with Rectangle. Automatic idle orbit
 is suspended while editing; explicit Orbit remains available.
 
 **Sun:** Save As Day and Save As Night preserve custom presets in the town document.
 Map statistics use U.S. grouping and include area, length and width in metres.
-They move left of the open editor so they remain readable.
+They appear in the upper-right and move left of the open editor so they remain readable.
 
 **Travel:** click a connected road on the minimap to request a road/bridge-only
-route. The destination is marked and the camera follows the party. Manual movement,
+route. The destination is marked and the camera follows the party. The minimap's
+minus/plus buttons or mouse wheel zoom from the whole map to 8× around the party.
+Routes use a time-budgeted, goal-directed road search and walk along the middle
+of road stretches, retaining safe turns at junctions. Manual movement,
 editing, a map change or a blocked route cancels the trip. Map Load surface markers
-store a named destination; connected painted markers inherit it. They can be
+store a named destination. Draw the yellow rectangle first, then choose a destination
+from the other open map tabs. Connected painted markers inherit it. They can be
 reassigned or deleted and are saved separately from the underlying terrain material.
 
 **Royal Court:** Items → Buildings → Royal Court opens Select / Move,
@@ -89,7 +112,7 @@ or existing viewing distance supplies the pivot. Follow Party middle/arrow orbit
 keeps Arin as its pivot without moving him to the middle of the screen. Tab switches
 show only the retained static background and loading status until the whole map
 and its initial camera are ready. Ctrl+click outside the editor relocates
-the whole party to the nearest walkable road. Bottom diagnostics show map triangles
+the whole party to the nearest walkable road. Upper-right statistics show map triangles
 and render vertices per submitted mesh instance, including offscreen geometry and
 actors, excluding particles and repeated shadow/reflection passes.
 

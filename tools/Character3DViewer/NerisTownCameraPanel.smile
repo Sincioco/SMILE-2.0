@@ -235,17 +235,17 @@ Public Sub Draw(ByRef Value As State, ByRef View As Arena.State,
     Call Diagnostics(Value.FrameRate, View.LiveCamera, Horizontal, Vertical,
         Orbiting, PartyCamera, DroneEnabled, FlyInspect)
 
-    Fill Rectangle StatsX, Window_Height() - 252, 326, 92, RGB(12, 20, 32) Opacity 80
-    Draw Text "Map Polygons (Triangles)" At StatsX + 8, Window_Height() - 248 Size 11 Color LIGHT_GRAY
-    Draw Text CountLabel(Value.MapTriangles) At StatsX + 198, Window_Height() - 248 Size 11 Color CYAN
-    Draw Text "Map Vertices" At StatsX + 8, Window_Height() - 230 Size 11 Color LIGHT_GRAY
-    Draw Text CountLabel(Value.MapVertices) At StatsX + 198, Window_Height() - 230 Size 11 Color CYAN
-    Draw Text "Map Area (m²)" At StatsX + 8, Window_Height() - 212 Size 11 Color LIGHT_GRAY
-    Draw Text MeasureLabel(WidthMeters * LengthMeters) At StatsX + 198, Window_Height() - 212 Size 11 Color CYAN
-    Draw Text "Map Length (m)" At StatsX + 8, Window_Height() - 194 Size 11 Color LIGHT_GRAY
-    Draw Text MeasureLabel(LengthMeters) At StatsX + 198, Window_Height() - 194 Size 11 Color CYAN
-    Draw Text "Map Width (m)" At StatsX + 8, Window_Height() - 176 Size 11 Color LIGHT_GRAY
-    Draw Text MeasureLabel(WidthMeters) At StatsX + 198, Window_Height() - 176 Size 11 Color CYAN
+    Fill Rectangle StatsX, 132, 326, 92, RGB(12, 20, 32) Opacity 80
+    Draw Text "Map Polygons (Triangles)" At StatsX + 8, 136 Size 11 Color LIGHT_GRAY
+    Draw Text CountLabel(Value.MapTriangles) At StatsX + 198, 136 Size 11 Color CYAN
+    Draw Text "Map Vertices" At StatsX + 8, 154 Size 11 Color LIGHT_GRAY
+    Draw Text CountLabel(Value.MapVertices) At StatsX + 198, 154 Size 11 Color CYAN
+    Draw Text "Map Area (m²)" At StatsX + 8, 172 Size 11 Color LIGHT_GRAY
+    Draw Text MeasureLabel(WidthMeters * LengthMeters) At StatsX + 198, 172 Size 11 Color CYAN
+    Draw Text "Map Length (m)" At StatsX + 8, 190 Size 11 Color LIGHT_GRAY
+    Draw Text MeasureLabel(LengthMeters) At StatsX + 198, 190 Size 11 Color CYAN
+    Draw Text "Map Width (m)" At StatsX + 8, 208 Size 11 Color LIGHT_GRAY
+    Draw Text MeasureLabel(WidthMeters) At StatsX + 198, 208 Size 11 Color CYAN
 
 End Sub
 

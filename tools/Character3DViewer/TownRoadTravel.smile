@@ -1,4 +1,4 @@
-''' One active road journey. Search is budgeted across frames; movement uses normal party collision.
+''' One active road journey. Goal-directed search is time-budgeted; movement uses normal collision.
 Module Smile.Tools.TownRoadTravel
 
 Option Explicit
@@ -12,7 +12,7 @@ Import Smile.Tools.TownDocumentNavigation As Navigation
 Private Dim Surface As Grid.State
 Private Dim Parents[262144] As Number
 Private Dim Queue[262144] As Number
-Private Dim Head As Number
+Private Dim Scores[262144] As Double
 Private Dim Tail As Number
 Private Dim GoalCell As Number
 Private Dim Cursor As Number
@@ -23,6 +23,8 @@ Private Dim Destination As P.Vector3
 Private Dim Previous As P.Vector3
 Private Dim Stalled As Number
 Private Dim Notice As Text
+Private Dim WaypointCursor As Number
+Private Dim Waypoint As P.Vector3
 
 Public Sub Cancel(Optional Message As Text = "")
 
@@ -80,7 +82,8 @@ Private Function Road(X As Number, Z As Number) As Boolean
 
 End Function
 
-Private Function ClearSegment(First As P.Vector3, Last As P.Vector3) As Boolean
+Private Function ClearSegment(First As P.Vector3, Last As P.Vector3,
+    Optional RequireRoad As Boolean = True) As Boolean
 
     Dim Steps As Number
     Dim Index As Number
@@ -92,13 +95,165 @@ Private Function ClearSegment(First As P.Vector3, Last As P.Vector3) As Boolean
 
         Point = M.Add(First, M.Scale(M.Subtract(Last, First), ToDouble(Index) / ToDouble(Steps)))
 
-        If Not Navigation.CanStand(Point.X, Point.Z) Then
+        If (Not Navigation.CanStand(Point.X, Point.Z) Or
+            (RequireRoad And Not Road(Grid.CellX(Surface, Point.X), Grid.CellZ(Surface, Point.Z)))) Then
             Return False
         End If
 
     End For
 
     Return True
+
+End Function
+
+Private Sub Push(Cell As Number)
+
+    Dim Slot As Number
+    Dim Parent As Number
+    Dim Point As P.Vector3
+    Dim Goal As P.Vector3
+
+    Point = Center(Cell)
+    Goal = Center(GoalCell)
+    Scores[Cell] = Abs(Point.X - Goal.X) + Abs(Point.Z - Goal.Z)
+    Slot = Tail
+    Tail = Tail + 1
+
+    Do
+
+        If Not (Slot > 0) Then
+            Exit Do
+        End If
+
+        Parent = (Slot - 1) / 2
+
+        If Scores[Queue[Parent]] <= Scores[Cell] Then
+            Exit Do
+        End If
+
+        Queue[Slot] = Queue[Parent]
+        Slot = Parent
+
+    Loop
+
+    Queue[Slot] = Cell
+
+End Sub
+
+Private Function Pop() As Number
+
+    Dim Result As Number
+    Dim Last As Number
+    Dim Slot As Number
+    Dim Child As Number
+
+    Result = Queue[0]
+    Tail = Tail - 1
+    Last = Queue[Tail]
+
+    Do
+
+        If Not (Slot * 2 + 1 < Tail) Then
+            Exit Do
+        End If
+
+        Child = Slot * 2 + 1
+
+        If Child + 1 < Tail And Scores[Queue[Child + 1]] < Scores[Queue[Child]] Then
+            Child = Child + 1
+        End If
+
+        If Scores[Last] <= Scores[Queue[Child]] Then
+            Exit Do
+        End If
+
+        Queue[Slot] = Queue[Child]
+        Slot = Child
+
+    Loop
+
+    Queue[Slot] = Last
+
+    Return Result
+
+End Function
+
+Private Function LaneCenter(Cell As Number) As P.Vector3
+
+    Dim X As Number
+    Dim Z As Number
+    Dim ColumnStart As Number
+    Dim ColumnEnd As Number
+    Dim RowStart As Number
+    Dim RowEnd As Number
+    Dim Width As Double
+    Dim Depth As Double
+    Dim Result As P.Vector3
+
+    X = Cell Mod Surface.Columns
+    Z = Cell / Surface.Columns
+    ColumnStart = X
+    ColumnEnd = X
+    RowStart = Z
+    RowEnd = Z
+
+    Do
+
+        If Not (ColumnStart > 0 And Road(ColumnStart - 1, Z)) Then
+            Exit Do
+        End If
+
+        ColumnStart = ColumnStart - 1
+
+    Loop
+
+    Do
+
+        If Not (ColumnEnd + 1 < Surface.Columns And Road(ColumnEnd + 1, Z)) Then
+            Exit Do
+        End If
+
+        ColumnEnd = ColumnEnd + 1
+
+    Loop
+
+    Do
+
+        If Not (RowStart > 0 And Road(X, RowStart - 1)) Then
+            Exit Do
+        End If
+
+        RowStart = RowStart - 1
+
+    Loop
+
+    Do
+
+        If Not (RowEnd + 1 < Surface.Rows And Road(X, RowEnd + 1)) Then
+            Exit Do
+        End If
+
+        RowEnd = RowEnd + 1
+
+    Loop
+
+    Width = Surface.XEdges[ColumnEnd + 1] - Surface.XEdges[ColumnStart]
+    Depth = Surface.ZEdges[RowEnd + 1] - Surface.ZEdges[RowStart]
+    Result = Center(Cell)
+
+    ' At junctions retain the safe cell turn instead of centering across another road.
+
+    If Width < Depth * 0.5 Then
+        Result.X = (Surface.XEdges[ColumnStart] + Surface.XEdges[ColumnEnd + 1]) * 0.5
+    Else If Depth < Width * 0.5 Then
+        Result.Z = (Surface.ZEdges[RowStart] + Surface.ZEdges[RowEnd + 1]) * 0.5
+    End If
+
+    If Not ClearSegment(Center(Cell), Result) Then
+        Result = Center(Cell)
+    End If
+
+    Return Result
 
 End Function
 
@@ -129,8 +284,9 @@ Public Function Begin(ByRef Town As Document.State, Leader As P.Vector3,
 
     StartCell = Grid.CellZ(Surface, StartPoint.Z) * Surface.Columns + Grid.CellX(Surface, StartPoint.X)
     GoalCell = Grid.CellZ(Surface, Destination.Z) * Surface.Columns + Grid.CellX(Surface, Destination.X)
+    Destination = LaneCenter(GoalCell)
 
-    If (Not ClearSegment(Leader, Center(StartCell)) Or
+    If (Not ClearSegment(Leader, Center(StartCell), False) Or
         Not ClearSegment(Center(GoalCell), Destination)) Then
         Notice = "The nearest road is obstructed."
         Return False
@@ -142,8 +298,8 @@ Public Function Begin(ByRef Town As Document.State, Leader As P.Vector3,
 
     Parents[StartCell] = -1
     Queue[0] = StartCell
-    Head = 0
     Tail = 1
+    WaypointCursor = -2
     Stage = 1
     Revision = Town.Revision
     TownName = Town.Name
@@ -186,8 +342,8 @@ Private Sub Visit(X As Number, Z As Number, FromCell As Number)
     End If
 
     Parents[Cell] = FromCell + 1
-    Queue[Tail] = Cell
-    Tail = Tail + 1
+
+    Call Push(Cell)
 
 End Sub
 
@@ -197,17 +353,19 @@ Private Sub Search()
     Dim Cell As Number
     Dim X As Number
     Dim Z As Number
+    Dim Started As Number
 
-    For Work = 0 To 127
+    Started = Timer()
 
-        If Head = Tail Then
+    For Work = 0 To 2047
+
+        If Tail = 0 Then
             Call Cancel("That road is disconnected or obstructed.")
 
             Return
         End If
 
-        Cell = Queue[Head]
-        Head = Head + 1
+        Cell = Pop()
 
         If Cell = GoalCell Then
 
@@ -233,6 +391,11 @@ Private Sub Search()
         Call Visit(X + 1, Z, Cell)
         Call Visit(X, Z - 1, Cell)
         Call Visit(X, Z + 1, Cell)
+
+        If Timer() - Started >= 3 Then
+            Return
+        End If
+
     End For
 
 End Sub
@@ -261,12 +424,25 @@ Public Function Direction(ByRef Town As Document.State, Leader As P.Vector3,
         Return Result
     End If
 
-    Point = Destination
+    If WaypointCursor <> Cursor Then
 
-    If Cursor >= 0 Then
-        Point = Center(Queue[Cursor])
+        Waypoint = Destination
+
+        If Cursor >= 0 Then
+
+            Waypoint = LaneCenter(Queue[Cursor])
+
+            If Not ClearSegment(Leader, Waypoint) Then
+                Waypoint = Center(Queue[Cursor])
+            End If
+
+        End If
+
+        WaypointCursor = Cursor
+
     End If
 
+    Point = Waypoint
     Delta = M.Subtract(Point, Leader)
     Delta.Y = 0.0
     Distance = M.Length(Delta)

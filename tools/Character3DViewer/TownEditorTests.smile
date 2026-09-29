@@ -41,6 +41,7 @@ Dim Point As P.Vector3
 Dim Identity As Number
 Dim BeforeSurface As Number
 Dim CellPreview As Guides.Marker
+Dim MarkerGesture As MarkerTools.State
 
 Ok = Guides.SetSpacing(Guide, "0.25")
 Guide.SnapMode = 1
@@ -337,6 +338,45 @@ Sub CheckRoadTrips()
 
     Call Check(Ok And Not Roads.Active(), "An Edited Map Cancels The Old Journey")
 
+    Ok = Grid.Initialize(Town.Surface, 20, 12, 0.0, 0.0, 20.0, Grid.SURFACE_GROUND)
+
+    Call Grid.PaintRectangle(Town.Surface, 0, 0, 19, 4, Grid.SURFACE_ROAD)
+    Call Navigation.Rebuild(Town)
+
+    Leader = P.Vector(10.0, 23.12, 10.0)
+    Ok = Roads.Begin(Town, Leader, P.Vector(370.0, 23.12, 10.0)) And Ok
+
+    For Frame = 0 To 1000
+
+        Direction = Roads.Direction(Town, Leader, 3.0, 16)
+        Leader = Math3D.Add(Leader, Math3D.Scale(Direction, 3.0))
+
+        If Not Roads.Active() Then
+            Exit For
+        End If
+
+    End For
+
+    Call Check(Ok And Abs(Leader.X - 370.0) < 0.5 And Abs(Leader.Z - 50.0) < 0.5,
+        "Wide Road Travel And Destination Use The Road Middle Instead Of Its Edge")
+
+    Ok = Links.PlaceRectangle(Town, 1, 1, 3, 2, "Horizon Airport")
+
+    Call Check(Ok And Town.MapTileCount = 6 And
+        Links.DestinationAt(Town, 30.0, 30.0) = "Horizon Airport",
+        "Map Load Rectangle Commits All Selected Tiles Together")
+
+    Ok = Links.PlaceRectangle(Town, 4, 1, 5, 2, "Neris Spaceport")
+
+    Call Check(Ok And Town.MapTileCount = 10 And
+        Links.DestinationAt(Town, 30.0, 30.0) = "Neris Spaceport",
+        "Connected Map Load Rectangles Share The Chosen Destination")
+
+    Ok = Links.PlaceRectangle(Town, -1, 0, 5, 2, "Neris Town")
+
+    Call Check(Not Ok And Town.MapTileCount = 10,
+        "Invalid Map Load Rectangle Does Not Partially Paint")
+
 End Sub
 
 Sub CheckPresetsAndGuideFiles()
@@ -578,6 +618,29 @@ Sub CheckEditing()
     Call Check(MarkerTools.Hit(Guide, P.Vector(50.0, 23.12, 1.0), 3.0) = 0 And
         MarkerTools.Hit(Guide, P.Vector(200.0, 23.12, 200.0), 3.0) = -1,
         "Marker Selection Hits A Line Near Its Edge And Rejects Empty Ground")
+
+    Guide.SnapMode = 0
+
+    Call MarkerTools.Gesture(MarkerGesture, Guide, P.Vector(-10.0, 23.12, -10.0), 1.0,
+        True, True, True, False)
+    Call MarkerTools.Gesture(MarkerGesture, Guide, P.Vector(110.0, 23.12, 80.0), 1.0,
+        True, False, False, False)
+    Call Check(MarkerTools.SelectedCount(Guide) = 2,
+        "Rubber Selection Selects Multiple Guide Markers")
+    Call MarkerTools.Gesture(MarkerGesture, Guide, P.Vector(50.0, 23.12, 0.0), 1.0,
+        True, True, True, False)
+    Call MarkerTools.Gesture(MarkerGesture, Guide, P.Vector(70.0, 23.12, 10.0), 1.0,
+        True, False, True, False)
+    Call MarkerTools.Gesture(MarkerGesture, Guide, P.Vector(70.0, 23.12, 10.0), 1.0,
+        True, False, False, False)
+    Call History.Record(Journal, Town, Guide.Ink)
+    Call Check(Guide.Ink.Markers[0].First.X = 20.0 And Guide.Ink.Markers[1].First.X = 50.0,
+        "One Drag Moves The Entire Selected Guide Group")
+
+    Ok = History.Restore(Journal, Town, Guide.Ink, False)
+
+    Call Check(Ok And Guide.Ink.Markers[0].First.X = 0.0 And Guide.Ink.Markers[1].First.X = 30.0,
+        "Guide Group Movement Is One Undo Step")
 
     Guide.SnapMode = 2
     Point = Guides.Snap(Guide, P.Vector(99.0, 47.0, 2.0), 5.0)

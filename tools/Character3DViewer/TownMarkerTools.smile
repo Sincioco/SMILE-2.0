@@ -12,6 +12,8 @@ Public Type State
     Changed As Boolean
     Anchor As P.Vector3
     Before As Guides.Drawing
+    Selecting As Boolean
+    Current As P.Vector3
 End Type
 
 Public Sub ClearSelection(ByRef Guide As Guides.State)
@@ -154,6 +156,8 @@ End Function
 
 Public Sub Cancel(ByRef Value As State, ByRef Guide As Guides.State)
 
+    Value.Selecting = False
+
     If Value.Dragging Then
         Guide.Ink = Value.Before
         Value.Dragging = False
@@ -164,14 +168,46 @@ End Sub
 Public Sub Input(ByRef Value As State, ByRef Guide As Guides.State,
     Point As P.Vector3, Radius As Double, Available As Boolean)
 
+    Call Gesture(Value, Guide, Point, Radius, Available,
+        Pointer_Pressed(POINTER_PRIMARY), Pointer_Held(POINTER_PRIMARY), Key_Held(KEY_CONTROL))
+
+End Sub
+
+Public Sub Gesture(ByRef Value As State, ByRef Guide As Guides.State,
+    Point As P.Vector3, Radius As Double, Available As Boolean,
+    Pressed As Boolean, Held As Boolean, Additive As Boolean)
+
     Dim Index As Number
     Dim Found As Number
     Dim Offset As P.Vector3
     Dim Desired As P.Vector3
 
-    If Value.Dragging Then
+    If Value.Selecting Then
 
-        If Pointer_Held(POINTER_PRIMARY) Then
+        If Available Then
+            Value.Current = Point
+        End If
+
+        If Not Held Then
+
+            For Index = 0 To Guide.Ink.EntryCount - 1
+
+                If (Max(Guide.Ink.Markers[Index].First.X, Guide.Ink.Markers[Index].Last.X) >= Min(Value.Anchor.X, Value.Current.X) And
+                    Min(Guide.Ink.Markers[Index].First.X, Guide.Ink.Markers[Index].Last.X) <= Max(Value.Anchor.X, Value.Current.X) And
+                    Max(Guide.Ink.Markers[Index].First.Z, Guide.Ink.Markers[Index].Last.Z) >= Min(Value.Anchor.Z, Value.Current.Z) And
+                    Min(Guide.Ink.Markers[Index].First.Z, Guide.Ink.Markers[Index].Last.Z) <= Max(Value.Anchor.Z, Value.Current.Z)) Then
+                    Guide.Selected[Index] = True
+                End If
+
+            End For
+
+            Value.Selecting = False
+
+        End If
+
+    Else If Value.Dragging Then
+
+        If Held Then
 
             If Available Then
 
@@ -216,15 +252,21 @@ Public Sub Input(ByRef Value As State, ByRef Guide As Guides.State,
 
         End If
 
-    Else If Available And Pointer_Pressed(POINTER_PRIMARY) Then
+    Else If Available And Pressed Then
 
         Found = Hit(Guide, Point, Radius)
 
         If Found < 0 Then
 
-            Call ClearSelection(Guide)
+            If Not Additive Then
+                Call ClearSelection(Guide)
+            End If
 
-        Else If Key_Held(KEY_CONTROL) Then
+            Value.Selecting = True
+            Value.Anchor = Point
+            Value.Current = Point
+
+        Else If Additive Then
 
             Guide.Selected[Found] = Not Guide.Selected[Found]
 
@@ -244,6 +286,22 @@ Public Sub Input(ByRef Value As State, ByRef Guide As Guides.State,
         End If
 
     End If
+
+End Sub
+
+Public Sub Draw(ByRef Value As State, View As P.Camera3D)
+
+    Dim Preview As Guides.Marker
+
+    If Not Value.Selecting Then
+        Return
+    End If
+
+    Preview.First = Value.Anchor
+    Preview.Last = Value.Current
+    Preview.IsRectangle = True
+
+    Call Guides.DrawMarker(Preview, View, RGB(70, 230, 215))
 
 End Sub
 

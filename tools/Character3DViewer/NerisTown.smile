@@ -260,6 +260,16 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
 
     Blocked = Blocked Or HeaderHovered
 
+    If (Value.Edited And Not Blocked And Not Authoring.Editing() And
+        Not Authoring.CameraBlocked() And Not Value.Cinematic And
+        Value.Map.Opacity > 0.0 And Authoring.MapHovered()) Then
+
+        If Authoring.ZoomMinimap(Value.People.Path.Positions[0]) Then
+            Return
+        End If
+
+    End If
+
     If (Value.Edited And
         Not Blocked And
         Not Authoring.Editing() And

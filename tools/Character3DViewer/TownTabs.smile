@@ -31,21 +31,13 @@ Public Sub Ensure(ByRef Value As State, ByRef Town As Document.State)
             Return
         End If
 
-        Ok = Storage.LoadDocument(Value.Documents[1], "TownEditor.Recovery.Neris Spaceport", True)
-
-        If Not Ok Then
-            Ok = Storage.LoadDocument(Value.Documents[1], "TownEditor.Town.Neris Spaceport")
-        End If
+        Ok = Library.RecoverNamed(Value.Documents[1], "Neris Spaceport")
 
         If Ok Then
             Value.TabCount = 2
         End If
 
-        Ok = Storage.LoadDocument(Value.Documents[Value.TabCount], "TownEditor.Recovery.Horizon Airport", True)
-
-        If Not Ok Then
-            Ok = Storage.LoadDocument(Value.Documents[Value.TabCount], "TownEditor.Town.Horizon Airport")
-        End If
+        Ok = Library.RecoverNamed(Value.Documents[Value.TabCount], "Horizon Airport")
 
         If Ok Then
             Value.TabCount = Value.TabCount + 1
@@ -54,6 +46,85 @@ Public Sub Ensure(ByRef Value As State, ByRef Town As Document.State)
     End If
 
 End Sub
+
+''' Promote the current edits to one named startup tab without discarding the copy.
+Public Function UpdatePermanent(ByRef Value As State, ByRef Town As Document.State,
+    Name As Text) As Boolean
+
+    Dim Candidate As Document.State
+    Dim Previous As Document.State
+    Dim Index As Number
+    Dim Target As Number
+    Dim Ok As Boolean
+
+    If Text_Length(Library.PermanentKey(Name)) = 0 Then
+        Value.Message = "Choose one of the three permanent maps."
+        Return False
+    End If
+
+    Call Ensure(Value, Town)
+
+    Target = -1
+
+    For Index = 0 To Value.TabCount - 1
+
+        If Value.Documents[Index].Name = Name Then
+            Target = Index
+        End If
+
+    End For
+
+    If Target < 0 And Value.TabCount >= CAPACITY Then
+        Value.Message = "Close a copy tab before updating this map."
+        Return False
+    End If
+
+    If Target >= 0 Then
+
+        Previous = Value.Documents[Target]
+
+        If Target = Value.Active Then
+            Previous = Town
+        End If
+
+    Else
+
+        Ok = Library.RecoverNamed(Previous, Name)
+
+        If Not Ok Then
+            Value.Message = "Original map not found; edits retained."
+            Return False
+        End If
+
+    End If
+
+    Candidate = Town
+    Candidate.Name = Name
+    Candidate.Revision = Max(Town.Revision, Previous.Revision) + 1
+    Candidate.Surface.Revision = Candidate.Revision
+    Candidate.SavedRevision = Candidate.Revision
+    Ok = Library.UpdatePermanent(Candidate, Previous, Name)
+
+    If Not Ok Then
+        Value.Message = "Permanent save failed; edits retained."
+        Return False
+    End If
+
+    Value.Documents[Value.Active] = Town
+
+    If Target < 0 Then
+        Target = Value.TabCount
+        Value.TabCount = Value.TabCount + 1
+    End If
+
+    Value.Active = Target
+    Town = Candidate
+    Value.Documents[Target] = Town
+    Value.Message = "Permanent map saved for next launch."
+
+    Return True
+
+End Function
 
 Public Function OpenNamed(ByRef Value As State, ByRef Town As Document.State, Name As Text) As Boolean
 

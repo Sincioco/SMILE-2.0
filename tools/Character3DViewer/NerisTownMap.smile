@@ -120,7 +120,7 @@ Public Sub Draw(ByRef Value As State, Position As P.Vector3, Yaw As Double,
     Width = Min(300, Max(225, Window_Width() / 5))
     Height = Width * 1080 / 1140
     X = Window_Width() - Width - 20
-    Y = 104
+    Y = 237
     MarkerX = MapX(Position.X, X + Width * 30 / 1140, Width * 1080 / 1140)
     MarkerY = MapY(Position.Z, Y + Height * 90 / 1080, Height * 940 / 1080)
     Coordinates = LeaderName + " X: " + Numbers.NumberText(ToNumber(Round(Position.X))) + "  Y: " + Numbers.NumberText(ToNumber(Round(Position.Y))) + "  Z: " + Numbers.NumberText(ToNumber(Round(Position.Z)))

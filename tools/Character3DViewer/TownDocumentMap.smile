@@ -12,13 +12,83 @@ Import Smile.Tools.NerisTownMap As Heading
 
 Private Dim Cells[64, 64] As Number
 Private Dim Revision As Number
+Private Dim ZoomLevel As Number
+Private Dim MapName As Text
+Private Dim LowX As Double
+Private Dim HighX As Double
+Private Dim LowZ As Double
+Private Dim HighZ As Double
+
+Public Sub SetZoom(ByRef Town As Document.State, Focus As P.Vector3, Level As Number)
+
+    Dim Width As Double
+    Dim Depth As Double
+
+    ZoomLevel = Max(1, Min(8, Level))
+    Width = (Town.Surface.XEdges[Town.Surface.Columns] - Town.Surface.OriginX) / ToDouble(ZoomLevel)
+    Depth = (Town.Surface.ZEdges[Town.Surface.Rows] - Town.Surface.OriginZ) / ToDouble(ZoomLevel)
+    LowX = Clamp(Focus.X - Width * 0.5, Town.Surface.OriginX, Town.Surface.XEdges[Town.Surface.Columns] - Width)
+    LowZ = Clamp(Focus.Z - Depth * 0.5, Town.Surface.OriginZ, Town.Surface.ZEdges[Town.Surface.Rows] - Depth)
+    HighX = LowX + Width
+    HighZ = LowZ + Depth
+    MapName = Town.Name
+    Revision = -1
+
+End Sub
+
+Public Function ZoomInput(ByRef Town As Document.State, Position As P.Vector3) As Boolean
+
+    Dim Change As Number
+
+    Change = Pointer_Wheel_Delta()
+
+    If Pointer_Y() < 259 And Pointer_Pressed(POINTER_PRIMARY) Then
+
+        If Pointer_X() >= Window_Width() - 52 Then
+            Change = 1
+        Else If Pointer_X() >= Window_Width() - 84 Then
+            Change = -1
+        End If
+
+        If Change = 0 Then
+            Return True
+        End If
+
+    End If
+
+    If Change <> 0 Then
+
+        If Change > 0 Then
+            Call SetZoom(Town, Position, Max(1, ZoomLevel) * 2)
+        Else
+
+            Call SetZoom(Town, Position, Max(1, ZoomLevel / 2))
+        End If
+
+        Return True
+
+    End If
+
+    Return False
+
+End Function
+
+Private Function Inside(Point As P.Vector3) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Point.X >= LowX And Point.X <= HighX And Point.Z >= LowZ And Point.Z <= HighZ
+
+    Return Result
+
+End Function
 
 Public Function Hovered() As Boolean
 
     Dim Result As Boolean
 
     Result = (Pointer_X() >= Window_Width() - 276 And Pointer_X() < Window_Width() - 20 And
-        Pointer_Y() >= 155 And Pointer_Y() < 411)
+        Pointer_Y() >= 237 And Pointer_Y() < 515)
 
     Return Result
 
@@ -28,10 +98,10 @@ Public Function Pick(ByRef Town As Document.State, X As Number, Y As Number) As 
 
     Dim Result As P.Vector3
 
-    Result = P.Vector(Town.Surface.OriginX + ToDouble(X - Window_Width() + 276) / 256.0 *
-        (Town.Surface.XEdges[Town.Surface.Columns] - Town.Surface.OriginX), 23.12,
-        Town.Surface.OriginZ + ToDouble(411 - Y) / 256.0 *
-        (Town.Surface.ZEdges[Town.Surface.Rows] - Town.Surface.OriginZ))
+    Result = P.Vector(LowX + ToDouble(X - Window_Width() + 276) / 256.0 *
+        (HighX - LowX), 23.12,
+        LowZ + ToDouble(515 - Y) / 256.0 *
+        (HighZ - LowZ))
 
     Return Result
 
@@ -43,12 +113,12 @@ Public Sub DrawDestination(ByRef Town As Document.State, Destination As P.Vector
     Dim X As Number
     Dim Y As Number
 
-    If Active Then
+    If Active And Inside(Destination) Then
 
-        X = Window_Width() - 276 + Coordinate(Destination.X, Town.Surface.OriginX,
-            Town.Surface.XEdges[Town.Surface.Columns]) * 4
-        Y = 155 + (63 - Coordinate(Destination.Z, Town.Surface.OriginZ,
-            Town.Surface.ZEdges[Town.Surface.Rows])) * 4
+        X = Window_Width() - 276 + Coordinate(Destination.X, LowX,
+            HighX) * 4
+        Y = 259 + (63 - Coordinate(Destination.Z, LowZ,
+            HighZ)) * 4
 
         Draw Rectangle X - 5, Y - 5, 11, 11, YELLOW
         Draw Line X - 8, Y, X + 8, Y, YELLOW
@@ -58,9 +128,9 @@ Public Sub DrawDestination(ByRef Town As Document.State, Destination As P.Vector
 
     If Message <> "" Then
 
-        Fill Rectangle Window_Width() - 282, 429, 268, 38, RGB(10, 22, 35)
-        Draw Text Text_Slice(Message, 0, 38) At Window_Width() - 276, 433 Size 11 Color YELLOW
-        Draw Text Text_Slice(Message, 38, 38) At Window_Width() - 276, 449 Size 11 Color YELLOW
+        Fill Rectangle Window_Width() - 282, 533, 268, 38, RGB(10, 22, 35)
+        Draw Text Text_Slice(Message, 0, 38) At Window_Width() - 276, 537 Size 11 Color YELLOW
+        Draw Text Text_Slice(Message, 38, 38) At Window_Width() - 276, 553 Size 11 Color YELLOW
 
     End If
 
@@ -97,14 +167,24 @@ Private Sub Rebuild(ByRef Town As Document.State)
 
     For Z = 0 To Town.Surface.Rows - 1
 
-        SZ = Coordinate(Town.Surface.ZEdges[Z], Town.Surface.OriginZ, Town.Surface.ZEdges[Town.Surface.Rows])
-        EZ = Coordinate(Town.Surface.ZEdges[Z + 1], Town.Surface.OriginZ, Town.Surface.ZEdges[Town.Surface.Rows])
+        SZ = Coordinate(Town.Surface.ZEdges[Z], LowZ, HighZ)
+        EZ = Coordinate(Town.Surface.ZEdges[Z + 1], LowZ, HighZ)
+
+        If Town.Surface.ZEdges[Z + 1] < LowZ Or Town.Surface.ZEdges[Z] > HighZ Then
+            SZ = 0
+            EZ = -1
+        End If
 
         For X = 0 To Town.Surface.Columns - 1
 
             Surface = Grid.ReadCell(Town.Surface, X, Z)
-            SX = Coordinate(Town.Surface.XEdges[X], Town.Surface.OriginX, Town.Surface.XEdges[Town.Surface.Columns])
-            EX = Coordinate(Town.Surface.XEdges[X + 1], Town.Surface.OriginX, Town.Surface.XEdges[Town.Surface.Columns])
+            SX = Coordinate(Town.Surface.XEdges[X], LowX, HighX)
+            EX = Coordinate(Town.Surface.XEdges[X + 1], LowX, HighX)
+
+            If Town.Surface.XEdges[X + 1] < LowX Or Town.Surface.XEdges[X] > HighX Then
+                SX = 0
+                EX = -1
+            End If
 
             For MZ = SZ To EZ
 
@@ -136,13 +216,25 @@ Public Sub Draw(ByRef Town As Document.State, Position As P.Vector3,
         Return
     End If
 
+    If MapName <> Town.Name Or ZoomLevel = 0 Then
+        Call SetZoom(Town, Position, 1)
+    End If
+
     If Revision <> Town.Revision Then
+        Call SetZoom(Town, Position, Max(1, ZoomLevel))
         Call Rebuild(Town)
     End If
 
     MapLeft = Window_Width() - 276
-    Fill Rectangle MapLeft - 6, 133, 268, 294, RGB(10, 22, 35) Opacity Opacity
-    Draw Text Text_Slice(Town.Name, 0, 28) At MapLeft, 139 Size 12 Color WHITE
+    Fill Rectangle MapLeft - 6, 237, 268, 294, RGB(10, 22, 35) Opacity Opacity
+    Draw Text Text_Slice(Town.Name, 0, 21) At MapLeft, 243 Size 12 Color WHITE
+
+    Fill Rectangle MapLeft + 192, 239, 28, 18, RGB(25, 70, 85)
+    Fill Rectangle MapLeft + 224, 239, 28, 18, RGB(25, 70, 85)
+    Draw Text "-" At MapLeft + 201, 240 Size 14 Color WHITE
+    Draw Text "+" At MapLeft + 233, 240 Size 14 Color WHITE
+
+    Clip Rectangle MapLeft, 259, 256, 256
 
     For Z = 0 To 63
 
@@ -165,7 +257,7 @@ Public Sub Draw(ByRef Town As Document.State, Position As P.Vector3,
                 ColorValue = RGB(123, 147, 158)
             End If
 
-            Fill Rectangle MapLeft + StartX * 4, 155 + (63 - Z) * 4, (X - StartX) * 4, 4, ColorValue Opacity Opacity
+            Fill Rectangle MapLeft + StartX * 4, 259 + (63 - Z) * 4, (X - StartX) * 4, 4, ColorValue Opacity Opacity
 
         Loop Until X >= 64
 
@@ -174,11 +266,11 @@ Public Sub Draw(ByRef Town As Document.State, Position As P.Vector3,
     For Index = 0 To Town.ItemCount - 1
 
         If (Town.Items[Index].Active And
-            Town.Items[Index].Category = Document.CATEGORY_BUILDINGS) Then
+            Town.Items[Index].Category = Document.CATEGORY_BUILDINGS And Inside(Town.Items[Index].Position)) Then
 
-            X = Coordinate(Town.Items[Index].Position.X, Town.Surface.OriginX, Town.Surface.XEdges[Town.Surface.Columns])
-            Z = Coordinate(Town.Items[Index].Position.Z, Town.Surface.OriginZ, Town.Surface.ZEdges[Town.Surface.Rows])
-            Fill Rectangle MapLeft + X * 4 - 3, 155 + (63 - Z) * 4 - 3, 7, 7, RGB(226, 200, 133) Opacity Opacity
+            X = Coordinate(Town.Items[Index].Position.X, LowX, HighX)
+            Z = Coordinate(Town.Items[Index].Position.Z, LowZ, HighZ)
+            Fill Rectangle MapLeft + X * 4 - 3, 259 + (63 - Z) * 4 - 3, 7, 7, RGB(226, 200, 237) Opacity Opacity
             Shape = Catalog.TemplateAt(Town.Items[Index].Template)
 
             If (Shape.Label = "City Hall" Or
@@ -186,7 +278,7 @@ Public Sub Draw(ByRef Town As Document.State, Position As P.Vector3,
                 Shape.Label = "Old Castle" Or
                 Shape.Label = "Royal Castle" Or
                 Shape.Label = "Military HQ") Then
-                Draw Text Shape.Label At MapLeft + X * 4 - 24, 155 + (63 - Z) * 4 Size 9 Color WHITE
+                Draw Text Shape.Label At MapLeft + X * 4 - 24, 259 + (63 - Z) * 4 Size 9 Color WHITE
             End If
 
         End If
@@ -196,13 +288,15 @@ Public Sub Draw(ByRef Town As Document.State, Position As P.Vector3,
     Call DrawLandmark(Town, MapLeft, Opacity, LandmarkName, LandmarkPosition)
     Call DrawLandmark(Town, MapLeft, Opacity, AirportName, AirportPosition)
 
-    X = Coordinate(Position.X, Town.Surface.OriginX, Town.Surface.XEdges[Town.Surface.Columns])
-    Z = Coordinate(Position.Z, Town.Surface.OriginZ, Town.Surface.ZEdges[Town.Surface.Rows])
+    X = Coordinate(Position.X, LowX, HighX)
+    Z = Coordinate(Position.Z, LowZ, HighZ)
 
-    Call Heading.DrawHeading(Headlight, MapLeft + X * 4, 155 + (63 - Z) * 4, Yaw, Opacity)
+    Call Heading.DrawHeading(Headlight, MapLeft + X * 4, 259 + (63 - Z) * 4, Yaw, Opacity)
 
-    Fill Rectangle MapLeft + X * 4 - 2, 155 + (63 - Z) * 4 - 2, 5, 5, CYAN
-    Draw Text LeaderName + " X:" + Panel.NumberLabel(ToNumber(Position.X)) + " Y:" + Panel.NumberLabel(ToNumber(Position.Y)) + " Z:" + Panel.NumberLabel(ToNumber(Position.Z)) At MapLeft, 414 Size 11 Color WHITE
+    Fill Rectangle MapLeft + X * 4 - 2, 259 + (63 - Z) * 4 - 2, 5, 5, CYAN
+    End Clip
+
+    Draw Text LeaderName + " X:" + Panel.NumberLabel(ToNumber(Position.X)) + " Y:" + Panel.NumberLabel(ToNumber(Position.Y)) + " Z:" + Panel.NumberLabel(ToNumber(Position.Z)) At MapLeft, 518 Size 11 Color WHITE
 
 End Sub
 
@@ -213,15 +307,15 @@ Private Sub DrawLandmark(ByRef Town As Document.State, MapLeft As Number,
     Dim Z As Number
     Dim LabelX As Number
 
-    If Name = "" Then
+    If Name = "" Or Not Inside(Position) Then
         Return
     End If
 
-    X = Coordinate(Position.X, Town.Surface.OriginX, Town.Surface.XEdges[Town.Surface.Columns])
-    Z = Coordinate(Position.Z, Town.Surface.OriginZ, Town.Surface.ZEdges[Town.Surface.Rows])
+    X = Coordinate(Position.X, LowX, HighX)
+    Z = Coordinate(Position.Z, LowZ, HighZ)
     LabelX = ToNumber(Clamp(ToDouble(X * 4 - 24), 0.0, ToDouble(256 - Text_Length(Name) * 6)))
-    Fill Rectangle MapLeft + X * 4 - 4, 155 + (63 - Z) * 4 - 4, 9, 9, RGB(226, 200, 133) Opacity Opacity
-    Draw Text Name At MapLeft + LabelX, 155 + (63 - Z) * 4 + 7 Size 9 Color WHITE
+    Fill Rectangle MapLeft + X * 4 - 4, 259 + (63 - Z) * 4 - 4, 9, 9, RGB(226, 200, 237) Opacity Opacity
+    Draw Text Name At MapLeft + LabelX, 259 + (63 - Z) * 4 + 7 Size 9 Color WHITE
 
 End Sub
 

@@ -20,16 +20,49 @@ Private Dim Enabled As Boolean
 Private Dim CameraDirty As Boolean
 Private Dim CameraAnchor As P.Vector3
 Private Dim CameraWorld As Clearance.World
+Private Dim LowX[1024] As Double
+Private Dim LowZ[1024] As Double
+Private Dim HighX[1024] As Double
+Private Dim HighZ[1024] As Double
 
 Public Sub Rebuild(ByRef Town As Document.State)
 
     Dim Index As Number
+    Dim Corner As Number
+    Dim LocalPoint As P.Vector3
+    Dim WorldPoint As P.Vector3
+    Dim Shape As Catalog.Template
 
     Surface = Town.Surface
     ItemCount = Town.ItemCount
 
     For Index = 0 To ItemCount - 1
+
         Items[Index] = Town.Items[Index]
+        Shape = Catalog.TemplateAt(Items[Index].Template)
+        LowX[Index] = 1.0E+20
+        LowZ[Index] = 1.0E+20
+        HighX[Index] = -1.0E+20
+        HighZ[Index] = -1.0E+20
+
+        For Corner = 0 To 3
+
+            LocalPoint = P.Vector(Shape.Low.X - 20.0, 0.0, Shape.Low.Z - 20.0)
+
+            If Corner Mod 2 = 1 Then
+                LocalPoint.X = Shape.High.X + 20.0
+            End If
+
+            If Corner >= 2 Then
+                LocalPoint.Z = Shape.High.Z + 20.0
+            End If
+
+            WorldPoint = Geometry.ToWorld(Items[Index], LocalPoint)
+            LowX[Index] = Min(LowX[Index], WorldPoint.X)
+            LowZ[Index] = Min(LowZ[Index], WorldPoint.Z)
+            HighX[Index] = Max(HighX[Index], WorldPoint.X)
+            HighZ[Index] = Max(HighZ[Index], WorldPoint.Z)
+        End For
     End For
 
     For Index = 0 To Catalog.TEMPLATE_COUNT - 1
@@ -40,6 +73,17 @@ Public Sub Rebuild(ByRef Town As Document.State)
     CameraDirty = True
 
 End Sub
+
+Private Function NearWorld(Index As Number, X As Double, Z As Double) As Boolean
+
+    Dim Result As Boolean
+
+    Result = (Items[Index].Active And X >= LowX[Index] And X <= HighX[Index] And
+        Z >= LowZ[Index] And Z <= HighZ[Index])
+
+    Return Result
+
+End Function
 
 Public Sub Disable()
 
@@ -67,6 +111,18 @@ Public Function NearestRoad(Point As P.Vector3, ByRef Result As P.Vector3) As Bo
 
     If Not Enabled Then
         Return False
+    End If
+
+    X = Grid.CellX(Surface, Point.X)
+    Z = Grid.CellZ(Surface, Point.Z)
+
+    If ((Grid.ReadCell(Surface, X, Z) = Grid.SURFACE_ROAD Or
+        Grid.ReadCell(Surface, X, Z) = Grid.SURFACE_BRIDGE) And CanStand(Point.X, Point.Z)) Then
+
+        Result = Point
+        Result.Y = GroundHeight(Point.X, Point.Z)
+        Return True
+
     End If
 
     Best = 1.0E+20
@@ -188,7 +244,7 @@ Public Function CanStand(X As Double, Z As Double) As Boolean
 
     For Index = 0 To ItemCount - 1
 
-        If Items[Index].Active Then
+        If NearWorld(Index, X, Z) Then
 
             Point = Geometry.ToLocal(Items[Index], P.Vector(X, Items[Index].Position.Y, Z))
 
@@ -249,7 +305,7 @@ Public Function GroundHeight(X As Double, Z As Double) As Double
 
     For Index = 0 To ItemCount - 1
 
-        If Items[Index].Active Then
+        If NearWorld(Index, X, Z) Then
 
             Point = Geometry.ToLocal(Items[Index], P.Vector(X, Items[Index].Position.Y, Z))
 

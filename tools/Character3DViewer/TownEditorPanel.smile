@@ -36,6 +36,9 @@ Public Type State
     RecentCount As Number
     CanRedo As Boolean
     SunSlider As Sun.State
+    HideGuides As Boolean
+    MapNames[8] As Text
+    MapCount As Number
 End Type
 
 Public Function NumberLabel(Value As Number) As Text
@@ -224,11 +227,11 @@ Private Sub Library(ByRef Value As State, X As Number)
 
         If Value.Surface = 5 Then
 
-            Call Button(Value, 17, X, 331, 91, "Place", Value.Tool = 17)
+            Call Button(Value, 17, X, 331, 91, "Draw Area", Value.Tool = 17)
             Call Button(Value, 18, X + 96, 331, 91, "Reassign", Value.Tool = 18)
             Call Button(Value, 19, X + 192, 331, 91, "Delete", Value.Tool = 19)
 
-            Draw Text "Click a tile on the map." At X, 375 Size 14 Color WHITE
+            Draw Text "Draw area, then choose a map." At X, 375 Size 13 Color WHITE
             Draw Text "Connected tiles share a destination." At X, 397 Size 12 Color WHITE
 
         Else
@@ -303,7 +306,7 @@ Private Sub Construction(ByRef Value As State, ByRef Guide As Guides.State, X As
     Dim StepY As Number
     Dim Height As Number
 
-    StepY = Min(30, Max(20, (Window_Height() - 505) / 10))
+    StepY = Min(30, Max(18, (Window_Height() - 505) / 11))
 
     Height = StepY - 3
     Label = "Snap: Off"
@@ -316,15 +319,23 @@ Private Sub Construction(ByRef Value As State, ByRef Guide As Guides.State, X As
         Label = "Snap: Grid + Markers"
     End If
 
-    Call Button(Value, 73, X, 212, 139, "Guide Grid", Guide.ShowGrid, True, Height)
-    Call Button(Value, 77, X + 144, 212, 139, "Actual Tile Grid", Guide.ShowTileGrid, True, Height)
-    Call Button(Value, 74, X, 212 + StepY, 283, Label, Guide.SnapMode > 0, True, Height)
-    Call Button(Value, 75, X, 212 + StepY * 2, 34, "/2", False, True, Height)
-    Call Button(Value, 78, X + 39, 212 + StepY * 2, 204,
+    Call Button(Value, 73, X, 212 + StepY, 139, "Guide Grid", Guide.ShowGrid, True, Height)
+    Call Button(Value, 77, X + 144, 212 + StepY, 139, "Actual Tile Grid", Guide.ShowTileGrid, True, Height)
+    Call Button(Value, 74, X, 212 + StepY * 2, 283, Label, Guide.SnapMode > 0, True, Height)
+    Call Button(Value, 75, X, 212 + StepY * 3, 34, "/2", False, True, Height)
+    Call Button(Value, 78, X + 39, 212 + StepY * 3, 204,
         "Grid: " + Guides.SpacingLabel(Guide.Spacing) + " m", False, True, Height)
-    Call Button(Value, 76, X + 248, 212 + StepY * 2, 34, "x2", False, True, Height)
+    Call Button(Value, 76, X + 248, 212 + StepY * 3, 34, "x2", False, True, Height)
 
-    RowY = 212 + StepY * 3
+    Label = "Hide Guides"
+
+    If Value.HideGuides Then
+        Label = "Show Guides"
+    End If
+
+    Call Button(Value, 96, X, 212, 283, Label, Not Value.HideGuides, True, Height)
+
+    RowY = 212 + StepY * 4
 
     If Guide.ShowTileGrid Then
 
@@ -382,7 +393,7 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State,
 
     X = LeftEdge() + 10
     LightBottom = 212 + 8 * Min(32, Max(16, (Window_Height() - 572) / 8))
-    FileStep = Min(32, Max(22, (Window_Height() - 525) / 8))
+    FileStep = Min(32, Max(20, (Window_Height() - 525) / 9))
 
     If Not Value.AtlasLoaded Then
         Load Image Value.Atlas From "Assets/Neris/Town-Palette.png"
@@ -432,6 +443,30 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State,
                 Text_Slice(Value.RecentLabels[Index], 0, 36), False, True, FileStep - 1)
         End For
 
+    Else If Value.Section = 6 Then
+
+        Draw Text "Choose Destination Map" At X, 212 Size 15 Color WHITE
+        Draw Text "The yellow area will load this map:" At X, 236 Size 12 Color WHITE
+
+        For Index = 0 To Value.MapCount - 1
+            Call Button(Value, 600 + Index, X, 264 + Index * 32, 283,
+                Text_Slice(Value.MapNames[Index], 0, 34))
+        End For
+
+        Call Button(Value, 50, X, 264 + Value.MapCount * 32, 283, "Cancel")
+
+    Else If Value.Section = 5 Then
+
+        Draw Text "Update Permanent Map" At X, 212 Size 15 Color WHITE
+        Draw Text "Use current edits for this startup tab:" At X, 239 Size 12 Color WHITE
+
+        Call Button(Value, 313, X, 264, 283, "Update Neris Town")
+        Call Button(Value, 314, X, 300, 283, "Update Neris Spaceport")
+        Call Button(Value, 315, X, 336, 283, "Update Horizon Airport")
+
+        Draw Text "Previous map kept in Open Recovery." At X, 379 Size 12 Color RGB(240, 205, 140)
+        Draw Text "Blender exports stay separate." At X, 399 Size 12 Color WHITE
+
     Else
 
         Draw Text "Viewer (.town)" At X, 212 Size 15 Color WHITE
@@ -439,18 +474,19 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State,
         Call Button(Value, 300, X, 237, 139, "Save For Viewer", False, True, FileStep - 3)
         Call Button(Value, 302, X + 144, 237, 139, "Save As...", False, True, FileStep - 3)
         Call Button(Value, 305, X, 237 + FileStep, 139, "Open For Viewer", False, True, FileStep - 3)
-        Call Button(Value, 310, X + 144, 237 + FileStep, 139, "Open As...", False, True, FileStep - 3)
+        Call Button(Value, 310, X + 144, 237 + FileStep, 139, "Recent Versions", False, True, FileStep - 3)
         Call Button(Value, 311, X, 237 + FileStep * 2, 283, "Show Last Town File In Explorer", False, True, FileStep - 3)
+        Call Button(Value, 312, X, 237 + FileStep * 3, 283, "Update Permanent Map...", False, True, FileStep - 3)
 
-        Draw Text "Blender (.blend)" At X, 241 + FileStep * 3 Size 15 Color WHITE
+        Draw Text "Blender (.blend)" At X, 241 + FileStep * 4 Size 15 Color WHITE
 
-        Call Button(Value, 301, X, 237 + FileStep * 4, 139, "Save For Blender", False, True, FileStep - 3)
-        Call Button(Value, 307, X + 144, 237 + FileStep * 4, 139, "Open Blender...", False, True, FileStep - 3)
-        Call Button(Value, 309, X, 237 + FileStep * 5, 283, "Show Last Blender File In Explorer", False, True, FileStep - 3)
-        Call Button(Value, 303, X, 237 + FileStep * 6, 139, "New Town", False, True, FileStep - 3)
-        Call Button(Value, 308, X + 144, 237 + FileStep * 6, 139, "Open Recovery...", False, True, FileStep - 3)
-        Call Button(Value, 304, X, 237 + FileStep * 7, 139, "New World", False, True, FileStep - 3)
-        Call Button(Value, 306, X + 144, 237 + FileStep * 7, 139, "Open World", False, True, FileStep - 3)
+        Call Button(Value, 301, X, 237 + FileStep * 5, 139, "Save For Blender", False, True, FileStep - 3)
+        Call Button(Value, 307, X + 144, 237 + FileStep * 5, 139, "Open Blender...", False, True, FileStep - 3)
+        Call Button(Value, 309, X, 237 + FileStep * 6, 283, "Show Last Blender File In Explorer", False, True, FileStep - 3)
+        Call Button(Value, 303, X, 237 + FileStep * 7, 139, "New Town", False, True, FileStep - 3)
+        Call Button(Value, 308, X + 144, 237 + FileStep * 7, 139, "Open Recovery...", False, True, FileStep - 3)
+        Call Button(Value, 304, X, 237 + FileStep * 8, 139, "New World", False, True, FileStep - 3)
+        Call Button(Value, 306, X + 144, 237 + FileStep * 8, 139, "Open World", False, True, FileStep - 3)
 
     End If
 

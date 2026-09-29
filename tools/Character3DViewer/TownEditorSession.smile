@@ -143,6 +143,16 @@ Public Function BeginRoadTrip(Leader As P.Vector3) As Boolean
 
 End Function
 
+Public Function ZoomMinimap(Leader As P.Vector3) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Map.ZoomInput(Town, Leader)
+
+    Return Result
+
+End Function
+
 Public Function RoadDirection(Leader As P.Vector3, Distance As Double, Elapsed As Number) As P.Vector3
 
     Dim Result As P.Vector3
@@ -392,9 +402,9 @@ Private Sub FileCommand(Action As Number)
         Action = 301 Or
         Action = 302 Or
         Action = 307 Or
-        Action = 310) Then
+        Action = 305) Then
 
-        If ((Action = 310 Or Action = 307 Or Action = 302) And
+        If ((Action = 305 Or Action = 307 Or Action = 302) And
             OpenTabs.TabCount >= Tabs.CAPACITY) Then
             Controls.Ui.Message = "Close a town tab first (limit 8)."
             Return
@@ -407,7 +417,7 @@ Private Sub FileCommand(Action As Number)
 
             Mode = Files.SAVE_BLENDER
 
-        Else If Action = 310 Then
+        Else If Action = 305 Then
 
             Mode = Files.OPEN_VIEWER
 
@@ -439,7 +449,37 @@ Private Sub FileCommand(Action As Number)
         Transfers.SaveAsCopy = Action = 302 And Transfers.RequestId > 0
         Controls.Ui.Message = Transfers.Message
 
-    Else If Action = 305 Then
+    Else If Action = 312 Then
+
+        Controls.Ui.Section = 5
+
+    Else If Action >= 313 And Action <= 315 Then
+
+        Name = "Neris Town"
+
+        If Action = 314 Then
+            Name = "Neris Spaceport"
+        Else If Action = 315 Then
+            Name = "Horizon Airport"
+        End If
+
+        Ok = Tabs.UpdatePermanent(OpenTabs, Town, Name)
+        Controls.Ui.Message = OpenTabs.Message
+        OpenTabs.Message = ""
+
+        If Ok Then
+
+            Call Editor.ResetHistory(Controls, Town)
+
+            TeleportPending = True
+            TabOverviewPending = True
+            Controls.Ui.Section = 2
+
+        End If
+
+        Return
+
+    Else If Action = 310 Then
 
         Controls.Ui.Section = 4
         Controls.Ui.RecentCount = 0
@@ -542,6 +582,7 @@ End Sub
 Public Sub Input(View As P.Camera3D, Key As Number, Blocked As Boolean)
 
     Dim Action As Number
+    Dim Index As Number
     Dim Name As Text
     Dim Ok As Boolean
 
@@ -622,7 +663,42 @@ Public Sub Input(View As P.Camera3D, Key As Number, Blocked As Boolean)
     Action = Editor.Input(Controls, Town, View, Key,
         Blocked Or (Controls.Ui.Category = 4 And Ground.Stage <> 0))
 
-    If Action = 89 Or Action = 90 Then
+    If Controls.MapGesture.Pending And Controls.Ui.Section <> 6 Then
+
+        Controls.Ui.MapCount = 0
+
+        For Index = 0 To OpenTabs.TabCount - 1
+
+            If OpenTabs.Documents[Index].Name <> Town.Name Then
+                Controls.Ui.MapNames[Controls.Ui.MapCount] = OpenTabs.Documents[Index].Name
+                Controls.Ui.MapCount = Controls.Ui.MapCount + 1
+            End If
+
+        End For
+
+        Controls.Ui.Section = 6
+
+    End If
+
+    If Action >= 600 And Action < 600 + Controls.Ui.MapCount Then
+
+        Name = Controls.Ui.MapNames[Action - 600]
+
+        For Index = 0 To OpenTabs.TabCount - 1
+
+            If OpenTabs.Documents[Index].Name = Name Then
+                Ok = Library.Remember(OpenTabs.Documents[Index])
+            End If
+
+        End For
+
+        If Ok Then
+            Call Editor.ApplyMapDestination(Controls, Town, Name)
+        Else
+            Controls.Ui.Message = "Destination save failed; map tiles retained."
+        End If
+
+    Else If Action = 89 Or Action = 90 Then
 
         If Transfers.RequestId = 0 Then
             Call GuideFiles.Choose(Controls.GuideTransfer, Controls.Guide, Action = 89)
@@ -639,7 +715,7 @@ Public Sub Input(View As P.Camera3D, Key As Number, Blocked As Boolean)
         Controls.Enabled = False
 
     Else If (Action >= 300 And
-        Action <= 311 Or
+        Action <= 315 Or
         (Action >= 500 And Action < 510)) Then
 
         Call FileCommand(Action)

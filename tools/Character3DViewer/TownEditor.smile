@@ -30,6 +30,7 @@ Public Type State
     MarkerGesture As MarkerTools.State
     SectionGesture As SectionTools.State
     CourtGesture As CourtTools.State
+    MapGesture As MapLoadTools.State
     HistoryState As History.State
     Enabled As Boolean
     Anchored As Boolean
@@ -94,6 +95,12 @@ Public Sub Cancel(ByRef Value As State, ByRef Town As Document.State)
 
     Value.Rubber = False
     Value.Anchored = False
+    Value.MapGesture.Drawing = False
+    Value.MapGesture.Pending = False
+
+    If Value.Ui.Section = 6 Then
+        Value.Ui.Section = 0
+    End If
 
 End Sub
 
@@ -124,6 +131,10 @@ Public Function Command(ByRef Value As State, ByRef Town As Document.State, Acti
 
     If Action = 0 Then
         Return 0
+    End If
+
+    If Action >= 600 And Action < 608 Then
+        Return Action
     End If
 
     Call Cancel(Value, Town)
@@ -171,6 +182,10 @@ Public Function Command(ByRef Value As State, ByRef Town As Document.State, Acti
         Action = 92) Then
 
         Value.Ui.Tool = Action
+
+        If Action = 15 Or Action = 16 Then
+            Value.Ui.HideGuides = False
+        End If
 
     Else If Action = 93 Or Action = 94 Then
 
@@ -259,7 +274,7 @@ Public Function Command(ByRef Value As State, ByRef Town As Document.State, Acti
 
         Value.Ui.Surface = 5
         Value.Ui.Tool = 17
-        Value.Ui.Message = "Click to place. Adjacent Map Load tiles share their destination."
+        Value.Ui.Message = "Drag a rectangle, then choose its destination map."
 
     Else If Action = 44 Then
 
@@ -283,7 +298,12 @@ Public Function Command(ByRef Value As State, ByRef Town As Document.State, Acti
     Else If Action = 86 Then
 
         Value.Ui.Tool = 70
-        Value.Ui.Message = "Click a marker edge. Ctrl-click adds to selection. Drag to move."
+        Value.Ui.HideGuides = False
+        Value.Ui.Message = "Drag empty space to select markers; drag an edge to move."
+
+    Else If Action = 96 Then
+
+        Value.Ui.HideGuides = Not Value.Ui.HideGuides
 
     Else If Action = 87 Then
 
@@ -552,6 +572,23 @@ Public Function Input(ByRef Value As State, ByRef Town As Document.State,
     Point = Camera.ProjectViewerPoint(RawPoint, View, Window_Width(), Window_Height())
     Radius = Camera.WorldSizeForPixels(14, Max(View.NearPlane, Point.Depth), View.FovDegrees, Window_Height())
 
+    If (Value.Ui.Category = 2 And Value.Ui.Surface = 5 And
+        Value.Ui.Tool >= 17 And Value.Ui.Tool <= 19) Then
+
+        Call MapLoadTools.Gesture(Value.MapGesture, Town, RawPoint,
+            OnGround And Not Blocked And Not Panel.Hovered() And Not Key_Held(KEY_SHIFT),
+            Pointer_Pressed(POINTER_PRIMARY), Pointer_Held(POINTER_PRIMARY), Value.Ui.Tool)
+
+        Value.Ui.Message = Value.MapGesture.Message
+
+        If Not Value.MapGesture.Drawing Then
+            Call History.Record(Value.HistoryState, Town, Value.Guide.Ink)
+        End If
+
+        Return Action
+
+    End If
+
     If Value.Ui.Tool = 93 Or Value.Ui.Tool = 94 Then
 
         Call CourtTools.Gesture(Value.CourtGesture, Town, Value.Guide, RawPoint,
@@ -595,6 +632,10 @@ Public Function Input(ByRef Value As State, ByRef Town As Document.State,
     End If
 
     If Value.Ui.Tool = 70 Or Value.MarkerGesture.Dragging Then
+
+        If Value.Ui.HideGuides Then
+            Return Action
+        End If
 
         Call MarkerTools.Input(Value.MarkerGesture, Value.Guide, RawPoint, Radius,
             OnGround And Not Blocked And Not Panel.Hovered() And Not Key_Held(KEY_SHIFT))
@@ -664,12 +705,6 @@ Public Function Input(ByRef Value As State, ByRef Town As Document.State,
 
             End If
 
-        Else If (Value.Ui.Category = 2 And
-            Value.Ui.Surface = 5 And
-            OnGround) Then
-
-            Value.Ui.Message = MapLoadTools.Edit(Town, RawPoint, Value.Ui.Tool)
-
         Else If Value.Ui.Category = 2 And OnGround Then
 
             If Value.Anchored Then
@@ -734,6 +769,21 @@ Private Sub Outline(X0 As Number, Y0 As Number, X1 As Number, Y1 As Number)
 
 End Sub
 
+Public Sub ApplyMapDestination(ByRef Value As State, ByRef Town As Document.State, Name As Text)
+
+    Dim Ok As Boolean
+
+    Ok = MapLoadTools.Apply(Value.MapGesture, Town, Name)
+    Value.Ui.Message = Value.MapGesture.Message
+
+    If Ok Then
+        Value.Ui.Section = 0
+
+        Call History.Record(Value.HistoryState, Town, Value.Guide.Ink)
+    End If
+
+End Sub
+
 Public Sub Draw(ByRef Value As State, ByRef Town As Document.State, View As P.Camera3D)
 
     Dim Index As Number
@@ -744,9 +794,16 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State, View As P.Ca
         Return
     End If
 
-    Call Guides.Draw(Value.Guide, Town.Surface, View, Panel.LeftEdge())
-    Call TileGuides.Draw(Value.Guide, Town, View, Panel.LeftEdge())
+    If Not Value.Ui.HideGuides Then
+
+        Call Guides.Draw(Value.Guide, Town.Surface, View, Panel.LeftEdge())
+        Call TileGuides.Draw(Value.Guide, Town, View, Panel.LeftEdge())
+        Call MarkerTools.Draw(Value.MarkerGesture, View)
+
+    End If
+
     Call MapLoadTools.Draw(Town, View, Panel.LeftEdge())
+    Call MapLoadTools.DrawPreview(Value.MapGesture, View)
     Call SectionTools.Draw(Value.SectionGesture, Town, View)
     Call CourtTools.Draw(Value.CourtGesture, Town, View)
 
@@ -768,7 +825,7 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State, View As P.Ca
         Call Outline(Value.StartX, Value.StartY, Pointer_X(), Pointer_Y())
     End If
 
-    If Value.Anchored Then
+    If Value.Anchored And (Value.Ui.Tool < 15 Or Not Value.Ui.HideGuides) Then
 
         Preview.First = Value.Anchor
         Preview.Last = Value.Current

@@ -191,6 +191,73 @@ Public Function Place(ByRef Town As Document.State, X As Number, Z As Number, De
 
 End Function
 
+''' Validate the complete rectangle before adding any tile; connect the group once.
+Public Function PlaceRectangle(ByRef Town As Document.State, X0 As Number, Z0 As Number,
+    X1 As Number, Z1 As Number, Destination As Text) As Boolean
+
+    Dim X As Number
+    Dim Z As Number
+    Dim Index As Number
+    Dim Needed As Number
+    Dim First As Number
+
+    If (X0 < 0 Or Z0 < 0 Or X1 < X0 Or Z1 < Z0 Or
+        X1 >= Town.Surface.Columns Or Z1 >= Town.Surface.Rows Or
+        Not Document.ValidName(Destination) Or Destination = Town.Name) Then
+        Return False
+    End If
+
+    Needed = (X1 - X0 + 1) * (Z1 - Z0 + 1)
+
+    For Z = Z0 To Z1
+
+        For X = X0 To X1
+            Lookup[X, Z] = 0
+        End For
+    End For
+
+    For Index = 0 To Town.MapTileCount - 1
+
+        X = Town.MapTiles[Index].X
+        Z = Town.MapTiles[Index].Z
+
+        If X >= X0 And X <= X1 And Z >= Z0 And Z <= Z1 Then
+            Lookup[X, Z] = Index + 1
+            Needed = Needed - 1
+        End If
+
+    End For
+
+    If Town.MapTileCount + Needed > Document.MAX_MAP_TILES Then
+        Return False
+    End If
+
+    For Z = Z0 To Z1
+
+        For X = X0 To X1
+
+            Index = Lookup[X, Z] - 1
+
+            If Index < 0 Then
+
+                Index = Town.MapTileCount
+                Town.MapTileCount = Town.MapTileCount + 1
+                Town.MapTiles[Index].X = X
+                Town.MapTiles[Index].Z = Z
+
+            End If
+
+            Town.MapTiles[Index].Destination = Destination
+            First = Index
+        End For
+    End For
+
+    Call AssignConnected(Town, First, Destination)
+
+    Return True
+
+End Function
+
 Public Function Remove(ByRef Town As Document.State, X As Number, Z As Number) As Boolean
 
     Dim Index As Number
