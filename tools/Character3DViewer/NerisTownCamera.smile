@@ -330,13 +330,11 @@ End Sub
 Public Sub ArrivalFrame(ByRef Value As State, ByRef View As Arena.State,
     ByRef Base As P.Camera3D, Leader As P.Vector3, Optional Heading As Double = 180.0)
 
-    Base.Target = M.Add(Leader, P.Vector(0.0, 42.0, 55.0))
-    Base.Position = M.Add(Leader, P.Vector(0.0, 26.0, -300.0))
+    Dim Forward As P.Vector3
 
-    If Heading = 0.0 Then
-        Base.Target = M.Add(Leader, P.Vector(0.0, 42.0, -55.0))
-        Base.Position = M.Add(Leader, P.Vector(0.0, 26.0, 300.0))
-    End If
+    Forward = P.Vector(Sin(M.Radians(Heading - 180.0)), 0.0, Cos(M.Radians(Heading - 180.0)))
+    Base.Target = M.Add(Leader, M.Add(M.Scale(Forward, 55.0), P.Vector(0.0, 42.0, 0.0)))
+    Base.Position = M.Add(Leader, M.Add(M.Scale(Forward, -300.0), P.Vector(0.0, 26.0, 0.0)))
 
     Call Focus(Value, Heading, Base)
     Call Motion.Reset(View.Controls, View.Zoom)

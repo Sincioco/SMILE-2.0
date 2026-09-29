@@ -722,9 +722,11 @@ Public Function CoversArea(MinX As Double, MinZ As Double, MaxX As Double, MaxZ 
 End Function
 
 Public Sub DrawMap(Position As P.Vector3, Opacity As Number, LeaderName As Text,
-    LandmarkName As Text, LandmarkPosition As P.Vector3, Headlight As Image, Yaw As Double)
+    LandmarkName As Text, LandmarkPosition As P.Vector3, AirportName As Text,
+    AirportPosition As P.Vector3, Headlight As Image, Yaw As Double)
 
-    Call Map.Draw(Town, Position, Opacity, LeaderName, LandmarkName, LandmarkPosition, Headlight, Yaw)
+    Call Map.Draw(Town, Position, Opacity, LeaderName, LandmarkName, LandmarkPosition,
+        AirportName, AirportPosition, Headlight, Yaw)
 
 End Sub
 

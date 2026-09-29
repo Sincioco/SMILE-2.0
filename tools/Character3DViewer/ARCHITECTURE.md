@@ -1,6 +1,46 @@
 # Character Viewer Architecture
 
-## Current: Horizon r007 facade and cursor orbit (September 29)
+## Current checkpoint: Horizon r008 (September 29)
+
+The versioned Horizon package owns Spaceport 01 paving, gold inlays and floor
+fixtures, tower relief, two strips with U-turn roads, aligned glass hangars,
+partially transparent plain terminal glazing, and smooth Neris aircraft.
+The sign follows the wave roof. The ground sign and white platform border are
+removed. VTOL noses face outward without rotating the buildings. Source and town
+assemblies preserve the previous revisions and all 362 town placements.
+
+NerisHorizonPreview owns four models and 86 draw objects. NerisRunwayTraffic owns
+ten slots with fifteen-second staggering in a 150-second cycle; one is cargo.
+NerisHorizonDownwash owns 48 low-opacity particles near the ground. Glow owns 201
+fixture particles, including three independently selected red antenna beacons.
+Lighting and pedestrian bounds remain in their existing owners. NerisTownLandmarks
+supplies the minimap label and actual airport location. NerisTown wires the Visit
+Horizon Airport button to party arrival; NerisTownCamera owns the arrival pose.
+Right-click restores overview orbit while O/Orbit retains the current view.
+
+Runway paint is one packed 4096 x 640 texture using existing anisotropic mip
+filtering. The former overlapping thin paint meshes are removed. The GLB exporter
+adds only an optional planar color texture path; no runtime extension, dependency,
+resource limit, size baseline, or save format changed. Geometry validation reports
+123,301 vertices in the airport, 32 model parts and 78,290 triangles across four
+models. GLB preparation verifies checksums and the actual cockpit nose axis.
+The new Downwash, roof-sign, hangar-glass and runway-surface owners isolate their
+respective behaviors rather than extending bootstrap.
+
+The native build and Blender geometry checks pass. The previous full-session and
+58-check hardening runs passed before the latest sign/glass/filter changes. The
+latest full-session rerun is recorded in artifacts/horizon-r008-tests.log. Native
+preview captures predate those final geometry changes and are historical evidence,
+not final acceptance. Final live orbit inspection remains pending.
+
+Requested follow-up after this checkpoint: lower the banners onto clear windows,
+improve night runway lighting, remove paving grid lines while retaining gold
+inlays, move Horizon into a third town tab, compact Neris Town, connect west/east
+walking gateways and add the opening terminal door and entry trigger. These are
+not implemented in this checkpoint. Studio, Web adoption and other paused camera
+work remain on hold.
+
+## Earlier: Horizon r007 facade and cursor orbit (September 29)
 
 r007 changes the authored airport facade and native asset publication: castle teal
 and gold materials, arched ivory/gold trim, mixed terminal glazing, two hangar

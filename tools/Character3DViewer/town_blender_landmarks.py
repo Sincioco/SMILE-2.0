@@ -26,7 +26,7 @@ def populate(document):
         counts['RoyalCourt'] = append_collection(original, 'Royal Court — M06-r006')
         if (document['xs'][0] <= -11400 and document['xs'][-1] >= -5400
                 and document['zs'][0] <= -3550 and document['zs'][-1] >= 6050):
-            source = ROOT / 'NerisHorizonV1/Town/r007/Neris-Town-Horizon-r007.blend'
+            source = ROOT / 'NerisHorizonV1/Town/r008/Neris-Town-Horizon-r008.blend'
             counts['Horizon'] = append_collection(source, 'Horizon Airport - West')
     for name, count in counts.items():
         bpy.context.scene['town_landmark_' + name] = count

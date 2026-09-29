@@ -68,7 +68,7 @@ End Sub
 
 Public Sub Draw(ByRef Town As Document.State, Position As P.Vector3,
     Opacity As Number, LeaderName As Text, LandmarkName As Text, LandmarkPosition As P.Vector3,
-    Headlight As Image, Yaw As Double)
+    AirportName As Text, AirportPosition As P.Vector3, Headlight As Image, Yaw As Double)
 
     Dim X As Number
     Dim Z As Number
@@ -140,14 +140,8 @@ Public Sub Draw(ByRef Town As Document.State, Position As P.Vector3,
 
     End For
 
-    If LandmarkName <> "" Then
-
-        X = Coordinate(LandmarkPosition.X, Town.Surface.OriginX, Town.Surface.XEdges[Town.Surface.Columns])
-        Z = Coordinate(LandmarkPosition.Z, Town.Surface.OriginZ, Town.Surface.ZEdges[Town.Surface.Rows])
-        Fill Rectangle MapLeft + X * 4 - 4, 155 + (63 - Z) * 4 - 4, 9, 9, RGB(226, 200, 133) Opacity Opacity
-        Draw Text LandmarkName At MapLeft + X * 4 - 24, 155 + (63 - Z) * 4 + 7 Size 9 Color WHITE
-
-    End If
+    Call DrawLandmark(Town, MapLeft, Opacity, LandmarkName, LandmarkPosition)
+    Call DrawLandmark(Town, MapLeft, Opacity, AirportName, AirportPosition)
 
     X = Coordinate(Position.X, Town.Surface.OriginX, Town.Surface.XEdges[Town.Surface.Columns])
     Z = Coordinate(Position.Z, Town.Surface.OriginZ, Town.Surface.ZEdges[Town.Surface.Rows])
@@ -156,6 +150,25 @@ Public Sub Draw(ByRef Town As Document.State, Position As P.Vector3,
 
     Fill Rectangle MapLeft + X * 4 - 2, 155 + (63 - Z) * 4 - 2, 5, 5, CYAN
     Draw Text LeaderName + " X:" + Panel.NumberLabel(ToNumber(Position.X)) + " Y:" + Panel.NumberLabel(ToNumber(Position.Y)) + " Z:" + Panel.NumberLabel(ToNumber(Position.Z)) At MapLeft, 414 Size 11 Color WHITE
+
+End Sub
+
+Private Sub DrawLandmark(ByRef Town As Document.State, MapLeft As Number,
+    Opacity As Number, Name As Text, Position As P.Vector3)
+
+    Dim X As Number
+    Dim Z As Number
+    Dim LabelX As Number
+
+    If Name = "" Then
+        Return
+    End If
+
+    X = Coordinate(Position.X, Town.Surface.OriginX, Town.Surface.XEdges[Town.Surface.Columns])
+    Z = Coordinate(Position.Z, Town.Surface.OriginZ, Town.Surface.ZEdges[Town.Surface.Rows])
+    LabelX = ToNumber(Clamp(ToDouble(X * 4 - 24), 0.0, ToDouble(256 - Text_Length(Name) * 6)))
+    Fill Rectangle MapLeft + X * 4 - 4, 155 + (63 - Z) * 4 - 4, 9, 9, RGB(226, 200, 133) Opacity Opacity
+    Draw Text Name At MapLeft + LabelX, 155 + (63 - Z) * 4 + 7 Size 9 Color WHITE
 
 End Sub
 

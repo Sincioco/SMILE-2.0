@@ -1,4 +1,4 @@
-''' One owned halo batch: blinking antenna beacon and inset runway guidance lights.
+''' One owned halo batch: alternating antenna beacons and inset guidance lights.
 Module Smile.Tools.NerisHorizonGlow
 
 Option Explicit
@@ -8,22 +8,24 @@ Import Smile.Simple3D.Graphics3D As G
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Tools.NerisHorizonRoute As Route
 
-Public Const PARTICLE_COUNT = 72
+Public Const PARTICLE_COUNT = 201
 
 Public Type State
     Texture As Core.Texture3D
     Material As Core.Material3D
     Particles As Core.ParticleBatch3D
     Clock As Number
-    Lit As Boolean
+    Lit As Number
     Ready As Boolean
 End Type
 
-Public Function BeaconOn(Time As Number) As Boolean
+Public Function BeaconOn(Time As Number, Optional Index As Number = 0) As Boolean
 
     Dim Result As Boolean
+    Dim Seed As Number
 
-    Result = Time Mod 1500 < 450
+    Seed = (ToNumber(Floor(ToDouble(Time Mod 57600) / 900.0)) * 25173 + 13849) Mod 65536
+    Result = Index = Seed Mod 3 And Time Mod 900 < 250 + Seed Mod 200
 
     Return Result
 
@@ -35,6 +37,8 @@ Public Function Create(ByRef Value As State) As Boolean
     Dim Point As P.Vector3
     Dim Size As Double
     Dim Ok As Boolean
+    Dim Lamp As Number
+    Dim Depth As Double
 
     Value.Texture = G.LoadTexture3D("Assets/Fire/ember-shape.png",
         G.TEXTURE_FILTER_LINEAR, G.TEXTURE_WRAP_CLAMP)
@@ -46,25 +50,39 @@ Public Function Create(ByRef Value As State) As Boolean
 
         Size = 16.0
 
-        If Index = 0 Then
-            Point = P.Vector(0.0, 285.6, 234.0)
+        Lamp = (Index - 3) Mod 71 + 1
+        Depth = 355.0 - Floor(ToDouble(Index - 3) / 71.0) * 85.0
+
+        If Index >= 145 Then
+            Point = FloorLight(Index - 145)
+            Size = 24.0
+        Else If Index = 0 Then
+            Point = P.Vector(0.0, 285.6, 194.0)
             Size = 80.0
-        Else If Index <= 30 Then
-            Point = P.Vector(-420.0 + ToDouble((Index - 1) Mod 15) * 60.0,
-                0.24, 329.0 + Floor(ToDouble(Index - 1) / 15.0) * 52.0)
-        Else If Index <= 53 Then
-            Point = P.Vector(-330.0 + ToDouble(Index - 31) * 30.0, 0.25, 355.0)
+        Else If Index = 1 Then
+            Point = P.Vector(-17.0, 256.6, 194.0)
+            Size = 70.0
+        Else If Index = 2 Then
+            Point = P.Vector(17.0, 265.6, 194.0)
+            Size = 70.0
+        Else If Lamp <= 30 Then
+            Point = P.Vector(-420.0 + ToDouble((Lamp - 1) Mod 15) * 60.0,
+                0.24, Depth - 26.0 + Floor(ToDouble(Lamp - 1) / 15.0) * 52.0)
+        Else If Lamp <= 53 Then
+            Point = P.Vector(-330.0 + ToDouble(Lamp - 31) * 30.0, 0.25, Depth)
         Else
-            Point = P.Vector(-426.0 + Floor(ToDouble(Index - 54) / 9.0) * 852.0,
-                0.25, 335.0 + ToDouble((Index - 54) Mod 9) * 5.0)
+            Point = P.Vector(-426.0 + Floor(ToDouble(Lamp - 54) / 9.0) * 852.0,
+                0.25, Depth - 20.0 + ToDouble((Lamp - 54) Mod 9) * 5.0)
         End If
 
         Point = Route.ToWorld(Point)
         Ok = P.SetParticle(Value.Particles, Index, Point, Size, 0.0, 0) And Ok
 
-        If Index = 0 Then
-            Ok = G.SetParticleColor3D(Value.Particles, Index, 255, 35, 20, 100) And Ok
-        Else If Index >= 54 Then
+        If Index < 3 Then
+            Ok = G.SetParticleColor3D(Value.Particles, Index, 255, 35, 20, 0) And Ok
+        Else If Index >= 145 Then
+            Ok = G.SetParticleColor3D(Value.Particles, Index, 75, 225, 255, 60) And Ok
+        Else If Lamp >= 54 Then
             Ok = G.SetParticleColor3D(Value.Particles, Index, 60, 255, 135, 75) And Ok
         Else
             Ok = G.SetParticleColor3D(Value.Particles, Index, 255, 239, 211, 68) And Ok
@@ -73,29 +91,79 @@ Public Function Create(ByRef Value As State) As Boolean
     End For
 
     Ok = G.CommitParticleBatch3D(Value.Particles, PARTICLE_COUNT) And Ok
-    Value.Lit = True
     Value.Ready = Ok
+
+    Call Update(Value, 0)
+
+    Ok = Value.Ready
 
     Return Ok
 
 End Function
 
+Public Function FloorLight(Index As Number) As P.Vector3
+
+    Dim Point As P.Vector3
+    Dim Offset As Number
+
+    If Index < 14 Then
+
+        Point = P.Vector(-26.0 + Floor(ToDouble(Index) / 7.0) * 52.0,
+            0.19, -186.0 + ToDouble(Index Mod 7) * 24.0)
+
+    Else If Index < 42 Then
+
+        Offset = Index - 14
+        Point = P.Vector(-449.0 + Floor(ToDouble(Offset) / 14.0) * 730.0 +
+            Floor(ToDouble(Offset Mod 14) / 7.0) * 168.0, 0.19, -162.0 + ToDouble(Offset Mod 7) * 32.0)
+
+    Else
+
+        Offset = Index - 42
+        Point = P.Vector(-450.0 + ToDouble(Offset) * 60.0, 0.19, -192.0)
+
+        If Offset >= 7 Then
+            Point.X = Point.X + 120.0
+        End If
+
+    End If
+
+    Return Point
+
+End Function
+
 Public Sub Update(ByRef Value As State, Elapsed As Number)
 
-    Dim Lit As Boolean
+    Dim Lit As Number
     Dim Alpha As Number
     Dim Ok As Boolean
+    Dim Index As Number
 
-    Value.Clock = (Value.Clock + Max(0, Elapsed) Mod 1500) Mod 1500
-    Lit = BeaconOn(Value.Clock)
+    Value.Clock = (Value.Clock + Max(0, Elapsed) Mod 57600) Mod 57600
+
+    For Index = 0 To 2
+
+        If BeaconOn(Value.Clock, Index) Then
+            Lit = Index + 1
+        End If
+
+    End For
 
     If Value.Ready And Value.Lit <> Lit Then
 
-        If Lit Then
-            Alpha = 100
-        End If
+        Ok = True
 
-        Ok = G.SetParticleColor3D(Value.Particles, 0, 255, 35, 20, Alpha)
+        For Index = 0 To 2
+
+            Alpha = 0
+
+            If Lit = Index + 1 Then
+                Alpha = 100
+            End If
+
+            Ok = G.SetParticleColor3D(Value.Particles, Index, 255, 35, 20, Alpha) And Ok
+        End For
+
         Ok = G.CommitParticleBatch3D(Value.Particles, PARTICLE_COUNT) And Ok
         Value.Ready = Ok
         Value.Lit = Lit

@@ -31,11 +31,11 @@ def write(path, batch):
                 "accessors": [], "bufferViews": [], "materials": [], "buffers": []}
     binary = bytearray()
 
-    def texture(filename, semantic):
+    def texture(filename, semantic, source=None):
         images = document.setdefault('images', [])
         for i, item in enumerate(images):
             if item['name'] == filename: return i
-        blob = (Path(__file__).resolve().parents[1] / 'Textures' / filename).read_bytes()
+        blob = (Path(source) if source else Path(__file__).resolve().parents[1] / 'Textures' / filename).read_bytes()
         binary.extend(b'\0' * (-len(binary) % 4))
         view = len(document['bufferViews'])
         document['bufferViews'].append({'buffer':0,'byteOffset':len(binary),'byteLength':len(blob)})
@@ -62,6 +62,8 @@ def write(path, batch):
         positions, normals, tangents, indices, uvs, shared = [], [], [], [], [], {}
         stone = bool(material.get('neris_stone_texture'))
         grass = bool(material.get('neris_grass_texture'))
+        planar = material.get('neris_planar_color_texture')
+        bounds = material.get('neris_planar_bounds', (0,0,1,1))
         for triangle in triangles:
             for corner in triangle:
                 if corner not in shared:
@@ -69,7 +71,10 @@ def write(path, batch):
                     p, n = corner
                     positions.extend((p[0], p[2], -p[1]))
                     repeat = 2.0 if grass else 1.8
-                    uvs.extend((p[0]/repeat, p[1]/repeat) if stone or grass else (0.0,0.0))
+                    if planar:
+                        uvs.extend(((p[0]-bounds[0])/bounds[2], 1-(p[1]-bounds[1])/bounds[3]))
+                    else:
+                        uvs.extend((p[0]/repeat, p[1]/repeat) if stone or grass else (0.0,0.0))
                     nx, ny, nz = n[0], n[2], -n[1]
                     normals.extend((nx, ny, nz))
                     tx, ty, tz = (nz, 0.0, -nx) if abs(ny) < .9 else (0.0, -nz, ny)
@@ -87,6 +92,9 @@ def write(path, batch):
         attributes = {"POSITION": position, "NORMAL": accessor(normals, 3), "TANGENT": accessor(tangents, 4),
                       "TEXCOORD_0": accessor(uvs, 2)}
         document["materials"].append(material_json(material))
+        if planar:
+            document['materials'][-1]['pbrMetallicRoughness']['baseColorTexture'] = {
+                'index':texture(Path(planar).name,'color',planar)}
         if stone:
             document['materials'][-1]['pbrMetallicRoughness']['baseColorTexture'] = {'index':texture('Neris-Stone-Grain.png','color')}
             document['materials'][-1]['normalTexture'] = {'index':texture('Neris-Stone-Normal.png','normal'),'scale':.25}

@@ -226,105 +226,46 @@ End Sub
 Sub CheckRunway()
 
     Dim Flight As Runway.State
+    Dim Clock As Runway.State
+    Dim NextFlight As Runway.State
     Dim Point As P.Vector3
-    Dim Before As P.Vector3
-    Dim Index As Number
-    Dim Boundary As Number
-
-    Call CheckRunwayDirection()
-
-    Flight.Time = 28000
-    Point = Runway.Position(Flight)
-
-    Call Check(Point.X = 180.0 And Point.Y = 0.14, "Runway Aircraft Accelerates Along The Ground Before Liftoff")
-
-    Flight.Time = 36000
-    Point = Runway.Position(Flight)
-
-    Call Check(Point.X > 180.0 And Point.Y > 100.0 And Runway.Pitch(Flight) > 0.0,
-        "Runway Aircraft Climbs Forward With Nose Raised")
-
-    Flight.Time = 60000
-
-    Call Check(Not Runway.Visible(Flight), "Cruising Aircraft Leaves The Airport View")
-
-    Flight.Time = 108000
-    Point = Runway.Position(Flight)
-
-    Call Check(Point.X = -240.0 And Point.Y = 0.14 And Runway.Visible(Flight),
-        "Returning Aircraft Touches Down On The Same Runway")
-
-    Flight.Time = 131000
-    Point = Runway.Position(Flight)
-
-    Call Check(Abs(Point.X - 422.5) < 0.01 And Abs(Point.Z - 332.5) < 0.01 And
-        Runway.Heading(Flight) = 270.0, "Aircraft Follows The Paved End Turn With Matching Heading")
-
-    Flight.Time = 148000
-    Point = Runway.Position(Flight)
-
-    Call Check(Abs(Point.X) < 0.01 And Point.Z = 310.0 And Runway.Heading(Flight) = 0.0,
-        "Aircraft Returns Along The Parallel Taxiway Behind The Glass Halls")
-
-    For Index = 0 To 7
-
-        Select Case Index
-            Case 0
-                Boundary = 10000
-            Case 1
-                Boundary = 28000
-            Case 2
-                Boundary = 108000
-            Case 3
-                Boundary = 126000
-            Case 4
-                Boundary = 136000
-            Case 5
-                Boundary = 160000
-            Case 6
-                Boundary = 170000
-            Case 7
-                Boundary = 180000
-        End Select
-
-        Flight.Time = Boundary - 1
-        Before = Runway.Position(Flight)
-
-        Call Runway.Advance(Flight, 1)
-
-        Point = Runway.Position(Flight)
-
-        Call Check(M.Distance(Before, Point) < 0.2, "Visible Runway Phase Joins And Cycle Wrap Stay Continuous")
-    End For
-
-End Sub
-
-Sub CheckRunwayDirection()
-
-    Dim Flight As Runway.State
     Dim Before As P.Vector3
     Dim Travel As P.Vector3
     Dim Nose As P.Vector3
     Dim Index As Number
     Dim Ok As Boolean
 
-    For Index = 0 To 6
+    Flight.Time = 20000
+    Point = Runway.Position(Flight)
+
+    Call Check(Point.X = -240.0 And Point.Y = 0.14 And Point.Z = 355.0,
+        "Arrivals Touch Down On The Outer Strip")
+
+    Flight.Time = 37000
+    Point = Runway.Position(Flight)
+
+    Call Check(Abs(Point.X - 402.5) < 0.01 And Abs(Point.Z - 312.5) < 0.01 And
+        Runway.Heading(Flight) = 270.0, "Aircraft Uses The Connecting U Turn Road")
+
+    Flight.Time = 60000
+    Point = Runway.Position(Flight)
+
+    Call Check(Point.X = -180.0 And Point.Z = 270.0 And Point.Y = 0.14,
+        "Departures Use The Second Strip")
+
+    For Index = 0 To 4
 
         Select Case Index
             Case 0
-                Flight.Time = 19000
+                Flight.Time = 10000
             Case 1
-                Flight.Time = 36000
+                Flight.Time = 25000
             Case 2
-                Flight.Time = 100000
+                Flight.Time = 37000
             Case 3
-                Flight.Time = 118000
+                Flight.Time = 53000
             Case 4
-                Flight.Time = 131000
-            Case 5
-                Flight.Time = 148000
-            Case 6
-                Flight.Time = 165000
+                Flight.Time = 66000
         End Select
 
         Before = Spaceport.ToWorld(Runway.Position(Flight))
@@ -336,8 +277,15 @@ Sub CheckRunwayDirection()
         Travel = M.Subtract(Spaceport.ToWorld(Runway.Position(Flight)), Before)
         Ok = M.TryNormalize(Travel, Travel)
 
-        Call Check(Ok And M.Dot(Nose, Travel) > 0.90,
-            "Actual Negative-Z Aircraft Nose Leads Departure, Approach, Rollout And Both Taxi Turns")
+        Call Check(Ok And M.Dot(Nose, Travel) > 0.90, "Aircraft Nose Leads Every Moving Flight Phase")
+    End For
+
+    For Index = 0 To 9
+        Flight = Runway.Scheduled(Clock, Index)
+        NextFlight = Runway.Scheduled(Clock, (Index + 1) Mod 10)
+
+        Call Check((NextFlight.Time - Flight.Time + Runway.CYCLE) Mod Runway.CYCLE = 15000,
+            "Ten Flights Are Staggered At Fifteen Second Intervals")
     End For
 
 End Sub

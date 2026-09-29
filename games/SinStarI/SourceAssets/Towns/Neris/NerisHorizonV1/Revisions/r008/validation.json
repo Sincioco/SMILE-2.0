@@ -1,0 +1,62 @@
+{
+  "revision": "r008",
+  "hangars": {
+    "Transport Hangar": [
+      [
+        -442.17938232421875,
+        28.950000762939453,
+        0.0
+      ],
+      [
+        -287.82061767578125,
+        150.64999389648438,
+        58.999446868896484
+      ]
+    ],
+    "Royal Hangar": [
+      [
+        316.7243957519531,
+        38.95000076293945,
+        0.0
+      ],
+      [
+        413.2756042480469,
+        150.64999389648438,
+        44.99858093261719
+      ]
+    ]
+  },
+  "tower_center_y_m": 190,
+  "floor_lights": 56,
+  "runway_lights": 142,
+  "runways": 2,
+  "retained_skylights": 196,
+  "hangar_skylight_panels": 32,
+  "filtered_runway_paint": true,
+  "nonoverlapping_turn_pavement": true,
+  "roof_sign": true,
+  "hangar_glass_opacity": 0.8,
+  "antenna_beacons": 3,
+  "white_platform_border": false,
+  "aircraft_models": {
+    "Horizon": {
+      "vertices": 123301,
+      "parts": 14
+    },
+    "Transport": {
+      "vertices": 5137,
+      "parts": 6,
+      "cooked_cockpit_mean_z": -28.5
+    },
+    "Royal": {
+      "vertices": 5137,
+      "parts": 6,
+      "cooked_cockpit_mean_z": -23.369999638310187
+    },
+    "Cargo": {
+      "vertices": 4513,
+      "parts": 6,
+      "cooked_cockpit_mean_z": -37.049998919169106
+    }
+  }
+}

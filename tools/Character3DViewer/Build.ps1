@@ -48,6 +48,7 @@ $nativeBattleSources = @(
     'NerisHorizonPreview.smile',
     'NerisHorizonRoute.smile',
     'NerisHorizonGlow.smile',
+    'NerisHorizonDownwash.smile',
     'NerisHorizonLighting.smile',
     'ProximityDrawbridge.smile',
     'TownDocument.smile',

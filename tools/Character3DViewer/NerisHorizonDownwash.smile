@@ -1,0 +1,121 @@
+''' A small ground-level dust ring beneath the two vertically moving aircraft.
+Module Smile.Tools.NerisHorizonDownwash
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Tools.NerisSpaceportTraffic As Traffic
+Import Smile.Tools.NerisHorizonRoute As Route
+
+Public Type State
+    Texture As Core.Texture3D
+    Material As Core.Material3D
+    Particles As Core.ParticleBatch3D
+    Clock As Number
+    Ready As Boolean
+End Type
+
+Public Function Create(ByRef Value As State) As Boolean
+
+    Dim Flights As Traffic.State
+
+    Dim ReturnValue As Boolean
+
+    Value.Texture = G.LoadTexture3D("Assets/Fire/ember-shape.png", G.TEXTURE_FILTER_LINEAR, G.TEXTURE_WRAP_CLAMP)
+    Value.Material = G.CreateEffectMaterial3D(Value.Texture, G.MATERIAL_ALPHA_BLEND, 100)
+    Value.Particles = G.CreateParticleBatch3D(48, Value.Material, G.VFX_BILLBOARD_CAMERA, 1, 1)
+    Value.Ready = Value.Texture.Handle <> 0 And Value.Material.Handle <> 0 And Value.Particles.Handle <> 0
+
+    Call Update(Value, Flights, 0)
+
+    ReturnValue = Value.Ready
+
+    Return ReturnValue
+
+End Function
+
+Public Function Strength(Flights As Traffic.State, Royal As Boolean) As Double
+
+    Dim Position As P.Vector3
+    Dim Time As Number
+    Dim Active As Boolean
+    Dim Result As Double
+
+    Position = Traffic.Position(Flights, Royal)
+    Time = Flights.TransportTime
+    Active = (Time >= 60000 And Time < 70000) Or Time >= 110000
+
+    If Royal Then
+        Time = Flights.RoyalTime
+        Active = (Time >= 55000 And Time < 65000) Or (Time >= 115000 And Time < 125000)
+    End If
+
+    If Active Then
+        Result = Max(0.0, 1.0 - Position.Y / 70.0)
+    End If
+
+    Return Result
+
+End Function
+
+Public Sub Update(ByRef Value As State, Flights As Traffic.State, Elapsed As Number)
+
+    Dim Index As Number
+    Dim Center As P.Vector3
+    Dim Point As P.Vector3
+    Dim Age As Double
+    Dim Angle As Double
+    Dim Radius As Double
+    Dim Alpha As Number
+    Dim Ok As Boolean
+
+    If Not Value.Ready Then
+        Return
+    End If
+
+    Value.Clock = (Value.Clock + Max(0, Elapsed)) Mod 1500
+    Ok = True
+
+    For Index = 0 To 47
+
+        Center = Traffic.Position(Flights, Index >= 24)
+        Age = ToDouble((Value.Clock + Index * 97) Mod 1500) / 1500.0
+        Angle = M.Radians(ToDouble(Index Mod 24) * 137.5 + Age * 28.0)
+        Radius = 3.0 + 24.0 * Age
+        Point = Route.ToWorld(P.Vector(Center.X + Radius * Cos(Angle),
+            0.35 + Age * 1.5, Center.Z + Radius * Sin(Angle)))
+        Alpha = ToNumber(Strength(Flights, Index >= 24) * 22.0 * Sin(M.Radians(Age * 180.0)))
+        Ok = P.SetParticle(Value.Particles, Index, Point, 18.0 + Age * 55.0, Age * 90.0, 0) And Ok
+        Ok = G.SetParticleColor3D(Value.Particles, Index, 165, 158, 137, Alpha) And Ok
+    End For
+
+    Value.Ready = G.CommitParticleBatch3D(Value.Particles, 48) And Ok
+
+End Sub
+
+Public Function Draw(ByRef Value As State) As Boolean
+
+    Dim Ok As Boolean
+
+    Ok = Value.Ready And G.DrawParticleBatch3D(Value.Particles)
+
+    Return Ok
+
+End Function
+
+Public Sub Destroy(ByRef Value As State)
+
+    Dim Empty As State
+
+    Call G.DestroyParticleBatch3D(Value.Particles)
+    Call G.DestroyMaterial3D(Value.Material)
+    Call G.DestroyTexture3D(Value.Texture)
+
+    Value = Empty
+
+End Sub
+
+End Module

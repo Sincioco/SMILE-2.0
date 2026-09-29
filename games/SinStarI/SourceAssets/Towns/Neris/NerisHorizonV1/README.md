@@ -1,90 +1,88 @@
-# Neris Horizon — Gentle Wave r007
+# Neris Horizon — Gentle Wave r008
 
-The current airport is in western Neris Town. Revision r007 uses the castles'
-actual teal-roof and gold materials, ivory arched facade details, gold roof ribs,
-window tracery and entrance trim. The terminal mixes 304 opaque blue panels with
-32 clear passenger panels. All 196 original skylight panels remain unchanged.
-Each side hangar has a real glazed roof opening, with gold borders: 38.5 × 84 m
-and 24 × 74 m. The rear halls restore the earlier opaque blue glass, ivory sawtooth
-roofs and gold frames, with 16 evergreen planters clear of the aircraft lanes.
-The **900 × 50 m rear runway**, parallel taxiway and hall positions remain intact.
-The 960 × 600 m site, 520 × 150 m terminal and 285 m antenna remain full size.
-The beacon housing raises the measured maximum height to 285.30 m.
+Horizon remains at full size in western Neris Town. The terminal and both hangars
+retain their teal wave roofs, original skylights and Neris facade ornaments.
+The two hangar rear roof edges now align with the terminal at local Y=150 m.
+Both VTOL noses face outward toward the front apron; building orientations are unchanged.
+Hangar side and rear walls use terminal-style vertical glass at 80% opacity.
+
+The control tower moves 40 m closer, to (0,190), with four ivory lancet surrounds,
+gold tracery, Neris compass emblems and cyan crystal reliefs. Its antenna reaches
+285.30 m. All three antenna tips flash red in an irregular sequence, one at a time.
+Both rear glass halls and their
+planters are removed. Two 900 x 50 m strips at Y=355 and Y=270 are connected by
+18 m wide U-turn roads with a 42.5 m centerline radius. The platform remains
+960 x 600 m. No light poles were added.
+
+The Spaceport 01 deck material is reused exactly, with 12 m paving tiles, four
+gold approach inlays, three compass medallions, apron borders and 56 flush cyan
+floor fixtures. Both strips have 71 guidance lights each. The ordinary terminal
+bays use 43% opacity; glass behind the gold ornaments stays opaque. The Neris-style
+teal/gold Horizon Airport sign follows the wave roof above the entrance, with two
+compass banners. The former ground sign and white platform border are removed.
 
 ## Current files
 
-- `Source/Neris-Horizon-Gentle-Wave-r007.blend`: isolated authored airport.
-- `Town/r007/Neris-Town-Horizon-r007.blend`: full review town, with all 362
-  original placements and unrelated objects preserved.
-- `Previews/r007`: actual Blender Rear, Top, Hero and Front renders, plus
-  `Native-Front.png` and `Native-Rear.png` captured from the rebuilt live Viewer.
-- `Native` and `Revisions/r007/Native`: checked matching exports, 3 models,
-  25 material parts and 69,264 triangles. The third aircraft reuses the transport
-  geometry at 55% size; the native owner draws 31 objects.
-- `Town/r007/Neris-Town-Horizon-r007.town`: layout snapshot. Live Viewer saves
-  were not replaced; the update changes the airport asset and its native behavior.
+- `Source/Neris-Horizon-Gentle-Wave-r008.blend`: authored airport, including aircraft previews.
+- `Town/r008/Neris-Town-Horizon-r008.blend`: full review town; all 362 placements
+  and 16,842 unrelated objects are preserved.
+- `Town/r008/Neris-Town-Horizon-r008.town`: unchanged layout snapshot. Live saves
+  remain authoritative and were not replaced.
+- `Native` and `Revisions/r008/Native`: matching, checksummed native exports.
+- `Previews/r008`: actual Blender and native Viewer evidence.
+- `Revisions/r008/validation.json`: measured geometry and model budgets.
 
-r006 and earlier sources remain intact. Original Spaceport 01 remains in its own
-**Neris Spaceport** town/tab, connected by the existing two-way foot route. All
-castles remain intact. The map footprint and existing roads did not change in r007.
-Future Save For Blender exports append the r007 airport collection.
+Earlier revisions, original Spaceport 01 and all castle packages remain intact.
+Save For Blender appends the r008 airport collection. The authored ship meshes
+keep the native -Z nose axis; the same outward orientation appears in Blender and
+the Viewer. **Visit Horizon Airport** brings the party to the front entrance and
+looks toward it from behind Arin. Right-click in Free Camera restores a bird's-eye
+town view and slow orbit. O/Orbit retains the current view; Follow Party remains
+leader-centered.
 
-## Movement and lighting
+## Traffic and lighting
 
-The third aircraft repeats a 180-second cycle: wait, accelerate, climb away,
-return on approach, touch down, slow along the runway, follow the paved end turn,
-and taxi back on the parallel lane. Its 45.1 m wingspan clears both moved glass
-halls; its original side-apron siblings keep their previous cycles. Flight motion
-is implemented by `NerisRunwayTraffic`, with resources owned by
-`NerisHorizonPreview`; it does not require another model or runtime pool increase.
-The model's native nose is -Z after asset cooking. Heading now includes the
-required 180-degree correction and pitch follows that same native axis.
+Nine regional aircraft instances and one larger Neris cargo aircraft share four
+model resources with the airport and its two VTOL spacecraft. Smoothed hulls and
+engines use denser sections, teal panels, gold stripes and Neris emblems. The cargo
+ship measures approximately 125 m long and 112 m wide; the regional aircraft use
+55% of the transport model. The cargo is 130% of that full-size model.
 
-The centered tower antenna has a red halo beacon, on for 0.45 seconds every
-1.5 seconds. Seventy-one inset runway fixtures provide edge, centerline and
-threshold guidance. `NerisHorizonGlow` owns one 72-particle batch including the
-beacon; `NerisHorizonLighting` retains the 13 concealed building light sources and
-moves the two glass-hall sources to their new positions. There are no light poles.
-The blinking beacon and aircraft cycle run in the native Viewer; the Blender
-review contains the authored fixtures and a parked third-aircraft preview.
+`NerisRunwayTraffic` schedules a new arrival every fifteen seconds on the outer strip.
+Each aircraft rolls out, takes the U-turn road, then leaves along the inner strip.
+The cargo occupies one of the ten staggered slots, returning every 150 seconds.
+An aircraft is hidden once clear of the scene, then returns on approach.
+`NerisHorizonPreview` owns the four models and 86 drawing objects; motion remains
+in the traffic owner. `NerisHorizonDownwash` owns 48 low-opacity dust particles
+that spread near the ground during VTOL ascent/descent and disappear aloft.
 
-Arin and all followers can walk from the town road through the physically clear
-23.4 m central entrance and around the terminal ground floor. Parked sliding
-leaves flank the opening. Counters, seating, remaining columns, stairs and glazing
-have solid pedestrian footprints; runway/taxi areas are excluded. Upper-floor
-stair traversal is not part of this update. `NerisHorizonRoute` owns these bounds
-and the matching step/landing heights.
-
-Follow Party orbit uses the leader's position as its pivot for O, the Orbit
-button, mouse orbit and arrow orbit. It retains the current camera position on
-activation and follows the leader as the party moves. Free-camera right-click
-uses depth picking (ground-plane fallback) to orbit the point under the cursor,
-without moving the eye on activation. O/Orbit retains its current pivot. The framing algorithm stays in
-`NerisTownCamera`, with small input wiring in `NerisTown`.
+`NerisHorizonGlow` owns 201 halo particles: 142 runway fixtures, 56 floor fixtures
+and three beacons. The existing thirteen concealed night-light sources are retained;
+the removed rear-hall washes now illuminate the forecourt. The minimap obtains
+its selected-airport label and actual terminal position from NerisTownLandmarks.
+Both Horizon and original Spaceport 01 are represented in their respective towns.
 
 ## Validation
 
-Blender checks pass for the unchanged terminal skylights, both open hangar
-skylights, gold curbs, planters, opaque hall glazing, clear entrance, parallel
-halls, 71 runway fixtures and canonical checksums. The town assembly retains all
-362 placements and 16,842 objects outside the airport collection. The Horizon
-mesh has 127,253 vertices, under the existing 131,072 limit; buried roof-cell
-walls were removed rather than increasing limits.
+Geometry checks confirm the aligned roof backs, two strips, four tower crystal
+panels, retained 196 terminal skylight panels and 32 hangar skylight panels,
+56 floor lenses, 142 runway fixtures and the clear passenger doorway. The deck
+color matches the source Spaceport 01 material. GLB preparation verifies the
+actual cockpit geometry's forward axis, checksums and unchanged native limits.
+Horizon has 123,301 vertices against the 131,072 limit; four models contain
+32 material parts and 78,290 triangles. No compiler/runtime or pool limits changed.
 
-Native editor foundations, route/navigation, scene/camera, rendering and full-asset
-session checks pass. They cover all four party members entering the terminal,
-eight actual runway-aircraft draw phases, seven nose-versus-motion samples,
-beacon timing, both named towns, round-trip walking and resource release/reload.
-Right-click checks preserve the picked world pivot and radius; close follow orbit
-admits a captured radius below 80 instead of pushing the camera outward. The full
-town uses 53/64 models, 499 meshes and 468 materials, with all 24 accepted Arin keys.
-The native hardening gate and its 58 graphics/input/audio checks also pass.
-No compiler/runtime capability or limit changed. Other paused camera follow-up,
-Studio and all Web work remain on hold.
+Earlier native editing, routes, rendering and full-session checks passed, covering airport
+entry by all four party members, flight poses, fifteen-second staggering, downwash
+activation, minimap selection, linked-town travel and resource release. The town
+uses 54/64 models (latest resource counts are in the session log),, retaining all 24 Arin calibration
+keys. The latest sign/glass/filter session rerun and live visual acceptance remain
+pending at this pre-map-move checkpoint. The native hardening gate and its 58 graphics/input/audio checks pass.
 
-The native Viewer was rebuilt and reopened with the user's existing town save.
-A brief multi-angle inspection checked the facade, roof openings and restored
-rear halls, and the actual right-click control was exercised. The r007 airport
-is also open in Blender. No user .NET rebuild, app restart or browser refresh is
-required. Current implementation owners and focused growth review are in the
-Character Viewer's `ARCHITECTURE.md`.
+Runway paint is baked into one packed 4096 x 640 surface texture, using native
+anisotropic filtering and mipmaps. Its former thin overlay meshes are removed,
+so the lines filter smoothly with distance without competing depth surfaces.
+U-turn road polygons are clipped to the gap between strips; fine roof seams are
+wider and lifted from the roof. Final live orbit inspection is recorded
+in the Viewer architecture handoff. Studio, Web and other paused camera work
+remain on hold.

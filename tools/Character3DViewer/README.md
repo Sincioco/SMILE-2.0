@@ -2,16 +2,26 @@
 
 ## Native Neris Town
 
-Horizon r007 has castle-matched teal wave roofs, gold trim and arched ivory facade
-details. The terminal mixes opaque blue glass with clear passenger windows and
-retains its three skylight ribbons; each hangar has a new skylight. Both rear halls
-retain their earlier ivory sawtooth roofs, blue glazing, gold frames and evergreen
-planters. A third aircraft travels nose-first through its three-minute
-takeoff/landing/taxi cycle, with inset runway guidance lights and a blinking red
-antenna beacon. Arin and the party can enter the clear central doorway.
+Horizon r008 has castle-matched teal wave roofs, gold trim, arched ivory details
+and Spaceport 01 paving with gold inlays, compass medallions and flush cyan lights.
+Plain terminal windows are partially transparent; ornamented bays remain opaque.
+All terminal and hangar skylights remain. The hangar backs align with the terminal;
+their vertical glass walls use 80% opacity. The two VTOL noses face outward toward
+the apron, with subtle ground downwash during lift-off and landing.
+The rear glass halls are removed. The tower moves closer and gains four Neris
+crystal-and-gold lancet panels. A teal/gold sign and Neris banners follow the wave
+roof above the entrance. The ground sign and white platform border are removed.
+Two rear runways connect through U-turn roads. Regional aircraft and occasional
+larger cargo flights arrive and depart at fifteen-second intervals, facing along
+their travel direction. Both strips have inset guidance lights and mip-filtered
+painted markings; the three tower antenna lights flash red one at a time in an
+irregular sequence. **Visit Horizon Airport** brings Arin and the party to its
+entrance, facing into the terminal with the camera behind Arin.
+Horizon now has a labelled marker at its terminal's position on the minimap.
 In Follow Party mode, O/Orbit, mouse orbit and arrow orbit stay centered on the
-leader. In Free Camera, right-click starts orbit around the visible town point
-under the cursor, retaining the camera's position. O/Orbit retains the current pivot.
+leader. In Free Camera, right-click restores the bird's-eye town overview and slow
+orbit. O/Orbit retains the current view and pivot. Middle-drag still uses the
+visible point under the cursor for manual orbit.
 
 The current layout has **Horizon — Gentle Wave** at full size west of the town.
 **Orbit Airport** frames it. The original Spaceport 01 is in the separate
@@ -103,7 +113,7 @@ its own four architectural washes. Removing a lamp removes its emitted light.
 | Wheel | Ease zoom without stopping orbit |
 | F / G / B | Floor / grid / shared background |
 | O / C or Orbit | Start orbit at the current camera position, target, height, lens and zoom; Orbit also stops it |
-| Right Click | Orbit the town point under the cursor; Follow Party keeps the leader as pivot |
+| Right Click | Restore bird's-eye overview and slow orbit; Follow Party keeps the leader as pivot |
 | Fit | Fit the entire town; preserve active orbit |
 | M | Show / hide minimap |
 | 1 | North-up top-down view in and out of Edit Town |

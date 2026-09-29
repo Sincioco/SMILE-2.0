@@ -23,7 +23,9 @@ Import Smile.Tools.NerisSpaceportPreview As Harbor
 Import Smile.Tools.NerisHorizonRoute As Airport
 Import Smile.Tools.NerisRunwayTraffic As Runway
 Import Smile.Tools.NerisHorizonGlow As AirportGlow
+Import Smile.Tools.NerisHorizonDownwash As Downwash
 Import Smile.Tools.NerisTownConnections As Connections
+Import Smile.Tools.NerisTownLandmarks As Landmarks
 Import Smile.Tools.NerisTownParty As Party
 Import Smile.Tools.NerisTownNavigation As Navigation
 Import Smile.Tools.NerisSpaceportTraffic As Traffic
@@ -39,6 +41,8 @@ Dim Action As Number
 Dim Shape As Catalog.Template
 Dim OpenTabs As Tabs.State
 Dim SecondTown As Document.State
+Dim AirportMapPoint As P.Vector3
+Dim DustFlights As Traffic.State
 
 Game Window "Town Editor Session Check" Size 1100 By 720
 
@@ -96,15 +100,31 @@ End If
 
 If Value.Horizon.Ready Then
 
-    Call Check(Value.Horizon.Loaded = 3 And Value.Horizon.ObjectCount = 31 And
+    Call Check(Value.Horizon.Loaded = 4 And Value.Horizon.ObjectCount = 86 And
         Not Value.Harbor.Ready, "Gentle Wave Loads In Town Without Original Spaceport")
     Call Check(Value.Comparison.Ready, "Royal Court Is Preserved Beside Horizon")
+
+    AirportMapPoint = Landmarks.AirportMapPosition()
+
+    Call Check(Landmarks.AirportMapLabel() = "Horizon Spaceport" And
+        AirportMapPoint.X = -8150.0 And AirportMapPoint.Z = 1250.0,
+        "Minimap Includes Horizon At Its Actual Terminal Position")
     Call CheckFleetFrames(Value)
     Call CheckAirportEntry(Value)
-    Call Check(AirportGlow.BeaconOn(0) And Not AirportGlow.BeaconOn(450) And
-        AirportGlow.BeaconOn(1500) And Value.Horizon.Lights.Ready,
-        "Tower Beacon Blinks And Seventy Two Airport Guidance Lights Load")
+    Call Check(Value.Horizon.Lights.Ready,
+        "Tower Beacon And Both Runways And Fifty Six Floor Lights Load")
+    Call CheckBeaconPattern()
 
+    Call Check(AirportGlow.PARTICLE_COUNT = 201 And Value.Horizon.Dust.Ready,
+        "Airport Lighting And Downwash Resources Are Ready")
+
+    DustFlights.TransportTime = 60500
+
+    Call Check(Downwash.Strength(DustFlights, False) > 0.8, "Ground Thrust Appears At Lift Off")
+
+    DustFlights.TransportTime = 70000
+
+    Call Check(Downwash.Strength(DustFlights, False) = 0.0, "Ground Thrust Stops Aloft")
     Call Town.Update(Value, 16)
     Call Town.ResetOverview(Value, True)
     Call Town.Update(Value, 16)
@@ -276,12 +296,41 @@ Sub CheckFleetFrames(ByRef Value As Town.State)
             Call Check(Abs(Pose.Position.X - Expected.X) < 0.001 And
                 Abs(Pose.Position.Y - Expected.Y) < 0.001 And Abs(Pose.Position.Z - Expected.Z) < 0.001,
                 "Royal Hull Uses The Rotated West Airport Placement")
+            Call Check(Abs(Pose.Rotation.Y - Airport.YAW) < 0.01,
+                "Hangar Spacecraft Nose Faces Outward Toward The Front Apron")
         End If
 
     End For
 
     Value.Horizon.Flights.TransportTime = 0
     Value.Horizon.Flights.RoyalTime = 0
+
+End Sub
+
+Sub CheckBeaconPattern()
+
+    Dim Time As Number
+    Dim Beacon As Number
+    Dim Active As Number
+    Dim Seen[3] As Boolean
+
+    For Time = 0 To 576
+
+        Active = 0
+
+        For Beacon = 0 To 2
+
+            If AirportGlow.BeaconOn(Time * 100, Beacon) Then
+                Active = Active + 1
+                Seen[Beacon] = True
+            End If
+
+        End For
+
+        Call Check(Active <= 1, "Antenna Beacons Never Flash Together")
+    End For
+
+    Call Check(Seen[0] And Seen[1] And Seen[2], "All Three Antenna Tips Flash In The Irregular Sequence")
 
 End Sub
 
@@ -302,9 +351,17 @@ Sub CheckAirportEntry(ByRef Value As Town.State)
     Value.People.Running = True
     Value.People.SpeedPercent = 200
 
-    Call Party.Teleport(Value.People, P.Vector(-5500.0, 23.12, 1250.0))
+    Call Town.VisitAirport(Value)
 
-    For Step = 1 To 70
+    Point = Value.People.Path.Positions[0]
+
+    Call Check(Abs(Point.X + 6950.0) < 0.01 And Abs(Point.Z - 1250.0) < 0.01 And
+        Value.Follow And Value.PartyCamera And Not Value.Cinematic,
+        "Visit Horizon Airport Places Arin At The Entrance In Party Follow Mode")
+    Call Check(Value.BaseCamera.Position.X > Point.X And Value.BaseCamera.Target.X < Point.X,
+        "Airport Arrival Camera Looks From Arins Back Toward The Entrance")
+
+    For Step = 1 To 37
         Call Town.MoveParty(Value, P.Vector(-1.0, 0.0, 0.0), 200)
     End For
 
@@ -324,19 +381,19 @@ Sub CheckAirportEntry(ByRef Value As Town.State)
             Case 0
                 Value.Horizon.RunwayFlight.Time = 0
             Case 1
-                Value.Horizon.RunwayFlight.Time = 36000
+                Value.Horizon.RunwayFlight.Time = 65000
             Case 2
-                Value.Horizon.RunwayFlight.Time = 100000
+                Value.Horizon.RunwayFlight.Time = 10000
             Case 3
-                Value.Horizon.RunwayFlight.Time = 108000
+                Value.Horizon.RunwayFlight.Time = 20000
             Case 4
-                Value.Horizon.RunwayFlight.Time = 126000
+                Value.Horizon.RunwayFlight.Time = 32000
             Case 5
-                Value.Horizon.RunwayFlight.Time = 131000
+                Value.Horizon.RunwayFlight.Time = 37000
             Case 6
-                Value.Horizon.RunwayFlight.Time = 148000
+                Value.Horizon.RunwayFlight.Time = 53000
             Case 7
-                Value.Horizon.RunwayFlight.Time = 165000
+                Value.Horizon.RunwayFlight.Time = 71000
         End Select
 
         Call Town.Draw(Value)
@@ -358,7 +415,7 @@ Sub CheckAirportEntry(ByRef Value As Town.State)
 
     Call Party.Teleport(Value.People, Before)
 
-    Print "Airport: All Four Members Enter; Third Aircraft Takeoff, Landing And Taxi Draw; Beacon And Runway Lights Ready"
+    Print "Airport: Visit Button And Four Party Members Enter; Runway Fleet Draws Nose First; Three Alternating Beacons Ready"
 
 End Sub
 
@@ -387,6 +444,7 @@ Sub CheckWalkingConnection(ByRef Value As Town.State)
         "Separate Spaceport Loads Original Only And Releases Town Landmarks")
     Call Check(Value.Harbor.Doors.Ready And Value.Harbor.Light.Ready,
         "Original Spaceport Keeps Swinging Doors And Crystal Halos")
+    Call Check(Landmarks.AirportMapLabel() = "Spaceport 01", "Minimap Switches To The Selected Airport")
     Call Check(Value.People.Path.Positions[0].X = -5500.0 And
         Value.People.Path.Positions[0].Z = -3650.0 And Value.People.Members[0].Yaw = 0.0,
         "Party Arrives On Causeway Facing The Original Spaceport")

@@ -306,38 +306,38 @@ Private Sub RightClickOrbit(ByRef Value As Town.State, ByRef Failures As Number)
     Dim Before As P.Camera3D
     Dim Point As P.Vector3
     Dim Radius As Double
-    Dim Ok As Boolean
-    Dim X As Number
-    Dim Y As Number
     Dim Index As Number
 
     Call Town.ResetOverview(Value)
     Call Arena.AdvanceTransition(Value.View, 1000)
     Call Town.Update(Value, 0)
-    Call Town.Draw(Value)
 
-    Show Screen
+    Value.BaseCamera.Position = M.Add(Value.BaseCamera.Target, P.Vector(30.0, 20.0, 40.0))
 
-    X = Window_Width() / 2 + 95
-    Y = Window_Height() / 2 + 70
-    Before = Value.View.LiveCamera
-    Ok = Picking.OrbitPoint(Before, X, Y, Window_Width(), Window_Height(), Point)
-
-    Call Town.StartCursorOrbit(Value, X, Y)
+    Call Motion.Reset(Value.View.Controls, Value.View.Zoom)
+    Call Arena.ComposeCamera(Value.View, Value.BaseCamera)
+    Call Town.StartOverviewOrbit(Value)
     Call Town.Update(Value, 0)
 
-    Radius = M.Distance(Before.Position, Point)
+    Before = Value.View.LiveCamera
+    Point = Before.Target
+    Radius = M.Distance(Before.Position, Before.Target)
 
-    Call Check(Ok And Value.Cinematic And Not Value.Follow And
-        M.Distance(Before.Position, Value.View.LiveCamera.Position) < 0.01 And
-        M.Distance(Point, Value.View.LiveCamera.Target) < 0.01,
-        "Right Click Converts The Off-Center Pixel To Its World Pivot Without Resetting The Eye", Failures)
+    Call Check(Value.Cinematic And Not Value.Follow And Not Value.OrbitPaused And
+        Radius > 8000.0 And Value.View.Controls.PanX = 0.0,
+        "Right Click Restores Bird Eye Zoom And Starts Orbit", Failures)
+
+    If Value.Horizon.Ready Then
+        Call Check(Abs(Radius - 12000.0) < 0.01 And
+            M.Distance(Point, P.Vector(-1075.0, 650.0, 0.0)) < 0.01,
+            "Horizon Town Overview Frames The Civic Town At The Requested Distance", Failures)
+    End If
 
     For Index = 1 To 4
         Call Town.Update(Value, 1000)
         Call Check(M.Distance(Point, Value.View.LiveCamera.Target) < 0.01 And
             Abs(M.Distance(Value.View.LiveCamera.Position, Point) - Radius) < 0.01,
-            "Automatic Right-Click Orbit Retains The Picked Point And Radius", Failures)
+            "Overview Orbit Keeps Its Town Center And Distance", Failures)
     End For
 
     Call Town.ResetOverview(Value)

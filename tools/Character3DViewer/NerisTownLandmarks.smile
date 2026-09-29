@@ -8,6 +8,9 @@ Import Smile.Simple3D.Graphics3D As G
 Import Smile.Tools.NerisCastlePreview As Castle
 Import Smile.Tools.NerisSpaceportPreview As Spaceport
 Import Smile.Tools.NerisHorizonPreview As Horizon
+Import Smile.Tools.NerisHorizonRoute As AirportRoute
+Import Smile.Tools.NerisSpaceportRoute As OriginalRoute
+Import Smile.Simple3D.Precision3D As P
 
 Public Type State
     Town As Text
@@ -15,6 +18,32 @@ Public Type State
     DoorCount As Number
     Failed As Boolean
 End Type
+
+Public Function AirportMapLabel() As Text
+
+    If AirportRoute.Active() Then
+        Return "Horizon Spaceport"
+    Else If OriginalRoute.Active() Then
+        Return "Spaceport 01"
+    End If
+
+    Return ""
+
+End Function
+
+Public Function AirportMapPosition() As P.Vector3
+
+    Dim Position As P.Vector3
+
+    If AirportRoute.Active() Then
+        Position = AirportRoute.ToWorld(P.Vector(0.0, 0.0, 75.0))
+    Else If OriginalRoute.Active() Then
+        Position = P.Vector(OriginalRoute.ORIGIN_X, OriginalRoute.DECK_Y, OriginalRoute.ORIGIN_Z)
+    End If
+
+    Return Position
+
+End Function
 
 Public Sub Destroy(ByRef Value As State, ByRef Court As Castle.State,
     ByRef Original As Spaceport.State, ByRef Airport As Horizon.State)

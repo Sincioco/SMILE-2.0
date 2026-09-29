@@ -43,6 +43,7 @@ Public Function CanStand(X As Double, Z As Double) As Boolean
 
     LocalX = (Z - ORIGIN_Z) / SCALE
     LocalZ = (ORIGIN_X - X) / SCALE
+
     Result = Enabled And Abs(LocalX) <= 475.0 And LocalZ >= -195.0 And LocalZ < -3.0
     Result = Result Or (Enabled And Abs(LocalX) <= 11.0 And LocalZ >= -36.0 And LocalZ <= 4.0)
     Result = Result Or (Enabled And GroundFloor(LocalX, LocalZ))
