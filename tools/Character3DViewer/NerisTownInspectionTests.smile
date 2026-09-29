@@ -24,6 +24,9 @@ Public Sub Run(ByRef Value As Town.State, ByRef Failures As Number)
     Dim SavedMap As TownMap.State
     Dim SavedPosition As P.Vector3
 
+    SavedMap = Value.Map
+    SavedPosition = Value.People.Path.Positions[0]
+
     Call ZoomAfterTab(Value, Failures)
     Call PartyMovementAcrossCameras(Value, Failures)
     Call IdleOrbit(Value, Failures)
@@ -35,12 +38,10 @@ Public Sub Run(ByRef Value As Town.State, ByRef Failures As Number)
     Call BehindLeader(Value, Failures)
     Call FollowPartyOrbit(Value, Failures)
 
-    SavedMap = Value.Map
-    SavedPosition = Value.People.Path.Positions[0]
-
     Call ShiftMiddlePan(Value, Failures)
     Call KeyboardModes(Value, Failures)
     Call CursorOrbit(Value, Failures)
+    Call RightClickOrbit(Value, Failures)
     Call MapOrbit(Value, Failures)
 
     Call Party.Teleport(Value.People, SavedPosition)
@@ -108,10 +109,14 @@ Private Sub SkyTargetZoom(ByRef Value As Town.State, ByRef Failures As Number)
     Dim Forward As P.Vector3
     Dim After As P.Vector3
     Dim Ok As Boolean
+    Dim SavedMaximumDistance As Double
 
     Call Town.ResetOverview(Value)
 
     Value.Cinematic = False
+    ' Reproduce the expanded airport view, whose ground ray exceeds the old map's radius.
+    SavedMaximumDistance = Value.View.MaximumDistance
+    Value.View.MaximumDistance = 40000.0
     Value.BaseCamera.Position = P.Vector(-13136.0, 17119.0, 2077.0)
     Value.BaseCamera.Target = P.Vector(-13115.0, 17057.0, 2031.0)
 
@@ -138,6 +143,9 @@ Private Sub SkyTargetZoom(ByRef Value As Town.State, ByRef Failures As Number)
     Call Drone.Compose(Value.Flight, Value.View, Value.BaseCamera, False, 0)
     Call Check(Abs(Value.View.LiveCamera.Position.Y - Limits.GROUND_CLEARANCE) < 0.01,
         "Sky Target At Distance Eighty Can Zoom All The Way To Ground", Failures)
+
+    Value.View.MaximumDistance = SavedMaximumDistance
+
     Call Town.ResetOverview(Value)
 
 End Sub
@@ -289,6 +297,49 @@ Private Sub CursorOrbit(ByRef Value As Town.State, ByRef Failures As Number)
     Ok = P.TryCursorDepth(-1, 0, Window_Width(), Window_Height(), Depth)
 
     Call Check(Not Ok And Depth = 123.0, "Invalid Depth Pick Does Not Mutate Output", Failures)
+    Call Town.ResetOverview(Value)
+
+End Sub
+
+Private Sub RightClickOrbit(ByRef Value As Town.State, ByRef Failures As Number)
+
+    Dim Before As P.Camera3D
+    Dim Point As P.Vector3
+    Dim Radius As Double
+    Dim Ok As Boolean
+    Dim X As Number
+    Dim Y As Number
+    Dim Index As Number
+
+    Call Town.ResetOverview(Value)
+    Call Arena.AdvanceTransition(Value.View, 1000)
+    Call Town.Update(Value, 0)
+    Call Town.Draw(Value)
+
+    Show Screen
+
+    X = Window_Width() / 2 + 95
+    Y = Window_Height() / 2 + 70
+    Before = Value.View.LiveCamera
+    Ok = Picking.OrbitPoint(Before, X, Y, Window_Width(), Window_Height(), Point)
+
+    Call Town.StartCursorOrbit(Value, X, Y)
+    Call Town.Update(Value, 0)
+
+    Radius = M.Distance(Before.Position, Point)
+
+    Call Check(Ok And Value.Cinematic And Not Value.Follow And
+        M.Distance(Before.Position, Value.View.LiveCamera.Position) < 0.01 And
+        M.Distance(Point, Value.View.LiveCamera.Target) < 0.01,
+        "Right Click Converts The Off-Center Pixel To Its World Pivot Without Resetting The Eye", Failures)
+
+    For Index = 1 To 4
+        Call Town.Update(Value, 1000)
+        Call Check(M.Distance(Point, Value.View.LiveCamera.Target) < 0.01 And
+            Abs(M.Distance(Value.View.LiveCamera.Position, Point) - Radius) < 0.01,
+            "Automatic Right-Click Orbit Retains The Picked Point And Radius", Failures)
+    End For
+
     Call Town.ResetOverview(Value)
 
 End Sub

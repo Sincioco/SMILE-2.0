@@ -13,7 +13,7 @@ Import Smile.Tools.NerisHorizonGlow As Glow
 
 Public Type State
     Models[3] As Core.Model3D
-    Objects[30] As Core.Object3D
+    Objects[32] As Core.Object3D
     FirstPart[3] As Number
     Flights As Traffic.State
     RunwayFlight As Runway.State
@@ -39,8 +39,8 @@ Public Sub LoadNext(ByRef Value As State)
     If Value.Loaded = 0 Then
 
         If (G.LiveModelCount3D() + 3 > G.MaximumModelCount3D() Or
-            G.LiveMeshCount3D() + 24 > G.MaximumMeshCount3D() Or
-            G.LiveMaterialCount3D() + 25 > G.MaximumMaterialCount3D()) Then
+            G.LiveMeshCount3D() + 25 > G.MaximumMeshCount3D() Or
+            G.LiveMaterialCount3D() + 27 > G.MaximumMaterialCount3D()) Then
             Value.Failed = True
 
             Return
@@ -61,7 +61,7 @@ Public Sub LoadNext(ByRef Value As State)
     Ok = G.PrepareModelPbr3D(Value.Models[Value.Loaded], G.TEXTURE_FILTER_ANISOTROPIC, 1, 16) And Ok
     Value.FirstPart[Value.Loaded] = Value.ObjectCount
 
-    If Value.ObjectCount + Value.Models[Value.Loaded].PartCount > 24 Then
+    If Value.ObjectCount + Value.Models[Value.Loaded].PartCount > 25 Then
         Value.Failed = True
 
         Return
@@ -99,7 +99,7 @@ Public Sub LoadNext(ByRef Value As State)
     End If
 
     Value.Failed = Not Ok
-    Value.Ready = Ok And Value.Loaded = 3 And Value.ObjectCount = 29
+    Value.Ready = Ok And Value.Loaded = 3 And Value.ObjectCount = 31
 
     Call Route.Enable(Value.Ready)
 

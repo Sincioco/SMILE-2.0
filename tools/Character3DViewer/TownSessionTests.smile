@@ -96,7 +96,7 @@ End If
 
 If Value.Horizon.Ready Then
 
-    Call Check(Value.Horizon.Loaded = 3 And Value.Horizon.ObjectCount = 29 And
+    Call Check(Value.Horizon.Loaded = 3 And Value.Horizon.ObjectCount = 31 And
         Not Value.Harbor.Ready, "Gentle Wave Loads In Town Without Original Spaceport")
     Call Check(Value.Comparison.Ready, "Royal Court Is Preserved Beside Horizon")
     Call CheckFleetFrames(Value)
@@ -347,6 +347,9 @@ Sub CheckAirportEntry(ByRef Value As Town.State)
         Call Check(Ok And Not Value.Failed And Abs(Pose.Position.X - Expected.X) < 0.01 And
             Abs(Pose.Position.Y - Expected.Y) < 0.01 And Abs(Pose.Position.Z - Expected.Z) < 0.01,
             "Third Aircraft Actually Draws At Its Runway Flight And Taxi Positions")
+        Call Check(Abs(Pose.Rotation.Y - Runway.Heading(Value.Horizon.RunwayFlight)) < 0.01 And
+            Abs(Pose.Rotation.X - Runway.Pitch(Value.Horizon.RunwayFlight)) < 0.01,
+            "Actual Runway Draw Uses The Corrected Nose-First Orientation")
     End For
 
     Value.Horizon.RunwayFlight.Time = 0

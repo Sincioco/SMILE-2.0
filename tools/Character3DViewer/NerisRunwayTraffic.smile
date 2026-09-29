@@ -97,7 +97,7 @@ Public Function Position(Value As State) As P.Vector3
 
 End Function
 
-''' Model nose is +Z after GLB conversion; the world runway heads north (+Z).
+''' Native cooking flips GLB Z: the model nose is -Z; departure travels world +Z.
 Public Function Heading(Value As State) As Double
 
     Dim Result As Double
@@ -110,6 +110,8 @@ Public Function Heading(Value As State) As Double
         Result = 180.0 * Ease(Fraction(Value.Time, 126000, 10000))
     End If
 
+    Result = M.WrapDegrees(Result + 180.0)
+
     Return Result
 
 End Function
@@ -119,9 +121,9 @@ Public Function Pitch(Value As State) As Double
     Dim Result As Double
 
     If Value.Time >= 28000 And Value.Time < 45000 Then
-        Result = -8.0 * Sin(M.Radians(180.0 * Fraction(Value.Time, 28000, 17000)))
+        Result = 8.0 * Sin(M.Radians(180.0 * Fraction(Value.Time, 28000, 17000)))
     Else If Value.Time >= 90000 And Value.Time < 108000 Then
-        Result = 6.0 * Sin(M.Radians(180.0 * Fraction(Value.Time, 90000, 18000)))
+        Result = -6.0 * Sin(M.Radians(180.0 * Fraction(Value.Time, 90000, 18000)))
     End If
 
     Return Result

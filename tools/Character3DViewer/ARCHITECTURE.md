@@ -1,33 +1,42 @@
 # Character Viewer Architecture
 
-## Current: Horizon r006 runway and terminal access (September 29)
+## Current: Horizon r007 facade and cursor orbit (September 29)
 
-r006 replaces only the current Horizon asset: two parallel rear glass halls, two
-wave hangar roofs, a 900 × 50 m runway and a return taxiway on the unchanged site.
-NerisRunwayTraffic owns the independent 180-second third-aircraft clock and pose;
-NerisHorizonPreview owns six additional draw objects sharing the existing transport
-model. Its three models have 23 parts and 29 drawn objects. NerisHorizonGlow owns
-one 72-particle batch for 71 inset fixtures and the blinking antenna beacon.
-NerisHorizonRoute owns terminal ground-floor access and furniture/glazing bounds;
-NerisHorizonLighting moves only the two existing hall sources. No public save
+r007 changes the authored airport facade and native asset publication: castle teal
+and gold materials, arched ivory/gold trim, mixed terminal glazing, two hangar
+skylights, restored sawtooth glass halls and 16 evergreen planters. The existing
+terminal skylights, runway, site, party doorway and town document remain intact.
+The three models contain 25 parts and 31 drawn objects; the third aircraft still
+borrows the transport model. NerisRunwayTraffic corrects yaw/pitch for the cooked
+model's -Z nose. NerisHorizonGlow retains 71 runway fixtures plus the tower beacon.
+Lighting and pedestrian bounds remain in their existing owners. No public save
 format, compiler, runtime, asset limit or entry-point behavior changed.
 
-The newly requested Follow Party orbit is implemented. NerisTownCamera.AnchorParty
-owns pivot/offset capture; NerisTown routes O/button, mouse and arrow orbit through
-it while retaining follow mode. Arin/the current leader remains the moving pivot.
-Free inspection retains its cursor/current-shot orbit. Other camera follow-up,
-Studio and Web remain held. The new motion owner is 141 lines; NerisTown grows
-979→1008 lines and NerisTownCamera gains the focused 27-line pivot operation/check.
-The town coordinator gains only input wiring, with no simulation algorithm added.
-No size baseline, guardrail or exclusion was changed.
+NerisTown.StartCursorOrbit converts a secondary-click pixel through TownPicking's
+existing opaque-depth/ground fallback operation. NerisTownCamera.AnchorPoint owns
+the camera capture and neutral input reset; AnchorParty reuses it and owns the
+moving-leader offset. The displayed eye is retained, while the picked point becomes
+the automatic orbit pivot. Follow Party still anchors on the leader. No state,
+generic picking API or reverse dependency was added. NerisTown grows 1008→1029
+lines, NerisTownCamera 461→473 and NerisRunwayTraffic 141→143; bootstrap is unchanged.
+No size baseline, guardrail or exclusion changed. Other camera follow-up, Studio
+and Web remain held.
 
-Focused native foundations, routes, rendering and real-asset session checks pass:
-all four followers enter the airport, eight runway-aircraft draw phases, beacon
-timing, Follow Party orbit, linked-town round trip and resource cleanup. Current
-town usage is 53/64 models, 497 meshes and 466 materials. Blender checks confirm
-the open doorway, parallel halls, wave hangars and fixture counts. The first
-lighting integration rejected 0–255 values in the percentage-opacity API; the
-owner now uses 0–100 and the full session passes. No runtime workaround was needed.
+The nose-direction regression compares the transformed native nose against actual
+world displacement through seven flight/taxi phases; reverting the fix fails all
+seven. Native session coverage also checks the actual drawn mesh rotations.
+Cursor-orbit coverage checks world picking, unchanged eye, fixed pivot and radius.
+Scene fixtures measure the current leader-pivot radius, use the expanded map's
+40,000-unit bound for the reported airport zoom, and restore minimap state around
+movement checks. AnchorPoint admits a captured radius below 80, preventing the
+close-pivot camera jump. Blender checks verify retained skylights,
+real hangar openings, gold trim, gardens, doorway and unchanged runway fixtures.
+
+Native route, scene/camera, editor foundations, rendering and real-asset session
+checks pass. The session verifies the four-member airport entry, eight aircraft
+draw phases, beacon timing, linked-town round trip and cleanup, using 53/64 models,
+499 meshes and 468 materials. All 24 accepted Arin keys remain loaded.
+The native hardening/architecture gate and its 58 graphics/input/audio checks pass.
 
 The following sections retain the previous milestone's details.
 

@@ -2,12 +2,16 @@
 
 ## Native Neris Town
 
-Horizon r006 now has a marked rear runway, inset guidance lights, a blinking red
-antenna beacon, parallel glass halls and matching wave roofs on both hangars.
-A third aircraft repeats a three-minute takeoff/landing/taxi cycle. Arin and the
-party can enter the terminal's clear central doorway and explore the ground floor.
+Horizon r007 has castle-matched teal wave roofs, gold trim and arched ivory facade
+details. The terminal mixes opaque blue glass with clear passenger windows and
+retains its three skylight ribbons; each hangar has a new skylight. Both rear halls
+retain their earlier ivory sawtooth roofs, blue glazing, gold frames and evergreen
+planters. A third aircraft travels nose-first through its three-minute
+takeoff/landing/taxi cycle, with inset runway guidance lights and a blinking red
+antenna beacon. Arin and the party can enter the clear central doorway.
 In Follow Party mode, O/Orbit, mouse orbit and arrow orbit stay centered on the
-leader. Free-camera inspection keeps its existing pivot behavior.
+leader. In Free Camera, right-click starts orbit around the visible town point
+under the cursor, retaining the camera's position. O/Orbit retains the current pivot.
 
 The current layout has **Horizon — Gentle Wave** at full size west of the town.
 **Orbit Airport** frames it. The original Spaceport 01 is in the separate
@@ -99,7 +103,7 @@ its own four architectural washes. Removing a lamp removes its emitted light.
 | Wheel | Ease zoom without stopping orbit |
 | F / G / B | Floor / grid / shared background |
 | O / C or Orbit | Start orbit at the current camera position, target, height, lens and zoom; Orbit also stops it |
-| Right Click | Reset to the map-centered overview |
+| Right Click | Orbit the town point under the cursor; Follow Party keeps the leader as pivot |
 | Fit | Fit the entire town; preserve active orbit |
 | M | Show / hide minimap |
 | 1 | North-up top-down view in and out of Edit Town |

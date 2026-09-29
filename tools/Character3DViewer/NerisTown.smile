@@ -396,7 +396,7 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
 
     If Not Blocked And Pointer_Pressed(POINTER_SECONDARY) Then
 
-        Call ResetOverview(Value)
+        Call StartCursorOrbit(Value, Pointer_X(), Pointer_Y())
 
     Else If Key = KEY_C Or Key = KEY_O Then
 
@@ -476,6 +476,27 @@ Public Sub StartOrbit(ByRef Value As State)
     Value.OrbitPaused = False
     Value.IdleOrbit = False
     Value.IdleTime = 0
+
+End Sub
+
+''' Right-click starts automatic orbit at the visible town point under the mouse.
+Public Sub StartCursorOrbit(ByRef Value As State, X As Number, Y As Number)
+
+    Dim Point As P.Vector3
+
+    If Value.Follow And Not Value.Keys.FlyInspect Then
+        Call StartOrbit(Value)
+
+        Return
+    End If
+
+    If Not Picking.OrbitPoint(Value.View.LiveCamera, X, Y,
+        Window_Width(), Window_Height(), Point) Then
+        Return
+    End If
+
+    Call StartOrbit(Value)
+    Call Drone.AnchorPoint(Value.Flight, Value.View, Value.BaseCamera, Point)
 
 End Sub
 
@@ -918,7 +939,7 @@ Public Sub Overlay(ByRef Value As State)
     If Authoring.Editing() Then
         Draw Text "1: Top Down   Left: Edit / Pan   Shift+Left: Pan   Middle: Orbit   Wheel: Zoom" At 18, Window_Height() - 48 Size 14 Color WHITE
     Else
-        Draw Text "Middle: Orbit   Shift+Middle / Left: Pan   Wheel: Zoom   1: Top Down   Right: Overview" At 18, Window_Height() - 48 Size 14 Color WHITE
+        Draw Text "Middle: Orbit   Shift+Middle / Left: Pan   Wheel: Zoom   1: Top Down   Right: Orbit Here" At 18, Window_Height() - 48 Size 14 Color WHITE
     End If
 
     Draw Text "F / G: Floor / Grid   B: Background   M: Map   Tab: Follow   Ctrl+Tab: Leader   R: Run" At 18, Window_Height() - 26 Size 14 Color WHITE

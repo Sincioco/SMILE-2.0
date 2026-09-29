@@ -370,7 +370,7 @@ Sub CheckCamera(ByRef Scene As Town.State)
     Call Town.ResetOverview(Scene)
     Call Check(Scene.View.Controls.OrbitYaw = 0.0 And
         Scene.View.Controls.Zoom = ToDouble(Motion.DEFAULT_ZOOM),
-        "Right Click Reset Command Restores Default Overview")
+        "Fit Reset Command Restores Default Overview")
 
     Scene.View.FloorVisible = False
     Scene.View.Controls.OrbitPitch = -75.0
@@ -410,24 +410,26 @@ Sub CheckCamera(ByRef Scene As Town.State)
 
     Call Town.Update(Scene, 0)
 
-    Distance = Math3D.Length(Math3D.Subtract(Scene.View.LiveCamera.Position, Scene.View.LiveCamera.Target))
+    Distance = Math3D.Distance(Scene.View.LiveCamera.Position,
+        Math3D.Add(Scene.People.Path.Positions[0], P.Vector(0.0, 14.0, 0.0)))
 
     Call Town.StartOrbit(Scene)
     Call Town.Update(Scene, 0)
     Call Check(Abs(Math3D.Length(Math3D.Subtract(Scene.View.LiveCamera.Position,
-        Scene.View.LiveCamera.Target)) - Distance) < 0.01, "O Preserves A Close Follow View Distance")
+        Scene.View.LiveCamera.Target)) - Distance) < 0.01, "O Uses The Close Eye To Leader Distance")
 
     Scene.Follow = True
     Scene.View.Controls.Zoom = 100.0
 
     Call Town.Update(Scene, 0)
 
-    Distance = Math3D.Length(Math3D.Subtract(Scene.View.LiveCamera.Position, Scene.View.LiveCamera.Target))
+    Distance = Math3D.Distance(Scene.View.LiveCamera.Position,
+        Math3D.Add(Scene.People.Path.Positions[0], P.Vector(0.0, 14.0, 0.0)))
 
     Call Town.StartOrbit(Scene)
     Call Town.Update(Scene, 0)
     Call Check(Abs(Math3D.Length(Math3D.Subtract(Scene.View.LiveCamera.Position,
-        Scene.View.LiveCamera.Target)) - Distance) < 0.01, "O Preserves A Distant Follow View Distance")
+        Scene.View.LiveCamera.Target)) - Distance) < 0.01, "O Uses The Distant Eye To Leader Distance")
 
     Scene.View.FloorVisible = True
 
