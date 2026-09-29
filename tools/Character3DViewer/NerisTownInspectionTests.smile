@@ -313,6 +313,10 @@ Private Sub RightClickOrbit(ByRef Value As Town.State, ByRef Failures As Number)
     Call Town.Update(Value, 0)
 
     Value.BaseCamera.Position = M.Add(Value.BaseCamera.Target, P.Vector(30.0, 20.0, 40.0))
+    ' A pan can leave historical follow intent after the displayed mode becomes Free Camera.
+    Value.Follow = True
+    Value.PartyCamera = False
+    Value.Cinematic = False
 
     Call Motion.Reset(Value.View.Controls, Value.View.Zoom)
     Call Arena.ComposeCamera(Value.View, Value.BaseCamera)

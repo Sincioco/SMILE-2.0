@@ -502,7 +502,9 @@ Public Sub StartOrbit(ByRef Value As State)
 
     Call Keyboard.Capture(Value.Keys, Value.View, Value.BaseCamera)
 
-    If Value.Follow And Not Value.Keys.FlyInspect Then
+    If (Value.Follow And
+        (Value.PartyCamera Or Value.Cinematic) And
+        Not Value.Keys.FlyInspect) Then
 
         Call Drone.AnchorParty(Value.Flight, Value.View, Value.BaseCamera, Value.People.Path.Positions[0])
 
@@ -542,7 +544,9 @@ End Sub
 ''' Right-click restores the town overview; party-follow orbit remains leader-centered.
 Public Sub StartOverviewOrbit(ByRef Value As State)
 
-    If Value.Follow And Not Value.Keys.FlyInspect Then
+    If (Value.Follow And
+        (Value.PartyCamera Or Value.Cinematic) And
+        Not Value.Keys.FlyInspect) Then
         Call StartOrbit(Value)
 
         Return

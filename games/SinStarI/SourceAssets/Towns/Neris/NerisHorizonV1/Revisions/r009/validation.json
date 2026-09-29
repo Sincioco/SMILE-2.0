@@ -33,7 +33,8 @@
     "native_town_session": "PASS \u2014 artifacts/neris-fleet-tests-final.log",
     "native_hardening": "PASS \u2014 58 checks, artifacts/horizon-r009-hardening-final.log",
     "style": "PASS \u2014 changed SMILE sources",
-    "blender": "Three matching town scenes and four visitors rendered; Horizon r009 opened interactively"
+    "blender": "Three matching town scenes and four visitors rendered; Horizon r009 opened interactively",
+    "final_camera_regression": "PASS \u2014 artifacts/horizon-final-camera-tests.log; stale follow intent after free-camera pan"
   },
   "native_manual_review": [
     "Three tab views; airport tabs automatically orbit their map centers",

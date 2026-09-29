@@ -44,11 +44,17 @@ The focused native session covers linked walking, entry, day/night, geometry
 instances, camera regressions and resource release. Studio and all Web adoption
 remain on hold. No size baseline, exclusions, save format or dependency changed.
 
-Current change review: Arena3D adds four metadata lines; NerisTown adds 100 and
-removes 17 coordinator lines, TownEditorSession adds 92 and removes three. The
+Current change review: Arena3D adds four metadata lines; NerisTown adds 106 and
+removes 19 coordinator lines, TownEditorSession adds 92 and removes three. The
 new alien fleet owner is 197 lines and the terminal door owner is 85 lines.
 Neither NativeProgram nor ViewerWorkflow grows. The existing focused hardening
 source ownership checks pass; no baseline or exclusion was changed.
+
+The final native mouse check exposed retained Follow intent after a pan had
+already displayed Free Camera. Orbit selection now checks the visible party
+camera/orbit mode as well as that intent; the focused regression reproduces
+the stale state and verifies the map-centered reset. The complete town session
+passes again in artifacts/horizon-final-camera-tests.log.
 
 Earlier checkpoint sections below are historical.
 
