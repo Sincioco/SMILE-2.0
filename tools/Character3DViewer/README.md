@@ -47,9 +47,21 @@ editing, a map change or a blocked route cancels the trip. Map Load surface mark
 store a named destination; connected painted markers inherit it. They can be
 reassigned or deleted and are saved separately from the underlying terrain material.
 
-**Remaining authoring work:** bulk Move Sections / Copy Sections is not yet exposed.
-The terrain transfer foundation does not move complete districts, fixed landmark
-assemblies or their navigation. Do not describe it as a completed editing tool.
+**Royal Court:** Items → Buildings → Royal Court opens Select / Move,
+Place / Relocate and Delete. Each map holds at most one Court. Its doors, drawbridge,
+fountain, lights and collision move together. Ground, roads and the surrounding
+moat remain independent map terrain: deleting or relocating the Court does not
+paint or remove them. Place / Relocate also restores a deleted Court. Ctrl+Z undoes
+the change. Placement and absence persist in town saves and Blender exports.
+
+**Bulk sections:** Items → Bulk offers Move Sections and Copy Sections. Drag a
+rectangle, then drag inside it to the destination. Complete intersecting objects,
+terrain and Map Load tiles travel together; destination contents are replaced.
+Move fills only the vacated source with ground. One Undo restores the operation.
+The preview commits after replacement terrain is ready; a failed rebuild restores
+the original document. A Royal Court can move with a section but cannot be copied,
+because there is only one per map. The specialized Spaceport and Horizon airport
+assemblies are still protected; moving those assemblies remains outstanding.
 
 ## Native Neris Town
 

@@ -1,0 +1,236 @@
+''' Transactional district transfers. The caller owns preview, rebuild and history.
+Module Smile.Tools.TownSections
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.SurfaceSections3D As Regions
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownCatalogData As Catalog
+Import Smile.Tools.TownGeometry As Geometry
+Import Smile.Tools.TownMapLoads As Links
+Import Smile.Tools.NerisCastleRoute As Court
+
+Private Function Intersects(First As Regions.Region, Last As Regions.Region) As Boolean
+
+    Dim Result As Boolean
+
+    Result = (First.MinX < Last.MaxX And First.MaxX > Last.MinX And
+        First.MinZ < Last.MaxZ And First.MaxZ > Last.MinZ)
+
+    Return Result
+
+End Function
+
+''' Whole objects travel together when their horizontal footprints meet the selection.
+Public Function IncludesItem(Area As Regions.Region, Item As Document.Item) As Boolean
+
+    Dim Shape As Catalog.Template
+    Dim Bounds As Regions.Region
+    Dim Point As P.Vector3
+    Dim Index As Number
+    Dim LocalX As Double
+    Dim LocalZ As Double
+    Dim Result As Boolean
+
+    If Not Item.Active Then
+        Return False
+    End If
+
+    Shape = Catalog.TemplateAt(Item.Template)
+
+    For Index = 0 To 3
+
+        LocalX = Shape.Low.X
+        LocalZ = Shape.Low.Z
+
+        If Index Mod 2 = 1 Then
+            LocalX = Shape.High.X
+        End If
+
+        If Index >= 2 Then
+            LocalZ = Shape.High.Z
+        End If
+
+        Point = Geometry.ToWorld(Item, P.Vector(LocalX, 0.0, LocalZ))
+
+        If Index = 0 Then
+
+            Bounds.MinX = Point.X
+            Bounds.MaxX = Point.X
+            Bounds.MinZ = Point.Z
+            Bounds.MaxZ = Point.Z
+
+        Else
+            Bounds.MinX = Min(Bounds.MinX, Point.X)
+            Bounds.MaxX = Max(Bounds.MaxX, Point.X)
+            Bounds.MinZ = Min(Bounds.MinZ, Point.Z)
+            Bounds.MaxZ = Max(Bounds.MaxZ, Point.Z)
+
+        End If
+
+    End For
+
+    Result = Intersects(Area, Bounds)
+
+    Return Result
+
+End Function
+
+''' Fixed assemblies still own specialized collision and animation coordinates.
+Public Function ProtectedArea(Name As Text, Area As Regions.Region) As Boolean
+
+    Dim Bounds As Regions.Region
+    Dim Result As Boolean
+
+    If Name = "Neris Spaceport" Then
+
+        Bounds.MinX = -9100.0
+        Bounds.MaxX = -1900.0
+        Bounds.MinZ = -9900.0
+        Bounds.MaxZ = -3700.0
+
+    Else If Name = "Horizon Airport" Then
+
+        Bounds.MinX = 5400.0
+        Bounds.MaxX = 11400.0
+        Bounds.MinZ = -3550.0
+        Bounds.MaxZ = 6050.0
+
+    Else
+        Return False
+
+    End If
+
+    Result = Intersects(Area, Bounds)
+
+    Return Result
+
+End Function
+
+Public Function CourtArea(ByRef Town As Document.State) As Regions.Region
+
+    Dim Result As Regions.Region
+
+    Result.MinX = Court.ORIGIN_X + Town.CourtOffsetX - 70.0 * Court.SCALE
+    Result.MaxX = Court.ORIGIN_X + Town.CourtOffsetX + 70.0 * Court.SCALE
+    Result.MinZ = Court.ORIGIN_Z + Town.CourtOffsetZ - 115.0 * Court.SCALE
+    Result.MaxZ = Court.ORIGIN_Z + Town.CourtOffsetZ + 82.0 * Court.SCALE
+
+    Return Result
+
+End Function
+
+''' No live mutation on failure. An empty error message means the candidate is complete.
+Public Function Prepare(ByRef Source As Document.State, ByRef Candidate As Document.State,
+    Area As Regions.Region, DeltaX As Double, DeltaZ As Double, Move As Boolean) As Text
+
+    Dim Destination As Regions.Region
+    Dim Index As Number
+    Dim Placed As Number
+    Dim Ok As Boolean
+    Dim Sample As Document.Item
+    Dim RoyalCourt As Regions.Region
+    Dim MoveCourt As Boolean
+    Dim ReplaceCourt As Boolean
+
+    Destination = Regions.Shift(Area, DeltaX, DeltaZ)
+
+    If Not Regions.Fits(Source.Surface, Area) Or Not Regions.Fits(Source.Surface, Destination) Then
+        Return "Keep both rectangles inside the map."
+    End If
+
+    If ProtectedArea(Source.Name, Area) Or ProtectedArea(Source.Name, Destination) Then
+        Return "Fixed landmark area; section unchanged."
+    End If
+
+    If Abs(DeltaX) < 0.00001 And Abs(DeltaZ) < 0.00001 Then
+        Return "Drag the section to a new location."
+    End If
+
+    If Source.CourtPlaced Then
+
+        RoyalCourt = CourtArea(Source)
+        MoveCourt = Intersects(Area, RoyalCourt)
+
+        If MoveCourt And Not Move Then
+            Return "One Royal Court per map; use Move Sections."
+        End If
+
+        ReplaceCourt = Not MoveCourt And Intersects(Destination, RoyalCourt)
+
+        If MoveCourt Then
+
+            RoyalCourt = Regions.Shift(RoyalCourt, DeltaX, DeltaZ)
+
+            If Not Regions.Fits(Source.Surface, RoyalCourt) Then
+                Return "Keep the complete Royal Court on the map."
+            End If
+
+        End If
+
+    End If
+
+    Candidate = Source
+
+    If ReplaceCourt Then
+        Candidate.CourtPlaced = False
+    End If
+
+    If MoveCourt Then
+        Candidate.CourtOffsetX = Source.CourtOffsetX + DeltaX
+        Candidate.CourtOffsetZ = Source.CourtOffsetZ + DeltaZ
+    End If
+
+    For Index = 0 To Source.ItemCount - 1
+
+        If (IncludesItem(Destination, Source.Items[Index]) Or
+            (Move And IncludesItem(Area, Source.Items[Index]))) Then
+            Candidate.Items[Index].Active = False
+        End If
+
+    End For
+
+    For Index = 0 To Source.ItemCount - 1
+
+        Sample = Source.Items[Index]
+
+        If IncludesItem(Area, Sample) Then
+
+            Placed = Document.Place(Candidate, Sample, Sample.Position.X + DeltaX, Sample.Position.Z + DeltaZ)
+
+            If Placed < 0 Then
+                Return "Item limit reached; section unchanged."
+            End If
+
+            If Move Then
+                Candidate.Items[Placed].Identity = Sample.Identity
+                Candidate.Items[Placed].SourceIndex = Sample.SourceIndex
+            End If
+
+        End If
+
+    End For
+
+    If Geometry.DrawCost(Candidate) > 3500 Or Geometry.WaterCount(Candidate) > 160 Then
+        Return "Scene limit reached; section unchanged."
+    End If
+
+    Ok = Regions.Transfer(Source.Surface, Candidate.Surface, Area, DeltaX, DeltaZ, Move)
+
+    If Not Ok Then
+        Return "Tile boundary limit; section unchanged."
+    End If
+
+    If Not Links.Transfer(Source, Candidate, Area, DeltaX, DeltaZ, Move) Then
+        Return "Map Load limit; section unchanged."
+    End If
+
+    Candidate.Revision = Source.Revision + 1
+
+    Return ""
+
+End Function
+
+End Module

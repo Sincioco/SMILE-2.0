@@ -1,0 +1,186 @@
+''' Focused regression coverage for atomic district and independent Royal Court placement.
+Module Smile.Tools.TownSectionTests
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.SurfaceSections3D As Regions
+Import Smile.Tools.TownSections As Sections
+Import Smile.Tools.TownSectionTools As Tools
+Import Smile.Tools.TownCourtTools As CourtTools
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownDocumentStore As Storage
+Import Smile.Tools.TownGuides As Guides
+Import Smile.Tools.TownHistory As History
+Import Smile.Tools.TownMapLoads As Links
+Import Smile.Tools.NerisCastleRoute As Court
+
+Private Dim Failures As Number
+Private Dim Town As Document.State
+Private Dim Candidate As Document.State
+Private Dim Guide As Guides.State
+Private Dim Journal As History.State
+Private Dim Gesture As Tools.State
+
+Private Sub Check(Ok As Boolean, Label As Text)
+
+    If Not Ok Then
+        Failures = Failures + 1
+        Print "FAIL " + Label
+    End If
+
+End Sub
+
+Public Function Run() As Number
+
+    Dim Area As Regions.Region
+    Dim Sample As Document.Item
+    Dim Message As Text
+    Dim Ok As Boolean
+    Dim Index As Number
+    Dim Before As Number
+    Dim ItemCount As Number
+    Dim OldIdentity As Number
+    Dim CourtGesture As CourtTools.State
+
+    Failures = 0
+    Ok = Document.Blank(Town, "Section Fixture", 10, 8, 100.0)
+    Ok = Grid.Initialize(Town.Surface, 10, 8, 0.0, 0.0, 100.0, Grid.SURFACE_GROUND) And Ok
+    Town.Surface.XEdges[1] = 75.0
+
+    Call Grid.PaintRectangle(Town.Surface, 0, 0, 0, 1, Grid.SURFACE_WATER)
+    Call Grid.PaintRectangle(Town.Surface, 1, 0, 1, 1, Grid.SURFACE_ROAD)
+
+    Sample.Template = 34
+    Sample.Category = 3
+    Sample.Scale = P.Vector(10.0, 10.0, 10.0)
+    Sample.Position.Y = 21.0
+    Index = Document.Place(Town, Sample, 50.0, 50.0)
+    OldIdentity = Town.Items[Index].Identity
+    Index = Document.Place(Town, Sample, 350.0, 50.0)
+    Ok = Links.Place(Town, 0, 0, "Another Map") And Ok
+    Area.MinX = 0.0
+    Area.MinZ = 0.0
+    Area.MaxX = 200.0
+    Area.MaxZ = 200.0
+    Message = Sections.Prepare(Town, Candidate, Area, 300.0, 0.0, False)
+
+    Call Check(Ok And Message = "" And Town.Items[0].Position.X = 50.0,
+        "Preparing Copy Never Mutates The Source")
+    Call Check(Grid.ReadCell(Candidate.Surface, Grid.CellX(Candidate.Surface, 350.0), 0) = Grid.SURFACE_WATER And
+        Grid.ReadCell(Candidate.Surface, Grid.CellX(Candidate.Surface, 400.0), 0) = Grid.SURFACE_ROAD,
+        "Section Preserves Nonuniform Terrain Boundaries")
+    Call Check(Links.DestinationAt(Candidate, 50.0, 50.0) = "Another Map" And
+        Links.DestinationAt(Candidate, 350.0, 50.0) = "Another Map",
+        "Copy Retains Source And Destination Travel Tiles")
+
+    For Index = 0 To Candidate.ItemCount - 1
+
+        If Candidate.Items[Index].Active Then
+            ItemCount = ItemCount + 1
+        End If
+
+    End For
+
+    Call Check(ItemCount = 2 And Candidate.Items[1].Identity <> 2 And
+        Candidate.Items[1].Position.X = 350.0, "Copy Overwrites Destination Objects With New Identities")
+    Call History.Reset(Journal, Town, Guide.Ink)
+
+    Message = Sections.Prepare(Town, Candidate, Area, 100.0, 0.0, True)
+    Town = Candidate
+
+    Call History.Record(Journal, Town, Guide.Ink)
+    Call Check(Message = "" And Grid.ReadCell(Town.Surface, 0, 0) = Grid.SURFACE_GROUND And
+        Grid.ReadCell(Town.Surface, Grid.CellX(Town.Surface, 150.0), 0) = Grid.SURFACE_WATER And
+        Town.Items[0].Identity = OldIdentity And Town.Items[0].Position.X = 150.0,
+        "Overlapping Move Uses Original Snapshot And Clears Only Vacated Source")
+
+    Ok = History.Restore(Journal, Town, Guide.Ink, False)
+
+    Call Check(Ok And Town.Items[0].Position.X = 50.0 And Town.Surface.Columns = 10 And
+        Links.DestinationAt(Town, 50.0, 50.0) = "Another Map", "One Undo Restores Objects Terrain And Triggers")
+
+    Message = Sections.Prepare(Town, Candidate, Area, -100.0, 0.0, True)
+
+    Call Check(Message <> "" And Town.Items[0].Position.X = 50.0, "Outside Drop Leaves Live Town Unchanged")
+
+    Area.MinX = 25.0
+    Area.MaxX = 50.0
+    Message = Sections.Prepare(Town, Candidate, Area, 200.0, 0.0, True)
+
+    Call Check(Message = "" And Grid.ReadCell(Candidate.Surface,
+        Grid.CellX(Candidate.Surface, 35.0), 0) = Grid.SURFACE_GROUND And
+        Grid.ReadCell(Candidate.Surface, Grid.CellX(Candidate.Surface, 60.0), 0) = Grid.SURFACE_WATER,
+        "Moving A Partial Cell Inserts Source Boundaries Without Clearing Its Neighbors")
+
+    Call Tools.Gesture(Gesture, Town, Guide, P.Vector(1.0, 23.12, 1.0), True, True, True, False)
+    Call Tools.Gesture(Gesture, Town, Guide, P.Vector(190.0, 23.12, 190.0), True, False, False, False)
+    Call Check(Gesture.Selected And Gesture.Area.MaxX = 200.0, "Rubber Selection Ends On Actual Tile Edges")
+    Call Tools.Gesture(Gesture, Town, Guide, P.Vector(50.0, 23.12, 50.0), True, True, True, False)
+    Call Tools.Gesture(Gesture, Town, Guide, P.Vector(350.0, 23.12, 50.0), True, False, False, False)
+    Call Check(Gesture.Pending And Town.Items[0].Position.X = 350.0, "Releasing Section Drag Stages One Transaction")
+    Call Tools.Finish(Gesture, Town, False)
+    Call Check(Town.Items[0].Position.X = 50.0 And Town.Surface.Columns = 10 And
+        Links.DestinationAt(Town, 50.0, 50.0) = "Another Map", "Terrain Rejection Rolls Back Every Part")
+
+    Ok = Document.Blank(Town, "Custom Court Map", 80, 80, 100.0)
+    Before = Town.Surface.Revision
+    Ok = CourtTools.Place(Town, P.Vector(300.0, 23.12, 500.0)) And Ok
+
+    Call Check(Ok And Town.CourtPlaced And Town.Surface.Revision = Before,
+        "Royal Court Places On A Custom Map Without Painting Water")
+    Call CourtTools.Gesture(CourtGesture, Town, Guide, P.Vector(300.0, 23.12, 500.0),
+        True, True, True, False)
+    Call CourtTools.Gesture(CourtGesture, Town, Guide, P.Vector(450.0, 23.12, 600.0),
+        True, False, True, False)
+    Call CourtTools.Gesture(CourtGesture, Town, Guide, P.Vector(450.0, 23.12, 600.0),
+        True, False, False, False)
+    Call Check(Not CourtGesture.Dragging And Town.CourtOffsetX = 4110.0 And Town.CourtOffsetZ = -1840.0,
+        "Royal Court Drag Commits The Pointer Displacement")
+
+    Ok = CourtTools.Place(Town, P.Vector(300.0, 23.12, 500.0))
+
+    Area = Sections.CourtArea(Town)
+    Message = Sections.Prepare(Town, Candidate, Area, 500.0, 0.0, False)
+
+    Call Check(Message <> "", "Copy Cannot Create A Second Royal Court")
+
+    Message = Sections.Prepare(Town, Candidate, Area, 500.0, 0.0, True)
+
+    Call Check(Message = "" And Candidate.CourtOffsetX = Town.CourtOffsetX + 500.0,
+        "Move Sections Moves The Single Royal Court")
+
+    Area.MinX = -3500.0
+    Area.MaxX = -3100.0
+    Area.MinZ = -3500.0
+    Area.MaxZ = -3100.0
+    Message = Sections.Prepare(Town, Candidate, Area, 3800.0, 4000.0, False)
+
+    Call Check(Message = "" And Not Candidate.CourtPlaced And Town.CourtPlaced,
+        "Replacing A Destination Removes Its Royal Court In The Candidate Only")
+    Call Court.Place(Town.CourtOffsetX, Town.CourtOffsetZ)
+    Call Court.Enable(True)
+    Call Check(Court.Contains(300.0, 500.0) And Not Court.Contains(Court.ORIGIN_X, Court.ORIGIN_Z),
+        "Royal Court Collision Moves To Its Saved Placement")
+    Call History.Reset(Journal, Town, Guide.Ink)
+    Call CourtTools.Remove(Town)
+    Call History.Record(Journal, Town, Guide.Ink)
+    Call Check(Not Town.CourtPlaced And Town.Surface.Revision = Before, "Delete Leaves All Terrain Untouched")
+
+    Ok = History.Restore(Journal, Town, Guide.Ink, False)
+    Ok = Storage.SaveDocument(Town, "TownEditor.CourtFixture", False) And Ok
+    Town.CourtPlaced = False
+    Town.CourtOffsetX = 0.0
+    Ok = Storage.LoadDocument(Town, "TownEditor.CourtFixture") And Ok
+
+    Call Check(Ok And Town.CourtPlaced And Town.CourtOffsetX = 3960.0 And Town.CourtOffsetZ = -1940.0,
+        "Royal Court Placement And Presence Survive Undo And Save Reload")
+    Call Court.Place(0.0, 0.0)
+    Call Court.Enable(False)
+
+    Return Failures
+
+End Function
+
+End Module

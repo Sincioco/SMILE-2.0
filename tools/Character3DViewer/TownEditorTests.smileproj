@@ -6,9 +6,13 @@
   </PropertyGroup>
   <ItemGroup>
     <SmileSource Include="TownEditorTests.smile" StartupOnly="true" />
+    <SmileSource Include="TownSectionTests.smile" />
     <SmileSource Include="TownDocument.smile" />
     <SmileSource Include="TownMapLoads.smile" />
     <SmileSource Include="TownGeometry.smile" />
+    <SmileSource Include="TownSections.smile" />
+    <SmileSource Include="NerisCastleRoute.smile" />
+    <SmileSource Include="ProximityDrawbridge.smile" />
     <SmileSource Include="TownRoadTravel.smile" />
     <SmileSource Include="TownDocumentNavigation.smile" />
     <SmileSource Include="TownCatalogFeatures.smile" />
@@ -16,6 +20,8 @@
     <SmileSource Include="TownGuides.smile" />
     <SmileSource Include="TownGuideFiles.smile" />
     <SmileSource Include="TownTileGuides.smile" />
+    <SmileSource Include="TownSectionTools.smile" />
+    <SmileSource Include="TownCourtTools.smile" />
     <SmileSource Include="TownMarkerTools.smile" />
     <SmileSource Include="TownPicking.smile" />
     <SmileSource Include="TownHistory.smile" />

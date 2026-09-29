@@ -134,6 +134,9 @@ Public Function Restore(ByRef Value As State, ByRef Town As Document.State,
         End If
 
         Town.MapTileCount = Value.Entries[Index].Town.MapTileCount
+        Town.CourtOffsetX = Value.Entries[Index].Town.CourtOffsetX
+        Town.CourtOffsetZ = Value.Entries[Index].Town.CourtOffsetZ
+        Town.CourtPlaced = Value.Entries[Index].Town.CourtPlaced
 
         For Item = 0 To Document.MAX_MAP_TILES - 1
             Town.MapTiles[Item] = Value.Entries[Index].Town.MapTiles[Item]

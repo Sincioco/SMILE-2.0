@@ -55,6 +55,34 @@ Public Function Create(ByRef Value As State) As Boolean
 
 End Function
 
+Public Sub Place(ByRef Value As State)
+
+    Dim Index As Number
+    Dim Point As P.Vector3
+    Dim Radius As Double
+    Dim Lamp As Boolean
+    Dim Ok As Boolean
+
+    If Not Value.Ready Then
+        Return
+    End If
+
+    Ok = True
+
+    For Index = 0 To 33
+
+        Call Anchor(Index, Point, Radius, Lamp)
+
+        Point = P.Vector(Route.CenterX() + Point.X * Route.SCALE,
+            Route.DECK_Y + Point.Y * Route.SCALE, Route.CenterZ() + Point.Z * Route.SCALE)
+        Ok = P.SetParticle(Value.Particles, Index * 2, Point, Radius * Route.SCALE, 0.0, 0) And Ok
+        Ok = P.SetParticle(Value.Particles, Index * 2 + 1, Point, Radius * Route.SCALE * 0.40, 0.0, 0) And Ok
+    End For
+
+    Value.Ready = G.CommitParticleBatch3D(Value.Particles, 68) And Ok
+
+End Sub
+
 Private Sub Anchor(Index As Number, ByRef Point As P.Vector3,
     ByRef Radius As Double, ByRef Lamp As Boolean)
 
@@ -206,8 +234,8 @@ Public Function ApplyLighting() As Boolean
             Z = 72.0
         End If
 
-        Ok = G.SetPointLight3D(Index, ToNumber(Route.ORIGIN_X + X * Route.SCALE),
-            ToNumber(Route.DECK_Y + 18.0 * Route.SCALE), ToNumber(Route.ORIGIN_Z + Z * Route.SCALE),
+        Ok = G.SetPointLight3D(Index, ToNumber(Route.CenterX() + X * Route.SCALE),
+            ToNumber(Route.DECK_Y + 18.0 * Route.SCALE), ToNumber(Route.CenterZ() + Z * Route.SCALE),
             255, 204, 139, Intensity, ToNumber(165.0 * Route.SCALE)) And Ok
     End For
 

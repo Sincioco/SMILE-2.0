@@ -15,14 +15,16 @@ Public Type State
     Streams As Core.RibbonBatch3D
     Time As Number
     Ready As Boolean
+    CenterX As Double
+    CenterZ As Double
 End Type
 
 Private Function WorldPoint(X As Double, Height As Double, Z As Double) As P.Vector3
 
     Dim Result As P.Vector3
 
-    Result = P.Vector(Route.ORIGIN_X + X * Route.SCALE,
-        Route.DECK_Y + Height * Route.SCALE, Route.ORIGIN_Z + Z * Route.SCALE)
+    Result = P.Vector(Route.CenterX() + X * Route.SCALE,
+        Route.DECK_Y + Height * Route.SCALE, Route.CenterZ() + Z * Route.SCALE)
 
     Return Result
 
@@ -192,8 +194,21 @@ End Function
 
 Public Sub Update(ByRef Value As State, Elapsed As Number)
 
+    Dim Index As Number
+    Dim Ok As Boolean
+
     If Not Value.Ready Then
         Return
+    End If
+
+    If Value.CenterX <> Route.CenterX() Or Value.CenterZ <> Route.CenterZ() Then
+
+        Ok = Basin(Value.Basins, Index, 5.67, 1.06)
+        Ok = Basin(Value.Basins, Index, 1.80, 2.74) And Ok
+        Value.Ready = G.CommitRibbonBatch3D(Value.Basins, Index) And Ok
+        Value.CenterX = Route.CenterX()
+        Value.CenterZ = Route.CenterZ()
+
     End If
 
     Value.Time = (Value.Time + Max(0, Elapsed)) Mod 3600000

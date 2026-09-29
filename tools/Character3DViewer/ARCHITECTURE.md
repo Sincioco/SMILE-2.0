@@ -1,5 +1,63 @@
 # Character Viewer Architecture
 
+## Current: section edits and independent Royal Court placement
+
+TownDocument owns the single optional Royal Court placement. TWN5 appends its X/Z
+offset and presence bit; older documents infer the original Court only for Neris
+Town. TownDocumentStore and town_document_codec.py share this version contract.
+TownHistory includes placement and deletion in ordinary undo. TownCourtTools owns
+selection/drag/place/delete gestures; it does not mutate the terrain. The existing
+NerisCastlePreview translates its mesh instances and delegates attached halo,
+light, fountain, door and drawbridge placement. NerisCastleRoute owns the matching
+collision/entry coordinates. Blender export translates the existing authored
+collection roots; surrounding moat tiles remain in the terrain document.
+
+TownSections prepares replacement documents without live mutation. TownSectionTools
+owns rubber selection and translated previews. TownMapLoads remaps tile destinations
+using its existing bounded lookup scratch. SurfaceSections3D inserts source and
+destination boundaries, preserving nonuniform cells and overlapping transfers.
+TownEditorSession stages replacement terrain while drawing the previous document,
+then records one undo entry on success or restores the entire document on failure.
+New section gestures wait for any prior terrain build to finish. No feature logic
+was added to bootstrap, no dependencies were introduced, and no architecture limits
+or exclusions were changed.
+
+The Royal Court supports section moves, deletion and destination replacement,
+but rejects copies to maintain one instance per map. Spaceport and Horizon still
+have fixed airport assemblies: sections intersecting them are rejected unchanged.
+Their model, fleet, lighting and navigation owners need a common saved placement
+before those assemblies can participate. Do not report bulk coverage as literally
+every map object until that remaining work is complete.
+
+Focused checks cover section overlap, destination replacement, source fill,
+nonuniform boundaries, Map Load remapping, rollback/undo, single-Court placement,
+native/Blender save compatibility, and translated meshes/effects/collision.
+See artifacts/court-*.log for this run's evidence and the current handoff for any
+pending live acceptance. Earlier checkpoint results below are historical.
+
+Final native validation also covers switching from Bulk Sections to guide-marker
+selection and clearing a stale Court message before Undo. Live delete, place on
+plain ground, and two-step Undo preserved the original moat. A live minimap trip
+reached its marked destination; walking onto a newly painted Map Load tile loaded
+Horizon with the party. Test-only edits were removed and all 371 saved objects,
+terrain, light presets and original map links were compared with Sin's preserved
+town before relaunching the complete 333-asset publication.
+
+Physical mouse acceptance remains for Court/section dragging: the automation
+input probe received only a press/release at the requested destination, without
+held movement. Explicit gesture regressions pass, but that tool result cannot
+prove an interactive drag. The existing short-window palette crowding and exact
+duplicated-lamp street-view acceptance also remain; the 75-lamp rendering check
+passes. These are separate from the protected airport-assembly work above.
+
+Growth review against 32c5a350: NerisTown adds five net coordinator lines,
+TownEditor adds 61, TownEditorSession 82 and TownMapLoads 75. The new focused owners
+are TownCourtTools (159 lines), TownSections (236), and TownSectionTools (224);
+TownSectionTests adds 186 lines of regression coverage. NativeProgram is unchanged.
+No compiler/runtime capability, third-party dependency, architecture exclusion or
+review baseline was added. Full town/native checks, 58 hardening checks, Blender
+collection placement, legacy/TWN5 codec round trips, style and diff checks passed.
+
 ## Current: Sin Star Studio authoring and publication safety (September 29)
 
 Sin Star Studio is the existing native Viewer, with unchanged folders and application

@@ -5,6 +5,7 @@ Option Explicit
 Import Smile.Simple3D.SurfaceGrid3D As Grid
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownSectionTests As SectionTests
 Import Smile.Tools.TownSelection As Selection
 Import Smile.Tools.TownCatalogData As Catalog
 Import Smile.Tools.TownInitialSurface As Initial
@@ -264,6 +265,8 @@ Call CheckEditing()
 Call CheckMapLoads()
 Call CheckPresetsAndGuideFiles()
 Call CheckRoadTrips()
+
+Failures = Failures + SectionTests.Run()
 
 If Failures = 0 Then
     Print "PASS Town Editor Foundations"

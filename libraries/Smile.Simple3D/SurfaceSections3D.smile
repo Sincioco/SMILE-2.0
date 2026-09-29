@@ -138,6 +138,15 @@ Public Function Transfer(ByRef Source As Grid.State, ByRef Target As Grid.State,
     Ok = InsertEdge(Target, Destination.MinZ, False) And Ok
     Ok = InsertEdge(Target, Destination.MaxZ, False) And Ok
 
+    If Move Then
+
+        Ok = InsertEdge(Target, Area.MinX, True) And Ok
+        Ok = InsertEdge(Target, Area.MaxX, True) And Ok
+        Ok = InsertEdge(Target, Area.MinZ, False) And Ok
+        Ok = InsertEdge(Target, Area.MaxZ, False) And Ok
+
+    End If
+
     For Index = 0 To Source.Columns
 
         If Source.XEdges[Index] >= Area.MinX And Source.XEdges[Index] <= Area.MaxX Then

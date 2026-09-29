@@ -6,7 +6,7 @@ import math
 ROOT = Path(__file__).resolve().parents[2] / 'games/SinStarI/SourceAssets/Towns/Neris'
 
 
-def append_collection(source, name):
+def append_collection(source, name, offset=(0, 0)):
     with bpy.data.libraries.load(str(source), link=False) as (available, loaded):
         if name not in available.collections:
             raise ValueError('Missing authored landmark collection: ' + name)
@@ -15,6 +15,12 @@ def append_collection(source, name):
     bpy.context.scene.collection.children.link(collection)
     collection.hide_viewport = False
     collection.hide_render = False
+    from mathutils import Matrix, Vector
+    displacement = Matrix.Translation(Vector((offset[0] / 10, offset[1] / 10, 0)))
+    members = set(collection.all_objects)
+    for obj in members:
+        if obj.parent not in members:
+            obj.matrix_world = displacement @ obj.matrix_world
     return len(collection.all_objects)
 
 
@@ -75,10 +81,11 @@ def populate(document):
     if document['name'] == 'Neris Spaceport':
         counts['Spaceport01'] = append_collection(original, 'Neris Spaceport 01 - Southwest')
         counts['AlienVisitors'] = append_visitors()
-    elif document['name'].startswith('Neris Town'):
-        counts['RoyalCourt'] = append_collection(original, 'Royal Court — M06-r006')
     elif document['name'] == 'Horizon Airport':
         counts['Horizon'] = append_airport()
+    if document.get('court_placed', document['name'].startswith('Neris Town')):
+        counts['RoyalCourt'] = append_collection(original, 'Royal Court — M06-r006',
+                                                  document.get('court_offset', (0, 0)))
     for name, count in counts.items():
         bpy.context.scene['town_landmark_' + name] = count
     return counts

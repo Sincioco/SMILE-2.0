@@ -63,7 +63,7 @@ Public Sub Destroy(ByRef Value As State, ByRef Court As Castle.State,
 
 End Sub
 
-Public Function LoadNext(ByRef Value As State, Name As Text, HasAirport As Boolean,
+Public Function LoadNext(ByRef Value As State, Name As Text, HasCourt As Boolean,
     ByRef Court As Castle.State, ByRef Original As Spaceport.State,
     ByRef Airport As Horizon.State) As Boolean
 
@@ -76,6 +76,15 @@ Public Function LoadNext(ByRef Value As State, Name As Text, HasAirport As Boole
         Call Destroy(Value, Court, Original, Airport)
 
         Value.Town = Name
+    End If
+
+    If HasCourt And Not Court.Ready Then
+
+        Ok = Castle.Create(Court)
+        Value.Failed = Not Ok
+
+        Return False
+
     End If
 
     If Name = "Neris Spaceport" Then
@@ -115,15 +124,6 @@ Public Function LoadNext(ByRef Value As State, Name As Text, HasAirport As Boole
         ReturnValue = Airport.Ready
 
         Return ReturnValue
-
-    End If
-
-    If Text_Slice(Name, 0, 10) = "Neris Town" Then
-
-        Ok = Castle.Create(Court)
-        Value.Failed = Not Ok
-
-        Return Ok
 
     End If
 

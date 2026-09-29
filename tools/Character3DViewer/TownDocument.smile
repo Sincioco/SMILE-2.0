@@ -50,6 +50,9 @@ Public Type SunPresets
 End Type
 
 Public Type State
+    CourtOffsetX As Double
+    CourtOffsetZ As Double
+    CourtPlaced As Boolean
     MapTiles[4096] As MapTile
     MapTileCount As Number
     Name As Text
@@ -180,6 +183,9 @@ Public Function Blank(ByRef Value As State, Name As Text, Columns As Number,
     End For
 
     Value.MapTileCount = 0
+    Value.CourtOffsetX = 0.0
+    Value.CourtOffsetZ = 0.0
+    Value.CourtPlaced = False
     Value.Name = Name
     Value.ItemCount = 0
     Value.NextIdentity = 1

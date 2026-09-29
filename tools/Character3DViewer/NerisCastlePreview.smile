@@ -21,6 +21,8 @@ Public Type State
     Light As Glow.State
     Water As Fountain.State
     Ready As Boolean
+    Visible As Boolean
+    Offset As P.Vector3
 End Type
 
 Public Function Create(ByRef Value As State) As Boolean
@@ -97,6 +99,8 @@ Public Function Create(ByRef Value As State) As Boolean
     Ok = Glow.Create(Value.Light) And Ok
     Ok = Fountain.Create(Value.Water) And Ok
     Value.Ready = Ok
+    Value.Visible = Ok
+    Value.Offset = P.Vector(0.0, 0.0, 0.0)
 
     Call Route.Enable(Ok)
 
@@ -104,14 +108,52 @@ Public Function Create(ByRef Value As State) As Boolean
 
 End Function
 
+''' Move every mesh and attached effect from the same document-owned offset.
+Public Sub Synchronize(ByRef Value As State, Visible As Boolean, Offset As P.Vector3)
+
+    Dim Index As Number
+    Dim Transform As P.Transform3D
+    Dim Ok As Boolean
+
+    Call Route.Place(Offset.X, Offset.Z)
+
+    If Value.Visible <> Visible Then
+        Call Route.Enable(Visible And Value.Ready)
+    End If
+
+    Value.Visible = Visible And Value.Ready
+
+    If Not Value.Ready Or (Value.Offset.X = Offset.X And Value.Offset.Z = Offset.Z) Then
+        Return
+    End If
+
+    For Index = 0 To Value.ObjectCount - 1
+
+        Ok = P.TryTransform(Value.Objects[Index], Transform)
+
+        If Ok Then
+            Ok = P.SetPosition(Value.Objects[Index], Transform.Position.X + Offset.X - Value.Offset.X,
+                Transform.Position.Y, Transform.Position.Z + Offset.Z - Value.Offset.Z)
+        End If
+
+    End For
+
+    Value.Offset = Offset
+
+    Call Glow.Place(Value.Light)
+
+End Sub
+
 Public Function ApplyLighting(ByRef Value As State) As Boolean
 
     Dim Ok As Boolean
 
     Ok = True
 
-    If Value.Ready Then
+    If Value.Ready And Value.Visible Then
         Ok = Glow.ApplyLighting()
+    Else
+        Ok = G.DisableLight3D(0) And G.DisableLight3D(1) And G.DisableLight3D(2) And G.DisableLight3D(3)
     End If
 
     Return Ok
@@ -129,7 +171,7 @@ Public Function Draw(ByRef Value As State) As Boolean
     Dim Index As Number
     Dim Ok As Boolean
 
-    If Not Value.Ready Then
+    If Not Value.Ready Or Not Value.Visible Then
         Return True
     End If
 

@@ -1,4 +1,4 @@
-"""Bounded TWN1–TWN4 codec shared by the existing Blender document worker."""
+"""Bounded TWN1–TWN5 codec shared by the existing Blender document worker."""
 import hashlib
 import json
 import struct
@@ -102,7 +102,7 @@ def decode(payload, catalog, request=False):
     if bytes(r.byte() for _ in range(3)) != b'TWN':
         raise ValueError('Unsupported town format')
     version = r.byte()
-    if version not in (1, 2, 3, 4):
+    if version not in (1, 2, 3, 4, 5):
         raise ValueError('Unsupported town format')
     fingerprint = catalog.get('document_fingerprint') or hashlib.sha256(json.dumps(catalog, sort_keys=True).encode()).hexdigest()
     if r.name() != fingerprint:
@@ -160,6 +160,9 @@ def decode(payload, catalog, request=False):
         result['presets'] = {'night_active': r.flag(),
                              'day': r.sun(4) if r.flag() else None,
                              'night': r.sun(4) if r.flag() else None}
+    if version >= 5:
+        result['court_offset'] = [r.precise(), r.precise()]
+        result['court_placed'] = r.flag()
     result['payload'] = payload[:r.offset]
     if request:
         result['mode'], result['request_id'] = r.integer(), r.integer()
@@ -173,7 +176,7 @@ def decode(payload, catalog, request=False):
 def encode(document, catalog):
     fingerprint = catalog.get('document_fingerprint') or hashlib.sha256(json.dumps(catalog, sort_keys=True).encode()).hexdigest()
     # Eight-value legacy snapshots must retain their checksum when opened.
-    version = (4 if 'presets' in document else 3 if 'map_tiles' in document
+    version = (5 if 'court_placed' in document else 4 if 'presets' in document else 3 if 'map_tiles' in document
                else 2 if len(document['sun']) == 9 else 1)
     result = bytearray(b'TWN') + bytes([version]) + name(fingerprint) + name(document['name']) + b'\0'
     precise = lambda value: integer(round(value * 1000000))
@@ -207,6 +210,9 @@ def encode(document, catalog):
                 for value in light[:5]:
                     result += integer(value)
                 result += precise(light[5]) + precise(light[6]) + bytes([light[7], light[8] + 1])
+    if version >= 5:
+        result += b''.join(precise(value) for value in document['court_offset'])
+        result += bytes([int(document['court_placed'])])
     decode(result, catalog)  # Same format/range checks apply in both directions.
     return bytes(result)
 

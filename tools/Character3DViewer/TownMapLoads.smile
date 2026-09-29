@@ -5,6 +5,7 @@ Option Explicit
 
 Import Smile.Tools.TownDocument As Document
 Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.SurfaceSections3D As Regions
 
 Private Dim Lookup[512, 512] As Number
 Private Dim Queue[4096] As Number
@@ -205,6 +206,80 @@ Public Function Remove(ByRef Town As Document.State, X As Number, Z As Number) A
     Town.MapTiles[Index] = Town.MapTiles[Town.MapTileCount]
     Town.MapTiles[Town.MapTileCount] = Last
     Town.Revision = Town.Revision + 1
+
+    Return True
+
+End Function
+
+''' Remap travel cells by their physical area, including cells split by new edges.
+Public Function Transfer(ByRef Source As Document.State, ByRef Target As Document.State,
+    Area As Regions.Region, DeltaX As Double, DeltaZ As Double, Move As Boolean) As Boolean
+
+    Dim Destination As Regions.Region
+    Dim X As Number
+    Dim Z As Number
+    Dim Index As Number
+    Dim ReadX As Number
+    Dim ReadZ As Number
+    Dim WorldX As Double
+    Dim WorldZ As Double
+    Dim SampleX As Double
+    Dim SampleZ As Double
+
+    For Z = 0 To Source.Surface.Rows - 1
+
+        For X = 0 To Source.Surface.Columns - 1
+            Lookup[X, Z] = 0
+        End For
+    End For
+
+    For Index = 0 To Source.MapTileCount - 1
+        Lookup[Source.MapTiles[Index].X, Source.MapTiles[Index].Z] = Index + 1
+    End For
+
+    Target.MapTileCount = 0
+    Destination = Regions.Shift(Area, DeltaX, DeltaZ)
+
+    For Z = 0 To Target.Surface.Rows - 1
+
+        WorldZ = (Target.Surface.ZEdges[Z] + Target.Surface.ZEdges[Z + 1]) * 0.5
+
+        For X = 0 To Target.Surface.Columns - 1
+
+            WorldX = (Target.Surface.XEdges[X] + Target.Surface.XEdges[X + 1]) * 0.5
+            SampleX = WorldX
+            SampleZ = WorldZ
+
+            If Regions.Contains(Destination, WorldX, WorldZ) Then
+                SampleX = WorldX - DeltaX
+                SampleZ = WorldZ - DeltaZ
+            End If
+
+            ReadX = Grid.CellX(Source.Surface, SampleX)
+            ReadZ = Grid.CellZ(Source.Surface, SampleZ)
+            Index = Lookup[ReadX, ReadZ] - 1
+
+            If (Move And
+                Regions.Contains(Area, WorldX, WorldZ) And
+                Not Regions.Contains(Destination, WorldX, WorldZ)) Then
+                Index = -1
+            End If
+
+            If Index >= 0 Then
+
+                If Target.MapTileCount >= Document.MAX_MAP_TILES Then
+                    Return False
+                End If
+
+                Target.MapTiles[Target.MapTileCount].X = X
+                Target.MapTiles[Target.MapTileCount].Z = Z
+                Target.MapTiles[Target.MapTileCount].Destination = Source.MapTiles[Index].Destination
+                Target.MapTileCount = Target.MapTileCount + 1
+
+            End If
+
+        End For
+    End For
 
     Return True
 

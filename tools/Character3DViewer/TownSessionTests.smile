@@ -18,6 +18,8 @@ Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PrecisionCamera3D As Camera
 Import Smile.Simple3D.ArenaCamera3D As Motion
 Import Smile.Tools.NerisCastleRoute As Castle
+Import Smile.Tools.NerisCastlePreview As CourtPreview
+Import Smile.Tools.NerisCastleFountain As CourtWater
 Import Smile.Tools.NerisSpaceportRoute As Spaceport
 Import Smile.Tools.NerisSpaceportPreview As Harbor
 Import Smile.Tools.NerisAlienFleet As Visitors
@@ -75,6 +77,7 @@ Action = Commands.Command(Controls, Draft, 2)
 Call Check(Controls.Ui.Category = 0 And Controls.Ui.Tool = 0,
     "Surfaces Toggle Off And Cancel The Paint Tool")
 Call CheckSunGesture()
+Call CheckSpecialToolSwitch()
 
 Ok = Editor.Available()
 
@@ -165,6 +168,7 @@ If Value.Ready Then
     Call Check(Value.Panel.MapTriangles > 100000 And Value.Panel.MapVertices > 100000,
         "Map Geometry Statistics Include The Loaded Town")
     Call CheckGeometryStatistics()
+    Call CheckCourtPlacement()
     Call CheckRoadArrival(Value)
 
     Show Screen
@@ -826,5 +830,80 @@ Sub CheckSunGesture()
 
     Call Check(Draft.Light.Intensity = 260 And Draft.Light.Azimuth = 207.0,
         "Day Button Restores Daylight At Azimuth 207")
+
+End Sub
+
+Sub CheckSpecialToolSwitch()
+
+    Dim Ignored As Number
+    Dim View As P.Camera3D
+
+    View.Position = P.Vector(0.0, 1000.0, -1000.0)
+    View.Target = P.Vector(0.0, 0.0, 0.0)
+    View.UpDirection = P.Vector(0.0, 1.0, 0.0)
+    View.FovDegrees = 45.0
+    View.NearPlane = 1.0
+    View.FarPlane = 25000.0
+
+    Ignored = Commands.Command(Controls, Draft, 4)
+    Ignored = Commands.Command(Controls, Draft, 53)
+    Ignored = Commands.Command(Controls, Draft, 86)
+    Controls.Ui.Message = "Guide selection active."
+    Controls.SectionGesture.Message = "Old section status."
+    Ignored = Commands.Input(Controls, Draft, View, 0, True)
+
+    Call Check(Controls.Ui.Tool = 70 And Controls.Ui.Message = "Guide selection active.",
+        "Guide Selection Remains Active After Bulk Sections")
+
+    Controls.CourtGesture.Message = "Old placement status."
+
+    Call Commands.Cancel(Controls, Draft)
+    Call Check(Controls.CourtGesture.Message = "", "Cancel Clears Stale Court Status Before Undo")
+
+End Sub
+
+Sub CheckCourtPlacement()
+
+    Dim Before As P.Transform3D
+    Dim After As P.Transform3D
+    Dim HaloBefore As P.Vector3
+    Dim HaloAfter As P.Vector3
+    Dim OriginalOffset As P.Vector3
+    Dim WaterBefore As P.Vector3
+    Dim WaterAfter As P.Vector3
+    Dim Models As Number
+    Dim Ok As Boolean
+
+    If Not Value.Comparison.Ready Then
+        Return
+    End If
+
+    OriginalOffset = Value.Comparison.Offset
+    Models = G.LiveModelCount3D()
+    Ok = P.TryTransform(Value.Comparison.Objects[0], Before)
+    Ok = P.TryParticlePosition(Value.Comparison.Light.Particles, 0, True, HaloBefore) And Ok
+    WaterBefore = CourtWater.StreamPoint(0, 0.0)
+
+    Call CourtPreview.Synchronize(Value.Comparison, True,
+        P.Vector(OriginalOffset.X + 375.25, 0.0, OriginalOffset.Z - 140.5))
+    Call CourtPreview.Update(Value.Comparison, 16)
+
+    Ok = P.TryTransform(Value.Comparison.Objects[0], After) And Ok
+    Ok = P.TryParticlePosition(Value.Comparison.Light.Particles, 0, True, HaloAfter) And Ok
+    WaterAfter = CourtWater.StreamPoint(0, 0.0)
+
+    Call Check(Ok And Abs(After.Position.X - Before.Position.X - 375.25) < 0.001 And
+        Abs(After.Position.Z - Before.Position.Z + 140.5) < 0.001 And
+        Abs(HaloAfter.X - HaloBefore.X - 375.25) < 0.001 And
+        Abs(WaterAfter.X - WaterBefore.X - 375.25) < 0.001 And
+        Value.Comparison.Water.CenterX = Castle.CenterX(),
+        "Royal Court Meshes Halos Fountain And Basins Move Together")
+    Call CourtPreview.Synchronize(Value.Comparison, False, OriginalOffset)
+    Call Check(Not Castle.Active() And Not Value.Comparison.Visible And G.LiveModelCount3D() = Models,
+        "Deleting The Court Disables Collision And Draws Without Destroying Shared Resources")
+    Call CourtPreview.Synchronize(Value.Comparison, True, OriginalOffset)
+    Call CourtPreview.Update(Value.Comparison, 16)
+    Call Check(Castle.Active() And Value.Comparison.Visible,
+        "Replacing The Court Reuses One Complete Assembly")
 
 End Sub

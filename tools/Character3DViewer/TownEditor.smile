@@ -19,6 +19,8 @@ Import Smile.Tools.TownMarkerTools As MarkerTools
 Import Smile.Tools.TownHistory As History
 Import Smile.Tools.TownMapLoadTools As MapLoadTools
 Import Smile.Tools.TownSunControls As Sun
+Import Smile.Tools.TownSectionTools As SectionTools
+Import Smile.Tools.TownCourtTools As CourtTools
 
 Public Type State
     Ui As Panel.State
@@ -26,6 +28,8 @@ Public Type State
     Guide As Guides.State
     GuideTransfer As GuideFiles.State
     MarkerGesture As MarkerTools.State
+    SectionGesture As SectionTools.State
+    CourtGesture As CourtTools.State
     HistoryState As History.State
     Enabled As Boolean
     Anchored As Boolean
@@ -85,6 +89,8 @@ Public Sub Cancel(ByRef Value As State, ByRef Town As Document.State)
     Call Selection.EndDrag(Value.Selected, Town, True)
     Call Sun.Cancel(Value.Ui.SunSlider, Town)
     Call MarkerTools.Cancel(Value.MarkerGesture, Value.Guide)
+    Call SectionTools.Cancel(Value.SectionGesture)
+    Call CourtTools.Cancel(Value.CourtGesture, Town)
 
     Value.Rubber = False
     Value.Anchored = False
@@ -123,7 +129,7 @@ Public Function Command(ByRef Value As State, ByRef Town As Document.State, Acti
     Call Cancel(Value, Town)
     Call History.Ensure(Value.HistoryState, Town, Value.Guide.Ink)
 
-    If Action >= 1 And Action <= 3 Then
+    If Action >= 1 And Action <= 4 Then
 
         If Value.Ui.Category = Action Then
 
@@ -154,13 +160,29 @@ Public Function Command(ByRef Value As State, ByRef Town As Document.State, Acti
 
         If Action = 2 Then
             Value.Ui.Tool = 13
+        Else If Action = 4 Then
+            Value.Ui.Tool = 91
         End If
 
         Call Selection.SetCategory(Value.Selected, Action)
 
-    Else If Action >= 10 And Action <= 19 Then
+    Else If ((Action >= 10 And Action <= 19) Or
+        Action = 91 Or
+        Action = 92) Then
 
         Value.Ui.Tool = Action
+
+    Else If Action = 93 Or Action = 94 Then
+
+        Value.Ui.Category = 1
+        Value.Ui.Tool = Action
+        Value.Ui.Message = "Royal Court: one assembly, independent terrain."
+
+    Else If Action = 95 Then
+
+        Call CourtTools.Remove(Town)
+
+        Value.Ui.Message = "Royal Court removed; terrain unchanged."
 
     Else If Action = 20 Or Action = 21 Then
 
@@ -509,6 +531,10 @@ Public Function Input(ByRef Value As State, ByRef Town As Document.State,
 
         Index = 24
 
+        If Value.Ui.Tool = 93 Or Value.Ui.Tool = 94 Then
+            Index = 95
+        End If
+
         If Value.Ui.Section = 3 Then
             Index = 88
         End If
@@ -525,6 +551,37 @@ Public Function Input(ByRef Value As State, ByRef Town As Document.State,
     RawPoint = Value.Current
     Point = Camera.ProjectViewerPoint(RawPoint, View, Window_Width(), Window_Height())
     Radius = Camera.WorldSizeForPixels(14, Max(View.NearPlane, Point.Depth), View.FovDegrees, Window_Height())
+
+    If Value.Ui.Tool = 93 Or Value.Ui.Tool = 94 Then
+
+        Call CourtTools.Gesture(Value.CourtGesture, Town, Value.Guide, RawPoint,
+            OnGround And Not Blocked And Not Panel.Hovered() And Not Key_Held(KEY_SHIFT),
+            Pointer_Pressed(POINTER_PRIMARY), Pointer_Held(POINTER_PRIMARY), Value.Ui.Tool = 94)
+
+        If Text_Length(Value.CourtGesture.Message) > 0 Then
+            Value.Ui.Message = Value.CourtGesture.Message
+        End If
+
+        If Not Value.CourtGesture.Dragging Then
+            Call History.Record(Value.HistoryState, Town, Value.Guide.Ink)
+        End If
+
+        Return Action
+
+    End If
+
+    If Value.Ui.Tool = 91 Or Value.Ui.Tool = 92 Then
+
+        Call SectionTools.Gesture(Value.SectionGesture, Town, Value.Guide, RawPoint,
+            OnGround And Not Blocked And Not Panel.Hovered() And Not Key_Held(KEY_SHIFT),
+            Pointer_Pressed(POINTER_PRIMARY), Pointer_Held(POINTER_PRIMARY), Value.Ui.Tool = 92)
+
+        Value.Ui.Message = Value.SectionGesture.Message
+
+        Return Action
+
+    End If
+
     Value.Current = Guides.Snap(Value.Guide, RawPoint, Radius)
 
     If Value.Guide.SnapTiles And Value.Ui.Category <> 2 Then
@@ -690,6 +747,8 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State, View As P.Ca
     Call Guides.Draw(Value.Guide, Town.Surface, View, Panel.LeftEdge())
     Call TileGuides.Draw(Value.Guide, Town, View, Panel.LeftEdge())
     Call MapLoadTools.Draw(Town, View, Panel.LeftEdge())
+    Call SectionTools.Draw(Value.SectionGesture, Town, View)
+    Call CourtTools.Draw(Value.CourtGesture, Town, View)
 
     For Index = 0 To Town.ItemCount - 1
 

@@ -134,7 +134,7 @@ Public Sub LoadNext(ByRef Value As State)
     If Value.Edited Then
 
         Ok = Landmarks.LoadNext(Value.Landmarks, Authoring.TownName(),
-            Authoring.TownName() = "Horizon Airport",
+            Authoring.CourtExists(),
             Value.Comparison, Value.Harbor, Value.Horizon)
         Value.Failed = Value.Landmarks.Failed
 
@@ -353,8 +353,8 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
         Pointer_X() < 944 And
         Pointer_Y() >= 10 And
         Pointer_Y() < 39) Then
-        Call VisitLandmark(Value, P.Vector(CastleRoute.ORIGIN_X,
-            CastleRoute.DECK_Y, CastleRoute.ORIGIN_Z - 1558.0), 180.0)
+        Call VisitLandmark(Value, P.Vector(CastleRoute.CenterX(),
+            CastleRoute.DECK_Y, CastleRoute.CenterZ() - 1558.0), 180.0)
 
         Return
     End If
@@ -899,7 +899,9 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
     Dim MapCenter As P.Vector3
     Dim CenterOffset As P.Vector3
 
-    If Value.Edited And Value.Landmarks.Town <> Authoring.TownName() Then
+    If (Value.Edited And
+        (Value.Landmarks.Town <> Authoring.TownName() Or
+        (Authoring.CourtExists() And Not Value.Comparison.Ready))) Then
         Call Authoring.Update(Value.People.Path.Positions[0], Elapsed)
 
         Value.Ready = False
@@ -986,6 +988,7 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
 
     End If
 
+    Call Castle.Synchronize(Value.Comparison, Authoring.CourtExists(), Authoring.CourtOffset())
     Call Castle.Update(Value.Comparison, Elapsed)
     Call TownMap.Update(Value.Map, Party.IsMoving(Value.People), Elapsed)
 
@@ -1053,7 +1056,9 @@ Public Sub Draw(ByRef Value As State)
 
     Dim Ok As Boolean
 
-    If Value.Edited And Value.Landmarks.Town <> Authoring.TownName() Then
+    If (Value.Edited And
+        (Value.Landmarks.Town <> Authoring.TownName() Or
+        (Authoring.CourtExists() And Not Value.Comparison.Ready))) Then
         Value.Ready = False
     End If
 
@@ -1195,7 +1200,7 @@ Public Sub Overlay(ByRef Value As State)
 
                 If Not Value.Cinematic Then
                     Call Authoring.DrawMap(Value.People.Path.Positions[0], ToNumber(Value.Map.Opacity), Party.LeaderName(Value.People),
-                        CastleRoute.MapLabel(), P.Vector(CastleRoute.ORIGIN_X, CastleRoute.DECK_Y, CastleRoute.ORIGIN_Z),
+                        CastleRoute.MapLabel(), P.Vector(CastleRoute.CenterX(), CastleRoute.DECK_Y, CastleRoute.CenterZ()),
                         Landmarks.AirportMapLabel(), Landmarks.AirportMapPosition(),
                         Value.Map.Headlight, Value.People.Members[0].Yaw)
                 End If

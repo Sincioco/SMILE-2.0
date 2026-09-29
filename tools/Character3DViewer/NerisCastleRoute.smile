@@ -19,6 +19,35 @@ Private Dim DoorRotation As Double
 Private Dim DoorHold As Number
 Private Dim Entered As Boolean
 Private Dim PendingEntry As Boolean
+Private Dim OffsetX As Double
+Private Dim OffsetZ As Double
+
+Public Sub Place(X As Double, Z As Double)
+
+    OffsetX = X
+    OffsetZ = Z
+
+End Sub
+
+Public Function CenterX() As Double
+
+    Dim Result As Double
+
+    Result = ORIGIN_X + OffsetX
+
+    Return Result
+
+End Function
+
+Public Function CenterZ() As Double
+
+    Dim Result As Double
+
+    Result = ORIGIN_Z + OffsetZ
+
+    Return Result
+
+End Function
 
 Public Sub Enable(Value As Boolean)
 
@@ -62,7 +91,7 @@ Public Function LocalPoint(X As Double, Z As Double) As P.Vector3
 
     Dim Result As P.Vector3
 
-    Result = P.Vector((X - ORIGIN_X) / SCALE, 0.0, (Z - ORIGIN_Z) / SCALE)
+    Result = P.Vector((X - CenterX()) / SCALE, 0.0, (Z - CenterZ()) / SCALE)
 
     Return Result
 
@@ -129,7 +158,10 @@ Public Sub Update(ByRef Path As Trail.State, ActorCount As Number, Elapsed As Nu
 
     Leader = LocalPoint(Path.Positions[0].X, Path.Positions[0].Z)
 
-    If Abs(Leader.X) < 2.8 And Leader.Z >= 15.0 And DoorRotation >= 75.0 And Not Entered Then
+    If (Abs(Leader.X) < 2.8 And
+        Leader.Z >= 15.0 And
+        DoorRotation >= 75.0 And
+        Not Entered) Then
         PendingEntry = True
         Entered = True
     End If
@@ -204,7 +236,9 @@ Public Function GroundHeight(X As Double, Z As Double) As Double
     Result = DECK_Y
     Point = LocalPoint(X, Z)
 
-    If Point.Z >= 2.0 And Point.Z < 14.0 And Abs(Point.X) <= 7.0 Then
+    If (Point.Z >= 2.0 And
+        Point.Z < 14.0 And
+        Abs(Point.X) <= 7.0) Then
         Result = DECK_Y + Min(20.0, Floor((Point.Z - 2.0) / 0.6) + 1.0) * 0.15 * SCALE
     Else If Point.Z >= 14.0 Then
         Result = DECK_Y + 3.0 * SCALE

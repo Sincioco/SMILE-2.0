@@ -1,0 +1,224 @@
+''' Rubber selection, placement preview and a pending atomic section transaction.
+Module Smile.Tools.TownSectionTools
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.SurfaceSections3D As Regions
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownSections As Sections
+Import Smile.Tools.TownGuides As Guides
+Import Smile.Tools.TownTileGuides As TileGuides
+Import Smile.Tools.TownPicking As Picking
+
+Public Type State
+    Area As Regions.Region
+    First As P.Vector3
+    Last As P.Vector3
+    Delta As P.Vector3
+    Selecting As Boolean
+    Dragging As Boolean
+    Selected As Boolean
+    Pending As Boolean
+    Copying As Boolean
+    Before As Document.State
+    Message As Text
+End Type
+
+Public Sub Cancel(ByRef Value As State)
+
+    Value.Selecting = False
+    Value.Dragging = False
+    Value.Selected = False
+
+End Sub
+
+Private Function Marker(Area As Regions.Region) As Guides.Marker
+
+    Dim Result As Guides.Marker
+
+    Result.First = P.Vector(Area.MinX, 23.12, Area.MinZ)
+    Result.Last = P.Vector(Area.MaxX, 23.12, Area.MaxZ)
+    Result.IsRectangle = True
+
+    Return Result
+
+End Function
+
+''' Pointer state is supplied explicitly so selection/drag/cancel can be checked without a window.
+Public Sub Gesture(ByRef Value As State, ByRef Town As Document.State,
+    ByRef Guide As Guides.State, Point As P.Vector3, Available As Boolean,
+    Pressed As Boolean, Held As Boolean, Copying As Boolean)
+
+    Dim Preview As Guides.Marker
+    Dim Desired As P.Vector3
+    Dim Candidate As Document.State
+
+    If Value.Pending Then
+        Return
+    End If
+
+    If Value.Selecting Then
+
+        If Available Then
+            Value.Last = Point
+        End If
+
+        Preview = TileGuides.CellRectangle(Town.Surface, Value.First, Value.Last)
+        Value.Area.MinX = Preview.First.X
+        Value.Area.MinZ = Preview.First.Z
+        Value.Area.MaxX = Preview.Last.X
+        Value.Area.MaxZ = Preview.Last.Z
+
+        If Not Held Then
+
+            Value.Selecting = False
+            Value.Selected = True
+            Value.Message = "Drag inside the rectangle to place it."
+
+        End If
+
+    Else If Value.Dragging Then
+
+        If Available Then
+
+            Desired = P.Vector(Value.Area.MinX + Point.X - Value.First.X,
+                23.12, Value.Area.MinZ + Point.Z - Value.First.Z)
+            Desired = Guides.Snap(Guide, Desired, 0.0)
+
+            If Guide.SnapTiles Then
+                Desired = Guides.SnapTile(Town.Surface, Desired)
+            End If
+
+            Value.Delta = P.Vector(Desired.X - Value.Area.MinX, 0.0, Desired.Z - Value.Area.MinZ)
+
+        End If
+
+        If Not Held Then
+
+            Value.Dragging = False
+
+            If Not Available Then
+                Value.Message = "Drop inside the map; section unchanged."
+                Return
+            End If
+
+            Value.Message = Sections.Prepare(Town, Candidate, Value.Area,
+                Value.Delta.X, Value.Delta.Z, Not Copying)
+
+            If Text_Length(Value.Message) = 0 Then
+
+                Value.Before = Town
+                Town = Candidate
+                Value.Pending = True
+                Value.Copying = Copying
+                Value.Message = "Building section; originals kept visible."
+
+            End If
+
+        End If
+
+    Else If Available And Pressed Then
+
+        Value.First = Point
+        Value.Last = Point
+        Value.Delta = P.Vector(0.0, 0.0, 0.0)
+
+        If Value.Selected And Regions.Contains(Value.Area, Point.X, Point.Z) Then
+            Value.Dragging = True
+        Else
+            Value.Selected = False
+            Value.Selecting = True
+        End If
+
+    End If
+
+End Sub
+
+''' Resolve after terrain has either committed its replacement or rejected it.
+Public Sub Finish(ByRef Value As State, ByRef Town As Document.State, Success As Boolean)
+
+    Dim Empty As Document.State
+    Dim Revision As Number
+
+    If Not Value.Pending Then
+        Return
+    End If
+
+    If Success Then
+
+        Value.Message = "Section copied. Ctrl+Z undoes all parts."
+
+        If Not Value.Copying Then
+            Value.Area = Regions.Shift(Value.Area, Value.Delta.X, Value.Delta.Z)
+            Value.Message = "Section moved. Ctrl+Z undoes all parts."
+        End If
+
+    Else
+
+        Revision = Town.Revision + 1
+        Town = Value.Before
+        Town.Revision = Revision
+        Value.Message = "Terrain limit; whole section restored."
+
+    End If
+
+    Value.Pending = False
+    Value.Before = Empty
+
+End Sub
+
+Public Sub Draw(ByRef Value As State, ByRef Town As Document.State, View As P.Camera3D)
+
+    Dim Destination As Regions.Region
+    Dim Preview As Guides.Marker
+    Dim Item As Document.Item
+    Dim Box As Picking.ScreenBox
+    Dim Index As Number
+    Dim ColorValue As Number
+
+    If Not Value.Selected And Not Value.Selecting Then
+        Return
+    End If
+
+    Preview = Marker(Value.Area)
+
+    Call Guides.DrawMarker(Preview, View, RGB(255, 210, 90))
+
+    If Not Value.Dragging Then
+        Return
+    End If
+
+    Destination = Regions.Shift(Value.Area, Value.Delta.X, Value.Delta.Z)
+    ColorValue = RGB(70, 230, 215)
+
+    If (Not Regions.Fits(Town.Surface, Destination) Or
+        Sections.ProtectedArea(Town.Name, Destination)) Then
+        ColorValue = RGB(255, 95, 80)
+    End If
+
+    Preview = Marker(Destination)
+
+    Call Guides.DrawMarker(Preview, View, ColorValue)
+
+    For Index = 0 To Town.ItemCount - 1
+
+        Item = Town.Items[Index]
+
+        If Sections.IncludesItem(Value.Area, Item) Then
+
+            Item.Position.X = Item.Position.X + Value.Delta.X
+            Item.Position.Z = Item.Position.Z + Value.Delta.Z
+            Box = Picking.Project(Item, View, Window_Width(), Window_Height())
+
+            If Box.Visible Then
+                Draw Rectangle Box.X0, Box.Y0, Box.X1 - Box.X0, Box.Y1 - Box.Y0, ColorValue
+            End If
+
+        End If
+
+    End For
+
+End Sub
+
+End Module

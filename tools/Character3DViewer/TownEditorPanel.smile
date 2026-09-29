@@ -171,15 +171,44 @@ Private Sub Library(ByRef Value As State, X As Number)
     Dim TileX As Number
     Dim TileY As Number
 
-    Call Button(Value, 1, X, 206, 91, "Buildings", Value.Category = 1)
-    Call Button(Value, 2, X + 96, 206, 91, "Surfaces", Value.Category = 2)
-    Call Button(Value, 3, X + 192, 206, 91, "Decor", Value.Category = 3)
+    Call Button(Value, 1, X, 206, 83, "Buildings", Value.Category = 1)
+    Call Button(Value, 2, X + 87, 206, 78, "Surfaces", Value.Category = 2)
+    Call Button(Value, 3, X + 169, 206, 54, "Decor", Value.Category = 3)
+    Call Button(Value, 4, X + 227, 206, 56, "Bulk", Value.Category = 4)
 
     If Value.Category = 0 Then
 
         Draw Text "Pan Mode" At X, 250 Size 18 Color RGB(70, 225, 220)
         Draw Text "Left-drag to pan the map." At X, 282 Size 14 Color WHITE
         Draw Text "Click a category to resume editing." At X, 310 Size 13 Color WHITE
+
+    Else If Value.Tool = 93 Or Value.Tool = 94 Then
+
+        Call Button(Value, 93, X, 240, 139, "Select / Move", Value.Tool = 93)
+        Call Button(Value, 94, X + 144, 240, 139, "Place / Relocate", Value.Tool = 94)
+        Call Button(Value, 95, X, 276, 283, "Delete Royal Court")
+        Call Button(Value, 10, X, 312, 283, "Back To Building Palette")
+
+        Draw Text "Royal Court - One Per Map" At X, 356 Size 16 Color WHITE
+        Draw Text "Move: click and drag its footprint." At X, 386 Size 13 Color WHITE
+        Draw Text "Place: click the new center point." At X, 410 Size 13 Color WHITE
+        Draw Text "Ground and water remain unchanged." At X, 446 Size 13 Color RGB(240, 205, 140)
+        Draw Text "Doors, bridge, fountain and lights" At X, 470 Size 12 Color WHITE
+        Draw Text "stay attached. Ctrl+Z undoes edits." At X, 490 Size 12 Color WHITE
+
+    Else If Value.Category = 4 Then
+
+        Call Button(Value, 91, X, 240, 139, "Move Sections", Value.Tool = 91)
+        Call Button(Value, 92, X + 144, 240, 139, "Copy Sections", Value.Tool = 92)
+
+        Draw Text "1. Drag a rectangle on the map." At X, 282 Size 13 Color WHITE
+        Draw Text "2. Drag inside it to the destination." At X, 306 Size 13 Color WHITE
+        Draw Text "Destination contents are replaced." At X, 342 Size 13 Color RGB(240, 205, 140)
+        Draw Text "Move fills the source with ground." At X, 366 Size 13 Color WHITE
+        Draw Text "Ctrl+Z undoes the entire operation." At X, 390 Size 13 Color WHITE
+        Draw Text "Esc cancels. Guides control snapping." At X, 414 Size 12 Color WHITE
+        Draw Text "Airport assemblies are protected." At X, 448 Size 12 Color RGB(240, 205, 140)
+        Draw Text "Royal Court supports Move only." At X, 470 Size 12 Color RGB(240, 205, 140)
 
     Else If Value.Category = 2 Then
 
@@ -223,7 +252,12 @@ Private Sub Library(ByRef Value As State, X As Number)
         Call Button(Value, 20, X, 274, 60, "Prev")
         Call Button(Value, 21, X + 223, 274, 60, "Next")
 
-        Draw Text "Palette" At X + 108, 281 Size 14 Color WHITE
+        If Value.Category = 1 Then
+            Call Button(Value, 93, X + 65, 274, 153, "Royal Court...")
+        Else
+            Draw Text "Palette" At X + 108, 281 Size 14 Color WHITE
+        End If
+
         Rows = PaletteRows()
 
         For Index = 0 To Catalog.TEMPLATE_COUNT - 1

@@ -9,6 +9,8 @@ Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownCatalogData As Catalog
 Import Smile.Tools.TownInitialSurface As Initial
 Import Smile.Tools.TownEditor As Editor
+Import Smile.Tools.TownSectionTools As SectionTools
+Import Smile.Tools.TownHistory As History
 Import Smile.Tools.TownEditorPanel As Panel
 Import Smile.Tools.TownCatalogRenderer As Renderer
 Import Smile.Tools.TownSurfaceRenderer As Terrain
@@ -82,6 +84,7 @@ Public Sub BeginEditing()
     If Not HaveDocument Then
 
         Town.Name = "Neris Town"
+        Town.CourtPlaced = True
 
         Call Initial.Populate(Town.Surface)
         Call Document.DefaultSun(Town.Light)
@@ -158,7 +161,9 @@ Public Function GestureActive() As Boolean
 
     Dim Result As Boolean
 
-    Result = (Controls.Selected.Dragging Or Controls.MarkerGesture.Dragging Or Controls.Rubber Or Controls.Anchored Or
+    Result = (Controls.Selected.Dragging Or Controls.MarkerGesture.Dragging Or
+        Controls.CourtGesture.Dragging Or Controls.SectionGesture.Selecting Or
+        Controls.SectionGesture.Dragging Or Controls.SectionGesture.Pending Or Controls.Rubber Or Controls.Anchored Or
         Controls.Ui.SunSlider.DragOwner > 0 Or World.Active())
 
     Return Result
@@ -540,6 +545,10 @@ Public Sub Input(View As P.Camera3D, Key As Number, Blocked As Boolean)
     Dim Name As Text
     Dim Ok As Boolean
 
+    If Controls.SectionGesture.Pending Then
+        Return
+    End If
+
     If Controls.GuideTransfer.Job > 0 And Not Controls.GuideTransfer.Saving Then
         Return
     End If
@@ -610,7 +619,8 @@ Public Sub Input(View As P.Camera3D, Key As Number, Blocked As Boolean)
         Return
     End If
 
-    Action = Editor.Input(Controls, Town, View, Key, Blocked)
+    Action = Editor.Input(Controls, Town, View, Key,
+        Blocked Or (Controls.Ui.Category = 4 And Ground.Stage <> 0))
 
     If Action = 89 Or Action = 90 Then
 
@@ -648,6 +658,37 @@ Public Sub Update(Leader As P.Vector3, Elapsed As Number)
     End If
 
     MapLoadCooldown = Max(0, MapLoadCooldown - Elapsed)
+
+    If Controls.SectionGesture.Pending Then
+
+        If Ground.PendingRevision <> Town.Surface.Revision Then
+            Call Terrain.BeginBuild(Ground, Town.Surface)
+        End If
+
+        Call Terrain.Update(Ground, Elapsed)
+
+        Controls.Ui.Busy = True
+        Controls.Ui.ProgressPercent = Ground.Row * 90 / Max(1, Town.Surface.Rows)
+
+        If Ground.Failed Then
+
+            Call SectionTools.Finish(Controls.SectionGesture, Town, False)
+            Call Editor.ResetHistory(Controls, Town)
+            Call Terrain.BeginBuild(Ground, Town.Surface)
+
+        Else If Ground.LiveRevision = Town.Surface.Revision Then
+
+            Call SectionTools.Finish(Controls.SectionGesture, Town, True)
+            Call History.Record(Controls.HistoryState, Town, Controls.Guide.Ink)
+
+        Else
+            Return
+
+        End If
+
+        Controls.Ui.Message = Controls.SectionGesture.Message
+
+    End If
 
     If AppliedRevision <> Town.Revision Then
 
@@ -752,6 +793,16 @@ End Sub
 Public Function Draw() As Boolean
 
     Dim Ok As Boolean
+
+    If Controls.SectionGesture.Pending Then
+
+        Ok = Renderer.Draw(Assets, Controls.SectionGesture.Before)
+        Ok = Terrain.Draw(Ground) And Ok
+        Ok = Attachments.Draw(Details, Controls.SectionGesture.Before) And Ok
+
+        Return Ok
+
+    End If
 
     Ok = Renderer.Draw(Assets, Town)
     Ok = Terrain.Draw(Ground) And Ok
@@ -928,6 +979,35 @@ Public Sub Release()
     TabOverviewPending = HaveDocument
 
 End Sub
+
+Public Function CourtExists() As Boolean
+
+    Dim Result As Boolean
+
+    Result = Town.CourtPlaced
+
+    If Controls.SectionGesture.Pending Then
+        Result = Controls.SectionGesture.Before.CourtPlaced
+    End If
+
+    Return Result
+
+End Function
+
+Public Function CourtOffset() As P.Vector3
+
+    Dim Result As P.Vector3
+
+    Result = P.Vector(Town.CourtOffsetX, 0.0, Town.CourtOffsetZ)
+
+    If Controls.SectionGesture.Pending Then
+        Result = P.Vector(Controls.SectionGesture.Before.CourtOffsetX,
+            0.0, Controls.SectionGesture.Before.CourtOffsetZ)
+    End If
+
+    Return Result
+
+End Function
 
 Public Function TownName() As Text
 

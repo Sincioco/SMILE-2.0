@@ -1,0 +1,159 @@
+''' Editing one Royal Court assembly without changing the surrounding terrain.
+Module Smile.Tools.TownCourtTools
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.SurfaceSections3D As Regions
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownSections As Sections
+Import Smile.Tools.TownGuides As Guides
+Import Smile.Tools.NerisCastleRoute As Court
+
+Public Type State
+    Selected As Boolean
+    Dragging As Boolean
+    Anchor As P.Vector3
+    OriginalX As Double
+    OriginalZ As Double
+    Message As Text
+End Type
+
+Public Function Place(ByRef Town As Document.State, Point As P.Vector3) As Boolean
+
+    Dim Bounds As Regions.Region
+    Dim DeltaX As Double
+    Dim DeltaZ As Double
+
+    DeltaX = Point.X - Court.ORIGIN_X - Town.CourtOffsetX
+    DeltaZ = Point.Z - Court.ORIGIN_Z - Town.CourtOffsetZ
+    Bounds = Regions.Shift(Sections.CourtArea(Town), DeltaX, DeltaZ)
+
+    If Not Regions.Fits(Town.Surface, Bounds) Or Sections.ProtectedArea(Town.Name, Bounds) Then
+        Return False
+    End If
+
+    Town.CourtPlaced = True
+    Town.CourtOffsetX = Point.X - Court.ORIGIN_X
+    Town.CourtOffsetZ = Point.Z - Court.ORIGIN_Z
+    Town.Revision = Town.Revision + 1
+
+    Return True
+
+End Function
+
+Public Sub Remove(ByRef Town As Document.State)
+
+    If Town.CourtPlaced Then
+        Town.CourtPlaced = False
+        Town.Revision = Town.Revision + 1
+    End If
+
+End Sub
+
+Public Sub Cancel(ByRef Value As State, ByRef Town As Document.State)
+
+    If Value.Dragging Then
+        Town.CourtOffsetX = Value.OriginalX
+        Town.CourtOffsetZ = Value.OriginalZ
+    End If
+
+    Value.Dragging = False
+    Value.Selected = False
+    Value.Message = ""
+
+End Sub
+
+Public Sub Gesture(ByRef Value As State, ByRef Town As Document.State,
+    ByRef Guide As Guides.State, Point As P.Vector3, Available As Boolean,
+    Pressed As Boolean, Held As Boolean, Placing As Boolean)
+
+    Dim Desired As P.Vector3
+    Dim Bounds As Regions.Region
+    Dim Ok As Boolean
+
+    If Value.Dragging Then
+
+        If Available Then
+
+            Desired = P.Vector(Court.ORIGIN_X + Value.OriginalX + Point.X - Value.Anchor.X,
+                23.12, Court.ORIGIN_Z + Value.OriginalZ + Point.Z - Value.Anchor.Z)
+            Desired = Guides.Snap(Guide, Desired, 0.0)
+
+            If Guide.SnapTiles Then
+                Desired = Guides.SnapTile(Town.Surface, Desired)
+            End If
+
+            Bounds = Regions.Shift(Sections.CourtArea(Town), Desired.X - Court.ORIGIN_X - Town.CourtOffsetX,
+                Desired.Z - Court.ORIGIN_Z - Town.CourtOffsetZ)
+
+            If (Regions.Fits(Town.Surface, Bounds) And
+                Not Sections.ProtectedArea(Town.Name, Bounds)) Then
+                Town.CourtOffsetX = Desired.X - Court.ORIGIN_X
+                Town.CourtOffsetZ = Desired.Z - Court.ORIGIN_Z
+            End If
+
+        End If
+
+        If Not Held Then
+
+            Value.Dragging = False
+
+            If Town.CourtOffsetX <> Value.OriginalX Or Town.CourtOffsetZ <> Value.OriginalZ Then
+                Town.Revision = Town.Revision + 1
+                Value.Message = "Royal Court moved; terrain unchanged."
+            End If
+
+        End If
+
+    Else If Available And Pressed Then
+
+        If Placing Then
+
+            Point = Guides.Snap(Guide, Point, 0.0)
+
+            If Guide.SnapTiles Then
+                Point = Guides.SnapTile(Town.Surface, Point)
+            End If
+
+            Ok = Place(Town, Point)
+            Value.Selected = Ok
+            Value.Message = "Keep the Royal Court inside clear map space."
+
+            If Ok Then
+                Value.Message = "Royal Court placed; terrain unchanged."
+            End If
+
+        Else If Town.CourtPlaced Then
+
+            Value.Selected = Regions.Contains(Sections.CourtArea(Town), Point.X, Point.Z)
+            Value.Dragging = Value.Selected
+            Value.Anchor = Point
+            Value.OriginalX = Town.CourtOffsetX
+            Value.OriginalZ = Town.CourtOffsetZ
+
+        End If
+
+    End If
+
+End Sub
+
+Public Sub Draw(ByRef Value As State, ByRef Town As Document.State, View As P.Camera3D)
+
+    Dim Area As Regions.Region
+    Dim Mark As Guides.Marker
+
+    If Not Value.Selected Or Not Town.CourtPlaced Then
+        Return
+    End If
+
+    Area = Sections.CourtArea(Town)
+    Mark.First = P.Vector(Area.MinX, 23.12, Area.MinZ)
+    Mark.Last = P.Vector(Area.MaxX, 23.12, Area.MaxZ)
+    Mark.IsRectangle = True
+
+    Call Guides.DrawMarker(Mark, View, RGB(255, 210, 90))
+
+End Sub
+
+End Module

@@ -316,7 +316,7 @@ Private Sub Encode(ByRef Value As Document.State, MarkSaved As Boolean)
     Call WriteByte(84)
     Call WriteByte(87)
     Call WriteByte(78)
-    Call WriteByte(4)
+    Call WriteByte(5)
     Call WriteName(Catalog.FINGERPRINT)
     Call WriteName(Value.Name)
 
@@ -393,6 +393,16 @@ Private Sub Encode(ByRef Value As Document.State, MarkSaved As Boolean)
         Call WriteByte(0)
     End If
 
+    Call WritePrecise(Value.CourtOffsetX)
+    Call WritePrecise(Value.CourtOffsetZ)
+
+    If Value.CourtPlaced Then
+        Call WriteByte(1)
+    Else
+
+        Call WriteByte(0)
+    End If
+
     ByteCount = Offset
 
 End Sub
@@ -418,7 +428,7 @@ Private Function Decode() As Boolean
 
     Version = ReadByte()
 
-    If Version < 1 Or Version > 4 Then
+    If Version < 1 Or Version > 5 Then
         Return False
     End If
 
@@ -567,6 +577,20 @@ Private Function Decode() As Boolean
         If Candidate.Presets.HasNight Then
             Candidate.Presets.Night = ReadSun(4)
         End If
+
+    End If
+
+    Candidate.CourtOffsetX = 0.0
+    Candidate.CourtOffsetZ = 0.0
+    Candidate.CourtPlaced = Text_Slice(Candidate.Name, 0, 10) = "Neris Town"
+
+    If Version >= 5 Then
+
+        Candidate.CourtOffsetX = ReadPrecise()
+        Candidate.CourtOffsetZ = ReadPrecise()
+        Flag = ReadByte()
+        Candidate.CourtPlaced = Flag = 1
+        Valid = Valid And Flag <= 1
 
     End If
 

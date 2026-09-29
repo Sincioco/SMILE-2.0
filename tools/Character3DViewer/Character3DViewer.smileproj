@@ -58,6 +58,8 @@
     <SmileSource Include="TownGuides.smile" />
     <SmileSource Include="TownGuideFiles.smile" />
     <SmileSource Include="TownTileGuides.smile" />
+    <SmileSource Include="TownSectionTools.smile" />
+    <SmileSource Include="TownCourtTools.smile" />
     <SmileSource Include="TownMarkerTools.smile" />
     <SmileSource Include="TownHistory.smile" />
     <SmileSource Include="TownCatalogData.smile" />
@@ -65,6 +67,7 @@
     <SmileSource Include="TownInitialSurface.smile" />
     <SmileSource Include="TownDocumentStore.smile" />
     <SmileSource Include="TownGeometry.smile" />
+    <SmileSource Include="TownSections.smile" />
     <SmileSource Include="TownDocumentNavigation.smile" />
     <SmileSource Include="TownCatalogRenderer.smile" />
     <SmileSource Include="TownSurfaceRenderer.smile" />
