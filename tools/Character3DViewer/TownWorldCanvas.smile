@@ -1,0 +1,287 @@
+''' World graph layout, pointer gestures and visible connection endpoints.
+Module Smile.Tools.TownWorldCanvas
+
+Option Explicit
+
+Import Smile.Tools.TownWorldDocument As Document
+
+Public Type State
+    Selected As Number
+    DragNode As Boolean
+    DragPort As Boolean
+    SourceNode As Number
+    SourcePort As Number
+    OffsetX As Number
+    OffsetY As Number
+    PointerX As Number
+    PointerY As Number
+    PendingDelete As Boolean
+    DeleteFirst As Number
+    DeleteSecond As Number
+End Type
+
+Public Function X(ByRef Map As Document.State, Index As Number, RightEdge As Number,
+    Optional Side As Number = -1) As Number
+
+    Dim Result As Number
+
+    Result = 100 + Map.Nodes[Index].X * Max(100, RightEdge - 200) / 1000
+
+    If Side = 0 Then
+        Result = Result - 80
+    Else If Side = 2 Then
+        Result = Result + 80
+    End If
+
+    Return Result
+
+End Function
+
+Public Function Y(ByRef Map As Document.State, Index As Number, Height As Number,
+    Optional Side As Number = -1) As Number
+
+    Dim Result As Number
+
+    Result = 200 + Map.Nodes[Index].Y * Max(100, Height - 400) / 1000
+
+    If Side = 1 Then
+        Result = Result - 22
+    Else If Side = 3 Then
+        Result = Result + 22
+    End If
+
+    Return Result
+
+End Function
+
+Private Function PickPort(ByRef Map As Document.State, Px As Number, Py As Number,
+    RightEdge As Number, Height As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Index As Number
+    Dim Side As Number
+    Dim Result As Number
+
+    For Index = 0 To Map.NodeCount - 1
+
+        For Side = 0 To 3
+
+            If Abs(Px - X(Map, Index, RightEdge, Side)) <= 10 And Abs(Py - Y(Map, Index, Height, Side)) <= 10 Then
+                Result = Index * 4 + Side
+                Return Result
+            End If
+
+        End For
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+Private Function OnLine(ByRef Map As Document.State, First As Number, Second As Number,
+    Px As Number, Py As Number, RightEdge As Number, Height As Number) As Boolean
+
+    Dim Ax As Double
+    Dim Ay As Double
+    Dim Dx As Double
+    Dim Dy As Double
+    Dim LengthSquared As Double
+    Dim Amount As Double
+    Dim Result As Boolean
+
+    Ax = ToDouble(X(Map, First, RightEdge, Map.Ports[First, Second]))
+    Ay = ToDouble(Y(Map, First, Height, Map.Ports[First, Second]))
+    Dx = ToDouble(X(Map, Second, RightEdge, Map.Ports[Second, First])) - Ax
+    Dy = ToDouble(Y(Map, Second, Height, Map.Ports[Second, First])) - Ay
+    LengthSquared = Dx * Dx + Dy * Dy
+
+    If LengthSquared < 1.0 Then
+        Return False
+    End If
+
+    Amount = Clamp(((ToDouble(Px) - Ax) * Dx + (ToDouble(Py) - Ay) * Dy) / LengthSquared, 0.0, 1.0)
+    Dx = ToDouble(Px) - Ax - Amount * Dx
+    Dy = ToDouble(Py) - Ay - Amount * Dy
+    Result = Dx * Dx + Dy * Dy <= 49.0
+
+    Return Result
+
+End Function
+
+Public Function Gesture(ByRef Value As State, ByRef Map As Document.State,
+    Px As Number, Py As Number, Pressed As Boolean, Held As Boolean, Available As Boolean,
+    RightEdge As Number, Height As Number) As Boolean
+
+    Dim Picked As Number
+    Dim Index As Number
+    Dim Other As Number
+    Dim Changed As Boolean
+
+    Value.PointerX = Px
+    Value.PointerY = Py
+
+    If Value.PendingDelete Then
+        Return False
+    End If
+
+    If Value.DragPort Then
+
+        If Not Held Then
+
+            Value.DragPort = False
+
+            If Available Then
+
+                Picked = PickPort(Map, Px, Py, RightEdge, Height)
+
+                If Picked >= 0 Then
+                    Changed = Document.Connect(Map, Value.SourceNode, Value.SourcePort, Picked / 4, Picked Mod 4)
+                End If
+
+            End If
+
+        End If
+
+    Else If Value.DragNode Then
+
+        Value.DragNode = Held
+
+        If Held And Available Then
+
+            Map.Nodes[Value.Selected].X = Max(0, Min(1000,
+                (Px - Value.OffsetX - 100) * 1000 / Max(100, RightEdge - 200)))
+            Map.Nodes[Value.Selected].Y = Max(0, Min(1000,
+                (Py - Value.OffsetY - 200) * 1000 / Max(100, Height - 400)))
+            Changed = True
+
+        End If
+
+    Else If Pressed And Available Then
+
+        Picked = PickPort(Map, Px, Py, RightEdge, Height)
+
+        If Picked >= 0 Then
+
+            Value.SourceNode = Picked / 4
+            Value.SourcePort = Picked Mod 4
+            Value.Selected = Value.SourceNode
+            Value.DragPort = True
+            Return False
+
+        End If
+
+        For Index = 0 To Map.NodeCount - 1
+
+            If Abs(Px - X(Map, Index, RightEdge)) < 80 And Abs(Py - Y(Map, Index, Height)) < 22 Then
+
+                Value.Selected = Index
+                Value.DragNode = True
+                Value.OffsetX = Px - X(Map, Index, RightEdge)
+                Value.OffsetY = Py - Y(Map, Index, Height)
+                Return False
+
+            End If
+
+        End For
+
+        For Index = 0 To Map.NodeCount - 1
+
+            For Other = Index + 1 To Map.NodeCount - 1
+
+                If Map.Links[Index, Other] And OnLine(Map, Index, Other, Px, Py, RightEdge, Height) Then
+
+                    Value.PendingDelete = True
+                    Value.DeleteFirst = Index
+                    Value.DeleteSecond = Other
+                    Return False
+
+                End If
+
+            End For
+        End For
+
+        Value.Selected = -1
+
+    End If
+
+    Return Changed
+
+End Function
+
+Public Function ConfirmDelete(ByRef Value As State, ByRef Map As Document.State, Accepted As Boolean) As Boolean
+
+    Dim Changed As Boolean
+
+    Changed = Accepted And Value.PendingDelete
+
+    If Changed Then
+        Map.Links[Value.DeleteFirst, Value.DeleteSecond] = False
+        Map.Links[Value.DeleteSecond, Value.DeleteFirst] = False
+    End If
+
+    Value.PendingDelete = False
+
+    Return Changed
+
+End Function
+
+Public Sub Draw(ByRef Value As State, ByRef Map As Document.State, RightEdge As Number, Height As Number)
+
+    Dim Index As Number
+    Dim Other As Number
+    Dim Side As Number
+    Dim ColorValue As Number
+    Dim Ax As Number
+    Dim Ay As Number
+    Dim Bx As Number
+    Dim EndY As Number
+
+    For Index = 0 To Map.NodeCount - 1
+
+        For Other = Index + 1 To Map.NodeCount - 1
+
+            If Map.Links[Index, Other] Then
+
+                Ax = X(Map, Index, RightEdge, Map.Ports[Index, Other])
+                Ay = Y(Map, Index, Height, Map.Ports[Index, Other])
+                Bx = X(Map, Other, RightEdge, Map.Ports[Other, Index])
+                EndY = Y(Map, Other, Height, Map.Ports[Other, Index])
+                Draw Line Ax, Ay, Bx, EndY, RGB(60, 185, 184)
+
+            End If
+
+        End For
+    End For
+
+    If Value.DragPort Then
+
+        Ax = X(Map, Value.SourceNode, RightEdge, Value.SourcePort)
+        Ay = Y(Map, Value.SourceNode, Height, Value.SourcePort)
+        Draw Line Ax, Ay, Value.PointerX, Value.PointerY, RGB(245, 210, 70)
+
+    End If
+
+    For Index = 0 To Map.NodeCount - 1
+
+        ColorValue = RGB(28, 55, 76)
+
+        If Value.Selected = Index Then
+            ColorValue = RGB(22, 110, 135)
+        End If
+
+        Fill Rectangle X(Map, Index, RightEdge) - 80, Y(Map, Index, Height) - 22, 160, 44, ColorValue
+        Ax = X(Map, Index, RightEdge) - 74
+        Ay = Y(Map, Index, Height) - 7
+        Draw Text Text_Slice(Map.Nodes[Index].Town, 0, 20) At Ax, Ay Size 13 Color WHITE
+
+        For Side = 0 To 3
+            Fill Rectangle X(Map, Index, RightEdge, Side) - 4, Y(Map, Index, Height, Side) - 4, 8, 8, RGB(245, 210, 70)
+        End For
+    End For
+
+End Sub
+
+End Module

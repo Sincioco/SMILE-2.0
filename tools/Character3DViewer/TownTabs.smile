@@ -297,7 +297,7 @@ Public Function Input(ByRef Value As State, ByRef Town As Document.State) As Boo
         Return False
     End If
 
-    Width = Min(180, (Window_Width() - 20) / Value.TabCount)
+    Width = Min(180, Max(1, Window_Width() - 358) / Value.TabCount)
     Index = (Pointer_X() - 10) / Width
 
     If (Pointer_X() >= 10 And
@@ -319,7 +319,7 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State)
         Return
     End If
 
-    Width = Min(180, (Window_Width() - 20) / Value.TabCount)
+    Width = Min(180, Max(1, Window_Width() - 358) / Value.TabCount)
     Fill Rectangle 0, 94, Window_Width(), 32, RGB(12, 23, 36)
 
     For Index = 0 To Value.TabCount - 1

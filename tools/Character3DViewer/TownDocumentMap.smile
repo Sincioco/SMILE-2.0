@@ -36,7 +36,31 @@ Public Sub SetZoom(ByRef Town As Document.State, Focus As P.Vector3, Level As Nu
 
 End Sub
 
-Public Function ZoomInput(ByRef Town As Document.State, Position As P.Vector3) As Boolean
+''' Keep the world point beneath the cursor fixed while changing map scale.
+Public Sub ZoomAt(ByRef Town As Document.State, X As Number, Y As Number, Level As Number)
+
+    Dim Anchor As P.Vector3
+    Dim Focus As P.Vector3
+    Dim FractionX As Double
+    Dim FractionZ As Double
+    Dim Width As Double
+    Dim Depth As Double
+
+    X = Max(Window_Width() - 276, Min(Window_Width() - 20, X))
+    Y = Max(259, Min(515, Y))
+    Anchor = Pick(Town, X, Y)
+    FractionX = ToDouble(X - Window_Width() + 276) / 256.0
+    FractionZ = ToDouble(515 - Y) / 256.0
+    Level = Max(1, Min(8, Level))
+    Width = (Town.Surface.XEdges[Town.Surface.Columns] - Town.Surface.OriginX) / ToDouble(Level)
+    Depth = (Town.Surface.ZEdges[Town.Surface.Rows] - Town.Surface.OriginZ) / ToDouble(Level)
+    Focus = P.Vector(Anchor.X + Width * (0.5 - FractionX), 0.0, Anchor.Z + Depth * (0.5 - FractionZ))
+
+    Call SetZoom(Town, Focus, Level)
+
+End Sub
+
+Public Function ZoomInput(ByRef Town As Document.State) As Boolean
 
     Dim Change As Number
 
@@ -59,10 +83,10 @@ Public Function ZoomInput(ByRef Town As Document.State, Position As P.Vector3) A
     If Change <> 0 Then
 
         If Change > 0 Then
-            Call SetZoom(Town, Position, Max(1, ZoomLevel) * 2)
+            Call ZoomAt(Town, Pointer_X(), Pointer_Y(), Max(1, ZoomLevel) * 2)
         Else
 
-            Call SetZoom(Town, Position, Max(1, ZoomLevel / 2))
+            Call ZoomAt(Town, Pointer_X(), Pointer_Y(), Max(1, ZoomLevel / 2))
         End If
 
         Return True
@@ -221,7 +245,7 @@ Public Sub Draw(ByRef Town As Document.State, Position As P.Vector3,
     End If
 
     If Revision <> Town.Revision Then
-        Call SetZoom(Town, Position, Max(1, ZoomLevel))
+        Call SetZoom(Town, P.Vector((LowX + HighX) * 0.5, 0.0, (LowZ + HighZ) * 0.5), Max(1, ZoomLevel))
         Call Rebuild(Town)
     End If
 

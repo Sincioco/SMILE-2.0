@@ -1,4 +1,4 @@
-''' One active road journey. Goal-directed search is time-budgeted; movement uses normal collision.
+''' One active road journey. Breadth-first search yields between frames; movement uses normal collision.
 Module Smile.Tools.TownRoadTravel
 
 Option Explicit
@@ -12,7 +12,7 @@ Import Smile.Tools.TownDocumentNavigation As Navigation
 Private Dim Surface As Grid.State
 Private Dim Parents[262144] As Number
 Private Dim Queue[262144] As Number
-Private Dim Scores[262144] As Double
+Private Dim Head As Number
 Private Dim Tail As Number
 Private Dim GoalCell As Number
 Private Dim Cursor As Number
@@ -103,78 +103,6 @@ Private Function ClearSegment(First As P.Vector3, Last As P.Vector3,
     End For
 
     Return True
-
-End Function
-
-Private Sub Push(Cell As Number)
-
-    Dim Slot As Number
-    Dim Parent As Number
-    Dim Point As P.Vector3
-    Dim Goal As P.Vector3
-
-    Point = Center(Cell)
-    Goal = Center(GoalCell)
-    Scores[Cell] = Abs(Point.X - Goal.X) + Abs(Point.Z - Goal.Z)
-    Slot = Tail
-    Tail = Tail + 1
-
-    Do
-
-        If Not (Slot > 0) Then
-            Exit Do
-        End If
-
-        Parent = (Slot - 1) / 2
-
-        If Scores[Queue[Parent]] <= Scores[Cell] Then
-            Exit Do
-        End If
-
-        Queue[Slot] = Queue[Parent]
-        Slot = Parent
-
-    Loop
-
-    Queue[Slot] = Cell
-
-End Sub
-
-Private Function Pop() As Number
-
-    Dim Result As Number
-    Dim Last As Number
-    Dim Slot As Number
-    Dim Child As Number
-
-    Result = Queue[0]
-    Tail = Tail - 1
-    Last = Queue[Tail]
-
-    Do
-
-        If Not (Slot * 2 + 1 < Tail) Then
-            Exit Do
-        End If
-
-        Child = Slot * 2 + 1
-
-        If Child + 1 < Tail And Scores[Queue[Child + 1]] < Scores[Queue[Child]] Then
-            Child = Child + 1
-        End If
-
-        If Scores[Last] <= Scores[Queue[Child]] Then
-            Exit Do
-        End If
-
-        Queue[Slot] = Queue[Child]
-        Slot = Child
-
-    Loop
-
-    Queue[Slot] = Last
-
-    Return Result
 
 End Function
 
@@ -298,6 +226,7 @@ Public Function Begin(ByRef Town As Document.State, Leader As P.Vector3,
 
     Parents[StartCell] = -1
     Queue[0] = StartCell
+    Head = 0
     Tail = 1
     WaypointCursor = -2
     Stage = 1
@@ -342,8 +271,8 @@ Private Sub Visit(X As Number, Z As Number, FromCell As Number)
     End If
 
     Parents[Cell] = FromCell + 1
-
-    Call Push(Cell)
+    Queue[Tail] = Cell
+    Tail = Tail + 1
 
 End Sub
 
@@ -353,19 +282,17 @@ Private Sub Search()
     Dim Cell As Number
     Dim X As Number
     Dim Z As Number
-    Dim Started As Number
 
-    Started = Timer()
+    For Work = 0 To 127
 
-    For Work = 0 To 2047
-
-        If Tail = 0 Then
+        If Head = Tail Then
             Call Cancel("That road is disconnected or obstructed.")
 
             Return
         End If
 
-        Cell = Pop()
+        Cell = Queue[Head]
+        Head = Head + 1
 
         If Cell = GoalCell Then
 
@@ -391,11 +318,6 @@ Private Sub Search()
         Call Visit(X + 1, Z, Cell)
         Call Visit(X, Z - 1, Cell)
         Call Visit(X, Z + 1, Cell)
-
-        If Timer() - Started >= 3 Then
-            Return
-        End If
-
     End For
 
 End Sub

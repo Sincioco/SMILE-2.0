@@ -1,5 +1,57 @@
 # Character Viewer Architecture
 
+## Current: world connections and viewport controls (September 30)
+
+TownWorldDocument owns the sixteen-node graph and each endpoint's edge index.
+Version 2 preserves those ports; version 1 loads with facing left/right endpoints.
+TownWorldCanvas owns graph picking, offset-preserving node dragging, port previews,
+connection commits and deletion confirmation state. TownWorldFiles owns native
+file-picker/asynchronous checked `.world` transfers with an immutable export key.
+TownWorldEditor coordinates these owners and lists current TownTabs documents;
+adding one persists its current working copy before referencing it. Opening a node
+uses TownTabs.OpenNamed, preserving an already-open map instead of duplicating it.
+Import validation is transactional. Canceled/invalid files leave the graph intact.
+Transfer completion is polled independently of the editor's visible graph.
+
+NerisTownCameraPanel owns the upper-right header statistics, bottom-right sliders
+and bottom-left Help disclosure. TownTabs reserves the header's statistics width.
+NerisTownKeyboard owns Space/Shift+Space vertical Fly Inspect movement; other camera
+modes retain orbit pause. NerisTown suppresses its idle orbit timer during Fly Inspect.
+TownDocumentMap owns cursor-anchored zoom and bound clamps.
+TownRoadTravel restores the earlier FIFO breadth-first search, yielding every 128
+nodes, while retaining the requested road-center walking and collision checks.
+TownEditorPanel requests exact `Yes` before a differently named permanent update;
+TownEditorSession delegates only after that confirmation succeeds.
+
+Focused world regressions cover port placement, connect/cancel/delete confirmation,
+node movement/removal and version 1/2 reads. The complete native town suite covers
+cursor zoom, vertical flight, route completion, safe road centers and all three maps.
+Native hardening and graphics checks pass. The full publication verifies 333 assets.
+No compiler/runtime/dependency change or architecture limit/exclusion change.
+The explicit build source inventory gains the two new production owners, not a
+size-limit exception. Against af423401: the town coordinator shrinks 12 lines,
+session grows 7, panel grows 17, world editor grows 20 and document grows 86.
+WorldCanvas is 287 lines and WorldFiles 113; each owns the focused behavior above.
+Live native acceptance: the existing Luma v1 world opened through the Windows picker,
+the open-town chooser listed all three existing tabs, a connection click showed its
+Delete/Cancel prompt, cancel retained the line, and Save World produced a verified v2
+file through the Windows save dialog. The mismatched permanent-map prompt rejected
+`No`; decoded authored fields in all three permanent maps remained unchanged.
+Help opened in the live viewport. Held vertical-flight vectors, idle-orbit suppression,
+graph drag/release transitions and cursor zoom are covered by native regressions;
+the automation tool cannot reliably hold a physical key or mouse button over frames.
+Returning from World Editor now carries its completed status into the town panel.
+All three map tabs loaded in the final deployed build. A live minimap click completed
+the road journey at X=0, Z=-1840 with `Destination reached`; zoom buttons enlarged
+the pointer's map region and returned to the full extent. A native input trace found
+that idle orbit was still active when minimap hit-testing ran, so the wheel fell
+through to the main camera before UpdateIdle canceled orbit. Input now records
+activity and wakes idle orbit before routing, including controls that return early.
+The regression checks that ordering; the final live wheel-in/wheel-out check changes
+the minimap while preserving main-camera zoom at 355. Diagnostic instrumentation
+was removed before the final 333-asset build. Deleting a world node also ends any
+active node/port drag so no subsequent gesture addresses the removed selection.
+
 ## Current: Map Load areas
 
 TownMapLoads owns connectivity for destination inheritance, reassignment and
@@ -32,8 +84,8 @@ directions; TownSessionTests starts the outgoing trip at the airport arrival and
 walks across the join, and exercises entry by all four party members after nearest-road
 teleportation. Earlier round-trip tests teleported beyond the blocked margin.
 
-NerisTownCameraPanel owns lower-right map statistics above the compact save status
-and camera diagnostics, moving left while the editor is open. NerisTown removes the
+NerisTownCameraPanel owns map statistics, now in the header as described above.
+NerisTown removes the
 three landmark header buttons and their hit regions. NerisTownTour accepts an
 elevation for its existing framing operation; tab opening and right-click reset share
 the approved front-facing Spaceport and Horizon views, anchored at the map floor
@@ -75,7 +127,7 @@ other open maps and persists the chosen destination before committing its name;
 the gesture owner has no filesystem dependency. Cancel discards the preview.
 
 TownDocumentMap owns minimap zoom and visible bounds, shared by rendering and
-click conversion. TownRoadTravel owns the bounded goal-directed heap search and
+click conversion. TownRoadTravel owns the bounded road search and
 road-center waypoints; TownDocumentNavigation caches object world bounds to reject
 distant collision candidates before transforming points into object coordinates.
 The existing exact collision checks still decide traversability. No compiler,

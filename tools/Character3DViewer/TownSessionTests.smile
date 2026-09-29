@@ -20,6 +20,7 @@ Import Smile.Tools.TownSunControls As Sun
 Import Smile.Tools.TownHistory As History
 Import Smile.Simple3D.Graphics3D As G
 Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
 Import Smile.Simple3D.PrecisionCamera3D As Camera
 Import Smile.Simple3D.ArenaCamera3D As Motion
 Import Smile.Tools.NerisCastleRoute As Castle
@@ -421,6 +422,27 @@ Sub CheckGuideAndMapControls()
     Other = DocumentMap.Pick(Draft, Window_Width() - 20, 387)
 
     Call Check(Other.X = 30.0, "Zoomed Minimap Picks Use The Visible World Extent")
+
+    Point = DocumentMap.Pick(Draft, Window_Width() - 116, 419)
+
+    Call DocumentMap.ZoomAt(Draft, Window_Width() - 116, 419, 8)
+
+    Other = DocumentMap.Pick(Draft, Window_Width() - 116, 419)
+
+    Call Check(M.Distance(Point, Other) < 0.001,
+        "Minimap Zoom In Keeps The World Point Under The Pointer")
+    Call DocumentMap.ZoomAt(Draft, Window_Width() - 116, 419, 4)
+
+    Other = DocumentMap.Pick(Draft, Window_Width() - 116, 419)
+
+    Call Check(M.Distance(Point, Other) < 0.001,
+        "Minimap Zoom Out Keeps The World Point Under The Pointer")
+    Call DocumentMap.ZoomAt(Draft, Window_Width() - 20, 259, 1)
+
+    Other = DocumentMap.Pick(Draft, Window_Width() - 20, 259)
+
+    Call Check(Other.X = 120.0 And Other.Z = 120.0,
+        "Minimap Full Zoom Stays Within The Map Edges")
 
 End Sub
 

@@ -36,6 +36,9 @@ remains available; the chosen permanent tab becomes active. The previous destina
 is available through Open Recovery... as `<map name> Before Permanent Update`.
 Only successful native persistence switches the live tab. Ordinary editing and
 Save For Viewer continue to preserve each permanent map independently.
+If the current document name differs from the chosen permanent destination, the
+confirmation requires typing `Yes` exactly; cancel or any other response leaves
+both maps unchanged.
 
 Save For Viewer writes a portable `.town` version. Open For Viewer presents the
 native `.town` file picker; Recent Versions lists previous exports. Opening a version creates a
@@ -58,13 +61,16 @@ is suspended while editing; explicit Orbit remains available.
 
 **Sun:** Save As Day and Save As Night preserve custom presets in the town document.
 Map statistics use U.S. grouping and include area, length and width in metres.
-They appear in the lower-right above save progress and camera diagnostics, and move
-left of the open editor so they remain readable.
+They appear in the empty upper-right header, above the viewport. H Orbit, V Orbit
+and Zoom sit beside the lower-right camera diagnostics. The bottom-left `?` button
+opens the control reference. In Fly Inspect, Space ascends and Shift+Space descends;
+outside Fly Inspect, Space still pauses/resumes automatic orbit.
 
 **Travel:** click a connected road on the minimap to request a road/bridge-only
 route. The destination is marked and the camera follows the party. The minimap's
-minus/plus buttons or mouse wheel zoom from the whole map to 8× around the party.
-Routes use a time-budgeted, goal-directed road search and walk along the middle
+minus/plus buttons or mouse wheel zoom from the whole map to 8× around the pointer.
+The world point beneath the pointer stays fixed, subject to map-edge bounds.
+Routes use the restored incremental breadth-first road search and walk along the middle
 of road stretches, retaining safe turns at junctions. Manual movement,
 editing, a map change or a blocked route cancels the trip. Map Load surface markers
 store a named destination. Draw the yellow rectangle first, then choose a destination
@@ -126,7 +132,7 @@ or existing viewing distance supplies the pivot. Follow Party middle/arrow orbit
 keeps Arin as its pivot without moving him to the middle of the screen. Tab switches
 show only the retained static background and loading status until the whole map
 and its initial camera are ready. Ctrl+click outside the editor relocates
-the whole party to the nearest walkable road. Lower-right statistics show map triangles
+the whole party to the nearest walkable road. Upper-right header statistics show map triangles
 and render vertices per submitted mesh instance, including offscreen geometry and
 actors, excluding particles and repeated shadow/reflection passes.
 
@@ -1454,11 +1460,16 @@ its last working copy remains available through **Open Recovery...** by name. Up
 eight town tabs share one live renderer. Tab switches retain document changes and
 clear temporary markers/undo history. Duplicate open names get a numeric suffix.
 **New Town** creates a blank 256-metre environment. **New World / Open World** edit
-linked maps of up to sixteen saved town references; these are navigation maps,
-not overworld gameplay.
+linked maps of up to sixteen town references. **Add Open Town...** lists the open
+tabs. Drag a yellow midpoint on any town edge onto another town's edge to connect
+them; click a connection line to confirm deletion. Drag the cards to arrange them.
+**Save World... / Open World...** use native `.world` file dialogs. Older worlds
+remain readable. These connections organize maps; playable travel still uses Map
+Load areas or the existing gateways. Sin's earlier Luma graph is preserved in
+`games/SinStarI/SourceAssets/Towns/Worlds/2026-09-30 0356 - Luma.world`.
 
-Use `Launch.ps1`: its worker performs file transfers and runs installed Blender
-in the background. The native process snapshots the editor document before queuing;
+Use `Launch.ps1`: the editor performs town/guide/world transfers itself; its worker
+runs installed Blender for conversion only. The native process snapshots the editor document before queuing;
 you can continue editing while a progress bar reports the job. Completion marks
 only the matching revision saved. Canceling a dialog leaves the town intact.
 There is no implicit save to `Neris-Town-Waterfront.blend`: choose that exact file

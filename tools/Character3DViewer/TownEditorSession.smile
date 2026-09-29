@@ -143,11 +143,11 @@ Public Function BeginRoadTrip(Leader As P.Vector3) As Boolean
 
 End Function
 
-Public Function ZoomMinimap(Leader As P.Vector3) As Boolean
+Public Function ZoomMinimap() As Boolean
 
     Dim Result As Boolean
 
-    Result = Map.ZoomInput(Town, Leader)
+    Result = Map.ZoomInput(Town)
 
     Return Result
 
@@ -463,6 +463,11 @@ Private Sub FileCommand(Action As Number)
             Name = "Horizon Airport"
         End If
 
+        If Not Panel.ConfirmPermanent(Town.Name, Name) Then
+            Controls.Ui.Message = "Permanent update canceled; both maps retained."
+            Return
+        End If
+
         Ok = Tabs.UpdatePermanent(OpenTabs, Town, Name)
         Controls.Ui.Message = OpenTabs.Message
         OpenTabs.Message = ""
@@ -544,9 +549,13 @@ Private Sub FileCommand(Action As Number)
         Ok = Library.Remember(Town)
 
         If Ok Then
+
+            OpenTabs.Documents[OpenTabs.Active] = Town
+
             Call World.Open(Action = 304, Town.Name)
 
             Controls.Ui.Message = World.LastMessage()
+
         End If
 
     Else If Action = 308 Then
@@ -600,16 +609,12 @@ Public Sub Input(View As P.Camera3D, Key As Number, Blocked As Boolean)
 
     If World.Active() Then
 
-        Name = World.Input(Key)
+        Name = World.Input(Key, OpenTabs)
+        Controls.Ui.Message = World.LastMessage()
 
         If Text_Length(Name) > 0 Then
 
-            Incoming = Town
-            Ok = Library.OpenNamed(Incoming, Name)
-
-            If Ok Then
-                Ok = Tabs.Add(OpenTabs, Town, Incoming)
-            End If
+            Ok = Tabs.OpenNamed(OpenTabs, Town, Name)
 
             TeleportPending = Ok
 
@@ -728,6 +733,8 @@ Public Sub Update(Leader As P.Vector3, Elapsed As Number)
 
     Dim Ok As Boolean
     Dim Index As Number
+
+    Call World.Update()
 
     If Not Ready Then
         Return

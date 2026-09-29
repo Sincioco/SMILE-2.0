@@ -206,6 +206,15 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
         Return
     End If
 
+    Value.InputActive = (Key <> KEY_NONE Or Pointer_Delta_X() <> 0 Or
+        Pointer_Delta_Y() <> 0 Or Pointer_Wheel_Delta() <> 0 Or
+        Pointer_Held(POINTER_PRIMARY) Or Pointer_Held(POINTER_MIDDLE) Or
+        Pointer_Held(POINTER_SECONDARY))
+
+    ' Wake idle orbit before deciding which visible control owns this event.
+
+    Call UpdateIdle(Value, Value.InputActive, 0)
+
     ' Header hover blocks pointer gestures, not independent keyboard framing.
 
     If (Key = KEY_R And
@@ -237,7 +246,7 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
 
     If (Key = KEY_SPACE And
         Not Blocked And
-        Value.Cinematic) Then
+        Value.Cinematic And Not Value.Keys.FlyInspect) Then
 
         Value.OrbitPaused = Not Value.OrbitPaused
         Value.IdleOrbit = False
@@ -264,7 +273,7 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
         Not Authoring.CameraBlocked() And Not Value.Cinematic And
         Value.Map.Opacity > 0.0 And Authoring.MapHovered()) Then
 
-        If Authoring.ZoomMinimap(Value.People.Path.Positions[0]) Then
+        If Authoring.ZoomMinimap() Then
             Return
         End If
 
@@ -303,7 +312,7 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
     If (Not Blocked And
         Not Authoring.Editing() And
         Not Authoring.CameraBlocked() And
-        Not CameraPanel.Hovered() And
+        Not CameraPanel.Hovered(Value.Panel.HelpOpen) And
         Pointer_Y() >= 126 And
         Pointer_Pressed(POINTER_PRIMARY) And
         Key_Held(KEY_CONTROL)) Then
@@ -350,19 +359,14 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
 
     If Value.Edited Then
         Call Authoring.Input(Value.View.LiveCamera, Key,
-            Blocked Or CameraPanel.Hovered() Or Value.Panel.DragRow > 0)
+            Blocked Or CameraPanel.Hovered(Value.Panel.HelpOpen) Or Value.Panel.DragRow > 0)
 
-        Blocked = Blocked Or Authoring.CameraBlocked(CameraPanel.Hovered() Or Value.Panel.DragRow > 0)
+        Blocked = Blocked Or Authoring.CameraBlocked(CameraPanel.Hovered(Value.Panel.HelpOpen) Or Value.Panel.DragRow > 0)
     End If
-
-    Value.InputActive = (Key <> KEY_NONE Or Pointer_Delta_X() <> 0 Or
-        Pointer_Delta_Y() <> 0 Or Pointer_Wheel_Delta() <> 0 Or
-        Pointer_Held(POINTER_PRIMARY) Or Pointer_Held(POINTER_MIDDLE) Or
-        Pointer_Held(POINTER_SECONDARY))
 
     PanelAction = CameraPanel.Input(Value.Panel, Value.View, Value.BaseCamera, Blocked,
         Drone.GroundShot(Value.Flight, Value.PartyCamera))
-    Blocked = Blocked Or CameraPanel.Hovered() Or Value.Panel.DragRow > 0
+    Blocked = Blocked Or CameraPanel.Hovered(Value.Panel.HelpOpen) Or Value.Panel.DragRow > 0
 
     If PanelAction = 1 Then
 
@@ -989,7 +993,7 @@ End Function
 
 Public Sub UpdateIdle(ByRef Value As State, Active As Boolean, Elapsed As Number)
 
-    If Active Or Authoring.Editing() Then
+    If Active Or Authoring.Editing() Or Value.Keys.FlyInspect Then
 
         Value.IdleTime = 0
 
@@ -1125,24 +1129,6 @@ Public Sub Overlay(ByRef Value As State)
         Return
     End If
 
-    If Value.Keys.FlyInspect Then
-        Draw Text "WASD / Arrows: Fly   Space: Pause / Resume Orbit" At 18, Window_Height() - 70 Size 14 Color WHITE
-    Else
-        Draw Text "WASD: Party   Up / Down: Zoom   Left / Right: Orbit   Space: Pause / Resume Orbit" At 18, Window_Height() - 70 Size 14 Color WHITE
-    End If
-
-    If Authoring.Editing() Then
-        Draw Text "1: Top Down   R: Rotate View 90 CW   Left: Edit / Pan   Shift+Left: Pan   Middle: Orbit   Wheel: Zoom" At 18, Window_Height() - 48 Size 14 Color WHITE
-    Else
-        Draw Text "Middle: Orbit   Shift+Middle / Left: Pan   Wheel: Zoom   1: Top Down   Right: Overview Orbit" At 18, Window_Height() - 48 Size 14 Color WHITE
-    End If
-
-    If Authoring.Editing() Then
-        Draw Text "F / G: Floor / Grid   B: Background   M: Map   Tab: Follow   Ctrl+Tab: Leader" At 18, Window_Height() - 26 Size 14 Color WHITE
-    Else
-        Draw Text "F / G: Floor / Grid   B: Background   M: Map   Tab: Follow   Ctrl+Tab: Leader   R: Run" At 18, Window_Height() - 26 Size 14 Color WHITE
-    End If
-
     Call CameraPanel.Draw(Value.Panel, Value.View, Value.Cinematic,
         Value.PartyCamera, Value.Flight.Enabled And Not Value.Flight.Suspended,
         Drone.GroundShot(Value.Flight, Value.PartyCamera), Value.Keys.FlyInspect, Authoring.Editing())
@@ -1192,6 +1178,8 @@ Public Sub Overlay(ByRef Value As State)
     If Value.Edited And Value.Ready Then
         Call Authoring.Overlay(Value.View.LiveCamera)
     End If
+
+    Call CameraPanel.MapStatistics(Value.Panel, Value.View)
 
 End Sub
 

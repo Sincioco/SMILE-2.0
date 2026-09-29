@@ -16,6 +16,7 @@ Public Type State
     Nodes[16] As Node
     NodeCount As Number
     Links[16, 16] As Boolean
+    Ports[16, 16] As Number
 End Type
 
 Private Dim Bytes[8192] As Number
@@ -119,16 +120,73 @@ Public Function Add(ByRef Value As State, Name As Text, X As Number, Y As Number
 
 End Function
 
-Public Function SaveWorld(ByRef Value As State) As Boolean
+Public Function Connect(ByRef Value As State, First As Number, FirstPort As Number,
+    Second As Number, SecondPort As Number) As Boolean
+
+    If (First < 0 Or First >= Value.NodeCount Or Second < 0 Or Second >= Value.NodeCount Or
+        First = Second Or FirstPort < 0 Or FirstPort > 3 Or SecondPort < 0 Or SecondPort > 3) Then
+        Return False
+    End If
+
+    Value.Links[First, Second] = True
+    Value.Links[Second, First] = True
+    Value.Ports[First, Second] = FirstPort
+    Value.Ports[Second, First] = SecondPort
+
+    Return True
+
+End Function
+
+Public Sub Remove(ByRef Value As State, Selected As Number)
+
+    Dim Index As Number
+    Dim Other As Number
+
+    If Selected < 0 Or Selected >= Value.NodeCount Then
+        Return
+    End If
+
+    For Index = Selected To Value.NodeCount - 2
+
+        Value.Nodes[Index] = Value.Nodes[Index + 1]
+
+        For Other = 0 To Value.NodeCount - 1
+            Value.Links[Index, Other] = Value.Links[Index + 1, Other]
+            Value.Ports[Index, Other] = Value.Ports[Index + 1, Other]
+        End For
+    End For
+
+    For Index = 0 To Value.NodeCount - 1
+
+        For Other = Selected To Value.NodeCount - 2
+            Value.Links[Index, Other] = Value.Links[Index, Other + 1]
+            Value.Ports[Index, Other] = Value.Ports[Index, Other + 1]
+        End For
+
+        Value.Links[Index, Value.NodeCount - 1] = False
+        Value.Links[Value.NodeCount - 1, Index] = False
+        Value.Ports[Index, Value.NodeCount - 1] = 0
+        Value.Ports[Value.NodeCount - 1, Index] = 0
+    End For
+
+    Value.NodeCount = Value.NodeCount - 1
+
+End Sub
+
+Public Function SaveWorld(ByRef Value As State, Optional Key As Text = "") As Boolean
 
     Dim Index As Number
     Dim Other As Number
     Dim Status As Number
     Dim Result As Boolean
 
+    If Text_Length(Value.Name) < 1 Or Text_Length(Value.Name) > 80 Or Value.NodeCount > MAX_NODES Then
+        Return False
+    End If
+
     Offset = 0
 
-    Call Put(1)
+    Call Put(2)
     Call PutName(Value.Name)
     Call Put(Value.NodeCount)
 
@@ -149,25 +207,35 @@ Public Function SaveWorld(ByRef Value As State) As Boolean
                 Call Put(0)
             End If
 
+            Call Put(Value.Ports[Index, Other])
         End For
     End For
 
-    Save Data Bytes Count Offset To "TownEditor.World." + Value.Name Status Status
+    If Key = "" Then
+        Key = "TownEditor.World." + Value.Name
+    End If
+
+    Save Data Bytes Count Offset To Key Status Status
     Result = Status = DATA_STATUS_OK
 
     Return Result
 
 End Function
 
-Public Function LoadWorld(ByRef Value As State, Name As Text) As Boolean
+Public Function LoadWorld(ByRef Value As State, Name As Text, Optional Key As Text = "") As Boolean
 
     Dim Empty As State
     Dim Index As Number
     Dim Other As Number
     Dim Status As Number
     Dim Link As Number
+    Dim Version As Number
 
-    Load Data "TownEditor.World." + Name Into Bytes Count Length Status Status
+    If Key = "" Then
+        Key = "TownEditor.World." + Name
+    End If
+
+    Load Data Key Into Bytes Count Length Status Status
 
     If Status <> DATA_STATUS_OK Then
         Return False
@@ -177,14 +245,17 @@ Public Function LoadWorld(ByRef Value As State, Name As Text) As Boolean
     Offset = 0
     Valid = True
 
-    If ReadInteger() <> 1 Then
+    Version = ReadInteger()
+
+    If Version <> 1 And Version <> 2 Then
         Return False
     End If
 
     Candidate.Name = GetName()
     Candidate.NodeCount = ReadInteger()
 
-    If Candidate.Name <> Name Or Candidate.NodeCount < 0 Or Candidate.NodeCount > MAX_NODES Then
+    If ((Name <> "" And Candidate.Name <> Name) Or
+        Candidate.NodeCount < 0 Or Candidate.NodeCount > MAX_NODES) Then
         Return False
     End If
 
@@ -211,6 +282,21 @@ Public Function LoadWorld(ByRef Value As State, Name As Text) As Boolean
             End If
 
             Candidate.Links[Index, Other] = Link = 1
+
+            If Version = 2 Then
+
+                Candidate.Ports[Index, Other] = ReadInteger()
+
+                If Candidate.Ports[Index, Other] > 3 Then
+                    Return False
+                End If
+
+            Else If Candidate.Nodes[Other].X >= Candidate.Nodes[Index].X Then
+
+                Candidate.Ports[Index, Other] = 2
+
+            End If
+
         End For
     End For
 

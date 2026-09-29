@@ -77,6 +77,8 @@ $nativeBattleSources = @(
     'TownDocumentMap.smile',
     'TownRoadTravel.smile',
     'TownWorldDocument.smile',
+    'TownWorldCanvas.smile',
+    'TownWorldFiles.smile',
     'TownWorldEditor.smile',
     'TownEditorSession.smile',
     'TownFileJobs.smile',

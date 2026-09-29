@@ -29,6 +29,9 @@
     <SmileSource Include="TownInitialSurface.smile" />
     <SmileSource Include="TownDocumentStore.smile" />
     <SmileSource Include="TownWorldDocument.smile" />
+    <SmileSource Include="TownWorldCanvas.smile" />
+    <SmileSource Include="TownWorldTests.smile" />
+    <SmileSource Include="TownWorldFiles.smile" />
     <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
   </ItemGroup>
 </SmileProject>

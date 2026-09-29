@@ -93,6 +93,23 @@ Public Function Hovered() As Boolean
 
 End Function
 
+Public Function ConfirmPermanent(CurrentName As Text, TargetName As Text) As Boolean
+
+    Dim Answer As Text
+    Dim Accepted As Boolean
+
+    If CurrentName = TargetName Then
+        Return True
+    End If
+
+    Answer = Text_Prompt("Update Permanent " + TargetName,
+        "Replace " + TargetName + " with " + CurrentName + "? Type Yes to confirm.", "")
+    Accepted = Answer = "Yes"
+
+    Return Accepted
+
+End Function
+
 Public Function Input(ByRef Value As State) As Number
 
     Dim ReturnValue As Number

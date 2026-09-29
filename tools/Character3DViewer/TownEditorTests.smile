@@ -11,6 +11,7 @@ Import Smile.Tools.TownCatalogData As Catalog
 Import Smile.Tools.TownInitialSurface As Initial
 Import Smile.Tools.TownDocumentStore As Storage
 Import Smile.Tools.TownWorldDocument As World
+Import Smile.Tools.TownWorldTests As WorldTests
 Import Smile.Tools.TownGuides As Guides
 Import Smile.Tools.TownTileGuides As TileGuides
 Import Smile.Tools.TownMarkerTools As MarkerTools
@@ -268,6 +269,7 @@ Call CheckPresetsAndGuideFiles()
 Call CheckRoadTrips()
 
 Failures = Failures + SectionTests.Run()
+Failures = Failures + WorldTests.Run()
 
 If Failures = 0 Then
     Print "PASS Town Editor Foundations"

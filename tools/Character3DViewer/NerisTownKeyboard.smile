@@ -23,6 +23,7 @@ Public Type HeldKeys
     ForwardAmount As Double
     ArrowSide As Double
     ArrowForward As Double
+    Vertical As Double
 End Type
 
 Public Function ReadKeys(Blocked As Boolean) As HeldKeys
@@ -65,6 +66,16 @@ Public Function ReadKeys(Blocked As Boolean) As HeldKeys
         Result.ArrowSide = Result.ArrowSide - 1.0
     End If
 
+    If Key_Held(KEY_SPACE) Then
+
+        Result.Vertical = 1.0
+
+        If Key_Held(KEY_SHIFT) Then
+            Result.Vertical = -1.0
+        End If
+
+    End If
+
     Return Result
 
 End Function
@@ -74,7 +85,7 @@ Public Function Active(Keys As HeldKeys) As Boolean
     Dim Result As Boolean
 
     Result = (Keys.Sideways <> 0.0 Or Keys.ForwardAmount <> 0.0 Or
-        Keys.ArrowSide <> 0.0 Or Keys.ArrowForward <> 0.0)
+        Keys.ArrowSide <> 0.0 Or Keys.ArrowForward <> 0.0 Or Keys.Vertical <> 0.0)
 
     Return Result
 
@@ -99,6 +110,7 @@ Public Function CameraDirection(View As P.Camera3D, Keys As HeldKeys,
     If FlyInspect Then
         Result = FreeCamera.Direction(View, Clamp(Keys.Sideways + Keys.ArrowSide, -1.0, 1.0),
             Clamp(Keys.ForwardAmount + Keys.ArrowForward, -1.0, 1.0), False)
+        Result.Y = Result.Y + Keys.Vertical
     End If
 
     If M.Length(Result) > 1.0 Then

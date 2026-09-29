@@ -566,6 +566,7 @@ Private Sub KeyboardModes(ByRef Value As Town.State, ByRef Failures As Number)
     Dim Leader As P.Vector3
     Dim Follower As P.Vector3
     Dim Eye As P.Vector3
+    Dim Aim As P.Vector3
     Dim Zoom As Double
     Dim Yaw As Double
     Dim Index As Number
@@ -617,6 +618,40 @@ Private Sub KeyboardModes(ByRef Value As Town.State, ByRef Failures As Number)
         M.Distance(Leader, Value.People.Path.Positions[0]) < 0.001 And
         M.Distance(Follower, Value.People.Path.Positions[1]) < 0.001,
         "Fly Arrows Move The Camera And Freeze All Party Slots", Failures)
+
+    Call Keyboard.StopTravel(Value.Keys)
+
+    Keys = Empty
+    Keys.Vertical = 1.0
+    Eye = Value.BaseCamera.Position
+    Aim = M.Subtract(Value.BaseCamera.Target, Eye)
+
+    For Index = 0 To 20
+        Call Town.AdvanceKeyboard(Value, Keys, 16)
+        Call Drone.Compose(Value.Flight, Value.View, Value.BaseCamera, False, 16)
+    End For
+
+    Call Check(Value.BaseCamera.Position.Y > Eye.Y And
+        Abs(Value.BaseCamera.Position.X - Eye.X) < 0.001 And
+        Abs(Value.BaseCamera.Position.Z - Eye.Z) < 0.001 And
+        M.Distance(Aim, M.Subtract(Value.BaseCamera.Target, Value.BaseCamera.Position)) < 0.001,
+        "Fly Space Ascends Vertically Without Changing The View Direction", Failures)
+    Call Keyboard.StopTravel(Value.Keys)
+
+    Keys.Vertical = -1.0
+    Eye = Value.BaseCamera.Position
+
+    For Index = 0 To 20
+        Call Town.AdvanceKeyboard(Value, Keys, 16)
+        Call Drone.Compose(Value.Flight, Value.View, Value.BaseCamera, False, 16)
+    End For
+
+    Call Check(Value.BaseCamera.Position.Y < Eye.Y And
+        M.Distance(Leader, Value.People.Path.Positions[0]) < 0.001,
+        "Fly Shift Space Descends Without Moving The Party", Failures)
+
+    Keys = Empty
+    Keys.ArrowForward = 1.0
 
     Call Keyboard.StopTravel(Value.Keys)
     Call Motion.Reset(Value.View.Controls, Value.View.Zoom)
@@ -827,6 +862,14 @@ Private Sub IdleOrbit(ByRef Value As Town.State, ByRef Failures As Number)
     Value.IdleOrbit = False
     Value.IdleTime = 0
 
+    Value.Keys.FlyInspect = True
+
+    Call Town.UpdateIdle(Value, False, 20000)
+    Call Check(Not Value.Cinematic And Value.IdleTime = 0,
+        "Fly Inspect Remains Still Instead Of Starting Idle Orbit", Failures)
+
+    Value.Keys.FlyInspect = False
+
     Call Town.UpdateIdle(Value, False, 19999)
     Call Check(Not Value.Cinematic, "Idle Orbit Waits The Full Twenty Seconds", Failures)
     Call Town.UpdateIdle(Value, True, 1)
@@ -837,6 +880,10 @@ Private Sub IdleOrbit(ByRef Value As Town.State, ByRef Failures As Number)
     Call Town.UpdateIdle(Value, True, 1)
     Call Check(Not Value.Cinematic And Not Value.IdleOrbit And Value.IdleTime = 0,
         "Input Immediately Stops Automatic Idle Orbit", Failures)
+    Call Town.UpdateIdle(Value, False, 20000)
+    Call Town.Input(Value, KEY_TAB, True)
+    Call Check(Not Value.IdleOrbit And Value.IdleTime = 0 And Value.InputActive,
+        "Input Wakes Idle Orbit Before Routing To Minimap Or Camera", Failures)
     Call Authoring.BeginEditing()
     Call Town.UpdateIdle(Value, False, 20000)
     Call Check(Not Value.Cinematic And Not Value.IdleOrbit And Value.IdleTime = 0,

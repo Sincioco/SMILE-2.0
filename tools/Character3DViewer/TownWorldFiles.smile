@@ -1,0 +1,113 @@
+''' Portable .world snapshots use the native checked, asynchronous file transfer.
+Module Smile.Tools.TownWorldFiles
+
+Option Explicit
+
+Import Smile.Tools.TownWorldDocument As Document
+
+Public Type State
+    Job As Number
+    Saving As Boolean
+    Progress As Number
+    Message As Text
+    Path As Text
+End Type
+
+Public Function Choose(ByRef Value As State, ByRef Map As Document.State,
+    Saving As Boolean) As Boolean
+
+    Dim Path As Text
+    Dim Suggested As Text
+    Dim Title As Text
+    Dim Ok As Boolean
+    Dim Started As Boolean
+
+    If Value.Job > 0 Then
+        Return False
+    End If
+
+    Title = "Open World"
+
+    If Saving Then
+        Title = "Save World"
+        Suggested = Local_Timestamp() + " - " + Map.Name + ".world"
+    End If
+
+    Path = File_Pick(Saving, Title, "world", Suggested)
+
+    If Path = "" Then
+        Value.Message = "Canceled; world unchanged."
+        Return False
+    End If
+
+    If Saving Then
+
+        Ok = Document.SaveWorld(Map, "TownEditor.World.Transfer")
+
+        If Not Ok Then
+            Value.Message = "Could not prepare the world snapshot; edits retained."
+            Return False
+        End If
+
+    End If
+
+    Value.Job = Data_FileStart(Saving, "TownEditor.World.Transfer", Path)
+    Value.Path = Path
+    Value.Progress = 0
+    Value.Saving = Saving
+    Value.Message = "Transferring world..."
+    Started = Value.Job > 0
+
+    If Not Started Then
+        Value.Message = "Another file operation is running; try again when it finishes."
+    End If
+
+    Return Started
+
+End Function
+
+Public Function Update(ByRef Value As State, ByRef Map As Document.State) As Boolean
+
+    Dim Status As Number
+    Dim Loaded As Boolean
+
+    If Value.Job = 0 Then
+        Return False
+    End If
+
+    Status = Data_FileStatus(Value.Job)
+    Value.Progress = Min(99, Data_FileProgress(Value.Job))
+
+    If Status = 0 Then
+        Return False
+    End If
+
+    Value.Message = Data_FileMessage(Value.Job)
+    Value.Job = 0
+
+    If Status = 1 Then
+
+        If Value.Saving Then
+
+            Value.Progress = 100
+            Value.Message = "World saved and verified."
+
+        Else
+
+            Loaded = Document.LoadWorld(Map, "", "TownEditor.World.Transfer")
+            Value.Message = "Invalid world file; current world retained."
+
+            If Loaded Then
+                Value.Progress = 100
+                Value.Message = "World opened."
+            End If
+
+        End If
+
+    End If
+
+    Return Loaded
+
+End Function
+
+End Module
