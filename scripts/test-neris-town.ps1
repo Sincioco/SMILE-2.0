@@ -31,6 +31,9 @@ if ($routes -notmatch 'PASS Neris Town Routes' -or $routes -match 'FAIL') {
 $project.SmileProject.PropertyGroup.StartupFile = 'NerisTownSceneTests.smile'
 $project.SmileProject.PropertyGroup.ApplicationId = 'smile.tests.neris-town.run-' + [Guid]::NewGuid().ToString('N')
 $project.SmileProject.PropertyGroup.RememberWindowPlacement = 'false'
+    $workerNode = $project.SmileProject.PropertyGroup.NativeWorkerScript
+    $workerElement = $project.SmileProject.PropertyGroup.SelectSingleNode('NativeWorkerScript')
+    if ($null -ne $workerElement) { $null = $workerElement.ParentNode.RemoveChild($workerElement) }
 $entry = $project.SmileProject.ItemGroup.SmileSource | Where-Object StartupOnly -eq 'true'
 $entry.SetAttribute('Include', 'NerisTownSceneTests.smile')
 $inspectionTests = $project.CreateElement('SmileSource')

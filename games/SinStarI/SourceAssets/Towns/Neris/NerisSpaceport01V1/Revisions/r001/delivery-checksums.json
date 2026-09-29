@@ -1,0 +1,207 @@
+[
+  {
+    "file": "authored-asset-manifest.json",
+    "bytes": 137925,
+    "sha256": "951a842c41179f5435245c72233af81f17ff3581c6cfce39c0d6af80cb37a4d5"
+  },
+  {
+    "file": "Automation/pack-native.mjs",
+    "bytes": 8207,
+    "sha256": "5d5f5ff54d988f6911e604531dd0e52fc00e33f64b8ae5e225907fba9410e59e"
+  },
+  {
+    "file": "Checkpoints/blender-assembly-checks.json",
+    "bytes": 583,
+    "sha256": "f0384aff36c3bbd2d0d9d8139defe7c324a3c5cbfa75a713487c7d0bd4716e0b"
+  },
+  {
+    "file": "Checkpoints/blender-source-parity.json",
+    "bytes": 281,
+    "sha256": "0b30db0df65c673243eaf360659e1690ac72f8e3819052a302318b53c03e1801"
+  },
+  {
+    "file": "Checkpoints/integration-result.json",
+    "bytes": 1964,
+    "sha256": "8a97a5498e49877585820d63b2f5fda87de29f166502a02506c02aab804fca85"
+  },
+  {
+    "file": "Checkpoints/M09/checkpoint-result.json",
+    "bytes": 42944,
+    "sha256": "b9a946c29e15f7f491d1c82f575ca88442eb6f817e412def40d340077c68919a"
+  },
+  {
+    "file": "Checkpoints/M09/front.png",
+    "bytes": 5930379,
+    "sha256": "4eaa68d6fc3c85c43cad091ee0b3c0ed370368fc65ddeabd290d2aee8f93409e"
+  },
+  {
+    "file": "Checkpoints/M09/hero.png",
+    "bytes": 6128412,
+    "sha256": "debd7a98061248806421a5af9f0b6189369d9561616329c9bde07bbe7a476aac"
+  },
+  {
+    "file": "Checkpoints/M09/left-west.png",
+    "bytes": 5894746,
+    "sha256": "f79bc6d8819b4fa5cf3e329a44722ada8e93d185d301b48eb549b092c7745d32"
+  },
+  {
+    "file": "Checkpoints/M09/measurements.json",
+    "bytes": 27892,
+    "sha256": "d90f7c94315b4e8a85ddfa9f9f10df3fbd60e598434483f1009b8d985694a170"
+  },
+  {
+    "file": "Checkpoints/M09/rear.png",
+    "bytes": 5920472,
+    "sha256": "2f1229f1fca0a73b4481dca9e59aeefd3180230c95da7851c58478cdbc9cbda9"
+  },
+  {
+    "file": "Checkpoints/M09/right-east.png",
+    "bytes": 5851900,
+    "sha256": "54d265e3e92dd73a879473cfa2e00c86849fa3047a0ff17b4b31e17cc2a921bb"
+  },
+  {
+    "file": "Checkpoints/M09/top.png",
+    "bytes": 5994138,
+    "sha256": "0b3a82d3a70fd0854423ffad0e01e2dc1acd121cea6923a3290769a91a7d0d3f"
+  },
+  {
+    "file": "Checkpoints/Native/entrance-close.png",
+    "bytes": 194784,
+    "sha256": "ddf10719ec285000191f8abb58cbd3c83abbedc6f172bc32b1350610a0480ca4"
+  },
+  {
+    "file": "Checkpoints/Native/harbor-quarter.png",
+    "bytes": 192099,
+    "sha256": "52f23f476f89e1741f12b7cc018e6559e29107d3f7adbe40923656ff72262dc2"
+  },
+  {
+    "file": "Checkpoints/Native/rear-and-road-connections.png",
+    "bytes": 208704,
+    "sha256": "8ac8ab9ba425371598d3e4cbbe5e5016fbc18a8d775350f29e9af5839933d47f"
+  },
+  {
+    "file": "Checkpoints/Native/spaceport-live.png",
+    "bytes": 189844,
+    "sha256": "8a1b03d187d36ad757524f3202f6a4880c3bef1fd600dc5a23f3b765ee05db24"
+  },
+  {
+    "file": "Checkpoints/Native/town-connections.png",
+    "bytes": 246880,
+    "sha256": "90af379abaefa40807035a5a900be87d929479c6b4e7fca60d490f99650edfc6"
+  },
+  {
+    "file": "Checkpoints/Native/town-north-up.png",
+    "bytes": 230187,
+    "sha256": "5a28e60ea8de985647b2747e6fd94e401a9dccd57f8965bab5ae4d14171879cb"
+  },
+  {
+    "file": "Checkpoints/native-build-final.log",
+    "bytes": 21234,
+    "sha256": "5a02b59f6be1313089a5d293bc18188c1bab3f27b50605719e8fe0e1263c0e56"
+  },
+  {
+    "file": "Checkpoints/native-installation.json",
+    "bytes": 334,
+    "sha256": "3e8e20f9322365e2808366867b8e60c520556b59f06038e1b2ad14a3e58715c4"
+  },
+  {
+    "file": "Checkpoints/neris-regression-final.log",
+    "bytes": 1038,
+    "sha256": "6ec7b9f1243981e5a6fafdaa48aa0deea3922d01b603809f2ce946bab421b363"
+  },
+  {
+    "file": "Checkpoints/session-final.log",
+    "bytes": 103,
+    "sha256": "408a4a89e247436e04dcd14374393e880188a0e72057043d2f1f603c41ad3c0f"
+  },
+  {
+    "file": "Checkpoints/Spaceport-Harbor-Hero.png",
+    "bytes": 2642179,
+    "sha256": "ae8945db3875743fc97890d9624a16c9d9c349d935fef605563d3f15f37309ac"
+  },
+  {
+    "file": "Checkpoints/Spaceport-Town-Overview.png",
+    "bytes": 2854713,
+    "sha256": "dcca6936b7708f02759dc40da918193295f18c59fdbf8ac304c2c28eb38453db"
+  },
+  {
+    "file": "Checkpoints/Spaceport-Town-Top.png",
+    "bytes": 2815186,
+    "sha256": "492043a824e23415d06b9e821c1880da9e11ba058ce335d81797d8b2f5b05854"
+  },
+  {
+    "file": "Checkpoints/terrain-road-checks.json",
+    "bytes": 102402,
+    "sha256": "8b6b9e49892897e7d016d68914bf3da7f18d9dc86cf0171fb86dd41654704651"
+  },
+  {
+    "file": "INTEGRATION-HANDOFF.md",
+    "bytes": 3758,
+    "sha256": "8918e150334959aa3b0aa53bba3464a62f3554c4b784797cd0d068be12aa4887"
+  },
+  {
+    "file": "Native/native-layout.json",
+    "bytes": 8588,
+    "sha256": "0b99897c967e3d2b4ccfd6084d61c9919f8993f9f9cca0831f055d4fe3d12dd7"
+  },
+  {
+    "file": "Native/Spaceport-00.glb",
+    "bytes": 6881424,
+    "sha256": "0fad91cb818bb455037c19e5019a846c81cad2e7ccf289044617f49601d77148"
+  },
+  {
+    "file": "Native/Spaceport-01.glb",
+    "bytes": 6725212,
+    "sha256": "376292dd91273261741d6850d3b5d6bba1fa6020dccf9f16ee60f637562d504c"
+  },
+  {
+    "file": "Native/Spaceport-02.glb",
+    "bytes": 4163480,
+    "sha256": "075ca57638c7659806427916259ec03a0be8e7a8b959e0bfbf50bbda321b3288"
+  },
+  {
+    "file": "NSP01-anchors.json",
+    "bytes": 16792,
+    "sha256": "8700c044d8cbdc6c018f91613e52c5c03fb8def60a6147303f90c1c0e2ee719f"
+  },
+  {
+    "file": "NSP01-preview.glb",
+    "bytes": 8686220,
+    "sha256": "1b54016f5b46bd1e1d3b635fe7f0836f301a7d82ef3e8fc13123c4985c2d469a"
+  },
+  {
+    "file": "prepare-native.mjs",
+    "bytes": 1743,
+    "sha256": "7c54f7eca153fce7cde854941d36237172ad825a69893f8eca78cc660a014eec"
+  },
+  {
+    "file": "README.md",
+    "bytes": 3589,
+    "sha256": "87ef2b99a4292231f04054f4e6132d4fce2e3d9d1a3f1e7acca2a716081f8b16"
+  },
+  {
+    "file": "Source/NSP01-final-r01.blend",
+    "bytes": 1574208,
+    "sha256": "a77787ee639b97ec62a1df78fd213f28435ce35d20254bd735f02713866ef564"
+  },
+  {
+    "file": "Spaceport.sm3d.json",
+    "bytes": 14,
+    "sha256": "50208d78350a7a160dec59a82df1499b6ca7da33e54c5eb11c97e342118e68bb"
+  },
+  {
+    "file": "Town/Neris-Town-Spaceport-SW-r001.blend",
+    "bytes": 16923782,
+    "sha256": "a4169a956e9c85b3faea8459bb3303feeeee95dc56e753845fe7c1d0c0ae17fe"
+  },
+  {
+    "file": "Town/Neris-Town-Spaceport-SW-r001.town",
+    "bytes": 124615,
+    "sha256": "65c88acc6d3433c353e855b9d8249c5c4af764537d37eec92d59b1951eefa35d"
+  },
+  {
+    "file": "Town/spaceport-placement.json",
+    "bytes": 782,
+    "sha256": "b870aaa900add912cbab7ec7371901daea3b64380eeadc5c3ecef47b8d3b3b8f"
+  }
+]

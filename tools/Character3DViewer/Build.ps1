@@ -33,10 +33,22 @@ if ($Studio) {
 $nativeBattleSources = @(
     'NativeViewerHost.smile',
     'NerisTown.smile',
+    'NerisTownLandmarks.smile',
+    'NerisTownConnections.smile',
     'NerisCastlePreview.smile',
     'NerisCastleGlow.smile',
     'NerisCastleFountain.smile',
     'NerisCastleRoute.smile',
+    'NerisSpaceportPreview.smile',
+    'NerisSpaceportRoute.smile',
+    'NerisSpaceportTraffic.smile',
+    'NerisRunwayTraffic.smile',
+    'NerisSpaceportGlow.smile',
+    'NerisSpaceportEntrance.smile',
+    'NerisHorizonPreview.smile',
+    'NerisHorizonRoute.smile',
+    'NerisHorizonGlow.smile',
+    'NerisHorizonLighting.smile',
     'ProximityDrawbridge.smile',
     'TownDocument.smile',
     'TownPicking.smile',
@@ -64,6 +76,7 @@ $nativeBattleSources = @(
     'TownLighting.smile',
     'TownAttachments.smile',
     'NerisTownCamera.smile',
+    'NerisTownInspectionLimits.smile',
     'NerisTownKeyboard.smile',
     'NerisTownTour.smile',
     'NerisTownCameraPanel.smile',
@@ -320,6 +333,10 @@ if ($Target -in @('Native', 'All')) {
     $partyMirror = Join-Path $townMirror 'Party'
     & node (Join-Path $repositoryRoot 'games\SinStarI\SourceAssets\Towns\Neris\NerisCastleM06V2\prepare-native.mjs')
     if ($LASTEXITCODE -ne 0) { throw 'Neris Castle preview preparation failed.' }
+    & node (Join-Path $repositoryRoot 'games\SinStarI\SourceAssets\Towns\Neris\NerisSpaceport01V1\prepare-native.mjs')
+    if ($LASTEXITCODE -ne 0) { throw 'Neris Spaceport 01 preparation failed.' }
+    & node (Join-Path $repositoryRoot 'games\SinStarI\SourceAssets\Towns\Neris\NerisHorizonV1\prepare-native.mjs')
+    if ($LASTEXITCODE -ne 0) { throw 'Neris Spaceport preparation failed.' }
     $null = New-Item -ItemType Directory -Path $partyMirror -Force
     foreach ($entry in @(
         @('Arin', 'Paladin\ArinV57', 'ArinV57.sm3d.json'),

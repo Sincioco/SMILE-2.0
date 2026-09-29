@@ -1,0 +1,90 @@
+''' Deterministic local-metre flight and hangar travel; no renderer or global clock.
+Module Smile.Tools.NerisSpaceportTraffic
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+
+Public Type State
+    TransportTime As Number
+    RoyalTime As Number
+End Type
+
+Public Sub Advance(ByRef Value As State, Elapsed As Number)
+
+    Value.TransportTime = (Value.TransportTime + Max(0, Elapsed) Mod 120000) Mod 120000
+    Value.RoyalTime = (Value.RoyalTime + Max(0, Elapsed) Mod 180000) Mod 180000
+
+End Sub
+
+Private Function Ease(Time As Number, Start As Number, Duration As Number) As Double
+
+    Dim Amount As Double
+    Dim Result As Double
+
+    Amount = Min(1.0, Max(0.0, ToDouble(Time - Start) / ToDouble(Duration)))
+    Result = Amount * Amount * (3.0 - 2.0 * Amount)
+
+    Return Result
+
+End Function
+
+Public Function Position(ByRef Value As State, Royal As Boolean) As P.Vector3
+
+    Dim Time As Number
+    Dim Height As Double
+    Dim Forward As Double
+    Dim Result As P.Vector3
+
+    Time = Value.TransportTime
+
+    If Not Royal Then
+
+        If Time >= 110000 Then
+            Height = 900.0 * (1.0 - Ease(Time, 110000, 10000))
+        Else If Time >= 60000 Then
+            Height = 900.0 * Ease(Time, 60000, 10000)
+        End If
+
+        Result = P.Vector(-365.0, Height, -90.0)
+
+        Return Result
+
+    End If
+
+    Time = Value.RoyalTime
+    Forward = 108.0
+
+    If Time >= 135000 Then
+        Forward = -90.0 + 198.0 * Ease(Time, 135000, 15000)
+    Else If Time >= 30000 Then
+        Forward = 108.0 - 198.0 * Ease(Time, 30000, 15000)
+    End If
+
+    If Time >= 115000 Then
+        Height = 900.0 * (1.0 - Ease(Time, 115000, 10000))
+    Else If Time >= 55000 Then
+        Height = 900.0 * Ease(Time, 55000, 10000)
+    End If
+
+    Result = P.Vector(365.0, Height, Forward)
+
+    Return Result
+
+End Function
+
+Public Function Visible(ByRef Value As State, Royal As Boolean) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Value.TransportTime < 70000 Or Value.TransportTime >= 110000
+
+    If Royal Then
+        Result = Value.RoyalTime < 65000 Or Value.RoyalTime >= 115000
+    End If
+
+    Return Result
+
+End Function
+
+End Module

@@ -365,8 +365,8 @@ Sub CheckCamera(ByRef Scene As Town.State)
         Scene.View.Controls.OrbitPitch = -15.0, "Moderate Horizontal And Vertical Orbit")
     Call Town.Input(Scene, KEY_O, True)
     Call Check(Scene.Cinematic And Not Scene.Follow And
-        Scene.View.Controls.OrbitYaw = 25.0 And Scene.View.Controls.OrbitPitch = -15.0,
-        "O Resumes Cinematic Overview Without Resetting Orbit")
+        Scene.View.Controls.OrbitYaw = 0.0 And Scene.View.Controls.OrbitPitch = 0.0,
+        "O Bakes The Displayed Shot And Clears Applied Drag Offsets")
     Call Town.ResetOverview(Scene)
     Call Check(Scene.View.Controls.OrbitYaw = 0.0 And
         Scene.View.Controls.Zoom = ToDouble(Motion.DEFAULT_ZOOM),
@@ -415,7 +415,7 @@ Sub CheckCamera(ByRef Scene As Town.State)
     Call Town.StartOrbit(Scene)
     Call Town.Update(Scene, 0)
     Call Check(Abs(Math3D.Length(Math3D.Subtract(Scene.View.LiveCamera.Position,
-        Scene.View.LiveCamera.Target)) - Distance) < 0.01, "O Preserves Current Follow Zoom Distance")
+        Scene.View.LiveCamera.Target)) - Distance) < 0.01, "O Preserves A Close Follow View Distance")
 
     Scene.Follow = True
     Scene.View.Controls.Zoom = 100.0
@@ -427,7 +427,7 @@ Sub CheckCamera(ByRef Scene As Town.State)
     Call Town.StartOrbit(Scene)
     Call Town.Update(Scene, 0)
     Call Check(Abs(Math3D.Length(Math3D.Subtract(Scene.View.LiveCamera.Position,
-        Scene.View.LiveCamera.Target)) - Distance) < 0.01, "O Preserves Zoomed Out Follow Distance")
+        Scene.View.LiveCamera.Target)) - Distance) < 0.01, "O Preserves A Distant Follow View Distance")
 
     Scene.View.FloorVisible = True
 

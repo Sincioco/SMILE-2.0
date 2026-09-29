@@ -1,0 +1,94 @@
+''' One camera-facing halo batch for all thirteen authored tower-tip crystals.
+Module Smile.Tools.NerisSpaceportGlow
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Tools.NerisSpaceportRoute As Route
+
+Public Type State
+    Texture As Core.Texture3D
+    Material As Core.Material3D
+    Particles As Core.ParticleBatch3D
+    Ready As Boolean
+End Type
+
+Public Function Create(ByRef Value As State) As Boolean
+
+    Dim Index As Number
+    Dim Point As P.Vector3
+    Dim Ok As Boolean
+
+    Value.Texture = G.LoadTexture3D("Assets/Fire/ember-shape.png",
+        G.TEXTURE_FILTER_LINEAR, G.TEXTURE_WRAP_CLAMP)
+    Value.Material = G.CreateEffectMaterial3D(Value.Texture, G.MATERIAL_ALPHA_ADDITIVE, 180)
+    Value.Particles = G.CreateParticleBatch3D(13, Value.Material, G.VFX_BILLBOARD_CAMERA, 1, 1)
+    Ok = Value.Texture.Handle <> 0 And Value.Material.Handle <> 0 And Value.Particles.Handle <> 0
+
+    For Index = 0 To 12
+
+        Select Case Index
+            Case 0
+                Point = P.Vector(0.0, 306.72, 84.0)
+            Case 1
+                Point = P.Vector(-34.0, 239.84, 50.0)
+            Case 2
+                Point = P.Vector(-34.0, 227.84, 118.0)
+            Case 3
+                Point = P.Vector(-88.0, 208.8, 4.0)
+            Case 4
+                Point = P.Vector(-88.0, 188.8, 156.0)
+            Case 5
+                Point = P.Vector(-232.0, 115.84, -110.0)
+            Case 6
+                Point = P.Vector(-232.0, 99.84, 192.0)
+            Case 7
+                Point = P.Vector(34.0, 239.84, 50.0)
+            Case 8
+                Point = P.Vector(34.0, 227.84, 118.0)
+            Case 9
+                Point = P.Vector(88.0, 208.8, 4.0)
+            Case 10
+                Point = P.Vector(88.0, 188.8, 156.0)
+            Case 11
+                Point = P.Vector(232.0, 115.84, -110.0)
+            Case 12
+                Point = P.Vector(232.0, 99.84, 192.0)
+        End Select
+
+        Point = P.Vector(Route.ORIGIN_X - Point.X * Route.SCALE,
+            Route.DECK_Y + Point.Y * Route.SCALE, Route.ORIGIN_Z - Point.Z * Route.SCALE)
+        Ok = P.SetParticle(Value.Particles, Index, Point, 95.0, 0.0, 0) And Ok
+        Ok = G.SetParticleColor3D(Value.Particles, Index, 65, 205, 255, 48) And Ok
+    End For
+
+    Ok = G.CommitParticleBatch3D(Value.Particles, 13) And Ok
+    Value.Ready = Ok
+
+    Return Ok
+
+End Function
+
+Public Function Draw(ByRef Value As State) As Boolean
+
+    Dim Ok As Boolean
+
+    Ok = Value.Ready And G.DrawParticleBatch3D(Value.Particles)
+
+    Return Ok
+
+End Function
+
+Public Sub Destroy(ByRef Value As State)
+
+    Call G.DestroyParticleBatch3D(Value.Particles)
+    Call G.DestroyMaterial3D(Value.Material)
+    Call G.DestroyTexture3D(Value.Texture)
+
+    Value.Ready = False
+
+End Sub
+
+End Module

@@ -1,0 +1,40 @@
+{
+  "asset_id": "NSP01",
+  "source": "../source/NSP01-final-r01.blend",
+  "blender_origin_m": [
+    -550,
+    -760,
+    0.212
+  ],
+  "blender_rotation_z_degrees": 180,
+  "blender_scale": 1,
+  "native_origin": [
+    -5500,
+    23.12,
+    -7600
+  ],
+  "native_scale": 10,
+  "native_rotation_y_degrees": 180,
+  "native_up": "Y",
+  "bounds_blender_m": {
+    "min": [
+      -910,
+      -990,
+      -55.788
+    ],
+    "max": [
+      -190,
+      -370,
+      300.212
+    ]
+  },
+  "arrival_join_blender_m": [
+    -550,
+    -370,
+    0.212
+  ],
+  "water_blender_z_m": 0.085,
+  "underwater_structure": "Source underside retained beneath harbour water; main walking deck remains aligned with roads.",
+  "road_width_m": 20,
+  "arrival_bridge_width_m": 40
+}

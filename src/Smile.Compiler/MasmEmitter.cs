@@ -94,6 +94,7 @@ internal sealed class MasmEmitter
     private readonly bool _rememberWindowPlacement;
     private readonly bool _responsiveWindow;
     private readonly string? _startupAuthor;
+    private readonly string? _nativeWorkerScript;
     private readonly StartupBuildMetadata _startupBuild;
     private readonly StringBuilder _builder = new();
     private readonly Dictionary<VariableSymbol, string> _symbolLabels = new();
@@ -154,7 +155,7 @@ internal sealed class MasmEmitter
         bool vSync, bool emitDebugInformation, string? appIdentity = null,
         IReadOnlyList<string>? assetPaths = null, bool rememberWindowPlacement = false,
         bool responsiveWindow = false, string? startupAuthor = null,
-        StartupBuildMetadata? startupBuild = null)
+        StartupBuildMetadata? startupBuild = null, string? nativeWorkerScript = null)
     {
         _analysis = analysis;
         _graphicsBackend = graphicsBackend;
@@ -165,6 +166,7 @@ internal sealed class MasmEmitter
         _rememberWindowPlacement = rememberWindowPlacement;
         _responsiveWindow = responsiveWindow;
         _startupAuthor = startupAuthor;
+        _nativeWorkerScript = nativeWorkerScript;
         _startupBuild = startupBuild ?? StartupBuildMetadata.Create();
     }
 
@@ -272,6 +274,7 @@ internal sealed class MasmEmitter
         Line("EXTERN smile_text_prompt:PROC");
         Line("EXTERN smile_file_pick:PROC");
         Line("EXTERN smile_text_from_code:PROC");
+        if (_nativeWorkerScript != null) Line("EXTERN smile_native_worker_configure:PROC");
         if (_rememberWindowPlacement) Line("EXTERN smile_window_persistence_configure:PROC");
         if (_responsiveWindow) Line("EXTERN smile_window_responsive_configure:PROC");
         Line("EXTERN smile_game_clear:PROC");
@@ -357,6 +360,11 @@ internal sealed class MasmEmitter
             .FirstOrDefault()?.Title.Value as string ?? Path.GetFileNameWithoutExtension(_analysis.BoundSyntaxTree.Source.FilePath);
         Line("smile_startup_title LABEL BYTE");
         EmitBytes(Encoding.UTF8.GetBytes(string.IsNullOrWhiteSpace(startupTitle) ? "SMILE 2.0 Program" : startupTitle), terminate: true);
+        if (_nativeWorkerScript != null)
+        {
+            Line("smile_native_worker_path LABEL BYTE");
+            EmitBytes(Encoding.UTF8.GetBytes(_nativeWorkerScript), terminate: true);
+        }
         Line("smile_startup_author LABEL BYTE");
         EmitBytes(Encoding.UTF8.GetBytes(_startupAuthor ?? string.Empty), terminate: true);
         Line("smile_startup_build LABEL BYTE");
@@ -373,6 +381,11 @@ internal sealed class MasmEmitter
         Line("    lea r8, smile_asset_manifest");
         Line($"    mov r9, {_assetManifestBytes.Length.ToString(CultureInfo.InvariantCulture)}");
         CallAligned("smile_media_configure");
+        if (_nativeWorkerScript != null)
+        {
+            Line("    lea rcx, smile_native_worker_path");
+            CallAligned("smile_native_worker_configure");
+        }
         Line("    lea rcx, smile_startup_title");
         Line("    lea rdx, smile_startup_author");
         Line("    lea r8, smile_startup_build");

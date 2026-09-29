@@ -8,6 +8,7 @@ Import Smile.Simple3D.SurfaceGrid3D As Grid
 Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownCatalogData As Catalog
 Import Smile.Tools.TownEditorPanel As Panel
+Import Smile.Tools.NerisTownMap As Heading
 
 Private Dim Cells[64, 64] As Number
 Private Dim Revision As Number
@@ -66,7 +67,8 @@ Private Sub Rebuild(ByRef Town As Document.State)
 End Sub
 
 Public Sub Draw(ByRef Town As Document.State, Position As P.Vector3,
-    Opacity As Number, LeaderName As Text, LandmarkName As Text, LandmarkPosition As P.Vector3)
+    Opacity As Number, LeaderName As Text, LandmarkName As Text, LandmarkPosition As P.Vector3,
+    Headlight As Image, Yaw As Double)
 
     Dim X As Number
     Dim Z As Number
@@ -118,14 +120,19 @@ Public Sub Draw(ByRef Town As Document.State, Position As P.Vector3,
 
     For Index = 0 To Town.ItemCount - 1
 
-        If Town.Items[Index].Active And Town.Items[Index].Category = Document.CATEGORY_BUILDINGS Then
+        If (Town.Items[Index].Active And
+            Town.Items[Index].Category = Document.CATEGORY_BUILDINGS) Then
 
             X = Coordinate(Town.Items[Index].Position.X, Town.Surface.OriginX, Town.Surface.XEdges[Town.Surface.Columns])
             Z = Coordinate(Town.Items[Index].Position.Z, Town.Surface.OriginZ, Town.Surface.ZEdges[Town.Surface.Rows])
             Fill Rectangle MapLeft + X * 4 - 3, 155 + (63 - Z) * 4 - 3, 7, 7, RGB(226, 200, 133) Opacity Opacity
             Shape = Catalog.TemplateAt(Town.Items[Index].Template)
 
-            If Shape.Label = "City Hall" Or Shape.Label = "Comm Tower" Or Shape.Label = "Old Castle" Or Shape.Label = "Royal Castle" Or Shape.Label = "Military HQ" Then
+            If (Shape.Label = "City Hall" Or
+                Shape.Label = "Comm Tower" Or
+                Shape.Label = "Old Castle" Or
+                Shape.Label = "Royal Castle" Or
+                Shape.Label = "Military HQ") Then
                 Draw Text Shape.Label At MapLeft + X * 4 - 24, 155 + (63 - Z) * 4 Size 9 Color WHITE
             End If
 
@@ -144,6 +151,9 @@ Public Sub Draw(ByRef Town As Document.State, Position As P.Vector3,
 
     X = Coordinate(Position.X, Town.Surface.OriginX, Town.Surface.XEdges[Town.Surface.Columns])
     Z = Coordinate(Position.Z, Town.Surface.OriginZ, Town.Surface.ZEdges[Town.Surface.Rows])
+
+    Call Heading.DrawHeading(Headlight, MapLeft + X * 4, 155 + (63 - Z) * 4, Yaw, Opacity)
+
     Fill Rectangle MapLeft + X * 4 - 2, 155 + (63 - Z) * 4 - 2, 5, 5, CYAN
     Draw Text LeaderName + " X:" + Panel.NumberLabel(ToNumber(Position.X)) + " Y:" + Panel.NumberLabel(ToNumber(Position.Y)) + " Z:" + Panel.NumberLabel(ToNumber(Position.Z)) At MapLeft, 414 Size 11 Color WHITE
 

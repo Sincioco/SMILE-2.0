@@ -1,0 +1,23 @@
+{
+  "pass": true,
+  "town": "D:\\Projects\\Sin-Star-I-Assets\\Neris-Spaceport-01\\town-integration\\Neris-Town-Spaceport-SW-r001.blend",
+  "original_objects_preserved": 16833,
+  "town_placements": 361,
+  "spaceport_meshes": 1371,
+  "bounds_m": {
+    "min": [
+      -910.0,
+      -990.0,
+      -55.78799819946289
+    ],
+    "max": [
+      -189.99998474121094,
+      -370.0,
+      300.2120056152344
+    ]
+  },
+  "scale": 1,
+  "rotation_degrees": 180,
+  "sun_preserved": true,
+  "source_sha256": "a77787ee639b97ec62a1df78fd213f28435ce35d20254bd735f02713866ef564"
+}

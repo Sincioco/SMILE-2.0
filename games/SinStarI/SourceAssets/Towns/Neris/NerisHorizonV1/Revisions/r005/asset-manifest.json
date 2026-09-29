@@ -1,0 +1,56 @@
+{
+  "revision": "r005",
+  "design": "Gentle Wave",
+  "terminal_m": [
+    520,
+    150,
+    79
+  ],
+  "site_m": [
+    960,
+    600
+  ],
+  "tower_m": {
+    "height": 285,
+    "shaft_width": 44,
+    "cab_width": 70,
+    "center": [
+      0,
+      230
+    ]
+  },
+  "retained_objects": {
+    "Transport Hangar": 55,
+    "Royal Hangar": 55,
+    "Transport Glass Halls": 356,
+    "Royal Glass Hall": 118,
+    "Transport Aircraft": 35,
+    "Royal Aircraft": 35
+  },
+  "bounds_m": {
+    "min": [
+      -480.0224914550781,
+      -200.0225067138672,
+      -12.0
+    ],
+    "max": [
+      480.0224914550781,
+      400.0224914550781,
+      285.0
+    ]
+  },
+  "models": 3,
+  "parts": {
+    "Horizon": 11,
+    "Transport": 6,
+    "Royal": 5
+  },
+  "triangles": {
+    "Horizon": 45426,
+    "Transport": 1130,
+    "Royal": 1130
+  },
+  "light_poles": 0,
+  "frontage_obstructions": 0,
+  "glass": "Single alpha-blended planes with modeled interior"
+}

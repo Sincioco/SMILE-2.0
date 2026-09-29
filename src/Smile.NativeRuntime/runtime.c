@@ -1841,9 +1841,12 @@ static void smile_pump_messages(void)
     smile_sfx_reap();
 }
 
+extern void smile_native_worker_tick(void);
+
 void smile_show_screen(void)
 {
     int diagnostics_ready;
+    smile_native_worker_tick();
     smile_frame_clock_begin_present(&smile_frame_clock);
 
     /* Finish the input frame before collecting messages for the next one.
@@ -2769,6 +2772,19 @@ static void smile_data_error(const char* message)
 /* Values match the shared DATA_STATUS_* constants. No checked operation displays UI or exits. */
 enum { SMILE_DATA_OK, SMILE_DATA_MISSING, SMILE_DATA_RECOVERED, SMILE_DATA_INVALID,
     SMILE_DATA_UNAVAILABLE, SMILE_DATA_CORRUPT, SMILE_DATA_TOO_LARGE };
+
+extern void smile_native_worker_start(const char*, const WCHAR*);
+
+void smile_native_worker_configure(const char* script)
+{
+    WCHAR path[2048];
+    int index;
+    if (!smile_storage_data_path("NativeWorker", 12, path, 2048)) return;
+    for (index = lstrlenW(path) - 1; index >= 0 && path[index] != L'\\'; --index) {}
+    if (index < 0) return;
+    path[index] = 0;
+    smile_native_worker_start(script, path);
+}
 
 static int smile_data_read_file(const WCHAR* path, long long* destination, long long capacity, long long* count)
 {

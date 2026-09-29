@@ -81,7 +81,7 @@ public sealed class SmileProjectModel3DAssetSet
 public static class SmileProjectModel3DAssetResolver
 {
     // Build-time declarations can span multiple scenes; the live model pool is separate.
-    private const int MaximumItems = 128;
+    private const int MaximumItems = 256;
     private static readonly HashSet<string> AllowedAttributes = new(StringComparer.Ordinal)
     {
         "Include", "LogicalPath", "Profile", "Descriptor", "Identity", "TextureOutputDirectory",

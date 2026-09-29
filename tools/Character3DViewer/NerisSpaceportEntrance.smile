@@ -1,0 +1,87 @@
+''' Borrow Royal Court door geometry; own only the six spaceport draw objects.
+Module Smile.Tools.NerisSpaceportEntrance
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Tools.NerisSpaceportRoute As Route
+
+Public Type State
+    Objects[6] As Core.Object3D
+    Ready As Boolean
+End Type
+
+Public Function Create(ByRef Value As State, West As Core.Model3D, East As Core.Model3D) As Boolean
+
+    Dim Side As Number
+    Dim Part As Number
+    Dim Model As Core.Model3D
+    Dim Ok As Boolean
+
+    Ok = West.GeometryReady And East.GeometryReady And West.PartCount = 3 And East.PartCount = 3
+
+    If Not Ok Then
+        Return False
+    End If
+
+    For Side = 0 To 1
+
+        Model = West
+
+        If Side = 1 Then
+            Model = East
+        End If
+
+        For Part = 0 To 2
+
+            Value.Objects[Side * 3 + Part] = G.CreateModelPart3D(Model, Part)
+            Ok = Value.Objects[Side * 3 + Part].Handle <> 0 And Ok
+            Ok = P.SetScale(Value.Objects[Side * 3 + Part], 2000.0, 2000.0, 2000.0) And Ok
+            Ok = P.SetPosition(Value.Objects[Side * 3 + Part],
+                Route.ORIGIN_X + ToDouble(1 - Side * 2) * 60.0,
+                Route.DECK_Y + 0.6, Route.ORIGIN_Z + 457.0) And Ok
+        End For
+    End For
+
+    Value.Ready = Ok
+
+    Return Ok
+
+End Function
+
+Public Function Draw(ByRef Value As State) As Boolean
+
+    Dim Side As Number
+    Dim Part As Number
+    Dim Ok As Boolean
+
+    Ok = Value.Ready
+
+    For Side = 0 To 1
+
+        For Part = 0 To 2
+            Ok = P.SetRotation(Value.Objects[Side * 3 + Part], 0.0,
+                180.0 + ToDouble(Side * 2 - 1) * Route.DoorAngle(), 0.0) And Ok
+            Ok = G.DrawObject3D(Value.Objects[Side * 3 + Part]) And Ok
+        End For
+    End For
+
+    Return Ok
+
+End Function
+
+Public Sub Destroy(ByRef Value As State)
+
+    Dim Index As Number
+
+    For Index = 0 To 5
+        Call G.DestroyObject3D(Value.Objects[Index])
+    End For
+
+    Value.Ready = False
+
+End Sub
+
+End Module

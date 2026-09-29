@@ -238,6 +238,8 @@ def main():
         respond(data_folder, rid, 0, 35, 'Rebuilding surfaces and water banks...')
         terrain(document)
         lighting(document)
+        from town_blender_landmarks import populate
+        populate(document)
         scene = bpy.context.scene
         scene['town_editor_name'] = document['name']
         scene['town_editor_request'] = rid

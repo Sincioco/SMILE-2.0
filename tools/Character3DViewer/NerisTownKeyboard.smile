@@ -15,6 +15,7 @@ Public Type State
     FlyInspect As Boolean
     Travel As FreeCamera.State
     Moving As Boolean
+    Zooming As Boolean
 End Type
 
 Public Type HeldKeys
@@ -111,6 +112,7 @@ End Function
 Public Sub StopTravel(ByRef Value As State)
 
     Value.Moving = False
+    Value.Zooming = False
 
     Call FreeCamera.Reset(Value.Travel)
 

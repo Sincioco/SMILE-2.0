@@ -18,6 +18,10 @@ Public Type State
     RequestId As Number
     Operation As Number
     Clock As Number
+    WaitingTime As Number
+    WorkerPulse As Number
+    WorkerAge As Number
+    WorkerSeen As Boolean
     OriginRevision As Number
     OriginName As Text
     Path As Text
@@ -87,7 +91,9 @@ Public Function Queue(ByRef Value As State, ByRef Town As Document.State,
     Dim Status As Number
     Dim Ok As Boolean
 
-    If Value.RequestId > 0 Or Text_Length(Path) = 0 Or Text_Length(Path) > 4095 Then
+    If (Value.RequestId > 0 Or
+        Text_Length(Path) = 0 Or
+        Text_Length(Path) > 4095) Then
         Return False
     End If
 
@@ -141,6 +147,7 @@ Public Function Queue(ByRef Value As State, ByRef Town As Document.State,
     Value.Path = Path
     Value.RequestId = Id
     Value.Clock = 0
+    Value.WaitingTime = 0
     Value.Progress = 0
     Value.Message = "Opening town in background..."
 
@@ -164,6 +171,11 @@ Public Sub Choose(ByRef Value As State, ByRef Town As Document.State, Operation 
 
     If Value.RequestId > 0 Then
         Value.Message = "A file operation is still running."
+        Return
+    End If
+
+    If Not Value.WorkerSeen Or Value.WorkerAge > 3000 Then
+        Value.Message = "File helper is starting; retry in a moment."
         Return
     End If
 
@@ -223,10 +235,8 @@ Public Function Update(ByRef Value As State, ByRef Town As Document.State, Elaps
     Dim Ok As Boolean
     Dim Opened As Boolean
 
-    If Value.RequestId = 0 Then
-        Return False
-    End If
-
+    Value.WorkerAge = Min(60000, Value.WorkerAge + Elapsed)
+    Value.WaitingTime = Value.WaitingTime + Elapsed
     Value.Clock = Value.Clock + Elapsed
 
     If Value.Clock < 500 Then
@@ -234,11 +244,33 @@ Public Function Update(ByRef Value As State, ByRef Town As Document.State, Elaps
     End If
 
     Value.Clock = 0
+    Status = Storage.ReadBridgeStatus("TownEditor.File.Clock")
+
+    If Status.Progress <> Value.WorkerPulse Then
+
+        Value.WorkerSeen = Value.WorkerPulse <> 0
+        Value.WorkerAge = 0
+        Value.WorkerPulse = Status.Progress
+
+    End If
+
+    If Value.RequestId = 0 Then
+        Return False
+    End If
+
     Status = Storage.ReadBridgeStatus("TownEditor.File.Response")
 
     If Status.RequestId <> Value.RequestId Then
-        Value.Message = "Waiting for file worker (Launch.ps1)."
+
+        Value.Message = "Waiting for file helper to respond..."
+
+        If Value.WaitingTime > 15000 Then
+            Value.Message = "File helper unavailable; town retained. Retry Save."
+            Value.RequestId = 0
+        End If
+
         Return False
+
     End If
 
     Value.Message = Status.Message
@@ -273,7 +305,9 @@ Public Function Update(ByRef Value As State, ByRef Town As Document.State, Elaps
 
             Ok = Library.SaveCurrent(Value.Pending)
 
-            If Not Value.SaveAsCopy And Town.Name = Value.OriginName And Town.Revision = Value.OriginRevision Then
+            If (Not Value.SaveAsCopy And
+                Town.Name = Value.OriginName And
+                Town.Revision = Value.OriginRevision) Then
                 Town.Name = Value.Pending.Name
                 Town.SavedRevision = Town.Revision
             End If
@@ -333,8 +367,16 @@ Private Function SafeName(Name As Text) As Text
 
         Letter = Text_Code_At(Name, Index)
 
-        If (Letter < 32 Or Letter = 34 Or Letter = 42 Or Letter = 47 Or
-            Letter = 58 Or Letter = 60 Or Letter = 62 Or Letter = 63 Or Letter = 92 Or Letter = 124) Then
+        If (Letter < 32 Or
+            Letter = 34 Or
+            Letter = 42 Or
+            Letter = 47 Or
+            Letter = 58 Or
+            Letter = 60 Or
+            Letter = 62 Or
+            Letter = 63 Or
+            Letter = 92 Or
+            Letter = 124) Then
             Letter = 95
         End If
 
@@ -390,7 +432,9 @@ Private Sub ReadRecent(ByRef Value As State)
     Id = GetInteger()
     Length = GetInteger()
 
-    If Id <> Value.RequestId Or Length < 0 Or Length > 10 Then
+    If (Id <> Value.RequestId Or
+        Length < 0 Or
+        Length > 10) Then
         Return
     End If
 
@@ -403,7 +447,9 @@ Private Sub ReadRecent(ByRef Value As State)
         Id = GetInteger()
         Path = ""
 
-        If Id < 1 Or Id > 4095 Or Offset + Id * 4 > ByteCount Then
+        If (Id < 1 Or
+            Id > 4095 Or
+            Offset + Id * 4 > ByteCount) Then
             Return
         End If
 

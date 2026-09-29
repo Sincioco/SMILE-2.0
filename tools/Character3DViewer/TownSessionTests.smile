@@ -18,6 +18,15 @@ Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PrecisionCamera3D As Camera
 Import Smile.Simple3D.ArenaCamera3D As Motion
 Import Smile.Tools.NerisCastleRoute As Castle
+Import Smile.Tools.NerisSpaceportRoute As Spaceport
+Import Smile.Tools.NerisSpaceportPreview As Harbor
+Import Smile.Tools.NerisHorizonRoute As Airport
+Import Smile.Tools.NerisRunwayTraffic As Runway
+Import Smile.Tools.NerisHorizonGlow As AirportGlow
+Import Smile.Tools.NerisTownConnections As Connections
+Import Smile.Tools.NerisTownParty As Party
+Import Smile.Tools.NerisTownNavigation As Navigation
+Import Smile.Tools.NerisSpaceportTraffic As Traffic
 
 Dim Value As Town.State
 Dim Index As Number
@@ -75,8 +84,40 @@ For Index = 0 To 180
 End For
 
 Call Check(Value.Ready And Value.Edited And Not Value.Failed, "Editable Town And Party Load Together")
-Call Check(G.LiveModelCount3D() + 14 <= G.MaximumModelCount3D(),
-    "Royal Court And Detailed Shrubs Leave Room For All Fourteen Optional Tripo Models")
+
+If Value.Horizon.Failed Then
+
+    Print "Airport Load Stage " + Calibration.NumberText(Value.Horizon.Loaded)
+    Print "Airport Objects " + Calibration.NumberText(Value.Horizon.ObjectCount)
+    Print "Airport Parts " + Calibration.NumberText(Value.Horizon.Models[0].PartCount)
+    Print "Airport Lights " + Calibration.NumberText(Value.Horizon.Lights.Particles.Handle)
+
+End If
+
+If Value.Horizon.Ready Then
+
+    Call Check(Value.Horizon.Loaded = 3 And Value.Horizon.ObjectCount = 29 And
+        Not Value.Harbor.Ready, "Gentle Wave Loads In Town Without Original Spaceport")
+    Call Check(Value.Comparison.Ready, "Royal Court Is Preserved Beside Horizon")
+    Call CheckFleetFrames(Value)
+    Call CheckAirportEntry(Value)
+    Call Check(AirportGlow.BeaconOn(0) And Not AirportGlow.BeaconOn(450) And
+        AirportGlow.BeaconOn(1500) And Value.Horizon.Lights.Ready,
+        "Tower Beacon Blinks And Seventy Two Airport Guidance Lights Load")
+
+    Call Town.Update(Value, 16)
+    Call Town.ResetOverview(Value, True)
+    Call Town.Update(Value, 16)
+    Call Town.Draw(Value)
+    Call Check(Not Value.Failed And Value.BaseCamera.Target.Z = 1250.0,
+        "Horizon Draws At Its Western Town Placement")
+
+Else
+
+    Call Check(G.LiveModelCount3D() + 14 <= G.MaximumModelCount3D(),
+        "Earlier Town Revisions Retain Fourteen Optional Tripo Model Slots")
+
+End If
 
 Print "Meshes " + Calibration.NumberText(G.LiveMeshCount3D())
 Print "Materials " + Calibration.NumberText(G.LiveMaterialCount3D())
@@ -113,7 +154,8 @@ If Value.Ready Then
 
     Call Check(Not Value.PartyCamera And Not Value.Cinematic And
         Value.View.LiveCamera.Position.Y > Value.View.LiveCamera.Target.Y And
-        Abs(Value.View.LiveCamera.Position.Z - Value.View.LiveCamera.Target.Z) < 5.0 And
+        Abs(Value.View.LiveCamera.Position.Z - Value.View.LiveCamera.Target.Z) <
+            Abs(Value.View.LiveCamera.Position.Y - Value.View.LiveCamera.Target.Y) * 0.0003 And
         Abs(Value.View.LiveCamera.Position.X - Value.View.LiveCamera.Target.X) < 0.001,
         "One Key Selects A North Up Overhead Editor View Even Over The Header")
     Call Town.ResetOverview(Value)
@@ -123,10 +165,15 @@ If Value.Ready Then
     Call Town.Update(Value, 16)
     Call Check(Not Editor.Editing() And Not Value.Follow And
         Value.View.LiveCamera.Position.Y > Value.View.LiveCamera.Target.Y And
-        Abs(Value.View.LiveCamera.Position.Z - Value.View.LiveCamera.Target.Z) < 5.0,
+        Abs(Value.View.LiveCamera.Position.Z - Value.View.LiveCamera.Target.Z) <
+            Abs(Value.View.LiveCamera.Position.Y - Value.View.LiveCamera.Target.Y) * 0.0003,
         "One Key Selects Top Down Outside Edit Town")
     Call Inspection.Run(Value, Failures)
     Call CheckVisibleDepth()
+
+    If Value.Horizon.Ready Then
+        Call CheckWalkingConnection(Value)
+    End If
 
 End If
 
@@ -184,6 +231,185 @@ Sub Check(Condition As Boolean, Label As Text)
         Print "FAIL " + Label
         Failures = Failures + 1
     End If
+
+End Sub
+
+Sub CheckFleetFrames(ByRef Value As Town.State)
+
+    Dim Step As Number
+    Dim Frame As Number
+    Dim Pose As P.Transform3D
+    Dim Ok As Boolean
+    Dim Expected As P.Vector3
+
+    For Step = 0 To 6
+
+        Select Case Step
+            Case 0
+                Frame = 0
+            Case 1
+                Frame = 37500
+            Case 2
+                Frame = 65000
+            Case 3
+                Frame = 115000
+            Case 4
+                Frame = 125000
+            Case 5
+                Frame = 142500
+            Case 6
+                Frame = 150000
+        End Select
+
+        Value.Horizon.Flights.TransportTime = Frame Mod 120000
+        Value.Horizon.Flights.RoyalTime = Frame
+
+        Call Town.Draw(Value)
+
+        Ok = P.TryTransform(Value.Horizon.Objects[Value.Horizon.FirstPart[2]], Pose)
+
+        Call Check(Not Value.Failed And Ok, "Fleet Key Phases Draw With The Complete Town")
+
+        Expected = Airport.ToWorld(Traffic.Position(Value.Horizon.Flights, True))
+
+        If Traffic.Visible(Value.Horizon.Flights, True) Then
+            Call Check(Abs(Pose.Position.X - Expected.X) < 0.001 And
+                Abs(Pose.Position.Y - Expected.Y) < 0.001 And Abs(Pose.Position.Z - Expected.Z) < 0.001,
+                "Royal Hull Uses The Rotated West Airport Placement")
+        End If
+
+    End For
+
+    Value.Horizon.Flights.TransportTime = 0
+    Value.Horizon.Flights.RoyalTime = 0
+
+End Sub
+
+Sub CheckAirportEntry(ByRef Value As Town.State)
+
+    Dim Before As P.Vector3
+    Dim Point As P.Vector3
+    Dim Step As Number
+    Dim Running As Boolean
+    Dim Speed As Number
+    Dim Pose As P.Transform3D
+    Dim Expected As P.Vector3
+    Dim Ok As Boolean
+
+    Before = Value.People.Path.Positions[0]
+    Running = Value.People.Running
+    Speed = Value.People.SpeedPercent
+    Value.People.Running = True
+    Value.People.SpeedPercent = 200
+
+    Call Party.Teleport(Value.People, P.Vector(-5500.0, 23.12, 1250.0))
+
+    For Step = 1 To 70
+        Call Town.MoveParty(Value, P.Vector(-1.0, 0.0, 0.0), 200)
+    End For
+
+    For Step = 0 To 3
+        Point = Value.People.Path.Positions[Step]
+
+        Call Check(Point.X < -7900.0 And Abs(Point.Y - 31.12) < 0.01 And
+            Navigation.CanStand(Point.X, Point.Z), "Arin And Each Follower Enter The Terminal From The Town Road")
+    End For
+
+    Call Town.Draw(Value)
+    Call Check(Not Value.Failed, "Terminal Entry Draws With The Complete Party And Airport")
+
+    For Step = 0 To 7
+
+        Select Case Step
+            Case 0
+                Value.Horizon.RunwayFlight.Time = 0
+            Case 1
+                Value.Horizon.RunwayFlight.Time = 36000
+            Case 2
+                Value.Horizon.RunwayFlight.Time = 100000
+            Case 3
+                Value.Horizon.RunwayFlight.Time = 108000
+            Case 4
+                Value.Horizon.RunwayFlight.Time = 126000
+            Case 5
+                Value.Horizon.RunwayFlight.Time = 131000
+            Case 6
+                Value.Horizon.RunwayFlight.Time = 148000
+            Case 7
+                Value.Horizon.RunwayFlight.Time = 165000
+        End Select
+
+        Call Town.Draw(Value)
+
+        Ok = P.TryTransform(Value.Horizon.Objects[Value.Horizon.RunwayFirst], Pose)
+        Expected = Airport.ToWorld(Runway.Position(Value.Horizon.RunwayFlight))
+
+        Call Check(Ok And Not Value.Failed And Abs(Pose.Position.X - Expected.X) < 0.01 And
+            Abs(Pose.Position.Y - Expected.Y) < 0.01 And Abs(Pose.Position.Z - Expected.Z) < 0.01,
+            "Third Aircraft Actually Draws At Its Runway Flight And Taxi Positions")
+    End For
+
+    Value.Horizon.RunwayFlight.Time = 0
+    Value.People.Running = Running
+    Value.People.SpeedPercent = Speed
+
+    Call Party.Teleport(Value.People, Before)
+
+    Print "Airport: All Four Members Enter; Third Aircraft Takeoff, Landing And Taxi Draw; Beacon And Runway Lights Ready"
+
+End Sub
+
+Sub CheckWalkingConnection(ByRef Value As Town.State)
+
+    Dim Step As Number
+    Dim BeforeModels As Number
+    Dim BeforeMeshes As Number
+    Dim Destination As Text
+
+    BeforeModels = G.LiveModelCount3D()
+    BeforeMeshes = G.LiveMeshCount3D()
+
+    Call Town.Input(Value, KEY_TAB, False)
+    Call Party.Teleport(Value.People, P.Vector(-5000.0, 23.12, -3435.0))
+    Call Town.MoveParty(Value, P.Vector(0.0, 0.0, -1.0), 200)
+
+    Call Check(Editor.TownName() = "Neris Spaceport", "Walking South Takes The Linked Town Road")
+
+    For Step = 0 To 180
+        Call Town.Update(Value, 16)
+    End For
+
+    Call Check(Value.Ready And Not Value.Failed And Value.Harbor.Ready And
+        Not Value.Horizon.Ready And Not Value.Comparison.Ready,
+        "Separate Spaceport Loads Original Only And Releases Town Landmarks")
+    Call Check(Value.Harbor.Doors.Ready And Value.Harbor.Light.Ready,
+        "Original Spaceport Keeps Swinging Doors And Crystal Halos")
+    Call Check(Value.People.Path.Positions[0].X = -5500.0 And
+        Value.People.Path.Positions[0].Z = -3650.0 And Value.People.Members[0].Yaw = 0.0,
+        "Party Arrives On Causeway Facing The Original Spaceport")
+
+    Destination = Connections.Destination(Editor.TownName(), Value.People.Path.Positions[0], True)
+
+    Call Check(Destination = "", "Arrival Does Not Immediately Travel Back")
+    Call Town.Draw(Value)
+    Call Check(Not Value.Failed, "Separate Spaceport Actually Draws")
+    Call Party.Teleport(Value.People, P.Vector(-5500.0, 23.12, -3440.0))
+    Call Town.MoveParty(Value, P.Vector(0.0, 0.0, 1.0), 200)
+    Call Check(Editor.TownName() = "Neris Town", "Walking North Returns To Neris Town")
+
+    For Step = 0 To 180
+        Call Town.Update(Value, 16)
+    End For
+
+    Call Town.Draw(Value)
+    Call Check(Value.Ready And Not Value.Failed And Value.Horizon.Ready And
+        Value.Comparison.Ready And Not Value.Harbor.Ready, "Return Restores Horizon And Royal Court")
+    Call Check(G.LiveModelCount3D() = BeforeModels And G.LiveMeshCount3D() = BeforeMeshes,
+        "Round Trip Does Not Leak Landmark Resources")
+    Call Check(Value.People.MemberCount = 4 And Value.People.Path.Positions[0].Z = -3250.0,
+        "All Four Party Members Return To Town Road")
+
+    Print "Walking Round Trip: Four Party Members, Horizon And Original Spaceport, No Resource Growth"
 
 End Sub
 

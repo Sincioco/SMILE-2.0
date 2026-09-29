@@ -11,6 +11,7 @@ Import Smile.Simple3D.ArenaCamera3D As Motion
 Import Smile.Tools.Character3DViewerCalibration As Numbers
 Import Smile.Tools.Character3DViewerTiming As Timing
 Import Smile.Tools.NerisTownCamera As Drone
+Import Smile.Tools.NerisTownInspectionLimits As Limits
 
 Public Type State
     DragRow As Number
@@ -33,7 +34,7 @@ End Function
 
 ''' 1 toggles orbit, 2 fits, 3 signals manual rotation, 4 toggles Fly Inspect.
 Public Function Input(ByRef Value As State, ByRef View As Arena.State,
-    Base As P.Camera3D, Blocked As Boolean, Following As Boolean) As Number
+    ByRef Base As P.Camera3D, Blocked As Boolean, Following As Boolean) As Number
 
     Dim Row As Number
     Dim Amount As Double
@@ -67,6 +68,10 @@ Public Function Input(ByRef Value As State, ByRef View As Arena.State,
 
             If Abs(Pointer_Y() - (Window_Height() - 222 + Row * 30)) <= 12 Then
                 Value.DragRow = Row
+
+                If Row = 3 And Not Following Then
+                    Call Limits.BeginZoom(View, Base)
+                End If
             End If
 
         End For

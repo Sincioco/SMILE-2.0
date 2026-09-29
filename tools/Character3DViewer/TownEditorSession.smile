@@ -42,6 +42,8 @@ Private Dim AppliedRevision As Number
 Private Dim RecoveryRevision As Number
 Private Dim RecoveryClock As Number
 Private Dim TeleportPending As Boolean
+Private Dim TravelPending As Boolean
+Private Dim TravelArrival As P.Vector3
 Private Dim LiveSurface As Grid.State
 
 Public Function Available() As Boolean
@@ -51,6 +53,10 @@ Public Function Available() As Boolean
         AttemptedRecovery = True
         HaveDocument = Library.Recover(Town)
         TeleportPending = HaveDocument
+
+        If HaveDocument Then
+            Call Tabs.Ensure(OpenTabs, Town)
+        End If
 
     End If
 
@@ -145,9 +151,17 @@ Public Function LoadNext() As Boolean
 
     End If
 
+    If Ground.PendingRevision <> Town.Surface.Revision Then
+        Ready = False
+
+        Call Terrain.BeginBuild(Ground, Town.Surface)
+    End If
+
     Call Terrain.Update(Ground, 16)
 
-    If Ground.Stage = 0 And Not Ground.Failed And Not Assets.Failed Then
+    If (Ground.Stage = 0 And
+        Not Ground.Failed And
+        Not Assets.Failed) Then
 
         Ready = True
         AppliedRevision = Town.Revision
@@ -159,6 +173,26 @@ Public Function LoadNext() As Boolean
     End If
 
     Return Ready
+
+End Function
+
+Public Function TravelTo(Name As Text, Arrival As P.Vector3) As Boolean
+
+    Dim Ok As Boolean
+
+    Ok = Tabs.OpenNamed(OpenTabs, Town, Name)
+
+    If Ok Then
+
+        TeleportPending = True
+        TravelPending = True
+        TravelArrival = Arrival
+
+        Call Editor.ResetDocument(Controls, Town)
+
+    End If
+
+    Return Ok
 
 End Function
 
@@ -211,9 +245,14 @@ Private Sub FileCommand(Action As Number)
         Return
     End If
 
-    If Action = 300 Or Action = 301 Or Action = 302 Or Action = 307 Or Action = 310 Then
+    If (Action = 300 Or
+        Action = 301 Or
+        Action = 302 Or
+        Action = 307 Or
+        Action = 310) Then
 
-        If (Action = 310 Or Action = 307 Or Action = 302) And OpenTabs.TabCount >= Tabs.CAPACITY Then
+        If ((Action = 310 Or Action = 307 Or Action = 302) And
+            OpenTabs.TabCount >= Tabs.CAPACITY) Then
             Controls.Ui.Message = "Close a town tab first (limit 8)."
             Return
         End If
@@ -288,7 +327,8 @@ Private Sub FileCommand(Action As Number)
             Return
         End If
 
-        If Storage.Exists("TownEditor.Town." + Name) Or Storage.Exists("TownEditor.Recovery." + Name) Then
+        If (Storage.Exists("TownEditor.Town." + Name) Or
+            Storage.Exists("TownEditor.Recovery." + Name)) Then
             Controls.Ui.Message = "That name already exists. Choose another."
             Return
         End If
@@ -420,7 +460,9 @@ Public Sub Input(View As P.Camera3D, Key As Number, Blocked As Boolean)
         Call Editor.Cancel(Controls, Town)
 
         Controls.Enabled = False
-    Else If Action >= 300 And Action <= 310 Or (Action >= 500 And Action < 510) Then
+    Else If (Action >= 300 And
+        Action <= 310 Or
+        (Action >= 500 And Action < 510)) Then
         Call FileCommand(Action)
     End If
 
@@ -481,7 +523,8 @@ Public Sub Update(Leader As P.Vector3, Elapsed As Number)
 
         Call Terrain.BeginBuild(Ground, Town.Surface)
 
-    Else If Ground.LiveRevision = Town.Surface.Revision And LiveSurface.Revision <> Town.Surface.Revision Then
+    Else If (Ground.LiveRevision = Town.Surface.Revision And
+        LiveSurface.Revision <> Town.Surface.Revision) Then
 
         LiveSurface = Town.Surface
 
@@ -570,6 +613,21 @@ Public Function TakeSpawn(ByRef Position As P.Vector3) As Boolean
     End If
 
     TeleportPending = False
+
+    If TravelPending Then
+
+        Position = TravelArrival
+        TravelPending = False
+        Position.Y = Navigation.GroundHeight(Position.X, Position.Z)
+        Return True
+
+    End If
+
+    If Town.Name = "Neris Spaceport" Then
+        Position = P.Vector(-5500.0, 23.12, -3650.0)
+        Return True
+    End If
+
     Position = P.Vector(0.0, 23.12, 0.0)
 
     If Navigation.CanStand(0.0, -2780.0) Then
@@ -651,10 +709,22 @@ Public Function TownName() As Text
 
 End Function
 
-Public Sub DrawMap(Position As P.Vector3, Opacity As Number, LeaderName As Text,
-    LandmarkName As Text, LandmarkPosition As P.Vector3)
+''' Read-only coverage query for optional landmarks in expanded town revisions.
+Public Function CoversArea(MinX As Double, MinZ As Double, MaxX As Double, MaxZ As Double) As Boolean
 
-    Call Map.Draw(Town, Position, Opacity, LeaderName, LandmarkName, LandmarkPosition)
+    Dim Result As Boolean
+
+    Result = (HaveDocument And Town.Surface.OriginX <= MinX And Town.Surface.OriginZ <= MinZ And
+        Town.Surface.XEdges[Town.Surface.Columns] >= MaxX And Town.Surface.ZEdges[Town.Surface.Rows] >= MaxZ)
+
+    Return Result
+
+End Function
+
+Public Sub DrawMap(Position As P.Vector3, Opacity As Number, LeaderName As Text,
+    LandmarkName As Text, LandmarkPosition As P.Vector3, Headlight As Image, Yaw As Double)
+
+    Call Map.Draw(Town, Position, Opacity, LeaderName, LandmarkName, LandmarkPosition, Headlight, Yaw)
 
 End Sub
 

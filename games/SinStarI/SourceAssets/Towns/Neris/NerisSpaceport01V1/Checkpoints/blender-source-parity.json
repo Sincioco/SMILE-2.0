@@ -1,0 +1,14 @@
+{
+  "pass": true,
+  "production_objects": 1991,
+  "evaluated_triangles": 239912,
+  "matches_final_source": true,
+  "source_scene_preserved": true,
+  "kinds": {
+    "pad": 4,
+    "primary-tower": 13,
+    "keel-pylon": 9,
+    "door-panel": 24,
+    "lift-cabin": 24
+  }
+}

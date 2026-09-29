@@ -31,7 +31,7 @@ Dim Ok As Boolean
 Dim Failures As Number
 Dim Frames As Number
 Dim Before As Number
-Dim Meshes[512] As Number
+Dim Meshes[1024] As Number
 Dim Temporary As Core.Object3D
 Dim Controls As Editor.State
 Dim UntilTime As Number
@@ -45,15 +45,15 @@ Call Check(Panel.ContainsPoint(1050, 220, 1100, 720) And
     Not Panel.ContainsPoint(220, 528, 1100, 720),
     "Editor Hit Region Excludes Orbit Fit And Camera Sliders")
 
-For Index = 0 To 511
+For Index = 0 To 1023
     Meshes[Index] = G.CreateMesh3D(3, 3)
 End For
 
-Call Check(Meshes[0] <> Meshes[256] And Meshes[255] <> Meshes[511],
-    "Mesh Handles Remain Distinct Above Slot 255")
+Call Check(Meshes[0] <> Meshes[512] And Meshes[511] <> Meshes[1023] And G.MaximumMeshCount3D() = 1024,
+    "Mesh Handles Remain Distinct Above Slot 511")
 Call Check(G.CreateMesh3D(3, 3) = 0, "Mesh Pool Rejects Allocation Beyond Its Limit")
 
-For Index = 0 To 511
+For Index = 0 To 1023
     Ok = P.SetMeshVertex(Meshes[Index], 0, P.Vector(0.125, 23.125, -0.625))
 
     Call Check(Ok, "Every Mesh Slot Accepts Fractional Vertices")
@@ -379,8 +379,10 @@ Sub CheckLocalLighting()
 
         If Shape.Label = "Crystal Lamp" Then
             Expected = Expected + 1
-        Else If (Shape.Label = "Royal Castle" Or Shape.Label = "Military HQ" Or
-            Shape.Label = "Comm Tower" Or Shape.Label = "City Hall") Then
+        Else If (Shape.Label = "Royal Castle" Or
+            Shape.Label = "Military HQ" Or
+            Shape.Label = "Comm Tower" Or
+            Shape.Label = "City Hall") Then
             Expected = Expected + 2
         End If
 

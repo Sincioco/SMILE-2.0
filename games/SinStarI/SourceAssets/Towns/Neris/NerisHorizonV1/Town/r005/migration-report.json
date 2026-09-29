@@ -1,0 +1,27 @@
+{
+  "original_sha256": "08031df3cb1e30d85971e7f191371dbb7c9187413e1b5b8e59f27a45e3ea13c7",
+  "preserved_items": 362,
+  "town_bounds": [
+    -11600,
+    2750.0,
+    -3550.0,
+    6250
+  ],
+  "grid": [
+    496,
+    461
+  ],
+  "airport_site_m": [
+    960,
+    600
+  ],
+  "airport_native_origin": [
+    -7400,
+    23.12,
+    1250
+  ],
+  "airport_native_yaw": -90,
+  "airport_scale_native_units_per_m": 10,
+  "town": "D:\\SMILE 2.0\\games\\SinStarI\\SourceAssets\\Towns\\Neris\\NerisHorizonV1\\Town\\r005\\Neris-Town-Horizon-r005.town",
+  "separate_spaceport": "D:\\SMILE 2.0\\games\\SinStarI\\SourceAssets\\Towns\\Neris\\NerisHorizonV1\\Town\\r005\\Neris-Spaceport-r001.town"
+}

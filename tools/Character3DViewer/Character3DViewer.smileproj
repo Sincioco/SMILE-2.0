@@ -8,6 +8,7 @@
     <WebLoadingLogo>..\..\assets\branding\smile-2.0-logo-web.png</WebLoadingLogo>
     <RememberWindowPlacement>true</RememberWindowPlacement>
     <ResponsiveWindow>true</ResponsiveWindow>
+    <NativeWorkerScript>Watch-TownSaves.ps1</NativeWorkerScript>
     <GraphicsBackend>DirectX</GraphicsBackend>
     <VSync>true</VSync>
   </PropertyGroup>
@@ -15,11 +16,22 @@
     <SmileSource Include="NativeProgram.smile" StartupOnly="true" />
     <SmileSource Include="NativeViewerHost.smile" />
     <SmileSource Include="NerisTown.smile" />
+    <SmileSource Include="NerisTownConnections.smile" />
+    <SmileSource Include="NerisTownLandmarks.smile" />
     <SmileSource Include="NerisCastlePreview.smile" />
     <SmileSource Include="NerisTownTour.smile" />
     <SmileSource Include="NerisCastleGlow.smile" />
     <SmileSource Include="NerisCastleFountain.smile" />
     <SmileSource Include="NerisCastleRoute.smile" />
+    <SmileSource Include="NerisSpaceportRoute.smile" />
+    <SmileSource Include="NerisSpaceportPreview.smile" />
+    <SmileSource Include="NerisSpaceportTraffic.smile" />
+    <SmileSource Include="NerisRunwayTraffic.smile" />
+    <SmileSource Include="NerisSpaceportGlow.smile" />
+    <SmileSource Include="NerisSpaceportEntrance.smile" />
+    <SmileSource Include="NerisHorizonPreview.smile" />
+    <SmileSource Include="NerisHorizonRoute.smile" />
+    <SmileSource Include="NerisHorizonGlow.smile" />
     <SmileSource Include="ProximityDrawbridge.smile" />
     <SmileSource Include="TownDocument.smile" />
     <SmileSource Include="TownPicking.smile" />
@@ -45,8 +57,10 @@
     <SmileSource Include="TownCatalogRenderer.smile" />
     <SmileSource Include="TownSurfaceRenderer.smile" />
     <SmileSource Include="TownLighting.smile" />
+    <SmileSource Include="NerisHorizonLighting.smile" />
     <SmileSource Include="TownAttachments.smile" />
     <SmileSource Include="NerisTownCamera.smile" />
+    <SmileSource Include="NerisTownInspectionLimits.smile" />
     <SmileSource Include="NerisTownKeyboard.smile" />
     <SmileSource Include="NerisTownCameraPanel.smile" />
     <SmileSource Include="NerisTownObstacles.smile" />
@@ -457,5 +471,14 @@
     <Model3DAsset Include="BuildAssets\Neris\CastleV2\drawbridge.glb" Descriptor="BuildAssets\Neris\CastleV2\Castle.sm3d.json" LogicalPath="Assets/Neris/CastleV2/Drawbridge.sm3d" Profile="Static" Identity="sin-star-i.neris-castle.m06-r006.drawbridge" ProductionState="Prototype" />
     <Model3DAsset Include="BuildAssets\Neris\CastleV2\door-west.glb" Descriptor="BuildAssets\Neris\CastleV2\Castle.sm3d.json" LogicalPath="Assets/Neris/CastleV2/Door-West.sm3d" Profile="Static" Identity="sin-star-i.neris-castle.m06-r006.door-west" ProductionState="Prototype" />
     <Model3DAsset Include="BuildAssets\Neris\CastleV2\door-east.glb" Descriptor="BuildAssets\Neris\CastleV2\Castle.sm3d.json" LogicalPath="Assets/Neris/CastleV2/Door-East.sm3d" Profile="Static" Identity="sin-star-i.neris-castle.m06-r006.door-east" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Spaceport01\Spaceport-00.glb" Descriptor="BuildAssets\Neris\Spaceport01\Spaceport.sm3d.json" LogicalPath="Assets/Neris/Spaceport01/Spaceport-00.sm3d" Profile="Static" Identity="sin-star-i.neris-spaceport-01.part-0" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Spaceport01\Spaceport-01.glb" Descriptor="BuildAssets\Neris\Spaceport01\Spaceport.sm3d.json" LogicalPath="Assets/Neris/Spaceport01/Spaceport-01.sm3d" Profile="Static" Identity="sin-star-i.neris-spaceport-01.part-1" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Spaceport01\Spaceport-02.glb" Descriptor="BuildAssets\Neris\Spaceport01\Spaceport.sm3d.json" LogicalPath="Assets/Neris/Spaceport01/Spaceport-02.sm3d" Profile="Static" Identity="sin-star-i.neris-spaceport-01.part-2" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Spaceport01\Spaceport-03.glb" Descriptor="BuildAssets\Neris\Spaceport01\Spaceport.sm3d.json" LogicalPath="Assets/Neris/Spaceport01/Spaceport-03.sm3d" Profile="Static" Identity="sin-star-i.neris-spaceport-01.part-3" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Spaceport01\Spaceport-04.glb" Descriptor="BuildAssets\Neris\Spaceport01\Spaceport.sm3d.json" LogicalPath="Assets/Neris/Spaceport01/Spaceport-04.sm3d" Profile="Static" Identity="sin-star-i.neris-spaceport-01.part-4" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Spaceport01\Spaceport-05.glb" Descriptor="BuildAssets\Neris\Spaceport01\Spaceport.sm3d.json" LogicalPath="Assets/Neris/Spaceport01/Spaceport-05.sm3d" Profile="Static" Identity="sin-star-i.neris-spaceport-01.part-5" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Horizon\Horizon.glb" Descriptor="BuildAssets\Neris\Horizon\Horizon.sm3d.json" LogicalPath="Assets/Neris/Horizon/Horizon.sm3d" Profile="Static" Identity="sin-star-i.neris-horizon-v1.horizon" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Horizon\Transport.glb" Descriptor="BuildAssets\Neris\Horizon\Horizon.sm3d.json" LogicalPath="Assets/Neris/Horizon/Transport.sm3d" Profile="Static" Identity="sin-star-i.neris-horizon-v1.transport" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Horizon\Royal.glb" Descriptor="BuildAssets\Neris\Horizon\Horizon.sm3d.json" LogicalPath="Assets/Neris/Horizon/Royal.sm3d" Profile="Static" Identity="sin-star-i.neris-horizon-v1.royal" ProductionState="Prototype" />
   </ItemGroup>
 </SmileProject>

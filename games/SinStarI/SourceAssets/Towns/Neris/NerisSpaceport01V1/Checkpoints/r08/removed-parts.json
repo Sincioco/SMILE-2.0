@@ -1,0 +1,23 @@
+{
+  "removed_objects": [
+    "NSP01.Support.FlyingArch.-1.4",
+    "NSP01.Support.FlyingArchGold.-1.4",
+    "NSP01.Support.FlyingArch.-1.156",
+    "NSP01.Support.FlyingArchGold.-1.156",
+    "NSP01.Support.FlyingArch.1.4",
+    "NSP01.Support.FlyingArchGold.1.4",
+    "NSP01.Support.FlyingArch.1.156",
+    "NSP01.Support.FlyingArchGold.1.156",
+    "NSP01.Dock.W.LOW.Tie.-6",
+    "NSP01.Dock.W.LOW.Tie.6",
+    "NSP01.Dock.W.HIGH.Tie.-6",
+    "NSP01.Dock.W.HIGH.Tie.6",
+    "NSP01.Dock.E.LOW.Tie.-6",
+    "NSP01.Dock.E.LOW.Tie.6",
+    "NSP01.Dock.E.HIGH.Tie.-6",
+    "NSP01.Dock.E.HIGH.Tie.6"
+  ],
+  "curved_strip_pairs": 4,
+  "gold_vertical_ties": 8,
+  "source_sha256": "6f313b75abc8fce2e37563c8e3e476e6958e2594fc9d2f74d0609d8f715333fd"
+}

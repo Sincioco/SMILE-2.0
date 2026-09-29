@@ -84,6 +84,8 @@ def export_document(document, catalog, target, request_id, status):
     status(35, 'Rebuilding town surfaces and lighting...')
     terrain(document)
     lighting(document)
+    from town_blender_landmarks import populate
+    populate(document)
     # Normalize saved status before recording the portable document checksum.
     payload = encode(document, catalog)
     document = decode(payload, catalog)

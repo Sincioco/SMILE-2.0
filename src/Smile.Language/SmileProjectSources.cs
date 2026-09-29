@@ -85,7 +85,7 @@ public sealed class SmileProjectSourceSet
         bool rememberWindowPlacement, bool responsiveWindow, string? webLoadingAuthor, string? webLoadingLogoPath,
         IReadOnlyList<SmileProjectSourceItem> items, IReadOnlyList<SmileProjectSourceItem> compilationSources,
         IReadOnlyList<SmileProjectReferenceItem> references, SmileProjectAssetManifest assetManifest,
-        SmileProjectModel3DAssetSet model3DAssets)
+        SmileProjectModel3DAssetSet model3DAssets, string? nativeWorkerScript)
     {
         ProjectPath = projectPath;
         ProjectDirectory = Path.GetDirectoryName(projectPath) ?? Environment.CurrentDirectory;
@@ -106,6 +106,7 @@ public sealed class SmileProjectSourceSet
         References = references;
         AssetManifest = assetManifest;
         Model3DAssets = model3DAssets;
+        NativeWorkerScript = nativeWorkerScript;
     }
 
     public string ProjectPath { get; }
@@ -116,6 +117,7 @@ public sealed class SmileProjectSourceSet
     public string Version { get; }
     public string OutputName { get; }
     public string? ApplicationId { get; }
+    public string? NativeWorkerScript { get; }
     public string EffectiveApplicationId => ApplicationId ?? OutputName;
     public bool RememberWindowPlacement { get; }
     public bool ResponsiveWindow { get; }
@@ -273,6 +275,8 @@ public sealed class SmileProjectSourceSet
                     "ResponsiveWindow is available only to Game projects.", fullProjectPath, line, column);
         }
 
+        var nativeWorkerScript = NativeWorkerProject.Read(propertyGroups, projectKind, projectDirectory, fullProjectPath);
+
         var authorElements = propertyGroups.SelectMany(group =>
             group.Elements().Where(element => element.Name.LocalName == "WebLoadingAuthor")).ToArray();
         string? webLoadingAuthor = null;
@@ -391,7 +395,7 @@ public sealed class SmileProjectSourceSet
         return new SmileProjectSourceSet(fullProjectPath, projectKind, startupFile ?? string.Empty,
             libraryName, version, outputName!, applicationId, rememberWindowPlacement, responsiveWindow, webLoadingAuthor, webLoadingLogoPath,
             items, compilationSources, references, assetManifest,
-            model3DAssets);
+            model3DAssets, nativeWorkerScript);
     }
 
     public void ValidateFiles()

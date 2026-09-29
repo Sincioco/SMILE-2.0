@@ -1,0 +1,142 @@
+''' Horizon placement and ground-floor access; furniture and flight lanes stay solid.
+Module Smile.Tools.NerisHorizonRoute
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+
+Public Const ORIGIN_X = -7400.0
+Public Const ORIGIN_Z = 1250.0
+Public Const DECK_Y = 23.12
+Public Const SCALE = 10.0
+Public Const YAW = -90.0
+
+Private Dim Enabled As Boolean
+
+Public Sub Enable(Value As Boolean)
+
+    Enabled = Value
+
+End Sub
+
+Public Function Active() As Boolean
+
+    Return Enabled
+
+End Function
+
+Public Function Contains(X As Double, Z As Double) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Enabled And X >= -11400.0 And X <= -5400.0 And Z >= -3550.0 And Z <= 6050.0
+
+    Return Result
+
+End Function
+
+Public Function CanStand(X As Double, Z As Double) As Boolean
+
+    Dim LocalX As Double
+    Dim LocalZ As Double
+    Dim Result As Boolean
+
+    LocalX = (Z - ORIGIN_Z) / SCALE
+    LocalZ = (ORIGIN_X - X) / SCALE
+    Result = Enabled And Abs(LocalX) <= 475.0 And LocalZ >= -195.0 And LocalZ < -3.0
+    Result = Result Or (Enabled And Abs(LocalX) <= 11.0 And LocalZ >= -36.0 And LocalZ <= 4.0)
+    Result = Result Or (Enabled And GroundFloor(LocalX, LocalZ))
+    Result = Result Or (Enabled And Abs(LocalX) >= 272.0 And Abs(LocalX) <= 292.0 And
+        LocalZ >= -195.0 And LocalZ <= 185.0)
+
+    Return Result
+
+End Function
+
+Private Function GroundFloor(X As Double, Z As Double) As Boolean
+
+    Dim Index As Number
+    Dim Center As Double
+
+    If (Abs(X) > 256.0 Or
+        Z < 3.0 Or
+        Z > 145.0) Then
+        Return False
+    End If
+
+    If ((Abs(Abs(X) - 80.0) < 13.0 Or Abs(Abs(X) - 120.0) < 13.0) And
+        Abs(Z - 31.0) < 3.0) Then
+        Return False
+    End If
+
+    If (Abs(Abs(X) - 190.0) < 6.0 And
+        Z > 41.0 And
+        Z < 78.0) Then
+        Return False
+    End If
+
+    For Index = 0 To 18
+
+        Center = -234.0 + ToDouble(Index) * 26.0
+
+        If (Index <> 9 And
+            Abs(X - Center) < 2.0 And
+            (Abs(Z - 52.0) < 2.0 Or Abs(Z - 104.0) < 2.0)) Then
+            Return False
+        End If
+
+    End For
+
+    For Index = 0 To 2
+
+        Center = 80.0 + ToDouble(Index) * 65.0
+
+        If (Abs(Abs(X) - Center) < 9.5 And
+            (Abs(Z - 60.0) < 2.5 Or Abs(Z - 112.0) < 2.5)) Then
+            Return False
+        End If
+
+    End For
+
+    Return True
+
+End Function
+
+Public Function ToWorld(Point As P.Vector3) As P.Vector3
+
+    Dim Result As P.Vector3
+
+    Result = P.Vector(ORIGIN_X - Point.Z * SCALE, DECK_Y + Point.Y * SCALE,
+        ORIGIN_Z + Point.X * SCALE)
+
+    Return Result
+
+End Function
+
+Public Function GroundHeight(X As Double, Z As Double) As Double
+
+    Dim Result As Double
+    Dim Depth As Double
+
+    Result = DECK_Y
+    Depth = (ORIGIN_X - X) / SCALE
+
+    If (Abs(Z - ORIGIN_Z) <= 2600.0 And
+        Depth >= 0.0 And
+        Depth <= 150.0) Then
+        Result = DECK_Y + 0.8 * SCALE
+    Else If (Abs(Z - ORIGIN_Z) <= 330.0 And
+        Depth >= -31.0 And
+        Depth < -23.0) Then
+        Result = DECK_Y + Min(0.8, Floor((Depth + 31.0) / 2.0 + 1.0) * 0.2) * SCALE
+    Else If (Abs(Z - ORIGIN_Z) <= 330.0 And
+        Depth >= -23.0 And
+        Depth < 0.0) Then
+        Result = DECK_Y + 0.8 * SCALE
+    End If
+
+    Return Result
+
+End Function
+
+End Module

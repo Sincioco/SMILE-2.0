@@ -1,0 +1,193 @@
+''' Incremental Horizon building/fleet resources; flight state belongs to this instance.
+Module Smile.Tools.NerisHorizonPreview
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Tools.NerisHorizonRoute As Route
+Import Smile.Tools.NerisSpaceportTraffic As Traffic
+Import Smile.Tools.NerisRunwayTraffic As Runway
+Import Smile.Tools.NerisHorizonGlow As Glow
+
+Public Type State
+    Models[3] As Core.Model3D
+    Objects[30] As Core.Object3D
+    FirstPart[3] As Number
+    Flights As Traffic.State
+    RunwayFlight As Runway.State
+    Lights As Glow.State
+    RunwayFirst As Number
+    Loaded As Number
+    ObjectCount As Number
+    Ready As Boolean
+    Failed As Boolean
+End Type
+
+Public Sub LoadNext(ByRef Value As State)
+
+    Dim Part As Number
+    Dim Object As Core.Object3D
+    Dim Ok As Boolean
+    Dim Name As Text
+
+    If Value.Ready Or Value.Failed Then
+        Return
+    End If
+
+    If Value.Loaded = 0 Then
+
+        If (G.LiveModelCount3D() + 3 > G.MaximumModelCount3D() Or
+            G.LiveMeshCount3D() + 24 > G.MaximumMeshCount3D() Or
+            G.LiveMaterialCount3D() + 25 > G.MaximumMaterialCount3D()) Then
+            Value.Failed = True
+
+            Return
+        End If
+
+    End If
+
+    Name = "Horizon"
+
+    If Value.Loaded = 1 Then
+        Name = "Transport"
+    Else If Value.Loaded = 2 Then
+        Name = "Royal"
+    End If
+
+    Value.Models[Value.Loaded] = G.LoadModelGeometry3D("Assets/Neris/Horizon/" + Name + ".sm3d")
+    Ok = Value.Models[Value.Loaded].GeometryReady
+    Ok = G.PrepareModelPbr3D(Value.Models[Value.Loaded], G.TEXTURE_FILTER_ANISOTROPIC, 1, 16) And Ok
+    Value.FirstPart[Value.Loaded] = Value.ObjectCount
+
+    If Value.ObjectCount + Value.Models[Value.Loaded].PartCount > 24 Then
+        Value.Failed = True
+
+        Return
+    End If
+
+    For Part = 0 To Value.Models[Value.Loaded].PartCount - 1
+
+        Object = G.CreateModelPart3D(Value.Models[Value.Loaded], Part)
+        Ok = Object.Handle <> 0 And Ok
+        Ok = P.SetScale(Object, Route.SCALE * 100.0, Route.SCALE * 100.0, Route.SCALE * 100.0) And Ok
+        Ok = P.SetRotation(Object, 0.0, Route.YAW, 0.0) And Ok
+        Ok = P.SetPosition(Object, Route.ORIGIN_X, Route.DECK_Y, Route.ORIGIN_Z) And Ok
+        Value.Objects[Value.ObjectCount] = Object
+        Value.ObjectCount = Value.ObjectCount + 1
+    End For
+
+    Value.Loaded = Value.Loaded + 1
+
+    If Value.Loaded = 3 And Ok Then
+
+        Value.RunwayFirst = Value.ObjectCount
+
+        For Part = 0 To Value.Models[1].PartCount - 1
+
+            Object = G.CreateModelPart3D(Value.Models[1], Part)
+            Ok = Object.Handle <> 0 And Ok
+            Ok = P.SetScale(Object, Route.SCALE * Runway.SCALE * 100.0,
+                Route.SCALE * Runway.SCALE * 100.0, Route.SCALE * Runway.SCALE * 100.0) And Ok
+            Value.Objects[Value.ObjectCount] = Object
+            Value.ObjectCount = Value.ObjectCount + 1
+        End For
+
+        Ok = Glow.Create(Value.Lights) And Ok
+
+    End If
+
+    Value.Failed = Not Ok
+    Value.Ready = Ok And Value.Loaded = 3 And Value.ObjectCount = 29
+
+    Call Route.Enable(Value.Ready)
+
+End Sub
+
+Public Sub Update(ByRef Value As State, Elapsed As Number)
+
+    If Value.Ready Then
+
+        Call Traffic.Advance(Value.Flights, Elapsed)
+        Call Runway.Advance(Value.RunwayFlight, Elapsed)
+        Call Glow.Update(Value.Lights, Elapsed)
+
+    End If
+
+End Sub
+
+Public Function Draw(ByRef Value As State) As Boolean
+
+    Dim Index As Number
+    Dim Model As Number
+    Dim Offset As P.Vector3
+    Dim Ok As Boolean
+
+    Ok = True
+
+    If Value.Ready Then
+
+        For Model = 0 To 2
+
+            Offset = P.Vector(0.0, 0.0, 0.0)
+
+            If Model > 0 Then
+                Offset = Traffic.Position(Value.Flights, Model = 2)
+            End If
+
+            Offset = Route.ToWorld(Offset)
+
+            If Model = 0 Or Traffic.Visible(Value.Flights, Model = 2) Then
+
+                For Index = Value.FirstPart[Model] To Value.FirstPart[Model] + Value.Models[Model].PartCount - 1
+                    Ok = P.SetPosition(Value.Objects[Index], Offset.X, Offset.Y, Offset.Z) And Ok
+                    Ok = G.DrawObject3D(Value.Objects[Index]) And Ok
+                End For
+
+            End If
+
+        End For
+
+        If Runway.Visible(Value.RunwayFlight) Then
+
+            Offset = Route.ToWorld(Runway.Position(Value.RunwayFlight))
+
+            For Index = Value.RunwayFirst To Value.ObjectCount - 1
+                Ok = P.SetPosition(Value.Objects[Index], Offset.X, Offset.Y, Offset.Z) And Ok
+                Ok = P.SetRotation(Value.Objects[Index], Runway.Pitch(Value.RunwayFlight),
+                    Runway.Heading(Value.RunwayFlight), 0.0) And Ok
+                Ok = G.DrawObject3D(Value.Objects[Index]) And Ok
+            End For
+
+        End If
+
+        Ok = Glow.Draw(Value.Lights) And Ok
+
+    End If
+
+    Return Ok
+
+End Function
+
+Public Sub Destroy(ByRef Value As State)
+
+    Dim Index As Number
+    Dim Empty As State
+
+    For Index = 0 To Value.ObjectCount - 1
+        Call G.DestroyObject3D(Value.Objects[Index])
+    End For
+
+    For Index = 0 To 2
+        Call G.DestroyModel3D(Value.Models[Index])
+    End For
+
+    Call Route.Enable(False)
+    Call Glow.Destroy(Value.Lights)
+
+    Value = Empty
+
+End Sub
+
+End Module

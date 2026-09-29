@@ -1,0 +1,131 @@
+''' Full-scale southwest placement and conservative ground-level arrival path.
+Module Smile.Tools.NerisSpaceportRoute
+
+Option Explicit
+
+Import Smile.Simple3D.PartyTrail3D As Trail
+
+Public Const ORIGIN_X = -5500.0
+Public Const ORIGIN_Z = -7600.0
+Public Const DECK_Y = 23.12
+Public Const SCALE = 10.0
+
+Private Dim Enabled As Boolean
+Private Dim DoorRotation As Double
+Private Dim DoorHold As Number
+Private Dim Entered As Boolean
+Private Dim PendingEntry As Boolean
+
+Public Sub Enable(Value As Boolean)
+
+    Enabled = Value
+    DoorRotation = 0.0
+    DoorHold = 0
+    Entered = False
+    PendingEntry = False
+
+End Sub
+
+Public Function Active() As Boolean
+
+    Return Enabled
+
+End Function
+
+Public Function Contains(X As Double, Z As Double) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Enabled And X >= -9100.0 And X <= -1900.0 And Z >= -9900.0 And Z <= -3700.0
+
+    Return Result
+
+End Function
+
+''' The central route narrows through the actual swinging entrance.
+Public Function CanStand(X As Double, Z As Double) As Boolean
+
+    Dim LocalX As Double
+    Dim LocalZ As Double
+    Dim Result As Boolean
+
+    LocalX = (ORIGIN_X - X) / SCALE
+    LocalZ = (ORIGIN_Z - Z) / SCALE
+    Result = Enabled And Abs(LocalX) <= 10.0 And LocalZ >= -390.0 And LocalZ <= 45.0
+
+    If LocalZ > -47.0 And LocalZ < -32.0 Then
+        Result = Result And Abs(LocalX) < 5.6 And DoorRotation >= 80.0
+    End If
+
+    Return Result
+
+End Function
+
+Public Sub Update(ByRef Path As Trail.State, ActorCount As Number, Elapsed As Number)
+
+    Dim Index As Number
+    Dim X As Double
+    Dim Z As Double
+    Dim NearDoor As Boolean
+
+    If Not Enabled Then
+        Return
+    End If
+
+    For Index = 0 To Min(ActorCount, 5) - 1
+        X = (ORIGIN_X - Path.Positions[Index].X) / SCALE
+        Z = (ORIGIN_Z - Path.Positions[Index].Z) / SCALE
+        NearDoor = NearDoor Or (Abs(X) < 9.0 And Z > -57.0 And Z < -24.0 And
+            Abs(Path.Positions[Index].Y - DECK_Y) < 18.0)
+    End For
+
+    If NearDoor Then
+
+        DoorHold = 1500
+        DoorRotation = Min(95.0, DoorRotation + ToDouble(Elapsed) * 0.065)
+
+    Else
+
+        DoorHold = Max(0, DoorHold - Elapsed)
+
+        If DoorHold = 0 Then
+            DoorRotation = Max(0.0, DoorRotation - ToDouble(Elapsed) * 0.045)
+        End If
+
+        Entered = False
+
+    End If
+
+    X = (ORIGIN_X - Path.Positions[0].X) / SCALE
+    Z = (ORIGIN_Z - Path.Positions[0].Z) / SCALE
+
+    If (Abs(X) < 5.6 And
+        Z >= -44.5 And
+        Z < -24.0 And
+        DoorRotation >= 80.0 And
+        Not Entered) Then
+        PendingEntry = True
+        Entered = True
+    End If
+
+End Sub
+
+Public Function DoorAngle() As Double
+
+    Return DoorRotation
+
+End Function
+
+''' One entry event per approach, for the spaceport cutscene owner to consume.
+Public Function ConsumeEntry() As Boolean
+
+    Dim Result As Boolean
+
+    Result = PendingEntry
+    PendingEntry = False
+
+    Return Result
+
+End Function
+
+End Module

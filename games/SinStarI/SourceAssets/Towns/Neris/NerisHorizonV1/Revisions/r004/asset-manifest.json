@@ -1,0 +1,87 @@
+{
+  "objects": 1490,
+  "models": 3,
+  "parts": {
+    "Horizon": 13,
+    "Transport": 6,
+    "Royal": 5
+  },
+  "triangles": {
+    "Horizon": 15048,
+    "Transport": 1130,
+    "Royal": 1130
+  },
+  "hangars": [
+    {
+      "name": "Transport Hangar",
+      "center": [
+        -82,
+        -121
+      ],
+      "clear_width": 140,
+      "clear_depth": 104,
+      "clear_height": 43
+    },
+    {
+      "name": "Royal Hangar",
+      "center": [
+        148,
+        -126
+      ],
+      "clear_width": 82,
+      "clear_depth": 94,
+      "clear_height": 29
+    }
+  ],
+  "ships": [
+    {
+      "name": "Transport Display Craft",
+      "center": [
+        -82,
+        51
+      ],
+      "width": 82,
+      "length": 96,
+      "height": 36
+    },
+    {
+      "name": "Royal Display Craft",
+      "center": [
+        148,
+        68
+      ],
+      "width": 42.64,
+      "length": 49.92,
+      "height": 18.72
+    }
+  ],
+  "placement": {
+    "native": [
+      1500,
+      23.12,
+      -7600
+    ],
+    "yaw": 180,
+    "scale": 10
+  },
+  "bounds_m": {
+    "min": [
+      -270,
+      -390,
+      -14
+    ],
+    "max": [
+      270,
+      225,
+      196
+    ]
+  },
+  "glass": "Emissive opaque PBR teal panels with broad reflections.",
+  "revision": "r004",
+  "rear_terminal_m": [
+    520,
+    150,
+    63
+  ],
+  "side_tower_height_m": 195.2
+}

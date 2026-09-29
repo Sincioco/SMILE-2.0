@@ -19,6 +19,7 @@ Import Smile.Tools.Character3DViewerCalibration As Numbers
 Import Smile.Tools.NerisTownAppearance As Appearance
 Import Smile.Tools.NerisTownMap As TownMap
 Import Smile.Tools.NerisTownCamera As Drone
+Import Smile.Tools.NerisTownInspectionLimits As Limits
 Import Smile.Tools.NerisTownCameraPanel As CameraPanel
 Import Smile.Tools.NerisTownEntrances As Entrances
 Import Smile.Tools.TownEditorSession As Authoring
@@ -26,10 +27,19 @@ Import Smile.Tools.NerisCastlePreview As Castle
 Import Smile.Tools.NerisCastleRoute As CastleRoute
 Import Smile.Tools.TownPicking As Picking
 Import Smile.Tools.NerisTownTour As Tour
+Import Smile.Tools.NerisSpaceportPreview As Spaceport
+Import Smile.Tools.NerisSpaceportRoute As SpaceportRoute
+Import Smile.Tools.NerisHorizonPreview As Horizon
+Import Smile.Tools.NerisHorizonRoute As HorizonRoute
+Import Smile.Tools.NerisTownLandmarks As Landmarks
+Import Smile.Tools.NerisTownConnections As Connections
 
 Public Type State
     Town As Assets.State
     Comparison As Castle.State
+    Harbor As Spaceport.State
+    Horizon As Horizon.State
+    Landmarks As Landmarks.State
     People As Party.State
     View As Arena.State
     Look As Appearance.State
@@ -117,8 +127,17 @@ Public Sub LoadNext(ByRef Value As State)
 
     Ok = True
 
-    If Value.Edited And Text_Slice(Authoring.TownName(), 0, 10) = "Neris Town" Then
-        Ok = Castle.Create(Value.Comparison) And Ok
+    If Value.Edited Then
+
+        Ok = Landmarks.LoadNext(Value.Landmarks, Authoring.TownName(),
+            Authoring.CoversArea(-11400.0, -3550.0, -5400.0, 6050.0),
+            Value.Comparison, Value.Harbor, Value.Horizon)
+        Value.Failed = Value.Landmarks.Failed
+
+        If Not Ok Or Value.Failed Then
+            Return
+        End If
+
     End If
 
     If Not Value.View.Ready Then
@@ -136,7 +155,17 @@ Public Sub LoadNext(ByRef Value As State)
         Ok = Entrances.Create(Value.Doors) And Ok
     End If
 
-    Ok = Scene.SetShadowArea(-1000, 650, 0, 8000, 7600, 1, 11000) And Ok
+    If Value.Harbor.Ready Or Value.Horizon.Ready Then
+
+        Value.View.MaximumDistance = 40000.0
+        Value.BaseCamera.FarPlane = 55000.0
+        Ok = Scene.SetShadowArea(-2650, 1500, -3200, 15200, 15500, 1, 22000) And Ok
+
+    Else
+        Ok = Scene.SetShadowArea(-1000, 650, 0, 8000, 7600, 1, 11000) And Ok
+
+    End If
+
     Ok = Scene.SetShadowBias(25, 60) And Ok
     Value.Ready = Value.View.Ready And Value.People.Ready And Ok
     Value.Failed = Not Value.Ready
@@ -165,13 +194,17 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
 
     ' Header hover blocks pointer gestures, not independent keyboard framing.
 
-    If Key = KEY_1 And Not Blocked And Not Authoring.GestureActive() Then
+    If (Key = KEY_1 And
+        Not Blocked And
+        Not Authoring.GestureActive()) Then
         Call TopDown(Value)
 
         Return
     End If
 
-    If Key = KEY_SPACE And Not Blocked And Value.Cinematic Then
+    If (Key = KEY_SPACE And
+        Not Blocked And
+        Value.Cinematic) Then
 
         Value.OrbitPaused = Not Value.OrbitPaused
         Value.IdleOrbit = False
@@ -183,8 +216,11 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
 
     Blocked = Blocked Or HeaderHovered
 
-    If (Pointer_Pressed(POINTER_PRIMARY) And Pointer_X() >= 665 And Pointer_X() < 755 And
-        Pointer_Y() >= 10 And Pointer_Y() < 39) Then
+    If (Pointer_Pressed(POINTER_PRIMARY) And
+        Pointer_X() >= 665 And
+        Pointer_X() < 755 And
+        Pointer_Y() >= 10 And
+        Pointer_Y() < 39) Then
 
         Call Authoring.BeginEditing()
 
@@ -218,9 +254,14 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
         Blocked = Blocked Or Authoring.CameraBlocked(CameraPanel.Hovered() Or Value.Panel.DragRow > 0)
     End If
 
-    If (CastleRoute.Active() And Not Authoring.Editing() And Not Authoring.CameraBlocked() And
-        Pointer_Pressed(POINTER_PRIMARY) And Pointer_X() >= 770 And Pointer_X() < 944 And
-        Pointer_Y() >= 10 And Pointer_Y() < 39) Then
+    If (CastleRoute.Active() And
+        Not Authoring.Editing() And
+        Not Authoring.CameraBlocked() And
+        Pointer_Pressed(POINTER_PRIMARY) And
+        Pointer_X() >= 770 And
+        Pointer_X() < 944 And
+        Pointer_Y() >= 10 And
+        Pointer_Y() < 39) Then
 
         Call Party.Teleport(Value.People, P.Vector(CastleRoute.ORIGIN_X,
             CastleRoute.DECK_Y, CastleRoute.ORIGIN_Z - 1558.0))
@@ -236,6 +277,19 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
 
         Return
 
+    End If
+
+    If ((SpaceportRoute.Active() Or HorizonRoute.Active()) And
+        Not Authoring.Editing() And
+        Not Authoring.CameraBlocked() And
+        Pointer_Pressed(POINTER_PRIMARY) And
+        Pointer_X() >= 954 And
+        Pointer_X() < 1128 And
+        Pointer_Y() >= 10 And
+        Pointer_Y() < 39) Then
+        Call ResetOverview(Value, True)
+
+        Return
     End If
 
     Value.InputActive = (Key <> KEY_NONE Or Pointer_Delta_X() <> 0 Or
@@ -274,6 +328,12 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
 
     Pointer = Motion.ReadPointer(Blocked)
 
+    If (Not Value.Follow And
+        Pointer.Wheel <> 0 And
+        Not Value.Flight.CursorOrbit) Then
+        Call Limits.BeginZoom(Value.View, Value.BaseCamera)
+    End If
+
     Call Motion.ResolveGesture(Value.View.Controls, Pointer)
 
     If Value.Flight.CursorOrbit And Not Pointer.OrbitHeld Then
@@ -308,7 +368,9 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
         Value.People.SpeedPercent = Max(25, Value.People.SpeedPercent - 25)
     End If
 
-    If (Not Blocked And Not MovingGesture And
+    If (Not Blocked And
+        Not MovingGesture And
+        Not (Value.Follow And Pointer.OrbitPressed And Not Pointer.PanModifier) And
         (Pointer.OrbitPressed Or Pointer.PanPressed Or Pointer_Pressed(POINTER_PRIMARY))) Then
 
         Value.Cinematic = False
@@ -317,13 +379,15 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
 
     End If
 
-    If Not Blocked And Not MovingGesture And Pointer.OrbitPressed Then
+    If (Not Blocked And
+        (Not MovingGesture Or Value.Follow) And
+        Pointer.OrbitPressed) Then
 
-        Call Keyboard.Capture(Value.Keys, Value.View, Value.BaseCamera)
-        Call ManualCamera(Value)
+        Call BeginPointerOrbit(Value, Pointer.PanModifier)
 
-        If Picking.OrbitPoint(Value.View.LiveCamera, Pointer_X(), Pointer_Y(),
-            Window_Width(), Window_Height(), OrbitPoint) Then
+        If (Not Value.Follow And
+            Picking.OrbitPoint(Value.View.LiveCamera, Pointer_X(), Pointer_Y(),
+            Window_Width(), Window_Height(), OrbitPoint)) Then
             Call Drone.BeginCursorOrbit(Value.Flight, Value.View.LiveCamera, OrbitPoint,
                 Pointer_X(), Pointer_Y())
         End If
@@ -355,9 +419,10 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
 
         Value.Follow = True
         Value.PartyCamera = True
+        Value.Keys.FlyInspect = False
         Value.Cinematic = False
 
-        Call Drone.Focus(Value.Flight, 180.0, Value.View.LiveCamera)
+        Call Drone.Focus(Value.Flight, Value.People.Members[0].Yaw, Value.View.LiveCamera)
         Call Motion.Reset(Value.View.Controls, Value.View.Zoom)
 
     End If
@@ -390,10 +455,45 @@ Public Sub ToggleDrone(ByRef Value As State)
 
 End Sub
 
-''' Begin a steady map orbit from the approved overview perspective.
+''' Start orbit from the displayed shot, absorbing existing pan and zoom exactly once.
 Public Sub StartOrbit(ByRef Value As State)
 
-    Call ResetOverview(Value)
+    Call Keyboard.Capture(Value.Keys, Value.View, Value.BaseCamera)
+
+    If Value.Follow And Not Value.Keys.FlyInspect Then
+        Call Drone.AnchorParty(Value.Flight, Value.View, Value.BaseCamera, Value.People.Path.Positions[0])
+    Else
+        Value.Follow = False
+        Value.PartyCamera = False
+    End If
+
+    Value.Flight.CursorOrbit = False
+    Value.Flight.Suspended = True
+    Value.Flight.Focusing = False
+    Value.Flight.Arrival = False
+    Value.Flight.Peeking = False
+    Value.Cinematic = True
+    Value.OrbitPaused = False
+    Value.IdleOrbit = False
+    Value.IdleTime = 0
+
+End Sub
+
+''' Mouse and automatic orbit share party anchoring; free inspection keeps cursor picking.
+Public Sub BeginPointerOrbit(ByRef Value As State, Optional PanModifier As Boolean = False)
+
+    Call Keyboard.Capture(Value.Keys, Value.View, Value.BaseCamera)
+
+    If (Value.Follow And
+        Not Value.Keys.FlyInspect And
+        Not PanModifier) Then
+        Call Drone.AnchorParty(Value.Flight, Value.View, Value.BaseCamera, Value.People.Path.Positions[0])
+    Else
+
+        Call ManualCamera(Value)
+    End If
+
+    Value.Cinematic = False
 
 End Sub
 
@@ -433,7 +533,7 @@ Public Sub FitTown(ByRef Value As State)
 
 End Sub
 
-Public Sub ResetOverview(ByRef Value As State)
+Public Sub ResetOverview(ByRef Value As State, Optional Harbor As Boolean = False)
 
     Value.View.MaximumPitch = M.Radians(80.0)
     Value.Flight.CursorOrbit = False
@@ -449,8 +549,12 @@ Public Sub ResetOverview(ByRef Value As State)
 
     Call Tour.Frame(Value.BaseCamera, P.Vector(-1075.0, 150.0, 0.0))
 
-    If Value.Edited Then
-        Call Authoring.FrameDocument(Value.BaseCamera, True)
+    If Harbor And Value.Horizon.Ready Then
+        Call Tour.Frame(Value.BaseCamera, P.Vector(-8100.0, 700.0, 1250.0), 20000.0, 90.0)
+    Else If Harbor Then
+        Call Tour.Frame(Value.BaseCamera, P.Vector(-5500.0, 900.0, -7350.0), 18000.0, -165.0)
+    Else If Value.Edited Then
+        Call Authoring.FrameDocument(Value.BaseCamera, Not Value.Harbor.Ready)
     End If
 
     Call Arena.BeginTransition(Value.View, 0)
@@ -535,11 +639,19 @@ Public Sub AdvanceKeyboard(ByRef Value As State, Keys As Keyboard.HeldKeys, Elap
 
         If Keys.ArrowSide <> 0.0 Or Keys.ArrowForward <> 0.0 Then
 
-            If Value.Follow Then
+            If Value.Follow And Not Value.Flight.OrbitAtParty Then
                 Call Keyboard.Capture(Value.Keys, Value.View, Value.BaseCamera)
+                Call Drone.AnchorParty(Value.Flight, Value.View, Value.BaseCamera, Value.People.Path.Positions[0])
+            Else If Not Value.Follow Then
+                Call ManualCamera(Value)
             End If
 
-            Call ManualCamera(Value)
+            If (Keys.ArrowForward <> 0.0 And
+                Not Value.Keys.Zooming And
+                Not Value.Follow) Then
+                Call Limits.BeginZoom(Value.View, Value.BaseCamera)
+            End If
+
             Call Keyboard.OrbitZoom(Value.View, Keys, Elapsed)
 
         End If
@@ -552,6 +664,8 @@ Public Sub AdvanceKeyboard(ByRef Value As State, Keys As Keyboard.HeldKeys, Elap
 
     End If
 
+    Value.Keys.Zooming = Keys.ArrowForward <> 0.0 And Not Value.Keys.FlyInspect
+
 End Sub
 
 ''' Party movement retains navigation, collision and follower ownership.
@@ -559,6 +673,8 @@ Public Sub MoveParty(ByRef Value As State, Direction As P.Vector3, Elapsed As Nu
 
     Dim Leader As P.Vector3
     Dim Distance As Double
+    Dim Destination As Text
+    Dim Ok As Boolean
 
     Leader = Value.People.Path.Positions[0]
 
@@ -571,12 +687,29 @@ Public Sub MoveParty(ByRef Value As State, Direction As P.Vector3, Elapsed As Nu
 
     Call Party.Update(Value.People, Leader, Elapsed)
 
+    If Value.Edited And Not Authoring.Editing() Then
+
+        Destination = Connections.Destination(Authoring.TownName(), Leader, M.Length(Direction) > 0.001)
+
+        If Text_Length(Destination) > 0 Then
+            Ok = Authoring.TravelTo(Destination, Connections.Arrival(Destination))
+        End If
+
+    End If
+
 End Sub
 
 Public Sub Update(ByRef Value As State, Elapsed As Number)
 
     Dim Held As Keyboard.HeldKeys
     Dim Leader As P.Vector3
+    Dim ArrivalHeading As Double
+
+    If Value.Edited And Value.Landmarks.Town <> Authoring.TownName() Then
+        Call Authoring.Update(Value.People.Path.Positions[0], Elapsed)
+
+        Value.Ready = False
+    End If
 
     If Not Value.Ready Then
         Call LoadNext(Value)
@@ -594,6 +727,11 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
         Call CastleRoute.Update(Value.People.Path, Value.People.MemberCount, Elapsed)
     End If
 
+    If SpaceportRoute.Active() Then
+        Call SpaceportRoute.Update(Value.People.Path, Value.People.MemberCount, Elapsed)
+    End If
+
+    Call Horizon.Update(Value.Horizon, Elapsed)
     Call AdvanceKeyboard(Value, Held, Elapsed)
 
     Leader = Value.People.Path.Positions[0]
@@ -604,7 +742,13 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
 
         If Authoring.TakeSpawn(Leader) Then
 
-            Call Party.Teleport(Value.People, Leader)
+            ArrivalHeading = 180.0
+
+            If Authoring.TownName() = "Neris Spaceport" Then
+                ArrivalHeading = 0.0
+            End If
+
+            Call Party.Teleport(Value.People, Leader, ArrivalHeading)
 
             If Authoring.Editing() Then
 
@@ -612,7 +756,7 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
 
             Else
 
-                Call Drone.ArrivalFrame(Value.Flight, Value.View, Value.BaseCamera, Leader)
+                Call Drone.ArrivalFrame(Value.Flight, Value.View, Value.BaseCamera, Leader, ArrivalHeading)
 
                 Value.Follow = True
                 Value.Cinematic = False
@@ -642,8 +786,8 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
     End If
 
     Call Drone.Compose(Value.Flight, Value.View, Value.BaseCamera, Value.Follow And Not Value.Keys.FlyInspect, Elapsed,
-        Drone.GroundShot(Value.Flight, Value.PartyCamera),
-        Value.Keys.FlyInspect And Not Value.Cinematic)
+        Drone.GroundShot(Value.Flight, Value.PartyCamera) Or Value.Cinematic,
+        Value.Keys.FlyInspect)
 
 End Sub
 
@@ -699,7 +843,7 @@ Public Sub Draw(ByRef Value As State)
     If Not Value.Ready Then
 
         Clear RGB(12, 20, 32)
-        Draw Text "Neris Town" At 38, 132 Size 32 Color WHITE
+        Draw Text Authoring.TownName() At 38, 132 Size 32 Color WHITE
 
         If Value.Failed Then
 
@@ -747,6 +891,8 @@ Public Sub Draw(ByRef Value As State)
         End If
 
         Ok = Castle.Draw(Value.Comparison) And Ok
+        Ok = Spaceport.Draw(Value.Harbor) And Ok
+        Ok = Horizon.Draw(Value.Horizon) And Ok
         Ok = Scene.EndScene() And Ok
 
     End If
@@ -758,7 +904,7 @@ End Sub
 Public Sub Overlay(ByRef Value As State)
 
     Fill Rectangle 0, 0, Window_Width(), 94, RGB(12, 20, 32)
-    Draw Text Text_Slice(Authoring.TownName(), 0, 13) At 18, 12 Size 23 Color WHITE
+    Draw Text Text_Slice(Authoring.TownName(), 0, 20) At 18, 12 Size 18 Color WHITE
     Draw Text "Speed: " + Numbers.NumberText(Value.People.SpeedPercent) + "%  (+ / -)" At 405, 18 Size 16 Color WHITE
     Fill Rectangle 665, 10, 90, 29, RGB(20, 90, 108)
     Draw Text "Edit Town" At 675, 17 Size 15 Color WHITE
@@ -786,6 +932,11 @@ Public Sub Overlay(ByRef Value As State)
         Value.PartyCamera, Value.Flight.Enabled And Not Value.Flight.Suspended,
         Drone.GroundShot(Value.Flight, Value.PartyCamera), Value.Keys.FlyInspect)
 
+    If (SpaceportRoute.Active() Or HorizonRoute.Active()) And Not Authoring.Editing() Then
+        Fill Rectangle 954, 10, 174, 29, RGB(20, 90, 108)
+        Draw Text "Orbit Airport" At 964, 17 Size 14 Color WHITE
+    End If
+
     If Value.Ready Then
 
         If Not Authoring.Editing() Then
@@ -794,7 +945,8 @@ Public Sub Overlay(ByRef Value As State)
 
                 If Not Value.Cinematic Then
                     Call Authoring.DrawMap(Value.People.Path.Positions[0], ToNumber(Value.Map.Opacity), Party.LeaderName(Value.People),
-                        CastleRoute.MapLabel(), P.Vector(CastleRoute.ORIGIN_X, CastleRoute.DECK_Y, CastleRoute.ORIGIN_Z))
+                        CastleRoute.MapLabel(), P.Vector(CastleRoute.ORIGIN_X, CastleRoute.DECK_Y, CastleRoute.ORIGIN_Z),
+                        Value.Map.Headlight, Value.People.Members[0].Yaw)
                 End If
 
             Else
@@ -814,6 +966,8 @@ Public Sub Overlay(ByRef Value As State)
 
         If Value.Keys.FlyInspect Then
             Draw Text "Fly Inspect" At 180, 18 Size 16 Color RGB(70, 210, 205)
+        Else If Value.Cinematic And Value.Follow Then
+            Draw Text "Party Orbit" At 180, 18 Size 16 Color RGB(70, 210, 205)
         Else If Value.Cinematic Then
             Draw Text "Map Orbit" At 180, 18 Size 16 Color RGB(70, 210, 205)
         Else If Value.PartyCamera Then
@@ -832,7 +986,7 @@ End Sub
 
 Public Sub Destroy(ByRef Value As State)
 
-    Call Castle.Destroy(Value.Comparison)
+    Call Landmarks.Destroy(Value.Landmarks, Value.Comparison, Value.Harbor, Value.Horizon)
 
     If Value.Edited Then
         Call Authoring.Release()

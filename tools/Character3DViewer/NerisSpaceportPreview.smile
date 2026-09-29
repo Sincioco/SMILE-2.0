@@ -1,0 +1,123 @@
+''' Incremental resources for the southwest spaceport; no document or runtime state.
+Module Smile.Tools.NerisSpaceportPreview
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Tools.NerisSpaceportRoute As Route
+Import Smile.Tools.Character3DViewerCalibration As Numbers
+Import Smile.Tools.NerisSpaceportEntrance As Entrance
+Import Smile.Tools.NerisSpaceportGlow As Glow
+
+Public Type State
+    Models[6] As Core.Model3D
+    Objects[21] As Core.Object3D
+    Doors As Entrance.State
+    Light As Glow.State
+    Loaded As Number
+    ObjectCount As Number
+    Ready As Boolean
+    Failed As Boolean
+End Type
+
+Public Sub LoadNext(ByRef Value As State, WestDoor As Core.Model3D, EastDoor As Core.Model3D)
+
+    Dim Part As Number
+    Dim Object As Core.Object3D
+    Dim Ok As Boolean
+    Dim Name As Text
+
+    If Value.Ready Or Value.Failed Then
+        Return
+    End If
+
+    If Value.Loaded = 0 Then
+
+        If (G.LiveModelCount3D() + 6 > G.MaximumModelCount3D() Or
+            G.LiveMeshCount3D() + 21 > G.MaximumMeshCount3D() Or
+            G.LiveMaterialCount3D() + 22 > G.MaximumMaterialCount3D()) Then
+            Value.Failed = True
+
+            Return
+        End If
+
+    End If
+
+    Name = "Assets/Neris/Spaceport01/Spaceport-0" + Numbers.NumberText(Value.Loaded) + ".sm3d"
+    Value.Models[Value.Loaded] = G.LoadModelGeometry3D(Name)
+    Ok = Value.Models[Value.Loaded].GeometryReady
+    Ok = G.PrepareModelPbr3D(Value.Models[Value.Loaded], G.TEXTURE_FILTER_ANISOTROPIC, 1, 16) And Ok
+
+    For Part = 0 To Value.Models[Value.Loaded].PartCount - 1
+
+        Object = G.CreateModelPart3D(Value.Models[Value.Loaded], Part)
+        Ok = Object.Handle <> 0 And Ok
+        Ok = P.SetScale(Object, Route.SCALE * 100.0, Route.SCALE * 100.0, Route.SCALE * 100.0) And Ok
+        Ok = P.SetRotation(Object, 0.0, 180.0, 0.0) And Ok
+        Ok = P.SetPosition(Object, Route.ORIGIN_X, Route.DECK_Y, Route.ORIGIN_Z) And Ok
+        Value.Objects[Value.ObjectCount] = Object
+        Value.ObjectCount = Value.ObjectCount + 1
+    End For
+
+    Value.Loaded = Value.Loaded + 1
+    Value.Failed = Not Ok
+
+    If Ok And Value.Loaded = 6 Then
+        Ok = Entrance.Create(Value.Doors, WestDoor, EastDoor) And Ok
+        Ok = Glow.Create(Value.Light) And Ok
+    End If
+
+    Value.Failed = Not Ok
+    Value.Ready = Ok And Value.Loaded = 6 And Value.ObjectCount = 21
+
+    Call Route.Enable(Value.Ready)
+
+End Sub
+
+Public Function Draw(ByRef Value As State) As Boolean
+
+    Dim Index As Number
+    Dim Ok As Boolean
+
+    Ok = True
+
+    If Value.Ready Then
+
+        For Index = 0 To Value.ObjectCount - 1
+            Ok = G.DrawObject3D(Value.Objects[Index]) And Ok
+        End For
+
+        Ok = Entrance.Draw(Value.Doors) And Ok
+        Ok = Glow.Draw(Value.Light) And Ok
+
+    End If
+
+    Return Ok
+
+End Function
+
+Public Sub Destroy(ByRef Value As State)
+
+    Dim Index As Number
+    Dim Empty As State
+
+    Call Entrance.Destroy(Value.Doors)
+    Call Glow.Destroy(Value.Light)
+
+    For Index = 0 To Value.ObjectCount - 1
+        Call G.DestroyObject3D(Value.Objects[Index])
+    End For
+
+    For Index = 0 To 5
+        Call G.DestroyModel3D(Value.Models[Index])
+    End For
+
+    Call Route.Enable(False)
+
+    Value = Empty
+
+End Sub
+
+End Module

@@ -53,6 +53,18 @@ Public Function Active() As Boolean
 
 End Function
 
+Public Sub SurfaceBounds(ByRef Low As P.Vector3, ByRef High As P.Vector3)
+
+    Low = P.Vector(-4900.0, 23.12, -3550.0)
+    High = P.Vector(2750.0, 23.12, 3550.0)
+
+    If Enabled Then
+        Low = P.Vector(Surface.OriginX, 23.12, Surface.OriginZ)
+        High = P.Vector(Surface.XEdges[Surface.Columns], 23.12, Surface.ZEdges[Surface.Rows])
+    End If
+
+End Sub
+
 Private Function InBox(Box As Features.Box, Point As P.Vector3, Margin As Double) As Boolean
 
     Dim Result As Boolean
@@ -94,7 +106,8 @@ Private Function Approach(Item As Document.Item, Point As P.Vector3, Optional He
         Relative = M.Rotate(M.Subtract(Point, Door.Position), P.Vector(0.0, -Door.Yaw, 0.0))
 
         If (Abs(Relative.X) < Max(0.1, Door.Width / 2.0 - 3000.0 / Item.Scale.X) And
-            Relative.Z >= -18000.0 / Item.Scale.Z And Relative.Z <= 4000.0 / Item.Scale.Z) Then
+            Relative.Z >= -18000.0 / Item.Scale.Z And
+            Relative.Z <= 4000.0 / Item.Scale.Z) Then
 
             If Not HeightOnly Or Relative.Z >= -1000.0 / Item.Scale.Z Then
                 Height = Max(Height, Door.Position.Y)
@@ -269,8 +282,10 @@ Public Sub PopulateCamera(ByRef World As Clearance.World, Focus As P.Vector3)
                 LocalPoint = Geometry.ToLocal(Items[Index], Focus)
                 Margin = 1000000.0 / Min(Items[Index].Scale.X, Items[Index].Scale.Z)
 
-                If (LocalPoint.X >= Shape.Low.X - Margin And LocalPoint.X <= Shape.High.X + Margin And
-                    LocalPoint.Z >= Shape.Low.Z - Margin And LocalPoint.Z <= Shape.High.Z + Margin) Then
+                If (LocalPoint.X >= Shape.Low.X - Margin And
+                    LocalPoint.X <= Shape.High.X + Margin And
+                    LocalPoint.Z >= Shape.Low.Z - Margin And
+                    LocalPoint.Z <= Shape.High.Z + Margin) Then
 
                     For Part = 0 To Shape.CameraCount - 1
 

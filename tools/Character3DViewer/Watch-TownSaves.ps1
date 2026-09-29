@@ -1,7 +1,11 @@
 [CmdletBinding()]
-param([Parameter(Mandatory)][int]$ViewerProcessId, [string]$DataFolder)
+param([Parameter(Mandatory)][Alias("ParentProcessId")][int]$ViewerProcessId, [string]$DataFolder)
 
 $ErrorActionPreference = 'Stop'
+# The executable supervisor and the launcher can race; only one worker owns a Viewer.
+$created = $false
+$workerMutex = [Threading.Mutex]::new($true, "Local\SmileNativeWorker-$ViewerProcessId", [ref]$created)
+if (-not $created) { $workerMutex.Dispose(); exit 0 }
 . (Join-Path $PSScriptRoot 'TownFileWorker.ps1')
 function HashText([string]$Value) {
     [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($Value))).ToLowerInvariant()
@@ -37,10 +41,7 @@ if (-not $folder) {
     # An MSIX-hosted shell can see a redirected LocalCache while the native Viewer
     # writes the physical profile. Prefer the location with the live working copy.
     $physical = '\\localhost\' + $folder.Substring(0, 1) + '$' + $folder.Substring(2)
-    $working = (HashText 'TownEditor.Working') + '.bin'
-    $normalTime = (Get-Item -LiteralPath (Join-Path $folder $working) -ErrorAction SilentlyContinue).LastWriteTimeUtc
-    $physicalTime = (Get-Item -LiteralPath (Join-Path $physical $working) -ErrorAction SilentlyContinue).LastWriteTimeUtc
-    if ($physicalTime -gt $normalTime) { $folder = $physical }
+    if (Test-Path -LiteralPath $physical) { $folder = $physical }
 }
 $null = New-Item -ItemType Directory -Path $folder -Force
 $request = Join-Path $folder ((HashText 'TownEditor.Blender.Request') + '.bin')
@@ -52,7 +53,6 @@ $script = Join-Path $PSScriptRoot 'town_blender_save.py'
 $last = if (Test-Path -LiteralPath $stamp) { [IO.File]::ReadAllText($stamp) } else { '' }
 $fileRequest = Join-Path $folder ((HashText 'TownEditor.File.Request') + '.bin')
 $fileStamp = Join-Path $folder 'town-file-worker.completed'
-$dateStamp = ''
 $fileLast = if (Test-Path -LiteralPath $fileStamp) { [IO.File]::ReadAllText($fileStamp) } else { '' }
 while ($true) {
     $current = Get-Process -Id $ViewerProcessId -ErrorAction SilentlyContinue
@@ -76,18 +76,15 @@ while ($true) {
         }
     }
     $newStamp = Get-Date -Format 'yyyy-MM-dd HHmm'
-    if ($newStamp -ne $dateStamp) {
-        # Publish local date/time for the native Save As suggestion without another dialog.
-        $status = [Collections.Generic.List[byte]]::new()
-        $status.AddRange([byte[]](84,87,82,1))
-        Add-TownInteger $status $ViewerProcessId
-        Add-TownInteger $status 0
-        Add-TownInteger $status 0
-        Add-TownInteger $status $newStamp.Length
-        foreach ($letter in $newStamp.ToCharArray()) { Add-TownInteger $status ([int]$letter) }
-        Write-TownPayload (Join-Path $folder ((HashText 'TownEditor.File.Clock') + '.bin')) $status.ToArray()
-        $dateStamp = $newStamp
-    }
+    # Publish local date/time for the native Save As suggestion without another dialog.
+    $status = [Collections.Generic.List[byte]]::new()
+    $status.AddRange([byte[]](84,87,82,1))
+    Add-TownInteger $status $ViewerProcessId
+    Add-TownInteger $status 0
+    Add-TownInteger $status ([Environment]::TickCount64 % 1000000000)
+    Add-TownInteger $status $newStamp.Length
+    foreach ($letter in $newStamp.ToCharArray()) { Add-TownInteger $status ([int]$letter) }
+    Write-TownPayload (Join-Path $folder ((HashText 'TownEditor.File.Clock') + '.bin')) $status.ToArray()
     if (Test-Path -LiteralPath $fileRequest) {
         $fileHash = (Get-FileHash -LiteralPath $fileRequest -Algorithm SHA256).Hash
         if ($fileHash -ne $fileLast) {

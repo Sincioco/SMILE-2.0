@@ -184,6 +184,8 @@ foreach ($entry in $project.SmileProject.ItemGroup.ChildNodes) {
     if ($entry.HasAttribute('Descriptor')) { $entry.SetAttribute('Descriptor', [IO.Path]::GetFullPath((Join-Path $toolRoot $entry.Descriptor))) }
 }
 $projectPath = Join-Path $testRoot 'CalibrationTests.smileproj'
+$workerElement = $project.SmileProject.PropertyGroup.SelectSingleNode('NativeWorkerScript')
+if ($null -ne $workerElement) { $null = $workerElement.ParentNode.RemoveChild($workerElement) }
 $project.Save($projectPath)
 $compiler = Join-Path $repositoryRoot 'artifacts\compiler\smilec.exe'
 $executable = Join-Path $testRoot 'CalibrationTests.exe'

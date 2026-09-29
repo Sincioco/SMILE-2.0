@@ -80,7 +80,11 @@ the town's authored settings, independently of other town tabs.
 | `NerisTown` | Delegated input/update/draw/lifecycle alongside the existing party and camera |
 
 World links are authoring data and the map can open a linked town in the editor.
-They do not implement overworld travel, encounters or a new RPG runtime. There is
+They do not implement general overworld travel, encounters or a new RPG runtime.
+NerisTownConnections now provides two explicit walking gates between Neris Town
+and Neris Spaceport. TownEditorSession.TravelTo switches the named document and
+applies the arrival after its terrain is ready. This does not make arbitrary
+world-editor links traversable. There is
 no additional library/project dependency. Existing Scene3D, Precision3D, native
 Save Data and Character3D remain the runtime owners.
 

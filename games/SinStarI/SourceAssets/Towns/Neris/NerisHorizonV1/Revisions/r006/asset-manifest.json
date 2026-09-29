@@ -1,0 +1,109 @@
+{
+  "revision": "r006",
+  "design": "Gentle Wave with rear runway",
+  "terminal_m": [
+    520,
+    150,
+    79
+  ],
+  "site_m": [
+    960,
+    600
+  ],
+  "tower_m": {
+    "height": 285,
+    "center": [
+      0,
+      230
+    ]
+  },
+  "runway_m": [
+    900,
+    50
+  ],
+  "runway_center": [
+    0,
+    355
+  ],
+  "glass_hall_bounds_m": {
+    "Transport Glass Halls": {
+      "min": [
+        -325.9000549316406,
+        208.10003662109375,
+        0.0
+      ],
+      "max": [
+        -143.10003662109375,
+        281.9000549316406,
+        51.17500305175781
+      ]
+    },
+    "Royal Glass Hall": {
+      "min": [
+        178.10006713867188,
+        218.1000213623047,
+        0.0
+      ],
+      "max": [
+        292.90008544921875,
+        271.9000244140625,
+        45.17499923706055
+      ]
+    }
+  },
+  "hangar_bounds_m": {
+    "Transport Hangar": {
+      "min": [
+        -442.17938232421875,
+        47.125,
+        0.0
+      ],
+      "max": [
+        -287.82061767578125,
+        168.64999389648438,
+        58.999446868896484
+      ]
+    },
+    "Royal Hangar": {
+      "min": [
+        316.7243957519531,
+        52.125,
+        0.0
+      ],
+      "max": [
+        413.2756042480469,
+        163.64999389648438,
+        44.99858093261719
+      ]
+    }
+  },
+  "bounds_m": {
+    "min": [
+      -480.0224914550781,
+      -200.0225067138672,
+      -12.0
+    ],
+    "max": [
+      480.0224914550781,
+      400.0224914550781,
+      285.29998779296875
+    ]
+  },
+  "models": 3,
+  "parts": {
+    "Horizon": 12,
+    "Transport": 6,
+    "Royal": 5
+  },
+  "triangles": {
+    "Horizon": 58420,
+    "Transport": 1130,
+    "Royal": 1130
+  },
+  "aircraft_instances": 3,
+  "runway_aircraft_scale": 0.55,
+  "runway_cycle_seconds": 180,
+  "light_poles": 0,
+  "entrance_clear_width_m": 23.4,
+  "glass": "Single alpha-blended planes with modeled interior"
+}

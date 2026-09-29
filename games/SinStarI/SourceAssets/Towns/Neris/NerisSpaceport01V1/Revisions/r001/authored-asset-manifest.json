@@ -1,0 +1,4634 @@
+{
+  "asset_id": "NSP01",
+  "design_version": "1.0.0",
+  "revision": "final-r01",
+  "status": "delivered-approval-stops-waived",
+  "source": {
+    "file": "source/NSP01-final-r01.blend",
+    "bytes": 1574208,
+    "sha256": "a77787ee639b97ec62a1df78fd213f28435ce35d20254bd735f02713866ef564"
+  },
+  "portable": {
+    "file": "export/NSP01-preview.glb",
+    "bytes": 8686220,
+    "sha256": "1b54016f5b46bd1e1d3b635fe7f0836f301a7d82ef3e8fc13123c4985c2d469a",
+    "roles": [
+      "full-scale preview",
+      "L0"
+    ]
+  },
+  "collision": {
+    "file": "export/NSP01-collision-proxies.blend",
+    "bytes": 337511,
+    "sha256": "60f17125de84b7e62fe8dbead12d5eeefc61b563c35827a117682fb7aba0b240",
+    "format": "Blender .blend",
+    "collection": "NSP01.71-Collision",
+    "objects": 379,
+    "units": "metres",
+    "pose": "upper lift stops"
+  },
+  "anchors": {
+    "file": "export/NSP01-anchors.json",
+    "bytes": 16730,
+    "sha256": "982b9e5da42216310776299b45313932d440596cbdab91d3af20820e78f5a505"
+  },
+  "roundtrip": {
+    "file": "review-scratch/NSP01-roundtrip-r02.blend",
+    "bytes": 4502693,
+    "sha256": "173cf37e14e46aa3319f44bc7aaa4e1326e1b0c649870cc198f3dae76f331d5d"
+  },
+  "units": "metres",
+  "axes": {
+    "authoring": "+X east, +Y rear, +Z up; front -Y",
+    "gltf": "Right-handed Y-up, exporter conversion verified by reimport, no manual corrective rotation"
+  },
+  "root": {
+    "position": [
+      0,
+      0,
+      0
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "scale": [
+      1,
+      1,
+      1
+    ]
+  },
+  "bounds": {
+    "min": [
+      -360,
+      -390,
+      -56
+    ],
+    "max": [
+      360,
+      230,
+      300
+    ],
+    "dimensions": [
+      720,
+      620,
+      356
+    ]
+  },
+  "component_counts": {
+    "pad": 4,
+    "hangar-primary": 2,
+    "primary-tower": 13,
+    "keel-pylon": 9,
+    "door-panel": 24,
+    "lifts": 4,
+    "lift_stop_anchors": 8,
+    "dock_interface_anchors": 4
+  },
+  "source_geometry": {
+    "objects": 1991,
+    "unique_mesh_data": 699,
+    "evaluated_triangles": 239912,
+    "geometry_sha256": "30fe6512659007fd146dfd55fda1459473232f844fa6caa273d5e751bcde1663"
+  },
+  "portable_geometry": {
+    "meshes": 143,
+    "primitives": 151,
+    "accessor_vertices": 299236,
+    "triangles": 239864,
+    "materials": 8,
+    "negative_scale": [],
+    "removed_degenerate_triangles": 48
+  },
+  "materials": [
+    {
+      "doubleSided": true,
+      "extras": {
+        "asset_id": "NSP01",
+        "owner": "Materials",
+        "srgb_hex": "#D1B476"
+      },
+      "name": "NSP01.MAT.Marking",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.637596845626831,
+          0.4564110338687897,
+          0.18116424977779388,
+          1
+        ],
+        "metallicFactor": 0.20000000298023224,
+        "roughnessFactor": 0.5
+      }
+    },
+    {
+      "doubleSided": true,
+      "extras": {
+        "asset_id": "NSP01",
+        "owner": "Materials",
+        "srgb_hex": "#253640"
+      },
+      "name": "NSP01.MAT.Dark",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.01850022003054619,
+          0.03688944876194,
+          0.05126945674419403,
+          1
+        ],
+        "metallicFactor": 0.44999998807907104,
+        "roughnessFactor": 0.5199999809265137
+      }
+    },
+    {
+      "doubleSided": true,
+      "extras": {
+        "asset_id": "NSP01",
+        "owner": "Materials",
+        "srgb_hex": "#536273"
+      },
+      "name": "NSP01.MAT.Deck",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.08650045841932297,
+          0.12213877588510513,
+          0.17144110798835754,
+          1
+        ],
+        "metallicFactor": 0.3499999940395355,
+        "roughnessFactor": 0.46000000834465027
+      }
+    },
+    {
+      "doubleSided": true,
+      "extras": {
+        "asset_id": "NSP01",
+        "owner": "Materials",
+        "srgb_hex": "#E4E7E2"
+      },
+      "name": "NSP01.MAT.Ivory",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.7758222222328186,
+          0.7991027235984802,
+          0.7605245113372803,
+          1
+        ],
+        "metallicFactor": 0,
+        "roughnessFactor": 0.4000000059604645
+      }
+    },
+    {
+      "doubleSided": true,
+      "extras": {
+        "asset_id": "NSP01",
+        "owner": "Materials",
+        "srgb_hex": "#B99655"
+      },
+      "name": "NSP01.MAT.Gold",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.48514994978904724,
+          0.3049873113632202,
+          0.09084171056747437,
+          1
+        ],
+        "metallicFactor": 0.8999999761581421,
+        "roughnessFactor": 0.2800000011920929
+      }
+    },
+    {
+      "doubleSided": true,
+      "emissiveFactor": [
+        0.06962766341309215,
+        0.7806592054339404,
+        1
+      ],
+      "extensions": {
+        "KHR_materials_emissive_strength": {
+          "emissiveStrength": 1.7592447996139526
+        }
+      },
+      "extras": {
+        "asset_id": "NSP01",
+        "owner": "Materials",
+        "srgb_hex": "#46D8F1"
+      },
+      "name": "NSP01.MAT.Crystal",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.061246052384376526,
+          0.68668532371521,
+          0.8796223998069763,
+          1
+        ],
+        "metallicFactor": 0,
+        "roughnessFactor": 0.20000000298023224
+      }
+    },
+    {
+      "doubleSided": true,
+      "extras": {
+        "asset_id": "NSP01",
+        "owner": "Materials",
+        "srgb_hex": "#287E96"
+      },
+      "name": "NSP01.MAT.Teal",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.021219009533524513,
+          0.20863686501979828,
+          0.3049873113632202,
+          1
+        ],
+        "metallicFactor": 0.10000000149011612,
+        "roughnessFactor": 0.23999999463558197
+      }
+    },
+    {
+      "doubleSided": true,
+      "extras": {
+        "asset_id": "NSP01",
+        "owner": "Materials",
+        "srgb_hex": "#276F84"
+      },
+      "name": "NSP01.MAT.Cloth",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.020288562402129173,
+          0.15896083414554596,
+          0.23074005544185638,
+          1
+        ],
+        "metallicFactor": 0,
+        "roughnessFactor": 0.800000011920929
+      }
+    }
+  ],
+  "images": [],
+  "texture_memory_MiB": 0,
+  "dependencies": [],
+  "extensionsUsed": [
+    "KHR_materials_emissive_strength"
+  ],
+  "extensionsRequired": [],
+  "extension_fallback": "KHR_materials_emissive_strength is optional. Core emissive/base-color factors remain; emission-off coupon was reviewed.",
+  "normal_check": {
+    "normalCount": 299236,
+    "maxNormalError": 1.3489807138000742e-7,
+    "pass": true
+  },
+  "exporter": {
+    "blender": "5.2.1 LTS",
+    "addon": "Bundled io_scene_gltf2",
+    "settings": {
+      "filepath": "NSP01-preview.glb",
+      "export_format": "GLB",
+      "use_active_scene": true,
+      "export_yup": true,
+      "export_apply": false,
+      "export_extras": true,
+      "export_materials": "EXPORT",
+      "export_normals": true,
+      "export_texcoords": true,
+      "export_cameras": false,
+      "export_lights": false,
+      "export_animations": false,
+      "export_draco_mesh_compression_enable": false
+    },
+    "execution": "Blender main-thread disposable process; generated export copy only"
+  },
+  "design_spec": {
+    "file": "design-package/spec/spaceport-spec.json",
+    "sha256": "e078aa7385c68a8bfabadfecebf00327d5bbf2ff803812ad52afab28f3c803a3"
+  },
+  "camera_spec": {
+    "file": "design-package/spec/review-cameras.json",
+    "sha256": "3e227fc3f66d7b4032c87dc464158b81fc77fa74ecddc79a46f16327a57502d4"
+  },
+  "chunks": [
+    {
+      "node": "NSP01.L0.Underside.0",
+      "chunk": "Underside",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 2188,
+      "materials": [
+        "NSP01.MAT.Ivory"
+      ],
+      "source_parts": [
+        "NSP01.Hull.Underside",
+        "NSP01.Keel.Central",
+        "NSP01.Keel.E.APRON",
+        "NSP01.Keel.E.HULL-F",
+        "NSP01.Keel.E.HULL-R",
+        "NSP01.Keel.W.APRON",
+        "NSP01.Keel.W.HULL-F",
+        "NSP01.Keel.W.HULL-R"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Hull.1",
+      "chunk": "Hull",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 258,
+      "materials": [
+        "NSP01.MAT.Deck"
+      ],
+      "source_parts": [
+        "NSP01.Hull.Approach",
+        "NSP01.Hull.Main"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Hangar.W.2",
+      "chunk": "Hangar.W",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 276,
+      "materials": [
+        "NSP01.MAT.Deck"
+      ],
+      "source_parts": [
+        "NSP01.Hangar.W.Apron"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Hangar.E.3",
+      "chunk": "Hangar.E",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 276,
+      "materials": [
+        "NSP01.MAT.Deck"
+      ],
+      "source_parts": [
+        "NSP01.Hangar.E.Apron"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Underside.4",
+      "chunk": "Underside",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 220,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Keel.Central",
+        "NSP01.Keel.E.APRON",
+        "NSP01.Keel.E.HULL-F",
+        "NSP01.Keel.E.HULL-R",
+        "NSP01.Keel.W.APRON",
+        "NSP01.Keel.W.HULL-F",
+        "NSP01.Keel.W.HULL-R"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Hull.5",
+      "chunk": "Hull",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 894,
+      "materials": [
+        "NSP01.MAT.Ivory"
+      ],
+      "source_parts": [
+        "NSP01.Hull.Main",
+        "NSP01.Keel.E.BRIDGE",
+        "NSP01.Keel.W.BRIDGE"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Hull.6",
+      "chunk": "Hull",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 1080,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Hull.Fascia.0.0.Teal",
+        "NSP01.Hull.Fascia.0.1.Teal",
+        "NSP01.Hull.Fascia.0.10.Teal",
+        "NSP01.Hull.Fascia.0.11.Teal",
+        "NSP01.Hull.Fascia.0.12.Teal",
+        "NSP01.Hull.Fascia.0.13.Teal",
+        "NSP01.Hull.Fascia.0.14.Teal",
+        "NSP01.Hull.Fascia.0.15.Teal",
+        "NSP01.Hull.Fascia.0.16.Teal",
+        "NSP01.Hull.Fascia.0.17.Teal",
+        "NSP01.Hull.Fascia.0.18.Teal",
+        "NSP01.Hull.Fascia.0.19.Teal",
+        "NSP01.Hull.Fascia.0.2.Teal",
+        "NSP01.Hull.Fascia.0.20.Teal",
+        "NSP01.Hull.Fascia.0.21.Teal",
+        "NSP01.Hull.Fascia.0.22.Teal",
+        "NSP01.Hull.Fascia.0.3.Teal",
+        "NSP01.Hull.Fascia.0.4.Teal",
+        "NSP01.Hull.Fascia.0.5.Teal",
+        "NSP01.Hull.Fascia.0.6.Teal",
+        "NSP01.Hull.Fascia.0.7.Teal",
+        "NSP01.Hull.Fascia.0.8.Teal",
+        "NSP01.Hull.Fascia.0.9.Teal",
+        "NSP01.Hull.Fascia.1.0.Teal",
+        "NSP01.Hull.Fascia.1.1.Teal",
+        "NSP01.Hull.Fascia.2.0.Teal",
+        "NSP01.Hull.Fascia.2.1.Teal",
+        "NSP01.Hull.Fascia.2.10.Teal",
+        "NSP01.Hull.Fascia.2.11.Teal",
+        "NSP01.Hull.Fascia.2.12.Teal",
+        "NSP01.Hull.Fascia.2.13.Teal",
+        "NSP01.Hull.Fascia.2.14.Teal",
+        "NSP01.Hull.Fascia.2.15.Teal",
+        "NSP01.Hull.Fascia.2.2.Teal",
+        "NSP01.Hull.Fascia.2.3.Teal",
+        "NSP01.Hull.Fascia.2.4.Teal",
+        "NSP01.Hull.Fascia.2.5.Teal",
+        "NSP01.Hull.Fascia.2.6.Teal",
+        "NSP01.Hull.Fascia.2.7.Teal",
+        "NSP01.Hull.Fascia.2.8.Teal",
+        "NSP01.Hull.Fascia.2.9.Teal",
+        "NSP01.Hull.Fascia.3.0.Teal",
+        "NSP01.Hull.Fascia.3.1.Teal",
+        "NSP01.Hull.Fascia.4.0.Teal",
+        "NSP01.Hull.Fascia.4.1.Teal",
+        "NSP01.Hull.Fascia.4.10.Teal",
+        "NSP01.Hull.Fascia.4.11.Teal",
+        "NSP01.Hull.Fascia.4.12.Teal",
+        "NSP01.Hull.Fascia.4.13.Teal",
+        "NSP01.Hull.Fascia.4.14.Teal",
+        "NSP01.Hull.Fascia.4.15.Teal",
+        "NSP01.Hull.Fascia.4.16.Teal",
+        "NSP01.Hull.Fascia.4.17.Teal",
+        "NSP01.Hull.Fascia.4.18.Teal",
+        "NSP01.Hull.Fascia.4.19.Teal",
+        "NSP01.Hull.Fascia.4.2.Teal",
+        "NSP01.Hull.Fascia.4.20.Teal",
+        "NSP01.Hull.Fascia.4.21.Teal",
+        "NSP01.Hull.Fascia.4.22.Teal",
+        "NSP01.Hull.Fascia.4.3.Teal",
+        "NSP01.Hull.Fascia.4.4.Teal",
+        "NSP01.Hull.Fascia.4.5.Teal",
+        "NSP01.Hull.Fascia.4.6.Teal",
+        "NSP01.Hull.Fascia.4.7.Teal",
+        "NSP01.Hull.Fascia.4.8.Teal",
+        "NSP01.Hull.Fascia.4.9.Teal",
+        "NSP01.Hull.Fascia.5.0.Teal",
+        "NSP01.Hull.Fascia.5.1.Teal",
+        "NSP01.Hull.Fascia.6.0.Teal",
+        "NSP01.Hull.Fascia.6.1.Teal",
+        "NSP01.Hull.Fascia.6.10.Teal",
+        "NSP01.Hull.Fascia.6.11.Teal",
+        "NSP01.Hull.Fascia.6.12.Teal",
+        "NSP01.Hull.Fascia.6.13.Teal",
+        "NSP01.Hull.Fascia.6.14.Teal",
+        "NSP01.Hull.Fascia.6.15.Teal",
+        "NSP01.Hull.Fascia.6.2.Teal",
+        "NSP01.Hull.Fascia.6.3.Teal",
+        "NSP01.Hull.Fascia.6.4.Teal",
+        "NSP01.Hull.Fascia.6.5.Teal",
+        "NSP01.Hull.Fascia.6.6.Teal",
+        "NSP01.Hull.Fascia.6.7.Teal",
+        "NSP01.Hull.Fascia.6.8.Teal",
+        "NSP01.Hull.Fascia.6.9.Teal",
+        "NSP01.Hull.Fascia.7.0.Teal",
+        "NSP01.Hull.Fascia.7.1.Teal",
+        "NSP01.Keel.E.BRIDGE",
+        "NSP01.Keel.W.BRIDGE"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Hull.7",
+      "chunk": "Hull",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 96,
+      "materials": [
+        "NSP01.MAT.Dark"
+      ],
+      "source_parts": [
+        "NSP01.Hull.Main"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Terminal.8",
+      "chunk": "Terminal",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 4904,
+      "materials": [
+        "NSP01.MAT.Ivory"
+      ],
+      "source_parts": [
+        "NSP01.Roof.RadialRib.0",
+        "NSP01.Roof.RadialRib.1",
+        "NSP01.Roof.RadialRib.2",
+        "NSP01.Roof.RadialRib.3",
+        "NSP01.Roof.RadialRib.4",
+        "NSP01.Roof.RadialRib.5",
+        "NSP01.Roof.RadialRib.6",
+        "NSP01.Roof.RadialRib.7",
+        "NSP01.Terminal.LowerLift.-88",
+        "NSP01.Terminal.LowerLift.88",
+        "NSP01.Terminal.Portal",
+        "NSP01.Terminal.Portal.ArchRib",
+        "NSP01.Terminal.Portal.Pier.-1",
+        "NSP01.Terminal.Portal.Pier.1",
+        "NSP01.Terminal.RearLink",
+        "NSP01.Terminal.RearService",
+        "NSP01.Terminal.UpperSleeve.-88.-8.5",
+        "NSP01.Terminal.UpperSleeve.-88.8.5",
+        "NSP01.Terminal.UpperSleeve.88.-8.5",
+        "NSP01.Terminal.UpperSleeve.88.8.5",
+        "NSP01.Terminal.Wall.00",
+        "NSP01.Terminal.Wall.01",
+        "NSP01.Terminal.Wall.02",
+        "NSP01.Terminal.Wall.03",
+        "NSP01.Terminal.Wall.04",
+        "NSP01.Terminal.Wall.05",
+        "NSP01.Terminal.Wall.06",
+        "NSP01.Terminal.Wall.07"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Terminal.9",
+      "chunk": "Terminal",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 416,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Terminal.Roof",
+        "NSP01.Terminal.SideDoorPanel.-44",
+        "NSP01.Terminal.SideDoorPanel.44"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Terminal.10",
+      "chunk": "Terminal",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 2672,
+      "materials": [
+        "NSP01.MAT.Gold"
+      ],
+      "source_parts": [
+        "NSP01.Portal.BannerRod.-1",
+        "NSP01.Portal.BannerRod.1",
+        "NSP01.Portal.BannerStar.-1",
+        "NSP01.Portal.BannerStar.1",
+        "NSP01.Portal.MainCrest",
+        "NSP01.Roof.Ring.0.0",
+        "NSP01.Roof.Ring.0.1",
+        "NSP01.Roof.Ring.0.2.0",
+        "NSP01.Roof.Ring.0.2.1",
+        "NSP01.Roof.Ring.0.3",
+        "NSP01.Roof.Ring.0.4",
+        "NSP01.Roof.Ring.0.5",
+        "NSP01.Roof.Ring.0.6.0",
+        "NSP01.Roof.Ring.0.6.1",
+        "NSP01.Roof.Ring.0.7",
+        "NSP01.Roof.Ring.1.0",
+        "NSP01.Roof.Ring.1.1",
+        "NSP01.Roof.Ring.1.2.0",
+        "NSP01.Roof.Ring.1.2.1",
+        "NSP01.Roof.Ring.1.3",
+        "NSP01.Roof.Ring.1.4",
+        "NSP01.Roof.Ring.1.5",
+        "NSP01.Roof.Ring.1.6.0",
+        "NSP01.Roof.Ring.1.6.1",
+        "NSP01.Roof.Ring.1.7",
+        "NSP01.Roof.Ring.2.0",
+        "NSP01.Roof.Ring.2.1",
+        "NSP01.Roof.Ring.2.2",
+        "NSP01.Roof.Ring.2.3",
+        "NSP01.Roof.Ring.2.4",
+        "NSP01.Roof.Ring.2.5",
+        "NSP01.Roof.Ring.2.6",
+        "NSP01.Roof.Ring.2.7",
+        "NSP01.Roof.Ring.3.0",
+        "NSP01.Roof.Ring.3.1",
+        "NSP01.Roof.Ring.3.2",
+        "NSP01.Roof.Ring.3.3",
+        "NSP01.Roof.Ring.3.4",
+        "NSP01.Roof.Ring.3.5",
+        "NSP01.Roof.Ring.3.6",
+        "NSP01.Roof.Ring.3.7",
+        "NSP01.Roof.Ring.4.0",
+        "NSP01.Roof.Ring.4.1",
+        "NSP01.Roof.Ring.4.2",
+        "NSP01.Roof.Ring.4.3",
+        "NSP01.Roof.Ring.4.4",
+        "NSP01.Roof.Ring.4.5",
+        "NSP01.Roof.Ring.4.6",
+        "NSP01.Roof.Ring.4.7",
+        "NSP01.Roof.Ring.5.0",
+        "NSP01.Roof.Ring.5.1",
+        "NSP01.Roof.Ring.5.2",
+        "NSP01.Roof.Ring.5.3",
+        "NSP01.Roof.Ring.5.4",
+        "NSP01.Roof.Ring.5.5",
+        "NSP01.Roof.Ring.5.6",
+        "NSP01.Roof.Ring.5.7",
+        "NSP01.Terminal.Portal.Gold"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Terminal.11",
+      "chunk": "Terminal",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 36,
+      "materials": [
+        "NSP01.MAT.Dark"
+      ],
+      "source_parts": [
+        "NSP01.Terminal.ServiceBacking.-30",
+        "NSP01.Terminal.ServiceBacking.0",
+        "NSP01.Terminal.ServiceBacking.30"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Dock.W.LOW.12",
+      "chunk": "Dock.W.LOW",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 836,
+      "materials": [
+        "NSP01.MAT.Deck"
+      ],
+      "source_parts": [
+        "NSP01.Dock.W.LOW.Arm",
+        "NSP01.Dock.W.LOW.Deck"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Dock.W.LOW.13",
+      "chunk": "Dock.W.LOW",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 5864,
+      "materials": [
+        "NSP01.MAT.Ivory"
+      ],
+      "source_parts": [
+        "NSP01.Dock.W.LOW.ArmPosts",
+        "NSP01.Dock.W.LOW.Brace.-6.0",
+        "NSP01.Dock.W.LOW.Brace.-6.1",
+        "NSP01.Dock.W.LOW.Brace.6.0",
+        "NSP01.Dock.W.LOW.Brace.6.1",
+        "NSP01.Dock.W.LOW.Fascia",
+        "NSP01.Dock.W.LOW.MidRail",
+        "NSP01.Dock.W.LOW.Posts",
+        "NSP01.Dock.W.LOW.Rail.-8.0.65",
+        "NSP01.Dock.W.LOW.Rail.8.0.65",
+        "NSP01.Dock.W.LOW.Spoke.0",
+        "NSP01.Dock.W.LOW.Spoke.1",
+        "NSP01.Dock.W.LOW.Spoke.2",
+        "NSP01.Dock.W.LOW.Spoke.3",
+        "NSP01.Dock.W.LOW.Spoke.4",
+        "NSP01.Dock.W.LOW.Spoke.5",
+        "NSP01.Dock.W.LOW.Spoke.6",
+        "NSP01.Dock.W.LOW.Spoke.7"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Dock.W.LOW.14",
+      "chunk": "Dock.W.LOW",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 1564,
+      "materials": [
+        "NSP01.MAT.Marking"
+      ],
+      "source_parts": [
+        "NSP01.Compass.NSP01.Dock.W.LOW",
+        "NSP01.Dock.W.LOW.Guidance",
+        "NSP01.Dock.W.LOW.Usable"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Dock.W.LOW.15",
+      "chunk": "Dock.W.LOW",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 2652,
+      "materials": [
+        "NSP01.MAT.Gold"
+      ],
+      "source_parts": [
+        "NSP01.Dock.W.LOW.Rail.-8.1.34",
+        "NSP01.Dock.W.LOW.Rail.8.1.34",
+        "NSP01.Dock.W.LOW.Tie.-6",
+        "NSP01.Dock.W.LOW.Tie.6",
+        "NSP01.Dock.W.LOW.TopRail"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Dock.W.LOW.16",
+      "chunk": "Dock.W.LOW",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 352,
+      "materials": [
+        "NSP01.MAT.Crystal"
+      ],
+      "source_parts": [
+        "NSP01.Dock.W.LOW.Marker.0",
+        "NSP01.Dock.W.LOW.Marker.1",
+        "NSP01.Dock.W.LOW.Marker.2",
+        "NSP01.Dock.W.LOW.Marker.3",
+        "NSP01.Dock.W.LOW.Marker.4",
+        "NSP01.Dock.W.LOW.Marker.5",
+        "NSP01.Dock.W.LOW.Marker.6",
+        "NSP01.Dock.W.LOW.Marker.7"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Dock.W.HIGH.17",
+      "chunk": "Dock.W.HIGH",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 836,
+      "materials": [
+        "NSP01.MAT.Deck"
+      ],
+      "source_parts": [
+        "NSP01.Dock.W.HIGH.Arm",
+        "NSP01.Dock.W.HIGH.Deck"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Dock.W.HIGH.18",
+      "chunk": "Dock.W.HIGH",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 5864,
+      "materials": [
+        "NSP01.MAT.Ivory"
+      ],
+      "source_parts": [
+        "NSP01.Dock.W.HIGH.ArmPosts",
+        "NSP01.Dock.W.HIGH.Brace.-6.0",
+        "NSP01.Dock.W.HIGH.Brace.-6.1",
+        "NSP01.Dock.W.HIGH.Brace.6.0",
+        "NSP01.Dock.W.HIGH.Brace.6.1",
+        "NSP01.Dock.W.HIGH.Fascia",
+        "NSP01.Dock.W.HIGH.MidRail",
+        "NSP01.Dock.W.HIGH.Posts",
+        "NSP01.Dock.W.HIGH.Rail.-8.0.65",
+        "NSP01.Dock.W.HIGH.Rail.8.0.65",
+        "NSP01.Dock.W.HIGH.Spoke.0",
+        "NSP01.Dock.W.HIGH.Spoke.1",
+        "NSP01.Dock.W.HIGH.Spoke.2",
+        "NSP01.Dock.W.HIGH.Spoke.3",
+        "NSP01.Dock.W.HIGH.Spoke.4",
+        "NSP01.Dock.W.HIGH.Spoke.5",
+        "NSP01.Dock.W.HIGH.Spoke.6",
+        "NSP01.Dock.W.HIGH.Spoke.7"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Dock.W.HIGH.19",
+      "chunk": "Dock.W.HIGH",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 1564,
+      "materials": [
+        "NSP01.MAT.Marking"
+      ],
+      "source_parts": [
+        "NSP01.Compass.NSP01.Dock.W.HIGH",
+        "NSP01.Dock.W.HIGH.Guidance",
+        "NSP01.Dock.W.HIGH.Usable"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Dock.W.HIGH.20",
+      "chunk": "Dock.W.HIGH",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 2652,
+      "materials": [
+        "NSP01.MAT.Gold"
+      ],
+      "source_parts": [
+        "NSP01.Dock.W.HIGH.Rail.-8.1.34",
+        "NSP01.Dock.W.HIGH.Rail.8.1.34",
+        "NSP01.Dock.W.HIGH.Tie.-6",
+        "NSP01.Dock.W.HIGH.Tie.6",
+        "NSP01.Dock.W.HIGH.TopRail"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Dock.W.HIGH.21",
+      "chunk": "Dock.W.HIGH",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 352,
+      "materials": [
+        "NSP01.MAT.Crystal"
+      ],
+      "source_parts": [
+        "NSP01.Dock.W.HIGH.Marker.0",
+        "NSP01.Dock.W.HIGH.Marker.1",
+        "NSP01.Dock.W.HIGH.Marker.2",
+        "NSP01.Dock.W.HIGH.Marker.3",
+        "NSP01.Dock.W.HIGH.Marker.4",
+        "NSP01.Dock.W.HIGH.Marker.5",
+        "NSP01.Dock.W.HIGH.Marker.6",
+        "NSP01.Dock.W.HIGH.Marker.7"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Dock.E.LOW.22",
+      "chunk": "Dock.E.LOW",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 836,
+      "materials": [
+        "NSP01.MAT.Deck"
+      ],
+      "source_parts": [
+        "NSP01.Dock.E.LOW.Arm",
+        "NSP01.Dock.E.LOW.Deck"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Dock.E.LOW.23",
+      "chunk": "Dock.E.LOW",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 5864,
+      "materials": [
+        "NSP01.MAT.Ivory"
+      ],
+      "source_parts": [
+        "NSP01.Dock.E.LOW.ArmPosts",
+        "NSP01.Dock.E.LOW.Brace.-6.0",
+        "NSP01.Dock.E.LOW.Brace.-6.1",
+        "NSP01.Dock.E.LOW.Brace.6.0",
+        "NSP01.Dock.E.LOW.Brace.6.1",
+        "NSP01.Dock.E.LOW.Fascia",
+        "NSP01.Dock.E.LOW.MidRail",
+        "NSP01.Dock.E.LOW.Posts",
+        "NSP01.Dock.E.LOW.Rail.-8.0.65",
+        "NSP01.Dock.E.LOW.Rail.8.0.65",
+        "NSP01.Dock.E.LOW.Spoke.0",
+        "NSP01.Dock.E.LOW.Spoke.1",
+        "NSP01.Dock.E.LOW.Spoke.2",
+        "NSP01.Dock.E.LOW.Spoke.3",
+        "NSP01.Dock.E.LOW.Spoke.4",
+        "NSP01.Dock.E.LOW.Spoke.5",
+        "NSP01.Dock.E.LOW.Spoke.6",
+        "NSP01.Dock.E.LOW.Spoke.7"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Dock.E.LOW.24",
+      "chunk": "Dock.E.LOW",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 1564,
+      "materials": [
+        "NSP01.MAT.Marking"
+      ],
+      "source_parts": [
+        "NSP01.Compass.NSP01.Dock.E.LOW",
+        "NSP01.Dock.E.LOW.Guidance",
+        "NSP01.Dock.E.LOW.Usable"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Dock.E.LOW.25",
+      "chunk": "Dock.E.LOW",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 2652,
+      "materials": [
+        "NSP01.MAT.Gold"
+      ],
+      "source_parts": [
+        "NSP01.Dock.E.LOW.Rail.-8.1.34",
+        "NSP01.Dock.E.LOW.Rail.8.1.34",
+        "NSP01.Dock.E.LOW.Tie.-6",
+        "NSP01.Dock.E.LOW.Tie.6",
+        "NSP01.Dock.E.LOW.TopRail"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Dock.E.LOW.26",
+      "chunk": "Dock.E.LOW",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 352,
+      "materials": [
+        "NSP01.MAT.Crystal"
+      ],
+      "source_parts": [
+        "NSP01.Dock.E.LOW.Marker.0",
+        "NSP01.Dock.E.LOW.Marker.1",
+        "NSP01.Dock.E.LOW.Marker.2",
+        "NSP01.Dock.E.LOW.Marker.3",
+        "NSP01.Dock.E.LOW.Marker.4",
+        "NSP01.Dock.E.LOW.Marker.5",
+        "NSP01.Dock.E.LOW.Marker.6",
+        "NSP01.Dock.E.LOW.Marker.7"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Dock.E.HIGH.27",
+      "chunk": "Dock.E.HIGH",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 836,
+      "materials": [
+        "NSP01.MAT.Deck"
+      ],
+      "source_parts": [
+        "NSP01.Dock.E.HIGH.Arm",
+        "NSP01.Dock.E.HIGH.Deck"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Dock.E.HIGH.28",
+      "chunk": "Dock.E.HIGH",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 5864,
+      "materials": [
+        "NSP01.MAT.Ivory"
+      ],
+      "source_parts": [
+        "NSP01.Dock.E.HIGH.ArmPosts",
+        "NSP01.Dock.E.HIGH.Brace.-6.0",
+        "NSP01.Dock.E.HIGH.Brace.-6.1",
+        "NSP01.Dock.E.HIGH.Brace.6.0",
+        "NSP01.Dock.E.HIGH.Brace.6.1",
+        "NSP01.Dock.E.HIGH.Fascia",
+        "NSP01.Dock.E.HIGH.MidRail",
+        "NSP01.Dock.E.HIGH.Posts",
+        "NSP01.Dock.E.HIGH.Rail.-8.0.65",
+        "NSP01.Dock.E.HIGH.Rail.8.0.65",
+        "NSP01.Dock.E.HIGH.Spoke.0",
+        "NSP01.Dock.E.HIGH.Spoke.1",
+        "NSP01.Dock.E.HIGH.Spoke.2",
+        "NSP01.Dock.E.HIGH.Spoke.3",
+        "NSP01.Dock.E.HIGH.Spoke.4",
+        "NSP01.Dock.E.HIGH.Spoke.5",
+        "NSP01.Dock.E.HIGH.Spoke.6",
+        "NSP01.Dock.E.HIGH.Spoke.7"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Dock.E.HIGH.29",
+      "chunk": "Dock.E.HIGH",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 1564,
+      "materials": [
+        "NSP01.MAT.Marking"
+      ],
+      "source_parts": [
+        "NSP01.Compass.NSP01.Dock.E.HIGH",
+        "NSP01.Dock.E.HIGH.Guidance",
+        "NSP01.Dock.E.HIGH.Usable"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Dock.E.HIGH.30",
+      "chunk": "Dock.E.HIGH",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 2652,
+      "materials": [
+        "NSP01.MAT.Gold"
+      ],
+      "source_parts": [
+        "NSP01.Dock.E.HIGH.Rail.-8.1.34",
+        "NSP01.Dock.E.HIGH.Rail.8.1.34",
+        "NSP01.Dock.E.HIGH.Tie.-6",
+        "NSP01.Dock.E.HIGH.Tie.6",
+        "NSP01.Dock.E.HIGH.TopRail"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Dock.E.HIGH.31",
+      "chunk": "Dock.E.HIGH",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 352,
+      "materials": [
+        "NSP01.MAT.Crystal"
+      ],
+      "source_parts": [
+        "NSP01.Dock.E.HIGH.Marker.0",
+        "NSP01.Dock.E.HIGH.Marker.1",
+        "NSP01.Dock.E.HIGH.Marker.2",
+        "NSP01.Dock.E.HIGH.Marker.3",
+        "NSP01.Dock.E.HIGH.Marker.4",
+        "NSP01.Dock.E.HIGH.Marker.5",
+        "NSP01.Dock.E.HIGH.Marker.6",
+        "NSP01.Dock.E.HIGH.Marker.7"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Hangar.W.32",
+      "chunk": "Hangar.W",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 10152,
+      "materials": [
+        "NSP01.MAT.Ivory"
+      ],
+      "source_parts": [
+        "NSP01.Hangar.W.Jamb.-1",
+        "NSP01.Hangar.W.Jamb.1",
+        "NSP01.Hangar.W.Lintel",
+        "NSP01.Hangar.W.Roof",
+        "NSP01.Hangar.W.Side.-1",
+        "NSP01.Hangar.W.Side.1",
+        "NSP01.HangarFacade.-1.0.ArchRib",
+        "NSP01.HangarFacade.-1.0.Body",
+        "NSP01.HangarFacade.-1.0.Pier.-1",
+        "NSP01.HangarFacade.-1.0.Pier.1",
+        "NSP01.HangarFacade.-1.1.ArchRib",
+        "NSP01.HangarFacade.-1.1.Body",
+        "NSP01.HangarFacade.-1.1.Pier.-1",
+        "NSP01.HangarFacade.-1.1.Pier.1",
+        "NSP01.HangarFacade.-1.2.ArchRib",
+        "NSP01.HangarFacade.-1.2.Body",
+        "NSP01.HangarFacade.-1.2.Pier.-1",
+        "NSP01.HangarFacade.-1.2.Pier.1",
+        "NSP01.HangarFacade.-1.3.ArchRib",
+        "NSP01.HangarFacade.-1.3.Body",
+        "NSP01.HangarFacade.-1.3.Pier.-1",
+        "NSP01.HangarFacade.-1.3.Pier.1",
+        "NSP01.HangarFacade.-1.4.ArchRib",
+        "NSP01.HangarFacade.-1.4.Body",
+        "NSP01.HangarFacade.-1.4.Pier.-1",
+        "NSP01.HangarFacade.-1.4.Pier.1",
+        "NSP01.HangarRear.-1.0.Body",
+        "NSP01.HangarRear.-1.0.Pier.-1",
+        "NSP01.HangarRear.-1.0.Pier.1",
+        "NSP01.HangarRear.-1.1.ArchRib",
+        "NSP01.HangarRear.-1.1.Body",
+        "NSP01.HangarRear.-1.1.Pier.-1",
+        "NSP01.HangarRear.-1.1.Pier.1",
+        "NSP01.HangarRear.-1.2.Body",
+        "NSP01.HangarRear.-1.2.Pier.-1",
+        "NSP01.HangarRear.-1.2.Pier.1",
+        "NSP01.HangarRear.-1.3.ArchRib",
+        "NSP01.HangarRear.-1.3.Body",
+        "NSP01.HangarRear.-1.3.Pier.-1",
+        "NSP01.HangarRear.-1.3.Pier.1",
+        "NSP01.HangarRear.-1.4.Body",
+        "NSP01.HangarRear.-1.4.Pier.-1",
+        "NSP01.HangarRear.-1.4.Pier.1",
+        "NSP01.HangarRear.-1.5.ArchRib",
+        "NSP01.HangarRear.-1.5.Body",
+        "NSP01.HangarRear.-1.5.Pier.-1",
+        "NSP01.HangarRear.-1.5.Pier.1"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Hangar.W.Door.-1.00.33",
+      "chunk": "NSP01.Hangar.W.Door.-1.00",
+      "kind": "door-panel",
+      "origin_blender_m": [
+        -229.4499969482422,
+        -127.5,
+        14
+      ],
+      "triangles": 44,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Hangar.W.Door.-1.00"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Hangar.W.Door.-1.01.34",
+      "chunk": "NSP01.Hangar.W.Door.-1.01",
+      "kind": "door-panel",
+      "origin_blender_m": [
+        -229.4499969482422,
+        -126.69999694824219,
+        14
+      ],
+      "triangles": 44,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Hangar.W.Door.-1.01"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Hangar.W.Door.-1.02.35",
+      "chunk": "NSP01.Hangar.W.Door.-1.02",
+      "kind": "door-panel",
+      "origin_blender_m": [
+        -229.4499969482422,
+        -125.9000015258789,
+        14
+      ],
+      "triangles": 44,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Hangar.W.Door.-1.02"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Hangar.W.Door.-1.03.36",
+      "chunk": "NSP01.Hangar.W.Door.-1.03",
+      "kind": "door-panel",
+      "origin_blender_m": [
+        -229.4499969482422,
+        -125.0999984741211,
+        14
+      ],
+      "triangles": 44,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Hangar.W.Door.-1.03"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Hangar.W.Door.-1.04.37",
+      "chunk": "NSP01.Hangar.W.Door.-1.04",
+      "kind": "door-panel",
+      "origin_blender_m": [
+        -229.4499969482422,
+        -124.30000305175781,
+        14
+      ],
+      "triangles": 44,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Hangar.W.Door.-1.04"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Hangar.W.Door.-1.05.38",
+      "chunk": "NSP01.Hangar.W.Door.-1.05",
+      "kind": "door-panel",
+      "origin_blender_m": [
+        -229.4499969482422,
+        -123.5,
+        14
+      ],
+      "triangles": 44,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Hangar.W.Door.-1.05"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Hangar.W.Door.1.00.39",
+      "chunk": "NSP01.Hangar.W.Door.1.00",
+      "kind": "door-panel",
+      "origin_blender_m": [
+        -118.55000305175781,
+        -127.5,
+        14
+      ],
+      "triangles": 44,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Hangar.W.Door.1.00"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Hangar.W.Door.1.01.40",
+      "chunk": "NSP01.Hangar.W.Door.1.01",
+      "kind": "door-panel",
+      "origin_blender_m": [
+        -118.55000305175781,
+        -126.69999694824219,
+        14
+      ],
+      "triangles": 44,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Hangar.W.Door.1.01"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Hangar.W.Door.1.02.41",
+      "chunk": "NSP01.Hangar.W.Door.1.02",
+      "kind": "door-panel",
+      "origin_blender_m": [
+        -118.55000305175781,
+        -125.9000015258789,
+        14
+      ],
+      "triangles": 44,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Hangar.W.Door.1.02"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Hangar.W.Door.1.03.42",
+      "chunk": "NSP01.Hangar.W.Door.1.03",
+      "kind": "door-panel",
+      "origin_blender_m": [
+        -118.55000305175781,
+        -125.0999984741211,
+        14
+      ],
+      "triangles": 44,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Hangar.W.Door.1.03"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Hangar.W.Door.1.04.43",
+      "chunk": "NSP01.Hangar.W.Door.1.04",
+      "kind": "door-panel",
+      "origin_blender_m": [
+        -118.55000305175781,
+        -124.30000305175781,
+        14
+      ],
+      "triangles": 44,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Hangar.W.Door.1.04"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Hangar.W.Door.1.05.44",
+      "chunk": "NSP01.Hangar.W.Door.1.05",
+      "kind": "door-panel",
+      "origin_blender_m": [
+        -118.55000305175781,
+        -123.5,
+        14
+      ],
+      "triangles": 44,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Hangar.W.Door.1.05"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Hangar.W.45",
+      "chunk": "Hangar.W",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 4940,
+      "materials": [
+        "NSP01.MAT.Dark"
+      ],
+      "source_parts": [
+        "NSP01.Hangar.W.Back",
+        "NSP01.Hangar.W.InsideRib.-1.0",
+        "NSP01.Hangar.W.InsideRib.-1.1",
+        "NSP01.Hangar.W.InsideRib.-1.10",
+        "NSP01.Hangar.W.InsideRib.-1.11",
+        "NSP01.Hangar.W.InsideRib.-1.12",
+        "NSP01.Hangar.W.InsideRib.-1.13",
+        "NSP01.Hangar.W.InsideRib.-1.14",
+        "NSP01.Hangar.W.InsideRib.-1.15",
+        "NSP01.Hangar.W.InsideRib.-1.16",
+        "NSP01.Hangar.W.InsideRib.-1.17",
+        "NSP01.Hangar.W.InsideRib.-1.18",
+        "NSP01.Hangar.W.InsideRib.-1.19",
+        "NSP01.Hangar.W.InsideRib.-1.2",
+        "NSP01.Hangar.W.InsideRib.-1.20",
+        "NSP01.Hangar.W.InsideRib.-1.3",
+        "NSP01.Hangar.W.InsideRib.-1.4",
+        "NSP01.Hangar.W.InsideRib.-1.5",
+        "NSP01.Hangar.W.InsideRib.-1.6",
+        "NSP01.Hangar.W.InsideRib.-1.7",
+        "NSP01.Hangar.W.InsideRib.-1.8",
+        "NSP01.Hangar.W.InsideRib.-1.9",
+        "NSP01.Hangar.W.InsideRib.1.0",
+        "NSP01.Hangar.W.InsideRib.1.1",
+        "NSP01.Hangar.W.InsideRib.1.10",
+        "NSP01.Hangar.W.InsideRib.1.11",
+        "NSP01.Hangar.W.InsideRib.1.12",
+        "NSP01.Hangar.W.InsideRib.1.13",
+        "NSP01.Hangar.W.InsideRib.1.14",
+        "NSP01.Hangar.W.InsideRib.1.15",
+        "NSP01.Hangar.W.InsideRib.1.16",
+        "NSP01.Hangar.W.InsideRib.1.17",
+        "NSP01.Hangar.W.InsideRib.1.18",
+        "NSP01.Hangar.W.InsideRib.1.19",
+        "NSP01.Hangar.W.InsideRib.1.2",
+        "NSP01.Hangar.W.InsideRib.1.20",
+        "NSP01.Hangar.W.InsideRib.1.3",
+        "NSP01.Hangar.W.InsideRib.1.4",
+        "NSP01.Hangar.W.InsideRib.1.5",
+        "NSP01.Hangar.W.InsideRib.1.6",
+        "NSP01.Hangar.W.InsideRib.1.7",
+        "NSP01.Hangar.W.InsideRib.1.8",
+        "NSP01.Hangar.W.InsideRib.1.9",
+        "NSP01.HangarFacade.-1.0.Backing",
+        "NSP01.HangarFacade.-1.0.Louver.10",
+        "NSP01.HangarFacade.-1.0.Louver.12",
+        "NSP01.HangarFacade.-1.0.Louver.14",
+        "NSP01.HangarFacade.-1.0.Louver.16",
+        "NSP01.HangarFacade.-1.0.Louver.18",
+        "NSP01.HangarFacade.-1.0.Louver.20",
+        "NSP01.HangarFacade.-1.0.Louver.22",
+        "NSP01.HangarFacade.-1.0.Louver.8",
+        "NSP01.HangarFacade.-1.0.PanelJoint.32",
+        "NSP01.HangarFacade.-1.0.PanelJoint.4",
+        "NSP01.HangarFacade.-1.1.Backing",
+        "NSP01.HangarFacade.-1.1.Louver.10",
+        "NSP01.HangarFacade.-1.1.Louver.12",
+        "NSP01.HangarFacade.-1.1.Louver.14",
+        "NSP01.HangarFacade.-1.1.Louver.16",
+        "NSP01.HangarFacade.-1.1.Louver.18",
+        "NSP01.HangarFacade.-1.1.Louver.20",
+        "NSP01.HangarFacade.-1.1.Louver.22",
+        "NSP01.HangarFacade.-1.1.Louver.8",
+        "NSP01.HangarFacade.-1.1.PanelJoint.32",
+        "NSP01.HangarFacade.-1.1.PanelJoint.4",
+        "NSP01.HangarFacade.-1.2.Backing",
+        "NSP01.HangarFacade.-1.2.Louver.10",
+        "NSP01.HangarFacade.-1.2.Louver.12",
+        "NSP01.HangarFacade.-1.2.Louver.14",
+        "NSP01.HangarFacade.-1.2.Louver.16",
+        "NSP01.HangarFacade.-1.2.Louver.18",
+        "NSP01.HangarFacade.-1.2.Louver.20",
+        "NSP01.HangarFacade.-1.2.Louver.22",
+        "NSP01.HangarFacade.-1.2.Louver.8",
+        "NSP01.HangarFacade.-1.2.PanelJoint.32",
+        "NSP01.HangarFacade.-1.2.PanelJoint.4",
+        "NSP01.HangarFacade.-1.3.Backing",
+        "NSP01.HangarFacade.-1.3.Louver.10",
+        "NSP01.HangarFacade.-1.3.Louver.12",
+        "NSP01.HangarFacade.-1.3.Louver.14",
+        "NSP01.HangarFacade.-1.3.Louver.16",
+        "NSP01.HangarFacade.-1.3.Louver.18",
+        "NSP01.HangarFacade.-1.3.Louver.20",
+        "NSP01.HangarFacade.-1.3.Louver.22",
+        "NSP01.HangarFacade.-1.3.Louver.8",
+        "NSP01.HangarFacade.-1.3.PanelJoint.32",
+        "NSP01.HangarFacade.-1.3.PanelJoint.4",
+        "NSP01.HangarFacade.-1.4.Backing",
+        "NSP01.HangarFacade.-1.4.Louver.10",
+        "NSP01.HangarFacade.-1.4.Louver.12",
+        "NSP01.HangarFacade.-1.4.Louver.14",
+        "NSP01.HangarFacade.-1.4.Louver.16",
+        "NSP01.HangarFacade.-1.4.Louver.18",
+        "NSP01.HangarFacade.-1.4.Louver.20",
+        "NSP01.HangarFacade.-1.4.Louver.22",
+        "NSP01.HangarFacade.-1.4.Louver.8",
+        "NSP01.HangarFacade.-1.4.PanelJoint.32",
+        "NSP01.HangarFacade.-1.4.PanelJoint.4",
+        "NSP01.HangarRear.-1.0.PanelJoint.32",
+        "NSP01.HangarRear.-1.0.PanelJoint.4",
+        "NSP01.HangarRear.-1.1.Backing",
+        "NSP01.HangarRear.-1.1.Louver.10",
+        "NSP01.HangarRear.-1.1.Louver.12",
+        "NSP01.HangarRear.-1.1.Louver.14",
+        "NSP01.HangarRear.-1.1.Louver.16",
+        "NSP01.HangarRear.-1.1.Louver.18",
+        "NSP01.HangarRear.-1.1.Louver.20",
+        "NSP01.HangarRear.-1.1.Louver.22",
+        "NSP01.HangarRear.-1.1.Louver.8",
+        "NSP01.HangarRear.-1.1.PanelJoint.32",
+        "NSP01.HangarRear.-1.1.PanelJoint.4",
+        "NSP01.HangarRear.-1.2.PanelJoint.32",
+        "NSP01.HangarRear.-1.2.PanelJoint.4",
+        "NSP01.HangarRear.-1.3.Backing",
+        "NSP01.HangarRear.-1.3.Louver.10",
+        "NSP01.HangarRear.-1.3.Louver.12",
+        "NSP01.HangarRear.-1.3.Louver.14",
+        "NSP01.HangarRear.-1.3.Louver.16",
+        "NSP01.HangarRear.-1.3.Louver.18",
+        "NSP01.HangarRear.-1.3.Louver.20",
+        "NSP01.HangarRear.-1.3.Louver.22",
+        "NSP01.HangarRear.-1.3.Louver.8",
+        "NSP01.HangarRear.-1.3.PanelJoint.32",
+        "NSP01.HangarRear.-1.3.PanelJoint.4",
+        "NSP01.HangarRear.-1.4.PanelJoint.32",
+        "NSP01.HangarRear.-1.4.PanelJoint.4",
+        "NSP01.HangarRear.-1.5.Backing",
+        "NSP01.HangarRear.-1.5.Louver.10",
+        "NSP01.HangarRear.-1.5.Louver.12",
+        "NSP01.HangarRear.-1.5.Louver.14",
+        "NSP01.HangarRear.-1.5.Louver.16",
+        "NSP01.HangarRear.-1.5.Louver.18",
+        "NSP01.HangarRear.-1.5.Louver.20",
+        "NSP01.HangarRear.-1.5.Louver.22",
+        "NSP01.HangarRear.-1.5.Louver.8",
+        "NSP01.HangarRear.-1.5.PanelJoint.32",
+        "NSP01.HangarRear.-1.5.PanelJoint.4"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Hangar.W.46",
+      "chunk": "Hangar.W",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 36,
+      "materials": [
+        "NSP01.MAT.Crystal"
+      ],
+      "source_parts": [
+        "NSP01.Hangar.W.SoffitLight.0",
+        "NSP01.Hangar.W.SoffitLight.1",
+        "NSP01.Hangar.W.SoffitLight.2"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Hangar.W.47",
+      "chunk": "Hangar.W",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 24,
+      "materials": [
+        "NSP01.MAT.Marking"
+      ],
+      "source_parts": [
+        "NSP01.Hangar.W.ThresholdGuide.-1",
+        "NSP01.Hangar.W.ThresholdGuide.1"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Hangar.E.48",
+      "chunk": "Hangar.E",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 10152,
+      "materials": [
+        "NSP01.MAT.Ivory"
+      ],
+      "source_parts": [
+        "NSP01.Hangar.E.Jamb.-1",
+        "NSP01.Hangar.E.Jamb.1",
+        "NSP01.Hangar.E.Lintel",
+        "NSP01.Hangar.E.Roof",
+        "NSP01.Hangar.E.Side.-1",
+        "NSP01.Hangar.E.Side.1",
+        "NSP01.HangarFacade.1.0.ArchRib",
+        "NSP01.HangarFacade.1.0.Body",
+        "NSP01.HangarFacade.1.0.Pier.-1",
+        "NSP01.HangarFacade.1.0.Pier.1",
+        "NSP01.HangarFacade.1.1.ArchRib",
+        "NSP01.HangarFacade.1.1.Body",
+        "NSP01.HangarFacade.1.1.Pier.-1",
+        "NSP01.HangarFacade.1.1.Pier.1",
+        "NSP01.HangarFacade.1.2.ArchRib",
+        "NSP01.HangarFacade.1.2.Body",
+        "NSP01.HangarFacade.1.2.Pier.-1",
+        "NSP01.HangarFacade.1.2.Pier.1",
+        "NSP01.HangarFacade.1.3.ArchRib",
+        "NSP01.HangarFacade.1.3.Body",
+        "NSP01.HangarFacade.1.3.Pier.-1",
+        "NSP01.HangarFacade.1.3.Pier.1",
+        "NSP01.HangarFacade.1.4.ArchRib",
+        "NSP01.HangarFacade.1.4.Body",
+        "NSP01.HangarFacade.1.4.Pier.-1",
+        "NSP01.HangarFacade.1.4.Pier.1",
+        "NSP01.HangarRear.1.0.Body",
+        "NSP01.HangarRear.1.0.Pier.-1",
+        "NSP01.HangarRear.1.0.Pier.1",
+        "NSP01.HangarRear.1.1.ArchRib",
+        "NSP01.HangarRear.1.1.Body",
+        "NSP01.HangarRear.1.1.Pier.-1",
+        "NSP01.HangarRear.1.1.Pier.1",
+        "NSP01.HangarRear.1.2.Body",
+        "NSP01.HangarRear.1.2.Pier.-1",
+        "NSP01.HangarRear.1.2.Pier.1",
+        "NSP01.HangarRear.1.3.ArchRib",
+        "NSP01.HangarRear.1.3.Body",
+        "NSP01.HangarRear.1.3.Pier.-1",
+        "NSP01.HangarRear.1.3.Pier.1",
+        "NSP01.HangarRear.1.4.Body",
+        "NSP01.HangarRear.1.4.Pier.-1",
+        "NSP01.HangarRear.1.4.Pier.1",
+        "NSP01.HangarRear.1.5.ArchRib",
+        "NSP01.HangarRear.1.5.Body",
+        "NSP01.HangarRear.1.5.Pier.-1",
+        "NSP01.HangarRear.1.5.Pier.1"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Hangar.E.Door.-1.00.49",
+      "chunk": "NSP01.Hangar.E.Door.-1.00",
+      "kind": "door-panel",
+      "origin_blender_m": [
+        118.55000305175781,
+        -127.5,
+        14
+      ],
+      "triangles": 44,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Hangar.E.Door.-1.00"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Hangar.E.Door.-1.01.50",
+      "chunk": "NSP01.Hangar.E.Door.-1.01",
+      "kind": "door-panel",
+      "origin_blender_m": [
+        118.55000305175781,
+        -126.69999694824219,
+        14
+      ],
+      "triangles": 44,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Hangar.E.Door.-1.01"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Hangar.E.Door.-1.02.51",
+      "chunk": "NSP01.Hangar.E.Door.-1.02",
+      "kind": "door-panel",
+      "origin_blender_m": [
+        118.55000305175781,
+        -125.9000015258789,
+        14
+      ],
+      "triangles": 44,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Hangar.E.Door.-1.02"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Hangar.E.Door.-1.03.52",
+      "chunk": "NSP01.Hangar.E.Door.-1.03",
+      "kind": "door-panel",
+      "origin_blender_m": [
+        118.55000305175781,
+        -125.0999984741211,
+        14
+      ],
+      "triangles": 44,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Hangar.E.Door.-1.03"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Hangar.E.Door.-1.04.53",
+      "chunk": "NSP01.Hangar.E.Door.-1.04",
+      "kind": "door-panel",
+      "origin_blender_m": [
+        118.55000305175781,
+        -124.30000305175781,
+        14
+      ],
+      "triangles": 44,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Hangar.E.Door.-1.04"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Hangar.E.Door.-1.05.54",
+      "chunk": "NSP01.Hangar.E.Door.-1.05",
+      "kind": "door-panel",
+      "origin_blender_m": [
+        118.55000305175781,
+        -123.5,
+        14
+      ],
+      "triangles": 44,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Hangar.E.Door.-1.05"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Hangar.E.Door.1.00.55",
+      "chunk": "NSP01.Hangar.E.Door.1.00",
+      "kind": "door-panel",
+      "origin_blender_m": [
+        229.4499969482422,
+        -127.5,
+        14
+      ],
+      "triangles": 44,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Hangar.E.Door.1.00"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Hangar.E.Door.1.01.56",
+      "chunk": "NSP01.Hangar.E.Door.1.01",
+      "kind": "door-panel",
+      "origin_blender_m": [
+        229.4499969482422,
+        -126.69999694824219,
+        14
+      ],
+      "triangles": 44,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Hangar.E.Door.1.01"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Hangar.E.Door.1.02.57",
+      "chunk": "NSP01.Hangar.E.Door.1.02",
+      "kind": "door-panel",
+      "origin_blender_m": [
+        229.4499969482422,
+        -125.9000015258789,
+        14
+      ],
+      "triangles": 44,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Hangar.E.Door.1.02"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Hangar.E.Door.1.03.58",
+      "chunk": "NSP01.Hangar.E.Door.1.03",
+      "kind": "door-panel",
+      "origin_blender_m": [
+        229.4499969482422,
+        -125.0999984741211,
+        14
+      ],
+      "triangles": 44,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Hangar.E.Door.1.03"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Hangar.E.Door.1.04.59",
+      "chunk": "NSP01.Hangar.E.Door.1.04",
+      "kind": "door-panel",
+      "origin_blender_m": [
+        229.4499969482422,
+        -124.30000305175781,
+        14
+      ],
+      "triangles": 44,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Hangar.E.Door.1.04"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Hangar.E.Door.1.05.60",
+      "chunk": "NSP01.Hangar.E.Door.1.05",
+      "kind": "door-panel",
+      "origin_blender_m": [
+        229.4499969482422,
+        -123.5,
+        14
+      ],
+      "triangles": 44,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Hangar.E.Door.1.05"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Hangar.E.61",
+      "chunk": "Hangar.E",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 4940,
+      "materials": [
+        "NSP01.MAT.Dark"
+      ],
+      "source_parts": [
+        "NSP01.Hangar.E.Back",
+        "NSP01.Hangar.E.InsideRib.-1.0",
+        "NSP01.Hangar.E.InsideRib.-1.1",
+        "NSP01.Hangar.E.InsideRib.-1.10",
+        "NSP01.Hangar.E.InsideRib.-1.11",
+        "NSP01.Hangar.E.InsideRib.-1.12",
+        "NSP01.Hangar.E.InsideRib.-1.13",
+        "NSP01.Hangar.E.InsideRib.-1.14",
+        "NSP01.Hangar.E.InsideRib.-1.15",
+        "NSP01.Hangar.E.InsideRib.-1.16",
+        "NSP01.Hangar.E.InsideRib.-1.17",
+        "NSP01.Hangar.E.InsideRib.-1.18",
+        "NSP01.Hangar.E.InsideRib.-1.19",
+        "NSP01.Hangar.E.InsideRib.-1.2",
+        "NSP01.Hangar.E.InsideRib.-1.20",
+        "NSP01.Hangar.E.InsideRib.-1.3",
+        "NSP01.Hangar.E.InsideRib.-1.4",
+        "NSP01.Hangar.E.InsideRib.-1.5",
+        "NSP01.Hangar.E.InsideRib.-1.6",
+        "NSP01.Hangar.E.InsideRib.-1.7",
+        "NSP01.Hangar.E.InsideRib.-1.8",
+        "NSP01.Hangar.E.InsideRib.-1.9",
+        "NSP01.Hangar.E.InsideRib.1.0",
+        "NSP01.Hangar.E.InsideRib.1.1",
+        "NSP01.Hangar.E.InsideRib.1.10",
+        "NSP01.Hangar.E.InsideRib.1.11",
+        "NSP01.Hangar.E.InsideRib.1.12",
+        "NSP01.Hangar.E.InsideRib.1.13",
+        "NSP01.Hangar.E.InsideRib.1.14",
+        "NSP01.Hangar.E.InsideRib.1.15",
+        "NSP01.Hangar.E.InsideRib.1.16",
+        "NSP01.Hangar.E.InsideRib.1.17",
+        "NSP01.Hangar.E.InsideRib.1.18",
+        "NSP01.Hangar.E.InsideRib.1.19",
+        "NSP01.Hangar.E.InsideRib.1.2",
+        "NSP01.Hangar.E.InsideRib.1.20",
+        "NSP01.Hangar.E.InsideRib.1.3",
+        "NSP01.Hangar.E.InsideRib.1.4",
+        "NSP01.Hangar.E.InsideRib.1.5",
+        "NSP01.Hangar.E.InsideRib.1.6",
+        "NSP01.Hangar.E.InsideRib.1.7",
+        "NSP01.Hangar.E.InsideRib.1.8",
+        "NSP01.Hangar.E.InsideRib.1.9",
+        "NSP01.HangarFacade.1.0.Backing",
+        "NSP01.HangarFacade.1.0.Louver.10",
+        "NSP01.HangarFacade.1.0.Louver.12",
+        "NSP01.HangarFacade.1.0.Louver.14",
+        "NSP01.HangarFacade.1.0.Louver.16",
+        "NSP01.HangarFacade.1.0.Louver.18",
+        "NSP01.HangarFacade.1.0.Louver.20",
+        "NSP01.HangarFacade.1.0.Louver.22",
+        "NSP01.HangarFacade.1.0.Louver.8",
+        "NSP01.HangarFacade.1.0.PanelJoint.32",
+        "NSP01.HangarFacade.1.0.PanelJoint.4",
+        "NSP01.HangarFacade.1.1.Backing",
+        "NSP01.HangarFacade.1.1.Louver.10",
+        "NSP01.HangarFacade.1.1.Louver.12",
+        "NSP01.HangarFacade.1.1.Louver.14",
+        "NSP01.HangarFacade.1.1.Louver.16",
+        "NSP01.HangarFacade.1.1.Louver.18",
+        "NSP01.HangarFacade.1.1.Louver.20",
+        "NSP01.HangarFacade.1.1.Louver.22",
+        "NSP01.HangarFacade.1.1.Louver.8",
+        "NSP01.HangarFacade.1.1.PanelJoint.32",
+        "NSP01.HangarFacade.1.1.PanelJoint.4",
+        "NSP01.HangarFacade.1.2.Backing",
+        "NSP01.HangarFacade.1.2.Louver.10",
+        "NSP01.HangarFacade.1.2.Louver.12",
+        "NSP01.HangarFacade.1.2.Louver.14",
+        "NSP01.HangarFacade.1.2.Louver.16",
+        "NSP01.HangarFacade.1.2.Louver.18",
+        "NSP01.HangarFacade.1.2.Louver.20",
+        "NSP01.HangarFacade.1.2.Louver.22",
+        "NSP01.HangarFacade.1.2.Louver.8",
+        "NSP01.HangarFacade.1.2.PanelJoint.32",
+        "NSP01.HangarFacade.1.2.PanelJoint.4",
+        "NSP01.HangarFacade.1.3.Backing",
+        "NSP01.HangarFacade.1.3.Louver.10",
+        "NSP01.HangarFacade.1.3.Louver.12",
+        "NSP01.HangarFacade.1.3.Louver.14",
+        "NSP01.HangarFacade.1.3.Louver.16",
+        "NSP01.HangarFacade.1.3.Louver.18",
+        "NSP01.HangarFacade.1.3.Louver.20",
+        "NSP01.HangarFacade.1.3.Louver.22",
+        "NSP01.HangarFacade.1.3.Louver.8",
+        "NSP01.HangarFacade.1.3.PanelJoint.32",
+        "NSP01.HangarFacade.1.3.PanelJoint.4",
+        "NSP01.HangarFacade.1.4.Backing",
+        "NSP01.HangarFacade.1.4.Louver.10",
+        "NSP01.HangarFacade.1.4.Louver.12",
+        "NSP01.HangarFacade.1.4.Louver.14",
+        "NSP01.HangarFacade.1.4.Louver.16",
+        "NSP01.HangarFacade.1.4.Louver.18",
+        "NSP01.HangarFacade.1.4.Louver.20",
+        "NSP01.HangarFacade.1.4.Louver.22",
+        "NSP01.HangarFacade.1.4.Louver.8",
+        "NSP01.HangarFacade.1.4.PanelJoint.32",
+        "NSP01.HangarFacade.1.4.PanelJoint.4",
+        "NSP01.HangarRear.1.0.PanelJoint.32",
+        "NSP01.HangarRear.1.0.PanelJoint.4",
+        "NSP01.HangarRear.1.1.Backing",
+        "NSP01.HangarRear.1.1.Louver.10",
+        "NSP01.HangarRear.1.1.Louver.12",
+        "NSP01.HangarRear.1.1.Louver.14",
+        "NSP01.HangarRear.1.1.Louver.16",
+        "NSP01.HangarRear.1.1.Louver.18",
+        "NSP01.HangarRear.1.1.Louver.20",
+        "NSP01.HangarRear.1.1.Louver.22",
+        "NSP01.HangarRear.1.1.Louver.8",
+        "NSP01.HangarRear.1.1.PanelJoint.32",
+        "NSP01.HangarRear.1.1.PanelJoint.4",
+        "NSP01.HangarRear.1.2.PanelJoint.32",
+        "NSP01.HangarRear.1.2.PanelJoint.4",
+        "NSP01.HangarRear.1.3.Backing",
+        "NSP01.HangarRear.1.3.Louver.10",
+        "NSP01.HangarRear.1.3.Louver.12",
+        "NSP01.HangarRear.1.3.Louver.14",
+        "NSP01.HangarRear.1.3.Louver.16",
+        "NSP01.HangarRear.1.3.Louver.18",
+        "NSP01.HangarRear.1.3.Louver.20",
+        "NSP01.HangarRear.1.3.Louver.22",
+        "NSP01.HangarRear.1.3.Louver.8",
+        "NSP01.HangarRear.1.3.PanelJoint.32",
+        "NSP01.HangarRear.1.3.PanelJoint.4",
+        "NSP01.HangarRear.1.4.PanelJoint.32",
+        "NSP01.HangarRear.1.4.PanelJoint.4",
+        "NSP01.HangarRear.1.5.Backing",
+        "NSP01.HangarRear.1.5.Louver.10",
+        "NSP01.HangarRear.1.5.Louver.12",
+        "NSP01.HangarRear.1.5.Louver.14",
+        "NSP01.HangarRear.1.5.Louver.16",
+        "NSP01.HangarRear.1.5.Louver.18",
+        "NSP01.HangarRear.1.5.Louver.20",
+        "NSP01.HangarRear.1.5.Louver.22",
+        "NSP01.HangarRear.1.5.Louver.8",
+        "NSP01.HangarRear.1.5.PanelJoint.32",
+        "NSP01.HangarRear.1.5.PanelJoint.4"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Hangar.E.62",
+      "chunk": "Hangar.E",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 36,
+      "materials": [
+        "NSP01.MAT.Crystal"
+      ],
+      "source_parts": [
+        "NSP01.Hangar.E.SoffitLight.0",
+        "NSP01.Hangar.E.SoffitLight.1",
+        "NSP01.Hangar.E.SoffitLight.2"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Hangar.E.63",
+      "chunk": "Hangar.E",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 24,
+      "materials": [
+        "NSP01.MAT.Marking"
+      ],
+      "source_parts": [
+        "NSP01.Hangar.E.ThresholdGuide.-1",
+        "NSP01.Hangar.E.ThresholdGuide.1"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Spire.Central.64",
+      "chunk": "NSP01.Spire.Central",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 1006,
+      "materials": [
+        "NSP01.MAT.Ivory"
+      ],
+      "source_parts": [
+        "NSP01.Spire.Central",
+        "NSP01.Spire.Central.Cornice.0",
+        "NSP01.Spire.Central.Cornice.2",
+        "NSP01.Spire.Central.CrystalCradle",
+        "NSP01.Spire.Central.InfillMullion.0",
+        "NSP01.Spire.Central.InfillMullion.1",
+        "NSP01.Spire.Central.InfillMullion.2",
+        "NSP01.Spire.Central.Rib.0",
+        "NSP01.Spire.Central.Rib.1",
+        "NSP01.Spire.Central.Rib.2",
+        "NSP01.Spire.Central.Rib.3",
+        "NSP01.Spire.Central.Rib.4",
+        "NSP01.Spire.Central.Rib.5",
+        "NSP01.Spire.Central.Rib.6",
+        "NSP01.Spire.Central.Rib.7"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Spire.Central.65",
+      "chunk": "NSP01.Spire.Central",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 614,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Spire.Central",
+        "NSP01.Spire.Central.Infill.0",
+        "NSP01.Spire.Central.Infill.1",
+        "NSP01.Spire.Central.Infill.2"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Spire.Central.66",
+      "chunk": "NSP01.Spire.Central",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 3964,
+      "materials": [
+        "NSP01.MAT.Gold"
+      ],
+      "source_parts": [
+        "NSP01.Spire.Central.CompassCross",
+        "NSP01.Spire.Central.Cornice.1",
+        "NSP01.Spire.Central.CrystalRetention",
+        "NSP01.Spire.Central.Halo",
+        "NSP01.Spire.Central.InfillFrame.0",
+        "NSP01.Spire.Central.InfillFrame.1",
+        "NSP01.Spire.Central.InfillFrame.2",
+        "NSP01.Spire.Central.Mount.155",
+        "NSP01.Spire.Central.Mount.200",
+        "NSP01.Spire.Central.Mount.245",
+        "NSP01.Spire.Central.UpperRib.0",
+        "NSP01.Spire.Central.UpperRib.1",
+        "NSP01.Spire.Central.UpperRib.2",
+        "NSP01.Spire.Central.UpperRib.3",
+        "NSP01.Spire.Central.UpperRib.4",
+        "NSP01.Spire.Central.UpperRib.5",
+        "NSP01.Spire.Central.UpperRib.6",
+        "NSP01.Spire.Central.UpperRib.7"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Spire.Central.67",
+      "chunk": "NSP01.Spire.Central",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 8,
+      "materials": [
+        "NSP01.MAT.Crystal"
+      ],
+      "source_parts": [
+        "NSP01.Spire.Central.Crystal"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Spire.Crown.W.FRONT.68",
+      "chunk": "NSP01.Spire.Crown.W.FRONT",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 926,
+      "materials": [
+        "NSP01.MAT.Ivory"
+      ],
+      "source_parts": [
+        "NSP01.Spire.Crown.W.FRONT",
+        "NSP01.Spire.Crown.W.FRONT.Cornice.0",
+        "NSP01.Spire.Crown.W.FRONT.Cornice.2",
+        "NSP01.Spire.Crown.W.FRONT.InfillMullion.0",
+        "NSP01.Spire.Crown.W.FRONT.InfillMullion.1",
+        "NSP01.Spire.Crown.W.FRONT.InfillMullion.2",
+        "NSP01.Spire.Crown.W.FRONT.InfillMullion.3",
+        "NSP01.Spire.Crown.W.FRONT.Rib.0",
+        "NSP01.Spire.Crown.W.FRONT.Rib.1",
+        "NSP01.Spire.Crown.W.FRONT.Rib.2",
+        "NSP01.Spire.Crown.W.FRONT.Rib.3",
+        "NSP01.Spire.Crown.W.FRONT.Rib.4",
+        "NSP01.Spire.Crown.W.FRONT.Rib.5",
+        "NSP01.Spire.Crown.W.FRONT.Rib.6",
+        "NSP01.Spire.Crown.W.FRONT.Rib.7"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Spire.Crown.W.FRONT.69",
+      "chunk": "NSP01.Spire.Crown.W.FRONT",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 750,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Spire.Crown.W.FRONT",
+        "NSP01.Spire.Crown.W.FRONT.Infill.0",
+        "NSP01.Spire.Crown.W.FRONT.Infill.1",
+        "NSP01.Spire.Crown.W.FRONT.Infill.2",
+        "NSP01.Spire.Crown.W.FRONT.Infill.3"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Spire.Crown.W.FRONT.70",
+      "chunk": "NSP01.Spire.Crown.W.FRONT",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 3216,
+      "materials": [
+        "NSP01.MAT.Gold"
+      ],
+      "source_parts": [
+        "NSP01.Spire.Crown.W.FRONT.CapSeam.0",
+        "NSP01.Spire.Crown.W.FRONT.CapSeam.1",
+        "NSP01.Spire.Crown.W.FRONT.CapSeam.2",
+        "NSP01.Spire.Crown.W.FRONT.CapSeam.3",
+        "NSP01.Spire.Crown.W.FRONT.CapSeam.4",
+        "NSP01.Spire.Crown.W.FRONT.CapSeam.5",
+        "NSP01.Spire.Crown.W.FRONT.CapSeam.6",
+        "NSP01.Spire.Crown.W.FRONT.CapSeam.7",
+        "NSP01.Spire.Crown.W.FRONT.Cornice.1",
+        "NSP01.Spire.Crown.W.FRONT.InfillFrame.0",
+        "NSP01.Spire.Crown.W.FRONT.InfillFrame.1",
+        "NSP01.Spire.Crown.W.FRONT.InfillFrame.2",
+        "NSP01.Spire.Crown.W.FRONT.InfillFrame.3"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Spire.Crown.W.REAR.71",
+      "chunk": "NSP01.Spire.Crown.W.REAR",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 926,
+      "materials": [
+        "NSP01.MAT.Ivory"
+      ],
+      "source_parts": [
+        "NSP01.Spire.Crown.W.REAR",
+        "NSP01.Spire.Crown.W.REAR.Cornice.0",
+        "NSP01.Spire.Crown.W.REAR.Cornice.2",
+        "NSP01.Spire.Crown.W.REAR.InfillMullion.0",
+        "NSP01.Spire.Crown.W.REAR.InfillMullion.1",
+        "NSP01.Spire.Crown.W.REAR.InfillMullion.2",
+        "NSP01.Spire.Crown.W.REAR.InfillMullion.3",
+        "NSP01.Spire.Crown.W.REAR.Rib.0",
+        "NSP01.Spire.Crown.W.REAR.Rib.1",
+        "NSP01.Spire.Crown.W.REAR.Rib.2",
+        "NSP01.Spire.Crown.W.REAR.Rib.3",
+        "NSP01.Spire.Crown.W.REAR.Rib.4",
+        "NSP01.Spire.Crown.W.REAR.Rib.5",
+        "NSP01.Spire.Crown.W.REAR.Rib.6",
+        "NSP01.Spire.Crown.W.REAR.Rib.7"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Spire.Crown.W.REAR.72",
+      "chunk": "NSP01.Spire.Crown.W.REAR",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 750,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Spire.Crown.W.REAR",
+        "NSP01.Spire.Crown.W.REAR.Infill.0",
+        "NSP01.Spire.Crown.W.REAR.Infill.1",
+        "NSP01.Spire.Crown.W.REAR.Infill.2",
+        "NSP01.Spire.Crown.W.REAR.Infill.3"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Spire.Crown.W.REAR.73",
+      "chunk": "NSP01.Spire.Crown.W.REAR",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 3216,
+      "materials": [
+        "NSP01.MAT.Gold"
+      ],
+      "source_parts": [
+        "NSP01.Spire.Crown.W.REAR.CapSeam.0",
+        "NSP01.Spire.Crown.W.REAR.CapSeam.1",
+        "NSP01.Spire.Crown.W.REAR.CapSeam.2",
+        "NSP01.Spire.Crown.W.REAR.CapSeam.3",
+        "NSP01.Spire.Crown.W.REAR.CapSeam.4",
+        "NSP01.Spire.Crown.W.REAR.CapSeam.5",
+        "NSP01.Spire.Crown.W.REAR.CapSeam.6",
+        "NSP01.Spire.Crown.W.REAR.CapSeam.7",
+        "NSP01.Spire.Crown.W.REAR.Cornice.1",
+        "NSP01.Spire.Crown.W.REAR.InfillFrame.0",
+        "NSP01.Spire.Crown.W.REAR.InfillFrame.1",
+        "NSP01.Spire.Crown.W.REAR.InfillFrame.2",
+        "NSP01.Spire.Crown.W.REAR.InfillFrame.3"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Tower.Shoulder.W.FRONT.74",
+      "chunk": "NSP01.Tower.Shoulder.W.FRONT",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 926,
+      "materials": [
+        "NSP01.MAT.Ivory"
+      ],
+      "source_parts": [
+        "NSP01.Tower.Shoulder.W.FRONT",
+        "NSP01.Tower.Shoulder.W.FRONT.Cornice.0",
+        "NSP01.Tower.Shoulder.W.FRONT.Cornice.2",
+        "NSP01.Tower.Shoulder.W.FRONT.InfillMullion.0",
+        "NSP01.Tower.Shoulder.W.FRONT.InfillMullion.1",
+        "NSP01.Tower.Shoulder.W.FRONT.InfillMullion.2",
+        "NSP01.Tower.Shoulder.W.FRONT.InfillMullion.3",
+        "NSP01.Tower.Shoulder.W.FRONT.Rib.0",
+        "NSP01.Tower.Shoulder.W.FRONT.Rib.1",
+        "NSP01.Tower.Shoulder.W.FRONT.Rib.2",
+        "NSP01.Tower.Shoulder.W.FRONT.Rib.3",
+        "NSP01.Tower.Shoulder.W.FRONT.Rib.4",
+        "NSP01.Tower.Shoulder.W.FRONT.Rib.5",
+        "NSP01.Tower.Shoulder.W.FRONT.Rib.6",
+        "NSP01.Tower.Shoulder.W.FRONT.Rib.7"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Tower.Shoulder.W.FRONT.75",
+      "chunk": "NSP01.Tower.Shoulder.W.FRONT",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 750,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Tower.Shoulder.W.FRONT",
+        "NSP01.Tower.Shoulder.W.FRONT.Infill.0",
+        "NSP01.Tower.Shoulder.W.FRONT.Infill.1",
+        "NSP01.Tower.Shoulder.W.FRONT.Infill.2",
+        "NSP01.Tower.Shoulder.W.FRONT.Infill.3"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Tower.Shoulder.W.FRONT.76",
+      "chunk": "NSP01.Tower.Shoulder.W.FRONT",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 3216,
+      "materials": [
+        "NSP01.MAT.Gold"
+      ],
+      "source_parts": [
+        "NSP01.Tower.Shoulder.W.FRONT.CapSeam.0",
+        "NSP01.Tower.Shoulder.W.FRONT.CapSeam.1",
+        "NSP01.Tower.Shoulder.W.FRONT.CapSeam.2",
+        "NSP01.Tower.Shoulder.W.FRONT.CapSeam.3",
+        "NSP01.Tower.Shoulder.W.FRONT.CapSeam.4",
+        "NSP01.Tower.Shoulder.W.FRONT.CapSeam.5",
+        "NSP01.Tower.Shoulder.W.FRONT.CapSeam.6",
+        "NSP01.Tower.Shoulder.W.FRONT.CapSeam.7",
+        "NSP01.Tower.Shoulder.W.FRONT.Cornice.1",
+        "NSP01.Tower.Shoulder.W.FRONT.InfillFrame.0",
+        "NSP01.Tower.Shoulder.W.FRONT.InfillFrame.1",
+        "NSP01.Tower.Shoulder.W.FRONT.InfillFrame.2",
+        "NSP01.Tower.Shoulder.W.FRONT.InfillFrame.3"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Tower.Shoulder.W.REAR.77",
+      "chunk": "NSP01.Tower.Shoulder.W.REAR",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 1014,
+      "materials": [
+        "NSP01.MAT.Ivory"
+      ],
+      "source_parts": [
+        "NSP01.Tower.Shoulder.W.REAR",
+        "NSP01.Tower.Shoulder.W.REAR.Cornice.0",
+        "NSP01.Tower.Shoulder.W.REAR.Cornice.2",
+        "NSP01.Tower.Shoulder.W.REAR.InfillMullion.0",
+        "NSP01.Tower.Shoulder.W.REAR.InfillMullion.1",
+        "NSP01.Tower.Shoulder.W.REAR.InfillMullion.2",
+        "NSP01.Tower.Shoulder.W.REAR.InfillMullion.3",
+        "NSP01.Tower.Shoulder.W.REAR.Rib.0",
+        "NSP01.Tower.Shoulder.W.REAR.Rib.1",
+        "NSP01.Tower.Shoulder.W.REAR.Rib.2",
+        "NSP01.Tower.Shoulder.W.REAR.Rib.3",
+        "NSP01.Tower.Shoulder.W.REAR.Rib.4",
+        "NSP01.Tower.Shoulder.W.REAR.Rib.5",
+        "NSP01.Tower.Shoulder.W.REAR.Rib.6",
+        "NSP01.Tower.Shoulder.W.REAR.Rib.7"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Tower.Shoulder.W.REAR.78",
+      "chunk": "NSP01.Tower.Shoulder.W.REAR",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 750,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Tower.Shoulder.W.REAR",
+        "NSP01.Tower.Shoulder.W.REAR.Infill.0",
+        "NSP01.Tower.Shoulder.W.REAR.Infill.1",
+        "NSP01.Tower.Shoulder.W.REAR.Infill.2",
+        "NSP01.Tower.Shoulder.W.REAR.Infill.3"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Tower.Shoulder.W.REAR.79",
+      "chunk": "NSP01.Tower.Shoulder.W.REAR",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 3216,
+      "materials": [
+        "NSP01.MAT.Gold"
+      ],
+      "source_parts": [
+        "NSP01.Tower.Shoulder.W.REAR.CapSeam.0",
+        "NSP01.Tower.Shoulder.W.REAR.CapSeam.1",
+        "NSP01.Tower.Shoulder.W.REAR.CapSeam.2",
+        "NSP01.Tower.Shoulder.W.REAR.CapSeam.3",
+        "NSP01.Tower.Shoulder.W.REAR.CapSeam.4",
+        "NSP01.Tower.Shoulder.W.REAR.CapSeam.5",
+        "NSP01.Tower.Shoulder.W.REAR.CapSeam.6",
+        "NSP01.Tower.Shoulder.W.REAR.CapSeam.7",
+        "NSP01.Tower.Shoulder.W.REAR.Cornice.1",
+        "NSP01.Tower.Shoulder.W.REAR.InfillFrame.0",
+        "NSP01.Tower.Shoulder.W.REAR.InfillFrame.1",
+        "NSP01.Tower.Shoulder.W.REAR.InfillFrame.2",
+        "NSP01.Tower.Shoulder.W.REAR.InfillFrame.3"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Tower.Perimeter.W.FRONT.80",
+      "chunk": "NSP01.Tower.Perimeter.W.FRONT",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 934,
+      "materials": [
+        "NSP01.MAT.Ivory"
+      ],
+      "source_parts": [
+        "NSP01.Tower.Perimeter.W.FRONT",
+        "NSP01.Tower.Perimeter.W.FRONT.Cornice.0",
+        "NSP01.Tower.Perimeter.W.FRONT.Cornice.2",
+        "NSP01.Tower.Perimeter.W.FRONT.InfillMullion.0",
+        "NSP01.Tower.Perimeter.W.FRONT.InfillMullion.1",
+        "NSP01.Tower.Perimeter.W.FRONT.InfillMullion.2",
+        "NSP01.Tower.Perimeter.W.FRONT.InfillMullion.3",
+        "NSP01.Tower.Perimeter.W.FRONT.Rib.0",
+        "NSP01.Tower.Perimeter.W.FRONT.Rib.1",
+        "NSP01.Tower.Perimeter.W.FRONT.Rib.2",
+        "NSP01.Tower.Perimeter.W.FRONT.Rib.3",
+        "NSP01.Tower.Perimeter.W.FRONT.Rib.4",
+        "NSP01.Tower.Perimeter.W.FRONT.Rib.5",
+        "NSP01.Tower.Perimeter.W.FRONT.Rib.6",
+        "NSP01.Tower.Perimeter.W.FRONT.Rib.7"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Tower.Perimeter.W.FRONT.81",
+      "chunk": "NSP01.Tower.Perimeter.W.FRONT",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 750,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Tower.Perimeter.W.FRONT",
+        "NSP01.Tower.Perimeter.W.FRONT.Infill.0",
+        "NSP01.Tower.Perimeter.W.FRONT.Infill.1",
+        "NSP01.Tower.Perimeter.W.FRONT.Infill.2",
+        "NSP01.Tower.Perimeter.W.FRONT.Infill.3"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Tower.Perimeter.W.FRONT.82",
+      "chunk": "NSP01.Tower.Perimeter.W.FRONT",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 3216,
+      "materials": [
+        "NSP01.MAT.Gold"
+      ],
+      "source_parts": [
+        "NSP01.Tower.Perimeter.W.FRONT.CapSeam.0",
+        "NSP01.Tower.Perimeter.W.FRONT.CapSeam.1",
+        "NSP01.Tower.Perimeter.W.FRONT.CapSeam.2",
+        "NSP01.Tower.Perimeter.W.FRONT.CapSeam.3",
+        "NSP01.Tower.Perimeter.W.FRONT.CapSeam.4",
+        "NSP01.Tower.Perimeter.W.FRONT.CapSeam.5",
+        "NSP01.Tower.Perimeter.W.FRONT.CapSeam.6",
+        "NSP01.Tower.Perimeter.W.FRONT.CapSeam.7",
+        "NSP01.Tower.Perimeter.W.FRONT.Cornice.1",
+        "NSP01.Tower.Perimeter.W.FRONT.InfillFrame.0",
+        "NSP01.Tower.Perimeter.W.FRONT.InfillFrame.1",
+        "NSP01.Tower.Perimeter.W.FRONT.InfillFrame.2",
+        "NSP01.Tower.Perimeter.W.FRONT.InfillFrame.3"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Tower.Perimeter.W.REAR.83",
+      "chunk": "NSP01.Tower.Perimeter.W.REAR",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 926,
+      "materials": [
+        "NSP01.MAT.Ivory"
+      ],
+      "source_parts": [
+        "NSP01.Tower.Perimeter.W.REAR",
+        "NSP01.Tower.Perimeter.W.REAR.Cornice.0",
+        "NSP01.Tower.Perimeter.W.REAR.Cornice.2",
+        "NSP01.Tower.Perimeter.W.REAR.InfillMullion.0",
+        "NSP01.Tower.Perimeter.W.REAR.InfillMullion.1",
+        "NSP01.Tower.Perimeter.W.REAR.InfillMullion.2",
+        "NSP01.Tower.Perimeter.W.REAR.InfillMullion.3",
+        "NSP01.Tower.Perimeter.W.REAR.Rib.0",
+        "NSP01.Tower.Perimeter.W.REAR.Rib.1",
+        "NSP01.Tower.Perimeter.W.REAR.Rib.2",
+        "NSP01.Tower.Perimeter.W.REAR.Rib.3",
+        "NSP01.Tower.Perimeter.W.REAR.Rib.4",
+        "NSP01.Tower.Perimeter.W.REAR.Rib.5",
+        "NSP01.Tower.Perimeter.W.REAR.Rib.6",
+        "NSP01.Tower.Perimeter.W.REAR.Rib.7"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Tower.Perimeter.W.REAR.84",
+      "chunk": "NSP01.Tower.Perimeter.W.REAR",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 750,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Tower.Perimeter.W.REAR",
+        "NSP01.Tower.Perimeter.W.REAR.Infill.0",
+        "NSP01.Tower.Perimeter.W.REAR.Infill.1",
+        "NSP01.Tower.Perimeter.W.REAR.Infill.2",
+        "NSP01.Tower.Perimeter.W.REAR.Infill.3"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Tower.Perimeter.W.REAR.85",
+      "chunk": "NSP01.Tower.Perimeter.W.REAR",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 3216,
+      "materials": [
+        "NSP01.MAT.Gold"
+      ],
+      "source_parts": [
+        "NSP01.Tower.Perimeter.W.REAR.CapSeam.0",
+        "NSP01.Tower.Perimeter.W.REAR.CapSeam.1",
+        "NSP01.Tower.Perimeter.W.REAR.CapSeam.2",
+        "NSP01.Tower.Perimeter.W.REAR.CapSeam.3",
+        "NSP01.Tower.Perimeter.W.REAR.CapSeam.4",
+        "NSP01.Tower.Perimeter.W.REAR.CapSeam.5",
+        "NSP01.Tower.Perimeter.W.REAR.CapSeam.6",
+        "NSP01.Tower.Perimeter.W.REAR.CapSeam.7",
+        "NSP01.Tower.Perimeter.W.REAR.Cornice.1",
+        "NSP01.Tower.Perimeter.W.REAR.InfillFrame.0",
+        "NSP01.Tower.Perimeter.W.REAR.InfillFrame.1",
+        "NSP01.Tower.Perimeter.W.REAR.InfillFrame.2",
+        "NSP01.Tower.Perimeter.W.REAR.InfillFrame.3"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Spire.Crown.E.FRONT.86",
+      "chunk": "NSP01.Spire.Crown.E.FRONT",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 926,
+      "materials": [
+        "NSP01.MAT.Ivory"
+      ],
+      "source_parts": [
+        "NSP01.Spire.Crown.E.FRONT",
+        "NSP01.Spire.Crown.E.FRONT.Cornice.0",
+        "NSP01.Spire.Crown.E.FRONT.Cornice.2",
+        "NSP01.Spire.Crown.E.FRONT.InfillMullion.0",
+        "NSP01.Spire.Crown.E.FRONT.InfillMullion.1",
+        "NSP01.Spire.Crown.E.FRONT.InfillMullion.2",
+        "NSP01.Spire.Crown.E.FRONT.InfillMullion.3",
+        "NSP01.Spire.Crown.E.FRONT.Rib.0",
+        "NSP01.Spire.Crown.E.FRONT.Rib.1",
+        "NSP01.Spire.Crown.E.FRONT.Rib.2",
+        "NSP01.Spire.Crown.E.FRONT.Rib.3",
+        "NSP01.Spire.Crown.E.FRONT.Rib.4",
+        "NSP01.Spire.Crown.E.FRONT.Rib.5",
+        "NSP01.Spire.Crown.E.FRONT.Rib.6",
+        "NSP01.Spire.Crown.E.FRONT.Rib.7"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Spire.Crown.E.FRONT.87",
+      "chunk": "NSP01.Spire.Crown.E.FRONT",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 750,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Spire.Crown.E.FRONT",
+        "NSP01.Spire.Crown.E.FRONT.Infill.0",
+        "NSP01.Spire.Crown.E.FRONT.Infill.1",
+        "NSP01.Spire.Crown.E.FRONT.Infill.2",
+        "NSP01.Spire.Crown.E.FRONT.Infill.3"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Spire.Crown.E.FRONT.88",
+      "chunk": "NSP01.Spire.Crown.E.FRONT",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 3216,
+      "materials": [
+        "NSP01.MAT.Gold"
+      ],
+      "source_parts": [
+        "NSP01.Spire.Crown.E.FRONT.CapSeam.0",
+        "NSP01.Spire.Crown.E.FRONT.CapSeam.1",
+        "NSP01.Spire.Crown.E.FRONT.CapSeam.2",
+        "NSP01.Spire.Crown.E.FRONT.CapSeam.3",
+        "NSP01.Spire.Crown.E.FRONT.CapSeam.4",
+        "NSP01.Spire.Crown.E.FRONT.CapSeam.5",
+        "NSP01.Spire.Crown.E.FRONT.CapSeam.6",
+        "NSP01.Spire.Crown.E.FRONT.CapSeam.7",
+        "NSP01.Spire.Crown.E.FRONT.Cornice.1",
+        "NSP01.Spire.Crown.E.FRONT.InfillFrame.0",
+        "NSP01.Spire.Crown.E.FRONT.InfillFrame.1",
+        "NSP01.Spire.Crown.E.FRONT.InfillFrame.2",
+        "NSP01.Spire.Crown.E.FRONT.InfillFrame.3"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Spire.Crown.E.REAR.89",
+      "chunk": "NSP01.Spire.Crown.E.REAR",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 926,
+      "materials": [
+        "NSP01.MAT.Ivory"
+      ],
+      "source_parts": [
+        "NSP01.Spire.Crown.E.REAR",
+        "NSP01.Spire.Crown.E.REAR.Cornice.0",
+        "NSP01.Spire.Crown.E.REAR.Cornice.2",
+        "NSP01.Spire.Crown.E.REAR.InfillMullion.0",
+        "NSP01.Spire.Crown.E.REAR.InfillMullion.1",
+        "NSP01.Spire.Crown.E.REAR.InfillMullion.2",
+        "NSP01.Spire.Crown.E.REAR.InfillMullion.3",
+        "NSP01.Spire.Crown.E.REAR.Rib.0",
+        "NSP01.Spire.Crown.E.REAR.Rib.1",
+        "NSP01.Spire.Crown.E.REAR.Rib.2",
+        "NSP01.Spire.Crown.E.REAR.Rib.3",
+        "NSP01.Spire.Crown.E.REAR.Rib.4",
+        "NSP01.Spire.Crown.E.REAR.Rib.5",
+        "NSP01.Spire.Crown.E.REAR.Rib.6",
+        "NSP01.Spire.Crown.E.REAR.Rib.7"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Spire.Crown.E.REAR.90",
+      "chunk": "NSP01.Spire.Crown.E.REAR",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 750,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Spire.Crown.E.REAR",
+        "NSP01.Spire.Crown.E.REAR.Infill.0",
+        "NSP01.Spire.Crown.E.REAR.Infill.1",
+        "NSP01.Spire.Crown.E.REAR.Infill.2",
+        "NSP01.Spire.Crown.E.REAR.Infill.3"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Spire.Crown.E.REAR.91",
+      "chunk": "NSP01.Spire.Crown.E.REAR",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 3216,
+      "materials": [
+        "NSP01.MAT.Gold"
+      ],
+      "source_parts": [
+        "NSP01.Spire.Crown.E.REAR.CapSeam.0",
+        "NSP01.Spire.Crown.E.REAR.CapSeam.1",
+        "NSP01.Spire.Crown.E.REAR.CapSeam.2",
+        "NSP01.Spire.Crown.E.REAR.CapSeam.3",
+        "NSP01.Spire.Crown.E.REAR.CapSeam.4",
+        "NSP01.Spire.Crown.E.REAR.CapSeam.5",
+        "NSP01.Spire.Crown.E.REAR.CapSeam.6",
+        "NSP01.Spire.Crown.E.REAR.CapSeam.7",
+        "NSP01.Spire.Crown.E.REAR.Cornice.1",
+        "NSP01.Spire.Crown.E.REAR.InfillFrame.0",
+        "NSP01.Spire.Crown.E.REAR.InfillFrame.1",
+        "NSP01.Spire.Crown.E.REAR.InfillFrame.2",
+        "NSP01.Spire.Crown.E.REAR.InfillFrame.3"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Tower.Shoulder.E.FRONT.92",
+      "chunk": "NSP01.Tower.Shoulder.E.FRONT",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 926,
+      "materials": [
+        "NSP01.MAT.Ivory"
+      ],
+      "source_parts": [
+        "NSP01.Tower.Shoulder.E.FRONT",
+        "NSP01.Tower.Shoulder.E.FRONT.Cornice.0",
+        "NSP01.Tower.Shoulder.E.FRONT.Cornice.2",
+        "NSP01.Tower.Shoulder.E.FRONT.InfillMullion.0",
+        "NSP01.Tower.Shoulder.E.FRONT.InfillMullion.1",
+        "NSP01.Tower.Shoulder.E.FRONT.InfillMullion.2",
+        "NSP01.Tower.Shoulder.E.FRONT.InfillMullion.3",
+        "NSP01.Tower.Shoulder.E.FRONT.Rib.0",
+        "NSP01.Tower.Shoulder.E.FRONT.Rib.1",
+        "NSP01.Tower.Shoulder.E.FRONT.Rib.2",
+        "NSP01.Tower.Shoulder.E.FRONT.Rib.3",
+        "NSP01.Tower.Shoulder.E.FRONT.Rib.4",
+        "NSP01.Tower.Shoulder.E.FRONT.Rib.5",
+        "NSP01.Tower.Shoulder.E.FRONT.Rib.6",
+        "NSP01.Tower.Shoulder.E.FRONT.Rib.7"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Tower.Shoulder.E.FRONT.93",
+      "chunk": "NSP01.Tower.Shoulder.E.FRONT",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 750,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Tower.Shoulder.E.FRONT",
+        "NSP01.Tower.Shoulder.E.FRONT.Infill.0",
+        "NSP01.Tower.Shoulder.E.FRONT.Infill.1",
+        "NSP01.Tower.Shoulder.E.FRONT.Infill.2",
+        "NSP01.Tower.Shoulder.E.FRONT.Infill.3"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Tower.Shoulder.E.FRONT.94",
+      "chunk": "NSP01.Tower.Shoulder.E.FRONT",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 3216,
+      "materials": [
+        "NSP01.MAT.Gold"
+      ],
+      "source_parts": [
+        "NSP01.Tower.Shoulder.E.FRONT.CapSeam.0",
+        "NSP01.Tower.Shoulder.E.FRONT.CapSeam.1",
+        "NSP01.Tower.Shoulder.E.FRONT.CapSeam.2",
+        "NSP01.Tower.Shoulder.E.FRONT.CapSeam.3",
+        "NSP01.Tower.Shoulder.E.FRONT.CapSeam.4",
+        "NSP01.Tower.Shoulder.E.FRONT.CapSeam.5",
+        "NSP01.Tower.Shoulder.E.FRONT.CapSeam.6",
+        "NSP01.Tower.Shoulder.E.FRONT.CapSeam.7",
+        "NSP01.Tower.Shoulder.E.FRONT.Cornice.1",
+        "NSP01.Tower.Shoulder.E.FRONT.InfillFrame.0",
+        "NSP01.Tower.Shoulder.E.FRONT.InfillFrame.1",
+        "NSP01.Tower.Shoulder.E.FRONT.InfillFrame.2",
+        "NSP01.Tower.Shoulder.E.FRONT.InfillFrame.3"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Tower.Shoulder.E.REAR.95",
+      "chunk": "NSP01.Tower.Shoulder.E.REAR",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 1014,
+      "materials": [
+        "NSP01.MAT.Ivory"
+      ],
+      "source_parts": [
+        "NSP01.Tower.Shoulder.E.REAR",
+        "NSP01.Tower.Shoulder.E.REAR.Cornice.0",
+        "NSP01.Tower.Shoulder.E.REAR.Cornice.2",
+        "NSP01.Tower.Shoulder.E.REAR.InfillMullion.0",
+        "NSP01.Tower.Shoulder.E.REAR.InfillMullion.1",
+        "NSP01.Tower.Shoulder.E.REAR.InfillMullion.2",
+        "NSP01.Tower.Shoulder.E.REAR.InfillMullion.3",
+        "NSP01.Tower.Shoulder.E.REAR.Rib.0",
+        "NSP01.Tower.Shoulder.E.REAR.Rib.1",
+        "NSP01.Tower.Shoulder.E.REAR.Rib.2",
+        "NSP01.Tower.Shoulder.E.REAR.Rib.3",
+        "NSP01.Tower.Shoulder.E.REAR.Rib.4",
+        "NSP01.Tower.Shoulder.E.REAR.Rib.5",
+        "NSP01.Tower.Shoulder.E.REAR.Rib.6",
+        "NSP01.Tower.Shoulder.E.REAR.Rib.7"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Tower.Shoulder.E.REAR.96",
+      "chunk": "NSP01.Tower.Shoulder.E.REAR",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 750,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Tower.Shoulder.E.REAR",
+        "NSP01.Tower.Shoulder.E.REAR.Infill.0",
+        "NSP01.Tower.Shoulder.E.REAR.Infill.1",
+        "NSP01.Tower.Shoulder.E.REAR.Infill.2",
+        "NSP01.Tower.Shoulder.E.REAR.Infill.3"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Tower.Shoulder.E.REAR.97",
+      "chunk": "NSP01.Tower.Shoulder.E.REAR",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 3216,
+      "materials": [
+        "NSP01.MAT.Gold"
+      ],
+      "source_parts": [
+        "NSP01.Tower.Shoulder.E.REAR.CapSeam.0",
+        "NSP01.Tower.Shoulder.E.REAR.CapSeam.1",
+        "NSP01.Tower.Shoulder.E.REAR.CapSeam.2",
+        "NSP01.Tower.Shoulder.E.REAR.CapSeam.3",
+        "NSP01.Tower.Shoulder.E.REAR.CapSeam.4",
+        "NSP01.Tower.Shoulder.E.REAR.CapSeam.5",
+        "NSP01.Tower.Shoulder.E.REAR.CapSeam.6",
+        "NSP01.Tower.Shoulder.E.REAR.CapSeam.7",
+        "NSP01.Tower.Shoulder.E.REAR.Cornice.1",
+        "NSP01.Tower.Shoulder.E.REAR.InfillFrame.0",
+        "NSP01.Tower.Shoulder.E.REAR.InfillFrame.1",
+        "NSP01.Tower.Shoulder.E.REAR.InfillFrame.2",
+        "NSP01.Tower.Shoulder.E.REAR.InfillFrame.3"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Tower.Perimeter.E.FRONT.98",
+      "chunk": "NSP01.Tower.Perimeter.E.FRONT",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 934,
+      "materials": [
+        "NSP01.MAT.Ivory"
+      ],
+      "source_parts": [
+        "NSP01.Tower.Perimeter.E.FRONT",
+        "NSP01.Tower.Perimeter.E.FRONT.Cornice.0",
+        "NSP01.Tower.Perimeter.E.FRONT.Cornice.2",
+        "NSP01.Tower.Perimeter.E.FRONT.InfillMullion.0",
+        "NSP01.Tower.Perimeter.E.FRONT.InfillMullion.1",
+        "NSP01.Tower.Perimeter.E.FRONT.InfillMullion.2",
+        "NSP01.Tower.Perimeter.E.FRONT.InfillMullion.3",
+        "NSP01.Tower.Perimeter.E.FRONT.Rib.0",
+        "NSP01.Tower.Perimeter.E.FRONT.Rib.1",
+        "NSP01.Tower.Perimeter.E.FRONT.Rib.2",
+        "NSP01.Tower.Perimeter.E.FRONT.Rib.3",
+        "NSP01.Tower.Perimeter.E.FRONT.Rib.4",
+        "NSP01.Tower.Perimeter.E.FRONT.Rib.5",
+        "NSP01.Tower.Perimeter.E.FRONT.Rib.6",
+        "NSP01.Tower.Perimeter.E.FRONT.Rib.7"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Tower.Perimeter.E.FRONT.99",
+      "chunk": "NSP01.Tower.Perimeter.E.FRONT",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 750,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Tower.Perimeter.E.FRONT",
+        "NSP01.Tower.Perimeter.E.FRONT.Infill.0",
+        "NSP01.Tower.Perimeter.E.FRONT.Infill.1",
+        "NSP01.Tower.Perimeter.E.FRONT.Infill.2",
+        "NSP01.Tower.Perimeter.E.FRONT.Infill.3"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Tower.Perimeter.E.FRONT.100",
+      "chunk": "NSP01.Tower.Perimeter.E.FRONT",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 3216,
+      "materials": [
+        "NSP01.MAT.Gold"
+      ],
+      "source_parts": [
+        "NSP01.Tower.Perimeter.E.FRONT.CapSeam.0",
+        "NSP01.Tower.Perimeter.E.FRONT.CapSeam.1",
+        "NSP01.Tower.Perimeter.E.FRONT.CapSeam.2",
+        "NSP01.Tower.Perimeter.E.FRONT.CapSeam.3",
+        "NSP01.Tower.Perimeter.E.FRONT.CapSeam.4",
+        "NSP01.Tower.Perimeter.E.FRONT.CapSeam.5",
+        "NSP01.Tower.Perimeter.E.FRONT.CapSeam.6",
+        "NSP01.Tower.Perimeter.E.FRONT.CapSeam.7",
+        "NSP01.Tower.Perimeter.E.FRONT.Cornice.1",
+        "NSP01.Tower.Perimeter.E.FRONT.InfillFrame.0",
+        "NSP01.Tower.Perimeter.E.FRONT.InfillFrame.1",
+        "NSP01.Tower.Perimeter.E.FRONT.InfillFrame.2",
+        "NSP01.Tower.Perimeter.E.FRONT.InfillFrame.3"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Tower.Perimeter.E.REAR.101",
+      "chunk": "NSP01.Tower.Perimeter.E.REAR",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 926,
+      "materials": [
+        "NSP01.MAT.Ivory"
+      ],
+      "source_parts": [
+        "NSP01.Tower.Perimeter.E.REAR",
+        "NSP01.Tower.Perimeter.E.REAR.Cornice.0",
+        "NSP01.Tower.Perimeter.E.REAR.Cornice.2",
+        "NSP01.Tower.Perimeter.E.REAR.InfillMullion.0",
+        "NSP01.Tower.Perimeter.E.REAR.InfillMullion.1",
+        "NSP01.Tower.Perimeter.E.REAR.InfillMullion.2",
+        "NSP01.Tower.Perimeter.E.REAR.InfillMullion.3",
+        "NSP01.Tower.Perimeter.E.REAR.Rib.0",
+        "NSP01.Tower.Perimeter.E.REAR.Rib.1",
+        "NSP01.Tower.Perimeter.E.REAR.Rib.2",
+        "NSP01.Tower.Perimeter.E.REAR.Rib.3",
+        "NSP01.Tower.Perimeter.E.REAR.Rib.4",
+        "NSP01.Tower.Perimeter.E.REAR.Rib.5",
+        "NSP01.Tower.Perimeter.E.REAR.Rib.6",
+        "NSP01.Tower.Perimeter.E.REAR.Rib.7"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Tower.Perimeter.E.REAR.102",
+      "chunk": "NSP01.Tower.Perimeter.E.REAR",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 750,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Tower.Perimeter.E.REAR",
+        "NSP01.Tower.Perimeter.E.REAR.Infill.0",
+        "NSP01.Tower.Perimeter.E.REAR.Infill.1",
+        "NSP01.Tower.Perimeter.E.REAR.Infill.2",
+        "NSP01.Tower.Perimeter.E.REAR.Infill.3"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Tower.Perimeter.E.REAR.103",
+      "chunk": "NSP01.Tower.Perimeter.E.REAR",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 3216,
+      "materials": [
+        "NSP01.MAT.Gold"
+      ],
+      "source_parts": [
+        "NSP01.Tower.Perimeter.E.REAR.CapSeam.0",
+        "NSP01.Tower.Perimeter.E.REAR.CapSeam.1",
+        "NSP01.Tower.Perimeter.E.REAR.CapSeam.2",
+        "NSP01.Tower.Perimeter.E.REAR.CapSeam.3",
+        "NSP01.Tower.Perimeter.E.REAR.CapSeam.4",
+        "NSP01.Tower.Perimeter.E.REAR.CapSeam.5",
+        "NSP01.Tower.Perimeter.E.REAR.CapSeam.6",
+        "NSP01.Tower.Perimeter.E.REAR.CapSeam.7",
+        "NSP01.Tower.Perimeter.E.REAR.Cornice.1",
+        "NSP01.Tower.Perimeter.E.REAR.InfillFrame.0",
+        "NSP01.Tower.Perimeter.E.REAR.InfillFrame.1",
+        "NSP01.Tower.Perimeter.E.REAR.InfillFrame.2",
+        "NSP01.Tower.Perimeter.E.REAR.InfillFrame.3"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Facade.Front.104",
+      "chunk": "Facade.Front",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 4352,
+      "materials": [
+        "NSP01.MAT.Ivory"
+      ],
+      "source_parts": [
+        "NSP01.Facade.Front.-1.0.ArchRib",
+        "NSP01.Facade.Front.-1.0.Body",
+        "NSP01.Facade.Front.-1.0.Pier.-1",
+        "NSP01.Facade.Front.-1.0.Pier.1",
+        "NSP01.Facade.Front.-1.1.ArchRib",
+        "NSP01.Facade.Front.-1.1.Body",
+        "NSP01.Facade.Front.-1.1.Pier.-1",
+        "NSP01.Facade.Front.-1.1.Pier.1",
+        "NSP01.Facade.Front.1.0.ArchRib",
+        "NSP01.Facade.Front.1.0.Body",
+        "NSP01.Facade.Front.1.0.Pier.-1",
+        "NSP01.Facade.Front.1.0.Pier.1",
+        "NSP01.Facade.Front.1.1.ArchRib",
+        "NSP01.Facade.Front.1.1.Body",
+        "NSP01.Facade.Front.1.1.Pier.-1",
+        "NSP01.Facade.Front.1.1.Pier.1"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Facade.Front.105",
+      "chunk": "Facade.Front",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 672,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Facade.Front.-1.0.Backing",
+        "NSP01.Facade.Front.-1.1.Backing",
+        "NSP01.Facade.Front.1.0.Backing",
+        "NSP01.Facade.Front.1.1.Backing"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Facade.Front.106",
+      "chunk": "Facade.Front",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 4016,
+      "materials": [
+        "NSP01.MAT.Gold"
+      ],
+      "source_parts": [
+        "NSP01.Facade.Front.-1.0.Crest",
+        "NSP01.Facade.Front.-1.0.GoldInlay",
+        "NSP01.Facade.Front.-1.0.Mullion.-2.5",
+        "NSP01.Facade.Front.-1.0.Mullion.0",
+        "NSP01.Facade.Front.-1.0.Mullion.2.5",
+        "NSP01.Facade.Front.-1.0.PierGold.-1",
+        "NSP01.Facade.Front.-1.0.PierGold.1",
+        "NSP01.Facade.Front.-1.0.Transom.12",
+        "NSP01.Facade.Front.-1.0.Transom.20",
+        "NSP01.Facade.Front.-1.1.Crest",
+        "NSP01.Facade.Front.-1.1.GoldInlay",
+        "NSP01.Facade.Front.-1.1.Mullion.-2.5",
+        "NSP01.Facade.Front.-1.1.Mullion.0",
+        "NSP01.Facade.Front.-1.1.Mullion.2.5",
+        "NSP01.Facade.Front.-1.1.PierGold.-1",
+        "NSP01.Facade.Front.-1.1.PierGold.1",
+        "NSP01.Facade.Front.-1.1.Transom.12",
+        "NSP01.Facade.Front.-1.1.Transom.20",
+        "NSP01.Facade.Front.1.0.Crest",
+        "NSP01.Facade.Front.1.0.GoldInlay",
+        "NSP01.Facade.Front.1.0.Mullion.-2.5",
+        "NSP01.Facade.Front.1.0.Mullion.0",
+        "NSP01.Facade.Front.1.0.Mullion.2.5",
+        "NSP01.Facade.Front.1.0.PierGold.-1",
+        "NSP01.Facade.Front.1.0.PierGold.1",
+        "NSP01.Facade.Front.1.0.Transom.12",
+        "NSP01.Facade.Front.1.0.Transom.20",
+        "NSP01.Facade.Front.1.1.Crest",
+        "NSP01.Facade.Front.1.1.GoldInlay",
+        "NSP01.Facade.Front.1.1.Mullion.-2.5",
+        "NSP01.Facade.Front.1.1.Mullion.0",
+        "NSP01.Facade.Front.1.1.Mullion.2.5",
+        "NSP01.Facade.Front.1.1.PierGold.-1",
+        "NSP01.Facade.Front.1.1.PierGold.1",
+        "NSP01.Facade.Front.1.1.Transom.12",
+        "NSP01.Facade.Front.1.1.Transom.20"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Facade.Front.107",
+      "chunk": "Facade.Front",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 96,
+      "materials": [
+        "NSP01.MAT.Dark"
+      ],
+      "source_parts": [
+        "NSP01.Facade.Front.-1.0.PanelJoint.32",
+        "NSP01.Facade.Front.-1.0.PanelJoint.4",
+        "NSP01.Facade.Front.-1.1.PanelJoint.32",
+        "NSP01.Facade.Front.-1.1.PanelJoint.4",
+        "NSP01.Facade.Front.1.0.PanelJoint.32",
+        "NSP01.Facade.Front.1.0.PanelJoint.4",
+        "NSP01.Facade.Front.1.1.PanelJoint.32",
+        "NSP01.Facade.Front.1.1.PanelJoint.4"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Facade.West.108",
+      "chunk": "Facade.West",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 5548,
+      "materials": [
+        "NSP01.MAT.Ivory"
+      ],
+      "source_parts": [
+        "NSP01.Facade.Chamfer.-1.0.Pier.1",
+        "NSP01.Facade.Side.-1.0.ArchRib",
+        "NSP01.Facade.Side.-1.0.Body",
+        "NSP01.Facade.Side.-1.0.Pier.-1",
+        "NSP01.Facade.Side.-1.0.Pier.1",
+        "NSP01.Facade.Side.-1.1.ArchRib",
+        "NSP01.Facade.Side.-1.1.Body",
+        "NSP01.Facade.Side.-1.1.Pier.-1",
+        "NSP01.Facade.Side.-1.1.Pier.1",
+        "NSP01.Facade.Side.-1.2.ArchRib",
+        "NSP01.Facade.Side.-1.2.Body",
+        "NSP01.Facade.Side.-1.2.Pier.-1",
+        "NSP01.Facade.Side.-1.2.Pier.1",
+        "NSP01.Facade.Side.-1.3.ArchRib",
+        "NSP01.Facade.Side.-1.3.Body",
+        "NSP01.Facade.Side.-1.3.Pier.-1",
+        "NSP01.Facade.Side.-1.3.Pier.1",
+        "NSP01.Facade.Side.-1.4.ArchRib",
+        "NSP01.Facade.Side.-1.4.Body",
+        "NSP01.Facade.Side.-1.4.Pier.-1",
+        "NSP01.Facade.Side.-1.4.Pier.1"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Facade.West.109",
+      "chunk": "Facade.West",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 840,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Facade.Side.-1.0.Backing",
+        "NSP01.Facade.Side.-1.1.Backing",
+        "NSP01.Facade.Side.-1.2.Backing",
+        "NSP01.Facade.Side.-1.3.Backing",
+        "NSP01.Facade.Side.-1.4.Backing"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Facade.West.110",
+      "chunk": "Facade.West",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 5032,
+      "materials": [
+        "NSP01.MAT.Gold"
+      ],
+      "source_parts": [
+        "NSP01.Facade.Chamfer.-1.0.PierGold.1",
+        "NSP01.Facade.Side.-1.0.Crest",
+        "NSP01.Facade.Side.-1.0.GoldInlay",
+        "NSP01.Facade.Side.-1.0.Mullion.-2.5",
+        "NSP01.Facade.Side.-1.0.Mullion.0",
+        "NSP01.Facade.Side.-1.0.Mullion.2.5",
+        "NSP01.Facade.Side.-1.0.PierGold.-1",
+        "NSP01.Facade.Side.-1.0.PierGold.1",
+        "NSP01.Facade.Side.-1.0.Transom.12",
+        "NSP01.Facade.Side.-1.0.Transom.20",
+        "NSP01.Facade.Side.-1.1.Crest",
+        "NSP01.Facade.Side.-1.1.GoldInlay",
+        "NSP01.Facade.Side.-1.1.Mullion.-2.5",
+        "NSP01.Facade.Side.-1.1.Mullion.0",
+        "NSP01.Facade.Side.-1.1.Mullion.2.5",
+        "NSP01.Facade.Side.-1.1.PierGold.-1",
+        "NSP01.Facade.Side.-1.1.PierGold.1",
+        "NSP01.Facade.Side.-1.1.Transom.12",
+        "NSP01.Facade.Side.-1.1.Transom.20",
+        "NSP01.Facade.Side.-1.2.Crest",
+        "NSP01.Facade.Side.-1.2.GoldInlay",
+        "NSP01.Facade.Side.-1.2.Mullion.-2.5",
+        "NSP01.Facade.Side.-1.2.Mullion.0",
+        "NSP01.Facade.Side.-1.2.Mullion.2.5",
+        "NSP01.Facade.Side.-1.2.PierGold.-1",
+        "NSP01.Facade.Side.-1.2.PierGold.1",
+        "NSP01.Facade.Side.-1.2.Transom.12",
+        "NSP01.Facade.Side.-1.2.Transom.20",
+        "NSP01.Facade.Side.-1.3.Crest",
+        "NSP01.Facade.Side.-1.3.GoldInlay",
+        "NSP01.Facade.Side.-1.3.Mullion.-2.5",
+        "NSP01.Facade.Side.-1.3.Mullion.0",
+        "NSP01.Facade.Side.-1.3.Mullion.2.5",
+        "NSP01.Facade.Side.-1.3.PierGold.-1",
+        "NSP01.Facade.Side.-1.3.PierGold.1",
+        "NSP01.Facade.Side.-1.3.Transom.12",
+        "NSP01.Facade.Side.-1.3.Transom.20",
+        "NSP01.Facade.Side.-1.4.Crest",
+        "NSP01.Facade.Side.-1.4.GoldInlay",
+        "NSP01.Facade.Side.-1.4.Mullion.-2.5",
+        "NSP01.Facade.Side.-1.4.Mullion.0",
+        "NSP01.Facade.Side.-1.4.Mullion.2.5",
+        "NSP01.Facade.Side.-1.4.PierGold.-1",
+        "NSP01.Facade.Side.-1.4.PierGold.1",
+        "NSP01.Facade.Side.-1.4.Transom.12",
+        "NSP01.Facade.Side.-1.4.Transom.20"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Facade.West.111",
+      "chunk": "Facade.West",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 120,
+      "materials": [
+        "NSP01.MAT.Dark"
+      ],
+      "source_parts": [
+        "NSP01.Facade.Side.-1.0.PanelJoint.32",
+        "NSP01.Facade.Side.-1.0.PanelJoint.4",
+        "NSP01.Facade.Side.-1.1.PanelJoint.32",
+        "NSP01.Facade.Side.-1.1.PanelJoint.4",
+        "NSP01.Facade.Side.-1.2.PanelJoint.32",
+        "NSP01.Facade.Side.-1.2.PanelJoint.4",
+        "NSP01.Facade.Side.-1.3.PanelJoint.32",
+        "NSP01.Facade.Side.-1.3.PanelJoint.4",
+        "NSP01.Facade.Side.-1.4.PanelJoint.32",
+        "NSP01.Facade.Side.-1.4.PanelJoint.4"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Facade.East.112",
+      "chunk": "Facade.East",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 5548,
+      "materials": [
+        "NSP01.MAT.Ivory"
+      ],
+      "source_parts": [
+        "NSP01.Facade.Chamfer.1.0.Pier.-1",
+        "NSP01.Facade.Side.1.0.ArchRib",
+        "NSP01.Facade.Side.1.0.Body",
+        "NSP01.Facade.Side.1.0.Pier.-1",
+        "NSP01.Facade.Side.1.0.Pier.1",
+        "NSP01.Facade.Side.1.1.ArchRib",
+        "NSP01.Facade.Side.1.1.Body",
+        "NSP01.Facade.Side.1.1.Pier.-1",
+        "NSP01.Facade.Side.1.1.Pier.1",
+        "NSP01.Facade.Side.1.2.ArchRib",
+        "NSP01.Facade.Side.1.2.Body",
+        "NSP01.Facade.Side.1.2.Pier.-1",
+        "NSP01.Facade.Side.1.2.Pier.1",
+        "NSP01.Facade.Side.1.3.ArchRib",
+        "NSP01.Facade.Side.1.3.Body",
+        "NSP01.Facade.Side.1.3.Pier.-1",
+        "NSP01.Facade.Side.1.3.Pier.1",
+        "NSP01.Facade.Side.1.4.ArchRib",
+        "NSP01.Facade.Side.1.4.Body",
+        "NSP01.Facade.Side.1.4.Pier.-1",
+        "NSP01.Facade.Side.1.4.Pier.1"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Facade.East.113",
+      "chunk": "Facade.East",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 840,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Facade.Side.1.0.Backing",
+        "NSP01.Facade.Side.1.1.Backing",
+        "NSP01.Facade.Side.1.2.Backing",
+        "NSP01.Facade.Side.1.3.Backing",
+        "NSP01.Facade.Side.1.4.Backing"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Facade.East.114",
+      "chunk": "Facade.East",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 5032,
+      "materials": [
+        "NSP01.MAT.Gold"
+      ],
+      "source_parts": [
+        "NSP01.Facade.Chamfer.1.0.PierGold.-1",
+        "NSP01.Facade.Side.1.0.Crest",
+        "NSP01.Facade.Side.1.0.GoldInlay",
+        "NSP01.Facade.Side.1.0.Mullion.-2.5",
+        "NSP01.Facade.Side.1.0.Mullion.0",
+        "NSP01.Facade.Side.1.0.Mullion.2.5",
+        "NSP01.Facade.Side.1.0.PierGold.-1",
+        "NSP01.Facade.Side.1.0.PierGold.1",
+        "NSP01.Facade.Side.1.0.Transom.12",
+        "NSP01.Facade.Side.1.0.Transom.20",
+        "NSP01.Facade.Side.1.1.Crest",
+        "NSP01.Facade.Side.1.1.GoldInlay",
+        "NSP01.Facade.Side.1.1.Mullion.-2.5",
+        "NSP01.Facade.Side.1.1.Mullion.0",
+        "NSP01.Facade.Side.1.1.Mullion.2.5",
+        "NSP01.Facade.Side.1.1.PierGold.-1",
+        "NSP01.Facade.Side.1.1.PierGold.1",
+        "NSP01.Facade.Side.1.1.Transom.12",
+        "NSP01.Facade.Side.1.1.Transom.20",
+        "NSP01.Facade.Side.1.2.Crest",
+        "NSP01.Facade.Side.1.2.GoldInlay",
+        "NSP01.Facade.Side.1.2.Mullion.-2.5",
+        "NSP01.Facade.Side.1.2.Mullion.0",
+        "NSP01.Facade.Side.1.2.Mullion.2.5",
+        "NSP01.Facade.Side.1.2.PierGold.-1",
+        "NSP01.Facade.Side.1.2.PierGold.1",
+        "NSP01.Facade.Side.1.2.Transom.12",
+        "NSP01.Facade.Side.1.2.Transom.20",
+        "NSP01.Facade.Side.1.3.Crest",
+        "NSP01.Facade.Side.1.3.GoldInlay",
+        "NSP01.Facade.Side.1.3.Mullion.-2.5",
+        "NSP01.Facade.Side.1.3.Mullion.0",
+        "NSP01.Facade.Side.1.3.Mullion.2.5",
+        "NSP01.Facade.Side.1.3.PierGold.-1",
+        "NSP01.Facade.Side.1.3.PierGold.1",
+        "NSP01.Facade.Side.1.3.Transom.12",
+        "NSP01.Facade.Side.1.3.Transom.20",
+        "NSP01.Facade.Side.1.4.Crest",
+        "NSP01.Facade.Side.1.4.GoldInlay",
+        "NSP01.Facade.Side.1.4.Mullion.-2.5",
+        "NSP01.Facade.Side.1.4.Mullion.0",
+        "NSP01.Facade.Side.1.4.Mullion.2.5",
+        "NSP01.Facade.Side.1.4.PierGold.-1",
+        "NSP01.Facade.Side.1.4.PierGold.1",
+        "NSP01.Facade.Side.1.4.Transom.12",
+        "NSP01.Facade.Side.1.4.Transom.20"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Facade.East.115",
+      "chunk": "Facade.East",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 120,
+      "materials": [
+        "NSP01.MAT.Dark"
+      ],
+      "source_parts": [
+        "NSP01.Facade.Side.1.0.PanelJoint.32",
+        "NSP01.Facade.Side.1.0.PanelJoint.4",
+        "NSP01.Facade.Side.1.1.PanelJoint.32",
+        "NSP01.Facade.Side.1.1.PanelJoint.4",
+        "NSP01.Facade.Side.1.2.PanelJoint.32",
+        "NSP01.Facade.Side.1.2.PanelJoint.4",
+        "NSP01.Facade.Side.1.3.PanelJoint.32",
+        "NSP01.Facade.Side.1.3.PanelJoint.4",
+        "NSP01.Facade.Side.1.4.PanelJoint.32",
+        "NSP01.Facade.Side.1.4.PanelJoint.4"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Facade.Rear.116",
+      "chunk": "Facade.Rear",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 12840,
+      "materials": [
+        "NSP01.MAT.Ivory"
+      ],
+      "source_parts": [
+        "NSP01.Facade.Chamfer.-1.0.ArchRib",
+        "NSP01.Facade.Chamfer.-1.0.Body",
+        "NSP01.Facade.Chamfer.-1.0.Pier.-1",
+        "NSP01.Facade.Chamfer.-1.1.ArchRib",
+        "NSP01.Facade.Chamfer.-1.1.Body",
+        "NSP01.Facade.Chamfer.-1.1.Pier.-1",
+        "NSP01.Facade.Chamfer.-1.1.Pier.1",
+        "NSP01.Facade.Chamfer.1.0.ArchRib",
+        "NSP01.Facade.Chamfer.1.0.Body",
+        "NSP01.Facade.Chamfer.1.0.Pier.1",
+        "NSP01.Facade.Chamfer.1.1.ArchRib",
+        "NSP01.Facade.Chamfer.1.1.Body",
+        "NSP01.Facade.Chamfer.1.1.Pier.-1",
+        "NSP01.Facade.Chamfer.1.1.Pier.1",
+        "NSP01.Facade.Rear.00.ArchRib",
+        "NSP01.Facade.Rear.00.Body",
+        "NSP01.Facade.Rear.00.Pier.-1",
+        "NSP01.Facade.Rear.00.Pier.1",
+        "NSP01.Facade.Rear.01.ArchRib",
+        "NSP01.Facade.Rear.01.Body",
+        "NSP01.Facade.Rear.01.Pier.-1",
+        "NSP01.Facade.Rear.01.Pier.1",
+        "NSP01.Facade.Rear.02.ArchRib",
+        "NSP01.Facade.Rear.02.Body",
+        "NSP01.Facade.Rear.02.Pier.-1",
+        "NSP01.Facade.Rear.02.Pier.1",
+        "NSP01.Facade.Rear.03.ArchRib",
+        "NSP01.Facade.Rear.03.Body",
+        "NSP01.Facade.Rear.03.Pier.-1",
+        "NSP01.Facade.Rear.03.Pier.1",
+        "NSP01.Facade.Rear.04.ArchRib",
+        "NSP01.Facade.Rear.04.Body",
+        "NSP01.Facade.Rear.04.Pier.-1",
+        "NSP01.Facade.Rear.04.Pier.1",
+        "NSP01.Facade.Rear.05.ArchRib",
+        "NSP01.Facade.Rear.05.Body",
+        "NSP01.Facade.Rear.05.Pier.-1",
+        "NSP01.Facade.Rear.05.Pier.1",
+        "NSP01.Facade.Rear.06.ArchRib",
+        "NSP01.Facade.Rear.06.Body",
+        "NSP01.Facade.Rear.06.Pier.-1",
+        "NSP01.Facade.Rear.06.Pier.1",
+        "NSP01.Facade.Rear.07.ArchRib",
+        "NSP01.Facade.Rear.07.Body",
+        "NSP01.Facade.Rear.07.Pier.-1",
+        "NSP01.Facade.Rear.07.Pier.1"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Facade.Rear.117",
+      "chunk": "Facade.Rear",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 1848,
+      "materials": [
+        "NSP01.MAT.Dark"
+      ],
+      "source_parts": [
+        "NSP01.Facade.Chamfer.-1.0.PanelJoint.32",
+        "NSP01.Facade.Chamfer.-1.0.PanelJoint.4",
+        "NSP01.Facade.Chamfer.-1.1.PanelJoint.32",
+        "NSP01.Facade.Chamfer.-1.1.PanelJoint.4",
+        "NSP01.Facade.Chamfer.1.0.PanelJoint.32",
+        "NSP01.Facade.Chamfer.1.0.PanelJoint.4",
+        "NSP01.Facade.Chamfer.1.1.PanelJoint.32",
+        "NSP01.Facade.Chamfer.1.1.PanelJoint.4",
+        "NSP01.Facade.Rear.00.Backing",
+        "NSP01.Facade.Rear.00.Louver.10",
+        "NSP01.Facade.Rear.00.Louver.12",
+        "NSP01.Facade.Rear.00.Louver.14",
+        "NSP01.Facade.Rear.00.Louver.16",
+        "NSP01.Facade.Rear.00.Louver.18",
+        "NSP01.Facade.Rear.00.Louver.20",
+        "NSP01.Facade.Rear.00.Louver.22",
+        "NSP01.Facade.Rear.00.Louver.8",
+        "NSP01.Facade.Rear.00.PanelJoint.32",
+        "NSP01.Facade.Rear.00.PanelJoint.4",
+        "NSP01.Facade.Rear.01.PanelJoint.32",
+        "NSP01.Facade.Rear.01.PanelJoint.4",
+        "NSP01.Facade.Rear.02.PanelJoint.32",
+        "NSP01.Facade.Rear.02.PanelJoint.4",
+        "NSP01.Facade.Rear.03.Backing",
+        "NSP01.Facade.Rear.03.Louver.10",
+        "NSP01.Facade.Rear.03.Louver.12",
+        "NSP01.Facade.Rear.03.Louver.14",
+        "NSP01.Facade.Rear.03.Louver.16",
+        "NSP01.Facade.Rear.03.Louver.18",
+        "NSP01.Facade.Rear.03.Louver.20",
+        "NSP01.Facade.Rear.03.Louver.22",
+        "NSP01.Facade.Rear.03.Louver.8",
+        "NSP01.Facade.Rear.03.PanelJoint.32",
+        "NSP01.Facade.Rear.03.PanelJoint.4",
+        "NSP01.Facade.Rear.04.PanelJoint.32",
+        "NSP01.Facade.Rear.04.PanelJoint.4",
+        "NSP01.Facade.Rear.05.PanelJoint.32",
+        "NSP01.Facade.Rear.05.PanelJoint.4",
+        "NSP01.Facade.Rear.06.Backing",
+        "NSP01.Facade.Rear.06.Louver.10",
+        "NSP01.Facade.Rear.06.Louver.12",
+        "NSP01.Facade.Rear.06.Louver.14",
+        "NSP01.Facade.Rear.06.Louver.16",
+        "NSP01.Facade.Rear.06.Louver.18",
+        "NSP01.Facade.Rear.06.Louver.20",
+        "NSP01.Facade.Rear.06.Louver.22",
+        "NSP01.Facade.Rear.06.Louver.8",
+        "NSP01.Facade.Rear.06.PanelJoint.32",
+        "NSP01.Facade.Rear.06.PanelJoint.4",
+        "NSP01.Facade.Rear.07.PanelJoint.32",
+        "NSP01.Facade.Rear.07.PanelJoint.4"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Facade.Rear.118",
+      "chunk": "Facade.Rear",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 11556,
+      "materials": [
+        "NSP01.MAT.Gold"
+      ],
+      "source_parts": [
+        "NSP01.Facade.Chamfer.-1.0.Crest",
+        "NSP01.Facade.Chamfer.-1.0.GoldInlay",
+        "NSP01.Facade.Chamfer.-1.0.Mullion.-2.5",
+        "NSP01.Facade.Chamfer.-1.0.Mullion.0",
+        "NSP01.Facade.Chamfer.-1.0.Mullion.2.5",
+        "NSP01.Facade.Chamfer.-1.0.PierGold.-1",
+        "NSP01.Facade.Chamfer.-1.0.Transom.12",
+        "NSP01.Facade.Chamfer.-1.0.Transom.20",
+        "NSP01.Facade.Chamfer.-1.1.Crest",
+        "NSP01.Facade.Chamfer.-1.1.GoldInlay",
+        "NSP01.Facade.Chamfer.-1.1.Mullion.-2.5",
+        "NSP01.Facade.Chamfer.-1.1.Mullion.0",
+        "NSP01.Facade.Chamfer.-1.1.Mullion.2.5",
+        "NSP01.Facade.Chamfer.-1.1.PierGold.-1",
+        "NSP01.Facade.Chamfer.-1.1.PierGold.1",
+        "NSP01.Facade.Chamfer.-1.1.Transom.12",
+        "NSP01.Facade.Chamfer.-1.1.Transom.20",
+        "NSP01.Facade.Chamfer.1.0.Crest",
+        "NSP01.Facade.Chamfer.1.0.GoldInlay",
+        "NSP01.Facade.Chamfer.1.0.Mullion.-2.5",
+        "NSP01.Facade.Chamfer.1.0.Mullion.0",
+        "NSP01.Facade.Chamfer.1.0.Mullion.2.5",
+        "NSP01.Facade.Chamfer.1.0.PierGold.1",
+        "NSP01.Facade.Chamfer.1.0.Transom.12",
+        "NSP01.Facade.Chamfer.1.0.Transom.20",
+        "NSP01.Facade.Chamfer.1.1.Crest",
+        "NSP01.Facade.Chamfer.1.1.GoldInlay",
+        "NSP01.Facade.Chamfer.1.1.Mullion.-2.5",
+        "NSP01.Facade.Chamfer.1.1.Mullion.0",
+        "NSP01.Facade.Chamfer.1.1.Mullion.2.5",
+        "NSP01.Facade.Chamfer.1.1.PierGold.-1",
+        "NSP01.Facade.Chamfer.1.1.PierGold.1",
+        "NSP01.Facade.Chamfer.1.1.Transom.12",
+        "NSP01.Facade.Chamfer.1.1.Transom.20",
+        "NSP01.Facade.Rear.00.Crest",
+        "NSP01.Facade.Rear.00.GoldInlay",
+        "NSP01.Facade.Rear.00.PierGold.-1",
+        "NSP01.Facade.Rear.00.PierGold.1",
+        "NSP01.Facade.Rear.01.Crest",
+        "NSP01.Facade.Rear.01.GoldInlay",
+        "NSP01.Facade.Rear.01.Mullion.-2.5",
+        "NSP01.Facade.Rear.01.Mullion.0",
+        "NSP01.Facade.Rear.01.Mullion.2.5",
+        "NSP01.Facade.Rear.01.PierGold.-1",
+        "NSP01.Facade.Rear.01.PierGold.1",
+        "NSP01.Facade.Rear.01.Transom.12",
+        "NSP01.Facade.Rear.01.Transom.20",
+        "NSP01.Facade.Rear.02.Crest",
+        "NSP01.Facade.Rear.02.GoldInlay",
+        "NSP01.Facade.Rear.02.Mullion.-2.5",
+        "NSP01.Facade.Rear.02.Mullion.0",
+        "NSP01.Facade.Rear.02.Mullion.2.5",
+        "NSP01.Facade.Rear.02.PierGold.-1",
+        "NSP01.Facade.Rear.02.PierGold.1",
+        "NSP01.Facade.Rear.02.Transom.12",
+        "NSP01.Facade.Rear.02.Transom.20",
+        "NSP01.Facade.Rear.03.Crest",
+        "NSP01.Facade.Rear.03.GoldInlay",
+        "NSP01.Facade.Rear.03.PierGold.-1",
+        "NSP01.Facade.Rear.03.PierGold.1",
+        "NSP01.Facade.Rear.04.Crest",
+        "NSP01.Facade.Rear.04.GoldInlay",
+        "NSP01.Facade.Rear.04.Mullion.-2.5",
+        "NSP01.Facade.Rear.04.Mullion.0",
+        "NSP01.Facade.Rear.04.Mullion.2.5",
+        "NSP01.Facade.Rear.04.PierGold.-1",
+        "NSP01.Facade.Rear.04.PierGold.1",
+        "NSP01.Facade.Rear.04.Transom.12",
+        "NSP01.Facade.Rear.04.Transom.20",
+        "NSP01.Facade.Rear.05.Crest",
+        "NSP01.Facade.Rear.05.GoldInlay",
+        "NSP01.Facade.Rear.05.Mullion.-2.5",
+        "NSP01.Facade.Rear.05.Mullion.0",
+        "NSP01.Facade.Rear.05.Mullion.2.5",
+        "NSP01.Facade.Rear.05.PierGold.-1",
+        "NSP01.Facade.Rear.05.PierGold.1",
+        "NSP01.Facade.Rear.05.Transom.12",
+        "NSP01.Facade.Rear.05.Transom.20",
+        "NSP01.Facade.Rear.06.Crest",
+        "NSP01.Facade.Rear.06.GoldInlay",
+        "NSP01.Facade.Rear.06.PierGold.-1",
+        "NSP01.Facade.Rear.06.PierGold.1",
+        "NSP01.Facade.Rear.07.Crest",
+        "NSP01.Facade.Rear.07.GoldInlay",
+        "NSP01.Facade.Rear.07.Mullion.-2.5",
+        "NSP01.Facade.Rear.07.Mullion.0",
+        "NSP01.Facade.Rear.07.Mullion.2.5",
+        "NSP01.Facade.Rear.07.PierGold.-1",
+        "NSP01.Facade.Rear.07.PierGold.1",
+        "NSP01.Facade.Rear.07.Transom.12",
+        "NSP01.Facade.Rear.07.Transom.20"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Facade.Rear.119",
+      "chunk": "Facade.Rear",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 1512,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Facade.Chamfer.-1.0.Backing",
+        "NSP01.Facade.Chamfer.-1.1.Backing",
+        "NSP01.Facade.Chamfer.1.0.Backing",
+        "NSP01.Facade.Chamfer.1.1.Backing",
+        "NSP01.Facade.Rear.01.Backing",
+        "NSP01.Facade.Rear.02.Backing",
+        "NSP01.Facade.Rear.04.Backing",
+        "NSP01.Facade.Rear.05.Backing",
+        "NSP01.Facade.Rear.07.Backing"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Hangar.W.120",
+      "chunk": "Hangar.W",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 7444,
+      "materials": [
+        "NSP01.MAT.Gold"
+      ],
+      "source_parts": [
+        "NSP01.Hangar.Crest.-1",
+        "NSP01.Hangar.Frieze.-1",
+        "NSP01.HangarFacade.-1.0.Crest",
+        "NSP01.HangarFacade.-1.0.GoldInlay",
+        "NSP01.HangarFacade.-1.0.PierGold.-1",
+        "NSP01.HangarFacade.-1.0.PierGold.1",
+        "NSP01.HangarFacade.-1.1.Crest",
+        "NSP01.HangarFacade.-1.1.GoldInlay",
+        "NSP01.HangarFacade.-1.1.PierGold.-1",
+        "NSP01.HangarFacade.-1.1.PierGold.1",
+        "NSP01.HangarFacade.-1.2.Crest",
+        "NSP01.HangarFacade.-1.2.GoldInlay",
+        "NSP01.HangarFacade.-1.2.PierGold.-1",
+        "NSP01.HangarFacade.-1.2.PierGold.1",
+        "NSP01.HangarFacade.-1.3.Crest",
+        "NSP01.HangarFacade.-1.3.GoldInlay",
+        "NSP01.HangarFacade.-1.3.PierGold.-1",
+        "NSP01.HangarFacade.-1.3.PierGold.1",
+        "NSP01.HangarFacade.-1.4.Crest",
+        "NSP01.HangarFacade.-1.4.GoldInlay",
+        "NSP01.HangarFacade.-1.4.PierGold.-1",
+        "NSP01.HangarFacade.-1.4.PierGold.1",
+        "NSP01.HangarRear.-1.0.Crest",
+        "NSP01.HangarRear.-1.0.PierGold.-1",
+        "NSP01.HangarRear.-1.0.PierGold.1",
+        "NSP01.HangarRear.-1.1.Crest",
+        "NSP01.HangarRear.-1.1.GoldInlay",
+        "NSP01.HangarRear.-1.1.PierGold.-1",
+        "NSP01.HangarRear.-1.1.PierGold.1",
+        "NSP01.HangarRear.-1.2.Crest",
+        "NSP01.HangarRear.-1.2.PierGold.-1",
+        "NSP01.HangarRear.-1.2.PierGold.1",
+        "NSP01.HangarRear.-1.3.Crest",
+        "NSP01.HangarRear.-1.3.GoldInlay",
+        "NSP01.HangarRear.-1.3.PierGold.-1",
+        "NSP01.HangarRear.-1.3.PierGold.1",
+        "NSP01.HangarRear.-1.4.Crest",
+        "NSP01.HangarRear.-1.4.PierGold.-1",
+        "NSP01.HangarRear.-1.4.PierGold.1",
+        "NSP01.HangarRear.-1.5.Crest",
+        "NSP01.HangarRear.-1.5.GoldInlay",
+        "NSP01.HangarRear.-1.5.PierGold.-1",
+        "NSP01.HangarRear.-1.5.PierGold.1"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Hangar.E.121",
+      "chunk": "Hangar.E",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 7444,
+      "materials": [
+        "NSP01.MAT.Gold"
+      ],
+      "source_parts": [
+        "NSP01.Hangar.Crest.1",
+        "NSP01.Hangar.Frieze.1",
+        "NSP01.HangarFacade.1.0.Crest",
+        "NSP01.HangarFacade.1.0.GoldInlay",
+        "NSP01.HangarFacade.1.0.PierGold.-1",
+        "NSP01.HangarFacade.1.0.PierGold.1",
+        "NSP01.HangarFacade.1.1.Crest",
+        "NSP01.HangarFacade.1.1.GoldInlay",
+        "NSP01.HangarFacade.1.1.PierGold.-1",
+        "NSP01.HangarFacade.1.1.PierGold.1",
+        "NSP01.HangarFacade.1.2.Crest",
+        "NSP01.HangarFacade.1.2.GoldInlay",
+        "NSP01.HangarFacade.1.2.PierGold.-1",
+        "NSP01.HangarFacade.1.2.PierGold.1",
+        "NSP01.HangarFacade.1.3.Crest",
+        "NSP01.HangarFacade.1.3.GoldInlay",
+        "NSP01.HangarFacade.1.3.PierGold.-1",
+        "NSP01.HangarFacade.1.3.PierGold.1",
+        "NSP01.HangarFacade.1.4.Crest",
+        "NSP01.HangarFacade.1.4.GoldInlay",
+        "NSP01.HangarFacade.1.4.PierGold.-1",
+        "NSP01.HangarFacade.1.4.PierGold.1",
+        "NSP01.HangarRear.1.0.Crest",
+        "NSP01.HangarRear.1.0.PierGold.-1",
+        "NSP01.HangarRear.1.0.PierGold.1",
+        "NSP01.HangarRear.1.1.Crest",
+        "NSP01.HangarRear.1.1.GoldInlay",
+        "NSP01.HangarRear.1.1.PierGold.-1",
+        "NSP01.HangarRear.1.1.PierGold.1",
+        "NSP01.HangarRear.1.2.Crest",
+        "NSP01.HangarRear.1.2.PierGold.-1",
+        "NSP01.HangarRear.1.2.PierGold.1",
+        "NSP01.HangarRear.1.3.Crest",
+        "NSP01.HangarRear.1.3.GoldInlay",
+        "NSP01.HangarRear.1.3.PierGold.-1",
+        "NSP01.HangarRear.1.3.PierGold.1",
+        "NSP01.HangarRear.1.4.Crest",
+        "NSP01.HangarRear.1.4.PierGold.-1",
+        "NSP01.HangarRear.1.4.PierGold.1",
+        "NSP01.HangarRear.1.5.Crest",
+        "NSP01.HangarRear.1.5.GoldInlay",
+        "NSP01.HangarRear.1.5.PierGold.-1",
+        "NSP01.HangarRear.1.5.PierGold.1"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Approach.122",
+      "chunk": "Approach",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 588,
+      "materials": [
+        "NSP01.MAT.Marking"
+      ],
+      "source_parts": [
+        "NSP01.Approach.CompassRing",
+        "NSP01.Approach.Inlay.-12",
+        "NSP01.Approach.Inlay.-20",
+        "NSP01.Approach.Inlay.12",
+        "NSP01.Approach.Inlay.20",
+        "NSP01.Compass.Plaza"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Approach.123",
+      "chunk": "Approach",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 720,
+      "materials": [
+        "NSP01.MAT.Dark"
+      ],
+      "source_parts": [
+        "NSP01.Approach.LongSeam.-12",
+        "NSP01.Approach.LongSeam.-24",
+        "NSP01.Approach.LongSeam.-36",
+        "NSP01.Approach.LongSeam.0",
+        "NSP01.Approach.LongSeam.12",
+        "NSP01.Approach.LongSeam.24",
+        "NSP01.Approach.LongSeam.36",
+        "NSP01.Approach.Seam.-144",
+        "NSP01.Approach.Seam.-156",
+        "NSP01.Approach.Seam.-168",
+        "NSP01.Approach.Seam.-180",
+        "NSP01.Approach.Seam.-192",
+        "NSP01.Approach.Seam.-204",
+        "NSP01.Approach.Seam.-216",
+        "NSP01.Approach.Seam.-228",
+        "NSP01.Approach.Seam.-240",
+        "NSP01.Approach.Seam.-252",
+        "NSP01.Approach.Seam.-264",
+        "NSP01.Approach.Seam.-276",
+        "NSP01.Approach.Seam.-288",
+        "NSP01.Approach.Seam.-300",
+        "NSP01.Approach.Seam.-312",
+        "NSP01.Approach.Seam.-324",
+        "NSP01.Approach.Seam.-336",
+        "NSP01.Approach.Seam.-348",
+        "NSP01.Approach.Seam.-360",
+        "NSP01.Approach.Seam.-372",
+        "NSP01.Approach.Seam.-384",
+        "NSP01.Apron.Long.-1.-12",
+        "NSP01.Apron.Long.-1.-24",
+        "NSP01.Apron.Long.-1.-36",
+        "NSP01.Apron.Long.-1.-48",
+        "NSP01.Apron.Long.-1.0",
+        "NSP01.Apron.Long.-1.12",
+        "NSP01.Apron.Long.-1.24",
+        "NSP01.Apron.Long.-1.36",
+        "NSP01.Apron.Long.-1.48",
+        "NSP01.Apron.Long.1.-12",
+        "NSP01.Apron.Long.1.-24",
+        "NSP01.Apron.Long.1.-36",
+        "NSP01.Apron.Long.1.-48",
+        "NSP01.Apron.Long.1.0",
+        "NSP01.Apron.Long.1.12",
+        "NSP01.Apron.Long.1.24",
+        "NSP01.Apron.Long.1.36",
+        "NSP01.Apron.Long.1.48",
+        "NSP01.Apron.Seam.-1.-152",
+        "NSP01.Apron.Seam.-1.-164",
+        "NSP01.Apron.Seam.-1.-176",
+        "NSP01.Apron.Seam.-1.-188",
+        "NSP01.Apron.Seam.-1.-200",
+        "NSP01.Apron.Seam.-1.-212",
+        "NSP01.Apron.Seam.-1.-224",
+        "NSP01.Apron.Seam.1.-152",
+        "NSP01.Apron.Seam.1.-164",
+        "NSP01.Apron.Seam.1.-176",
+        "NSP01.Apron.Seam.1.-188",
+        "NSP01.Apron.Seam.1.-200",
+        "NSP01.Apron.Seam.1.-212",
+        "NSP01.Apron.Seam.1.-224"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Terminal.124",
+      "chunk": "Terminal",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 208,
+      "materials": [
+        "NSP01.MAT.Cloth"
+      ],
+      "source_parts": [
+        "NSP01.Portal.Banner.-1",
+        "NSP01.Portal.Banner.1"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Hull.125",
+      "chunk": "Hull",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 1736,
+      "materials": [
+        "NSP01.MAT.Gold"
+      ],
+      "source_parts": [
+        "NSP01.Hull.Fascia.0.0.Gold",
+        "NSP01.Hull.Fascia.0.1.Gold",
+        "NSP01.Hull.Fascia.0.10.Gold",
+        "NSP01.Hull.Fascia.0.11.Gold",
+        "NSP01.Hull.Fascia.0.12.Gold",
+        "NSP01.Hull.Fascia.0.13.Gold",
+        "NSP01.Hull.Fascia.0.14.Gold",
+        "NSP01.Hull.Fascia.0.15.Gold",
+        "NSP01.Hull.Fascia.0.16.Gold",
+        "NSP01.Hull.Fascia.0.17.Gold",
+        "NSP01.Hull.Fascia.0.18.Gold",
+        "NSP01.Hull.Fascia.0.19.Gold",
+        "NSP01.Hull.Fascia.0.2.Gold",
+        "NSP01.Hull.Fascia.0.20.Gold",
+        "NSP01.Hull.Fascia.0.21.Gold",
+        "NSP01.Hull.Fascia.0.22.Gold",
+        "NSP01.Hull.Fascia.0.3.Gold",
+        "NSP01.Hull.Fascia.0.4.Gold",
+        "NSP01.Hull.Fascia.0.5.Gold",
+        "NSP01.Hull.Fascia.0.6.Gold",
+        "NSP01.Hull.Fascia.0.7.Gold",
+        "NSP01.Hull.Fascia.0.8.Gold",
+        "NSP01.Hull.Fascia.0.9.Gold",
+        "NSP01.Hull.Fascia.1.0.Gold",
+        "NSP01.Hull.Fascia.1.1.Gold",
+        "NSP01.Hull.Fascia.2.0.Gold",
+        "NSP01.Hull.Fascia.2.1.Gold",
+        "NSP01.Hull.Fascia.2.10.Gold",
+        "NSP01.Hull.Fascia.2.11.Gold",
+        "NSP01.Hull.Fascia.2.12.Gold",
+        "NSP01.Hull.Fascia.2.13.Gold",
+        "NSP01.Hull.Fascia.2.14.Gold",
+        "NSP01.Hull.Fascia.2.15.Gold",
+        "NSP01.Hull.Fascia.2.2.Gold",
+        "NSP01.Hull.Fascia.2.3.Gold",
+        "NSP01.Hull.Fascia.2.4.Gold",
+        "NSP01.Hull.Fascia.2.5.Gold",
+        "NSP01.Hull.Fascia.2.6.Gold",
+        "NSP01.Hull.Fascia.2.7.Gold",
+        "NSP01.Hull.Fascia.2.8.Gold",
+        "NSP01.Hull.Fascia.2.9.Gold",
+        "NSP01.Hull.Fascia.3.0.Gold",
+        "NSP01.Hull.Fascia.3.1.Gold",
+        "NSP01.Hull.Fascia.4.0.Gold",
+        "NSP01.Hull.Fascia.4.1.Gold",
+        "NSP01.Hull.Fascia.4.10.Gold",
+        "NSP01.Hull.Fascia.4.11.Gold",
+        "NSP01.Hull.Fascia.4.12.Gold",
+        "NSP01.Hull.Fascia.4.13.Gold",
+        "NSP01.Hull.Fascia.4.14.Gold",
+        "NSP01.Hull.Fascia.4.15.Gold",
+        "NSP01.Hull.Fascia.4.16.Gold",
+        "NSP01.Hull.Fascia.4.17.Gold",
+        "NSP01.Hull.Fascia.4.18.Gold",
+        "NSP01.Hull.Fascia.4.19.Gold",
+        "NSP01.Hull.Fascia.4.2.Gold",
+        "NSP01.Hull.Fascia.4.20.Gold",
+        "NSP01.Hull.Fascia.4.21.Gold",
+        "NSP01.Hull.Fascia.4.22.Gold",
+        "NSP01.Hull.Fascia.4.3.Gold",
+        "NSP01.Hull.Fascia.4.4.Gold",
+        "NSP01.Hull.Fascia.4.5.Gold",
+        "NSP01.Hull.Fascia.4.6.Gold",
+        "NSP01.Hull.Fascia.4.7.Gold",
+        "NSP01.Hull.Fascia.4.8.Gold",
+        "NSP01.Hull.Fascia.4.9.Gold",
+        "NSP01.Hull.Fascia.5.0.Gold",
+        "NSP01.Hull.Fascia.5.1.Gold",
+        "NSP01.Hull.Fascia.6.0.Gold",
+        "NSP01.Hull.Fascia.6.1.Gold",
+        "NSP01.Hull.Fascia.6.10.Gold",
+        "NSP01.Hull.Fascia.6.11.Gold",
+        "NSP01.Hull.Fascia.6.12.Gold",
+        "NSP01.Hull.Fascia.6.13.Gold",
+        "NSP01.Hull.Fascia.6.14.Gold",
+        "NSP01.Hull.Fascia.6.15.Gold",
+        "NSP01.Hull.Fascia.6.2.Gold",
+        "NSP01.Hull.Fascia.6.3.Gold",
+        "NSP01.Hull.Fascia.6.4.Gold",
+        "NSP01.Hull.Fascia.6.5.Gold",
+        "NSP01.Hull.Fascia.6.6.Gold",
+        "NSP01.Hull.Fascia.6.7.Gold",
+        "NSP01.Hull.Fascia.6.8.Gold",
+        "NSP01.Hull.Fascia.6.9.Gold",
+        "NSP01.Hull.Fascia.7.0.Gold",
+        "NSP01.Hull.Fascia.7.1.Gold",
+        "NSP01.Keel.E.BRIDGE.CasingRib.0",
+        "NSP01.Keel.E.BRIDGE.CasingRib.1",
+        "NSP01.Keel.E.BRIDGE.CasingRib.2",
+        "NSP01.Keel.E.BRIDGE.CasingRib.3",
+        "NSP01.Keel.E.BRIDGE.CasingRib.4",
+        "NSP01.Keel.E.BRIDGE.CasingRib.5",
+        "NSP01.Keel.E.BRIDGE.CasingRib.6",
+        "NSP01.Keel.E.BRIDGE.CasingRib.7",
+        "NSP01.Keel.W.BRIDGE.CasingRib.0",
+        "NSP01.Keel.W.BRIDGE.CasingRib.1",
+        "NSP01.Keel.W.BRIDGE.CasingRib.2",
+        "NSP01.Keel.W.BRIDGE.CasingRib.3",
+        "NSP01.Keel.W.BRIDGE.CasingRib.4",
+        "NSP01.Keel.W.BRIDGE.CasingRib.5",
+        "NSP01.Keel.W.BRIDGE.CasingRib.6",
+        "NSP01.Keel.W.BRIDGE.CasingRib.7"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Interior.Center.126",
+      "chunk": "Interior.Center",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 12,
+      "materials": [
+        "NSP01.MAT.Deck"
+      ],
+      "source_parts": [
+        "NSP01.Route.Hall.Floor"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Interior.Center.127",
+      "chunk": "Interior.Center",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 716,
+      "materials": [
+        "NSP01.MAT.Ivory"
+      ],
+      "source_parts": [
+        "NSP01.Route.Hall.Ceiling",
+        "NSP01.Route.Hall.CeilingRib.-24",
+        "NSP01.Route.Hall.CeilingRib.-48",
+        "NSP01.Route.Hall.CeilingRib.0",
+        "NSP01.Route.Hall.CeilingRib.24",
+        "NSP01.Route.Hall.CeilingRib.48",
+        "NSP01.Route.Hall.RearWall",
+        "NSP01.Route.Hall.RecessMullion.-30",
+        "NSP01.Route.Hall.RecessMullion.0",
+        "NSP01.Route.Hall.RecessMullion.30"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Interior.West.128",
+      "chunk": "Interior.West",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 164,
+      "materials": [
+        "NSP01.MAT.Ivory"
+      ],
+      "source_parts": [
+        "NSP01.Route.Aisle.Ceiling.-1",
+        "NSP01.Route.Aisle.Wall.-1.80.5",
+        "NSP01.Route.Aisle.Wall.-1.95.5",
+        "NSP01.Route.Alcove.Back.-1",
+        "NSP01.Route.Alcove.Ceiling.-1",
+        "NSP01.Route.Alcove.Side.-1.22.5",
+        "NSP01.Route.Alcove.Side.-1.7.5",
+        "NSP01.Route.Hall.Side.-1",
+        "NSP01.Route.Hub.Ceiling.-1",
+        "NSP01.Route.Hub.Side.-1.36.5",
+        "NSP01.Route.Hub.Side.-1.51.5"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Interior.West.129",
+      "chunk": "Interior.West",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 212,
+      "materials": [
+        "NSP01.MAT.Deck"
+      ],
+      "source_parts": [
+        "NSP01.Lift.W.HIGH.Threshold.GROUND",
+        "NSP01.Lift.W.HIGH.Threshold.UPPER",
+        "NSP01.Lift.W.LOW.Threshold.GROUND",
+        "NSP01.Lift.W.LOW.Threshold.UPPER",
+        "NSP01.Route.Aisle.Floor.-1",
+        "NSP01.Route.Alcove.Bench.-1",
+        "NSP01.Route.Hub.Floor.-1"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Lift.W.LOW.CabinRoot.130",
+      "chunk": "NSP01.Lift.W.LOW.CabinRoot",
+      "kind": "lift-cabin",
+      "origin_blender_m": [
+        -88,
+        44,
+        64
+      ],
+      "triangles": 120,
+      "materials": [
+        "NSP01.MAT.Deck",
+        "NSP01.MAT.Ivory",
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Lift.W.LOW.Cabin.Ceiling",
+        "NSP01.Lift.W.LOW.Cabin.Floor",
+        "NSP01.Lift.W.LOW.Cabin.XWall.-1",
+        "NSP01.Lift.W.LOW.Cabin.XWall.1",
+        "NSP01.Lift.W.LOW.Cabin.YWall.-1",
+        "NSP01.Lift.W.LOW.Cabin.YWall.1"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Lift.W.HIGH.CabinRoot.131",
+      "chunk": "NSP01.Lift.W.HIGH.CabinRoot",
+      "kind": "lift-cabin",
+      "origin_blender_m": [
+        -88,
+        156,
+        104
+      ],
+      "triangles": 120,
+      "materials": [
+        "NSP01.MAT.Deck",
+        "NSP01.MAT.Ivory",
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Lift.W.HIGH.Cabin.Ceiling",
+        "NSP01.Lift.W.HIGH.Cabin.Floor",
+        "NSP01.Lift.W.HIGH.Cabin.XWall.-1",
+        "NSP01.Lift.W.HIGH.Cabin.XWall.1",
+        "NSP01.Lift.W.HIGH.Cabin.YWall.-1",
+        "NSP01.Lift.W.HIGH.Cabin.YWall.1"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Interior.East.132",
+      "chunk": "Interior.East",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 164,
+      "materials": [
+        "NSP01.MAT.Ivory"
+      ],
+      "source_parts": [
+        "NSP01.Route.Aisle.Ceiling.1",
+        "NSP01.Route.Aisle.Wall.1.80.5",
+        "NSP01.Route.Aisle.Wall.1.95.5",
+        "NSP01.Route.Alcove.Back.1",
+        "NSP01.Route.Alcove.Ceiling.1",
+        "NSP01.Route.Alcove.Side.1.22.5",
+        "NSP01.Route.Alcove.Side.1.7.5",
+        "NSP01.Route.Hall.Side.1",
+        "NSP01.Route.Hub.Ceiling.1",
+        "NSP01.Route.Hub.Side.1.36.5",
+        "NSP01.Route.Hub.Side.1.51.5"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Interior.East.133",
+      "chunk": "Interior.East",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 212,
+      "materials": [
+        "NSP01.MAT.Deck"
+      ],
+      "source_parts": [
+        "NSP01.Lift.E.HIGH.Threshold.GROUND",
+        "NSP01.Lift.E.HIGH.Threshold.UPPER",
+        "NSP01.Lift.E.LOW.Threshold.GROUND",
+        "NSP01.Lift.E.LOW.Threshold.UPPER",
+        "NSP01.Route.Aisle.Floor.1",
+        "NSP01.Route.Alcove.Bench.1",
+        "NSP01.Route.Hub.Floor.1"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Lift.E.LOW.CabinRoot.134",
+      "chunk": "NSP01.Lift.E.LOW.CabinRoot",
+      "kind": "lift-cabin",
+      "origin_blender_m": [
+        88,
+        44,
+        64
+      ],
+      "triangles": 120,
+      "materials": [
+        "NSP01.MAT.Deck",
+        "NSP01.MAT.Ivory",
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Lift.E.LOW.Cabin.Ceiling",
+        "NSP01.Lift.E.LOW.Cabin.Floor",
+        "NSP01.Lift.E.LOW.Cabin.XWall.-1",
+        "NSP01.Lift.E.LOW.Cabin.XWall.1",
+        "NSP01.Lift.E.LOW.Cabin.YWall.-1",
+        "NSP01.Lift.E.LOW.Cabin.YWall.1"
+      ]
+    },
+    {
+      "node": "NSP01.L0.NSP01.Lift.E.HIGH.CabinRoot.135",
+      "chunk": "NSP01.Lift.E.HIGH.CabinRoot",
+      "kind": "lift-cabin",
+      "origin_blender_m": [
+        88,
+        156,
+        104
+      ],
+      "triangles": 120,
+      "materials": [
+        "NSP01.MAT.Deck",
+        "NSP01.MAT.Ivory",
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Lift.E.HIGH.Cabin.Ceiling",
+        "NSP01.Lift.E.HIGH.Cabin.Floor",
+        "NSP01.Lift.E.HIGH.Cabin.XWall.-1",
+        "NSP01.Lift.E.HIGH.Cabin.XWall.1",
+        "NSP01.Lift.E.HIGH.Cabin.YWall.-1",
+        "NSP01.Lift.E.HIGH.Cabin.YWall.1"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Interior.Center.136",
+      "chunk": "Interior.Center",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 24,
+      "materials": [
+        "NSP01.MAT.Marking"
+      ],
+      "source_parts": [
+        "NSP01.Route.Hall.Guidance.-48",
+        "NSP01.Route.Hall.Guidance.48"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Interior.West.137",
+      "chunk": "Interior.West",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 36,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Route.Hall.Accent.-54.-6",
+        "NSP01.Route.Hall.Accent.-54.18",
+        "NSP01.Route.Hall.Accent.-54.36"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Interior.East.138",
+      "chunk": "Interior.East",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 36,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Route.Hall.Accent.54.-6",
+        "NSP01.Route.Hall.Accent.54.18",
+        "NSP01.Route.Hall.Accent.54.36"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Interior.Center.139",
+      "chunk": "Interior.Center",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 504,
+      "materials": [
+        "NSP01.MAT.Teal"
+      ],
+      "source_parts": [
+        "NSP01.Route.Hall.Recess.-30",
+        "NSP01.Route.Hall.Recess.0",
+        "NSP01.Route.Hall.Recess.30"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Interior.Center.140",
+      "chunk": "Interior.Center",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 2052,
+      "materials": [
+        "NSP01.MAT.Gold"
+      ],
+      "source_parts": [
+        "NSP01.Route.Hall.RecessTrim.-30",
+        "NSP01.Route.Hall.RecessTrim.0",
+        "NSP01.Route.Hall.RecessTrim.30"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Underside.141",
+      "chunk": "Underside",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 2688,
+      "materials": [
+        "NSP01.MAT.Gold"
+      ],
+      "source_parts": [
+        "NSP01.Keel.Central.CasingRib.0",
+        "NSP01.Keel.Central.CasingRib.1",
+        "NSP01.Keel.Central.CasingRib.2",
+        "NSP01.Keel.Central.CasingRib.3",
+        "NSP01.Keel.Central.CasingRib.4",
+        "NSP01.Keel.Central.CasingRib.5",
+        "NSP01.Keel.Central.CasingRib.6",
+        "NSP01.Keel.Central.CasingRib.7",
+        "NSP01.Keel.E.APRON.CasingRib.0",
+        "NSP01.Keel.E.APRON.CasingRib.1",
+        "NSP01.Keel.E.APRON.CasingRib.2",
+        "NSP01.Keel.E.APRON.CasingRib.3",
+        "NSP01.Keel.E.APRON.CasingRib.4",
+        "NSP01.Keel.E.APRON.CasingRib.5",
+        "NSP01.Keel.E.APRON.CasingRib.6",
+        "NSP01.Keel.E.APRON.CasingRib.7",
+        "NSP01.Keel.E.HULL-F.CasingRib.0",
+        "NSP01.Keel.E.HULL-F.CasingRib.1",
+        "NSP01.Keel.E.HULL-F.CasingRib.2",
+        "NSP01.Keel.E.HULL-F.CasingRib.3",
+        "NSP01.Keel.E.HULL-F.CasingRib.4",
+        "NSP01.Keel.E.HULL-F.CasingRib.5",
+        "NSP01.Keel.E.HULL-F.CasingRib.6",
+        "NSP01.Keel.E.HULL-F.CasingRib.7",
+        "NSP01.Keel.E.HULL-R.CasingRib.0",
+        "NSP01.Keel.E.HULL-R.CasingRib.1",
+        "NSP01.Keel.E.HULL-R.CasingRib.2",
+        "NSP01.Keel.E.HULL-R.CasingRib.3",
+        "NSP01.Keel.E.HULL-R.CasingRib.4",
+        "NSP01.Keel.E.HULL-R.CasingRib.5",
+        "NSP01.Keel.E.HULL-R.CasingRib.6",
+        "NSP01.Keel.E.HULL-R.CasingRib.7",
+        "NSP01.Keel.W.APRON.CasingRib.0",
+        "NSP01.Keel.W.APRON.CasingRib.1",
+        "NSP01.Keel.W.APRON.CasingRib.2",
+        "NSP01.Keel.W.APRON.CasingRib.3",
+        "NSP01.Keel.W.APRON.CasingRib.4",
+        "NSP01.Keel.W.APRON.CasingRib.5",
+        "NSP01.Keel.W.APRON.CasingRib.6",
+        "NSP01.Keel.W.APRON.CasingRib.7",
+        "NSP01.Keel.W.HULL-F.CasingRib.0",
+        "NSP01.Keel.W.HULL-F.CasingRib.1",
+        "NSP01.Keel.W.HULL-F.CasingRib.2",
+        "NSP01.Keel.W.HULL-F.CasingRib.3",
+        "NSP01.Keel.W.HULL-F.CasingRib.4",
+        "NSP01.Keel.W.HULL-F.CasingRib.5",
+        "NSP01.Keel.W.HULL-F.CasingRib.6",
+        "NSP01.Keel.W.HULL-F.CasingRib.7",
+        "NSP01.Keel.W.HULL-R.CasingRib.0",
+        "NSP01.Keel.W.HULL-R.CasingRib.1",
+        "NSP01.Keel.W.HULL-R.CasingRib.2",
+        "NSP01.Keel.W.HULL-R.CasingRib.3",
+        "NSP01.Keel.W.HULL-R.CasingRib.4",
+        "NSP01.Keel.W.HULL-R.CasingRib.5",
+        "NSP01.Keel.W.HULL-R.CasingRib.6",
+        "NSP01.Keel.W.HULL-R.CasingRib.7",
+        "NSP01.Underside.Joint.0",
+        "NSP01.Underside.Joint.1",
+        "NSP01.Underside.Joint.2",
+        "NSP01.Underside.Joint.3",
+        "NSP01.Underside.Joint.4",
+        "NSP01.Underside.Joint.5",
+        "NSP01.Underside.Joint.6",
+        "NSP01.Underside.Joint.7"
+      ]
+    },
+    {
+      "node": "NSP01.L0.Underside.142",
+      "chunk": "Underside",
+      "kind": "static",
+      "origin_blender_m": [
+        0,
+        0,
+        0
+      ],
+      "triangles": 216,
+      "materials": [
+        "NSP01.MAT.Dark"
+      ],
+      "source_parts": [
+        "NSP01.Underside.ServicePanel.-100",
+        "NSP01.Underside.ServicePanel.100"
+      ]
+    }
+  ],
+  "runtime_status": "not-tested",
+  "limitations": [
+    "Runtime integration/performance not tested; no SMILE runtime, importer, renderer or compiler changes.",
+    "Four lift cabins have measured upper/lower review states and neutral anchors; functioning elevators and collision updates are not implemented.",
+    "Hangar door panels retain individual pivots and open/closed placements; no runtime control or exported animation clips.",
+    "L1/L2 optional LODs not implemented. One canonical GLB serves preview and L0.",
+    "Materials use plain PBR factors and real geometry, with no textures, UV trim-sheet layout or baked texture maps. Opaque teal is the portable baseline.",
+    "Collision is a separate Blender collection of 379 local solids/rail segments, with cabins at upper stops. It is not a supported-runtime-format claim; ground floor proxy differences up to 0.012m remain within the specified 0.02m seam tolerance.",
+    "Architecture uses a clean repeated bay treatment with simplified micro-ornament; it is not a pixel-identical recreation of the concept illustrations.",
+    "Phone visibility of inline chat images remains unconfirmed; all original PNGs are retained locally."
+  ],
+  "path_base": "Workspace root, the parent directory of export/"
+}

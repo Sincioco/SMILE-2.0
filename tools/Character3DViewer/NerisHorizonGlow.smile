@@ -1,0 +1,129 @@
+''' One owned halo batch: blinking antenna beacon and inset runway guidance lights.
+Module Smile.Tools.NerisHorizonGlow
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Tools.NerisHorizonRoute As Route
+
+Public Const PARTICLE_COUNT = 72
+
+Public Type State
+    Texture As Core.Texture3D
+    Material As Core.Material3D
+    Particles As Core.ParticleBatch3D
+    Clock As Number
+    Lit As Boolean
+    Ready As Boolean
+End Type
+
+Public Function BeaconOn(Time As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Time Mod 1500 < 450
+
+    Return Result
+
+End Function
+
+Public Function Create(ByRef Value As State) As Boolean
+
+    Dim Index As Number
+    Dim Point As P.Vector3
+    Dim Size As Double
+    Dim Ok As Boolean
+
+    Value.Texture = G.LoadTexture3D("Assets/Fire/ember-shape.png",
+        G.TEXTURE_FILTER_LINEAR, G.TEXTURE_WRAP_CLAMP)
+    Value.Material = G.CreateEffectMaterial3D(Value.Texture, G.MATERIAL_ALPHA_ADDITIVE, 220)
+    Value.Particles = G.CreateParticleBatch3D(PARTICLE_COUNT, Value.Material, G.VFX_BILLBOARD_CAMERA, 1, 1)
+    Ok = Value.Texture.Handle <> 0 And Value.Material.Handle <> 0 And Value.Particles.Handle <> 0
+
+    For Index = 0 To PARTICLE_COUNT - 1
+
+        Size = 16.0
+
+        If Index = 0 Then
+            Point = P.Vector(0.0, 285.6, 234.0)
+            Size = 80.0
+        Else If Index <= 30 Then
+            Point = P.Vector(-420.0 + ToDouble((Index - 1) Mod 15) * 60.0,
+                0.24, 329.0 + Floor(ToDouble(Index - 1) / 15.0) * 52.0)
+        Else If Index <= 53 Then
+            Point = P.Vector(-330.0 + ToDouble(Index - 31) * 30.0, 0.25, 355.0)
+        Else
+            Point = P.Vector(-426.0 + Floor(ToDouble(Index - 54) / 9.0) * 852.0,
+                0.25, 335.0 + ToDouble((Index - 54) Mod 9) * 5.0)
+        End If
+
+        Point = Route.ToWorld(Point)
+        Ok = P.SetParticle(Value.Particles, Index, Point, Size, 0.0, 0) And Ok
+
+        If Index = 0 Then
+            Ok = G.SetParticleColor3D(Value.Particles, Index, 255, 35, 20, 100) And Ok
+        Else If Index >= 54 Then
+            Ok = G.SetParticleColor3D(Value.Particles, Index, 60, 255, 135, 75) And Ok
+        Else
+            Ok = G.SetParticleColor3D(Value.Particles, Index, 255, 239, 211, 68) And Ok
+        End If
+
+    End For
+
+    Ok = G.CommitParticleBatch3D(Value.Particles, PARTICLE_COUNT) And Ok
+    Value.Lit = True
+    Value.Ready = Ok
+
+    Return Ok
+
+End Function
+
+Public Sub Update(ByRef Value As State, Elapsed As Number)
+
+    Dim Lit As Boolean
+    Dim Alpha As Number
+    Dim Ok As Boolean
+
+    Value.Clock = (Value.Clock + Max(0, Elapsed) Mod 1500) Mod 1500
+    Lit = BeaconOn(Value.Clock)
+
+    If Value.Ready And Value.Lit <> Lit Then
+
+        If Lit Then
+            Alpha = 100
+        End If
+
+        Ok = G.SetParticleColor3D(Value.Particles, 0, 255, 35, 20, Alpha)
+        Ok = G.CommitParticleBatch3D(Value.Particles, PARTICLE_COUNT) And Ok
+        Value.Ready = Ok
+        Value.Lit = Lit
+
+    End If
+
+End Sub
+
+Public Function Draw(ByRef Value As State) As Boolean
+
+    Dim Ok As Boolean
+
+    Ok = Value.Ready And G.DrawParticleBatch3D(Value.Particles)
+
+    Return Ok
+
+End Function
+
+Public Sub Destroy(ByRef Value As State)
+
+    Dim Empty As State
+
+    Call G.DestroyParticleBatch3D(Value.Particles)
+    Call G.DestroyMaterial3D(Value.Material)
+    Call G.DestroyTexture3D(Value.Texture)
+
+    Value = Empty
+
+End Sub
+
+End Module

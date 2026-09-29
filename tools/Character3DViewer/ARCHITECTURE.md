@@ -1,5 +1,134 @@
 # Character Viewer Architecture
 
+## Current: Horizon r006 runway and terminal access (September 29)
+
+r006 replaces only the current Horizon asset: two parallel rear glass halls, two
+wave hangar roofs, a 900 × 50 m runway and a return taxiway on the unchanged site.
+NerisRunwayTraffic owns the independent 180-second third-aircraft clock and pose;
+NerisHorizonPreview owns six additional draw objects sharing the existing transport
+model. Its three models have 23 parts and 29 drawn objects. NerisHorizonGlow owns
+one 72-particle batch for 71 inset fixtures and the blinking antenna beacon.
+NerisHorizonRoute owns terminal ground-floor access and furniture/glazing bounds;
+NerisHorizonLighting moves only the two existing hall sources. No public save
+format, compiler, runtime, asset limit or entry-point behavior changed.
+
+The newly requested Follow Party orbit is implemented. NerisTownCamera.AnchorParty
+owns pivot/offset capture; NerisTown routes O/button, mouse and arrow orbit through
+it while retaining follow mode. Arin/the current leader remains the moving pivot.
+Free inspection retains its cursor/current-shot orbit. Other camera follow-up,
+Studio and Web remain held. The new motion owner is 141 lines; NerisTown grows
+979→1008 lines and NerisTownCamera gains the focused 27-line pivot operation/check.
+The town coordinator gains only input wiring, with no simulation algorithm added.
+No size baseline, guardrail or exclusion was changed.
+
+Focused native foundations, routes, rendering and real-asset session checks pass:
+all four followers enter the airport, eight runway-aircraft draw phases, beacon
+timing, Follow Party orbit, linked-town round trip and resource cleanup. Current
+town usage is 53/64 models, 497 meshes and 466 materials. Blender checks confirm
+the open doorway, parallel halls, wave hangars and fixture counts. The first
+lighting integration rejected 0–255 values in the percentage-opacity API; the
+owner now uses 0–100 and the full session passes. No runtime workaround was needed.
+
+The following sections retain the previous milestone's details.
+
+## Current: Gentle Wave and separate airport towns (September 29)
+
+NerisHorizonV1 r005 supersedes the earlier comparison layout. Full-size Horizon is
+on expanded western/northern land, facing the town; original Spaceport 01 r08 is
+in its own Neris Spaceport tab. All 362 latest town placements are retained.
+NerisTownLandmarks owns selected-town landmark loading/release, including two
+owned Royal Court door models for the standalone original airport. Preview owners
+retain their own geometry lifetimes. NerisTownConnections owns two authored foot
+gates and arrival coordinates; TownEditorSession.TravelTo delegates tab/persistence
+work to TownTabs and consumes one pending arrival after terrain is ready. The
+party's existing Teleport accepts the arrival heading. No generic world traversal
+or new compiler grammar was introduced. Existing world-editor links remain
+authoring metadata; these two walking gates are the implemented gameplay route.
+
+The 496 × 461 document retains existing limits. The selected Neris Town uses
+53/64 models, 496 meshes, 464 materials and 24 accepted Arin calibration keys.
+Earlier authorized two-airport capacity work expanded native mesh slots to 1024
+and asset-object slots to 256; current separated towns do not require both airports
+resident. Native model/material limits remain 64/512. Background worker startup is
+owned by the project NativeWorkerScript contract and startup/background_worker.cpp;
+direct executable launch starts/restarts the existing PowerShell file worker with
+the actual storage directory and a per-Viewer duplicate guard.
+
+town_blender_landmarks.py appends the same versioned landmark collections to both
+Blender export paths; it adds no mesh/codec work to the entry point. The worker runs
+Blender separately and verifies exports before publishing them. Full town Blender
+export can take several minutes; Save For Viewer is the small document transfer.
+
+Validation: native routes, editor foundations/rendering, real-asset town session,
+two-way walking with four party members and no resource growth, Blender export
+reopen/import, and 58 native hardening checks pass. The isolated calibration test
+now removes production NativeWorkerScript when relocating its generated project.
+This fixes the demonstrated missing-relative-worker fixture failure. No guardrail
+limit, baseline or exclusion was changed. Main/bootstrap did not grow; lifecycle
+wiring stays in NerisTown/TownEditorSession, algorithms in focused owners. Studio,
+Web and the previously paused camera follow-up remain held. No commit/push.
+Current size review against the original repository baseline: NerisTown 854→979
+lines, TownEditorSession 690→760; the new landmark and connection owners are 105
+and 44 lines. Those coordinator changes include prior orbit/worker work in this
+uncommitted session. No persistence or geometry algorithm moved into bootstrap.
+
+The following earlier sections describe their named historical milestones.
+
+## September 29 spaceport facade and current-view orbit
+
+NerisSpaceport01V1 owns the completed standalone Blender source, portable GLB,
+six native chunks, expanded town revision and actual Blender/native evidence.
+NerisSpaceportPreview owns incremental loading, 21 static draw objects and release.
+NerisSpaceportEntrance owns six draw objects borrowing Royal Court's existing two
+door models; it never destroys borrowed models. NerisSpaceportGlow owns one additive
+particle batch for thirteen authored crystal anchors. NerisSpaceportRoute owns its
+full-scale transform, conservative central arrival path, proximity door motion and
+one-shot cutscene entry event. These owners do not depend on the town coordinator.
+NerisTown adds lifecycle wiring and
+an Orbit Spaceport button; NerisTownTour accepts framing parameters while retaining
+the earlier map defaults. TownEditorSession exposes a read-only coverage query so
+older town revisions do not acquire a spaceport outside their saved terrain.
+
+The southwest snapshot retains 361 placements and the latest live Day lighting,
+extends west land and southwest water, and connects a 20 m road spine to Royal
+Court and the town. Its 40 m causeway ends exactly at the spaceport approach.
+The new region uses coarse 10 m cells while all existing cell edges remain intact.
+The 478 × 508 grid stays below the unchanged 512 × 512 document limit. Spaceport
+placement is (-5500, 23.12, -7600), 10 native units/m, yaw 180 degrees. Its 720 ×
+620 × 404 m r08 geometry includes the raised ornamental crown; underside structure
+remains below harbor water. r003 Blender town retains all 361 placements and
+16,837 objects outside the old spaceport assembly, including terrain and review cameras.
+
+The portable r08 has 483,336 triangles and eleven materials. Native packing retains
+473,528 static triangles and reuses the 9,808 entrance triangles from the existing
+Royal Court models. It preserves authored UVs and embeds the limestone texture;
+orthonormal tangents remain explicit. No runtime/compiler or pool limits change.
+The expanded scene uses 495 meshes, 461 materials and 56/64 models, including the
+existing 98 Royal Court parts and 24 accepted Arin pose keys. The optional 14-model
+Tripo composition no longer fits simultaneously in this expanded town; source
+assets and older town revisions are preserved. This is an asset-consolidation
+follow-up, not permission to increase runtime limits or remove another castle.
+
+Sin's latest instruction supersedes the fixed-overview behavior for O and Orbit.
+StartOrbit captures the displayed camera through the existing Keyboard.Capture,
+clears follow/transition activity, and rotates that captured shot without a reset.
+The neutral shared zoom is -16, not zero. Orbit preserves low party angles and the
+explicit top-down pitch limit; ordinary manual inspection keeps its existing
+constraints. Right-click and the dedicated Orbit Spaceport command still request
+new framing. Native fixtures check position, target, FOV, radius and one revolution;
+the actual O key and Orbit button were checked after zoom and pan in the main Viewer.
+Route, drawing, retained calibrations and resource-release fixtures pass. The
+58-check native Viewer hardening gate passes. All thirteen original fixed Blender
+cameras were rendered for r07 and r08; fresh GLB import verifies dimensions, triangles and UVs.
+The r08 asset-only follow-up removes the four user-marked ivory/gold flying-strip
+pairs and eight hanging gold dock ties (sixteen objects). All earlier revisions remain.
+
+Owner growth versus the repository baseline: NerisTown 854→934 lines (including required long-If formatting),
+TownEditorSession 690→713, NerisTownTour 25→24, NerisTownNavigation +11. New resource
+and route owners are 123 and 131 lines; entrance and glow are 87 and 94 lines.
+No architecture threshold, exclusion or
+baseline changes. Studio and Web adoption remain held. No commit or push occurred.
+
 ## September 28 royal castle, town inspection and water
 
 NerisCastleM06V2 owns source M06-r006, the complete portable GLB, actual fixed-camera

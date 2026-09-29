@@ -6,7 +6,11 @@
   <ItemGroup>
     <SmileSource Include="NerisTownTests.smile" StartupOnly="true" />
     <SmileSource Include="NerisTownNavigation.smile" />
+    <SmileSource Include="NerisHorizonRoute.smile" />
     <SmileSource Include="NerisCastleRoute.smile" />
+    <SmileSource Include="NerisSpaceportRoute.smile" />
+    <SmileSource Include="NerisSpaceportTraffic.smile" />
+    <SmileSource Include="NerisRunwayTraffic.smile" />
     <SmileSource Include="ProximityDrawbridge.smile" />
     <SmileSource Include="TownDocumentNavigation.smile" />
     <SmileSource Include="TownDocument.smile" />

@@ -22,6 +22,8 @@ Public Type State
     GridVisible As Boolean
     BackgroundIndex As Number
     WorldScale As Double
+    PanXLimit As Double
+    PanYLimit As Double
     MinimumDistance As Double
     MaximumDistance As Double
     MaximumPitch As Double
@@ -43,6 +45,8 @@ Public Function Create(Width As Number, Depth As Number,
     Result.GridVisible = True
     Result.BackgroundIndex = Backdrop.DEFAULT_BACKGROUND
     Result.WorldScale = WorldScale
+    Result.PanXLimit = 360.0 * WorldScale
+    Result.PanYLimit = 220.0 * WorldScale
     Result.PreviousTime = Timer()
     Result.Ready = Result.Floor.Ready And Result.Backgrounds.Ready And WorldScale > 0.0
 
@@ -69,7 +73,7 @@ Public Sub Update(ByRef Value As State, Key As Number, Optional Blocked As Boole
     End If
 
     Changed = Motion.UpdatePointer(Value.Controls, Value.Zoom, Motion.ReadPointer(Blocked),
-        360.0 * Value.WorldScale, 220.0 * Value.WorldScale, Value.WorldScale)
+        Value.PanXLimit, Value.PanYLimit, Value.WorldScale)
     CurrentTime = Timer()
 
     Call Motion.Advance(Value.Controls, Value.Zoom, CurrentTime - Value.PreviousTime)

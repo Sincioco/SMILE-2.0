@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([switch]$SkipRendering, [string]$SavedTown)
+param([switch]$SkipRendering, [string]$SavedTown, [string]$LinkedTown)
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
@@ -77,8 +77,16 @@ if (-not $SkipRendering) {
         $fixtureData = Join-Path $env:LOCALAPPDATA "SMILE 2.0\Games\$applicationHash\Data"
         $null = New-Item -ItemType Directory -Path $fixtureData -Force
         Copy-Item -LiteralPath $SavedTown -Destination (Join-Path $fixtureData "$keyHash.bin")
+        if ($LinkedTown) {
+            $linkedHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData(
+                [Text.Encoding]::UTF8.GetBytes('TownEditor.Town.Neris Spaceport'))).ToLowerInvariant()
+            Copy-Item -LiteralPath $LinkedTown -Destination (Join-Path $fixtureData "$linkedHash.bin")
+        }
     }
     $project.SmileProject.PropertyGroup.RememberWindowPlacement = 'false'
+    $workerNode = $project.SmileProject.PropertyGroup.NativeWorkerScript
+    $workerElement = $project.SmileProject.PropertyGroup.SelectSingleNode('NativeWorkerScript')
+    if ($null -ne $workerElement) { $null = $workerElement.ParentNode.RemoveChild($workerElement) }
     $entry = $project.SmileProject.ItemGroup.SmileSource | Where-Object StartupOnly -eq 'true'
     $entry.SetAttribute('Include', 'TownSessionTests.smile')
     $inspection = $project.CreateElement('SmileSource')

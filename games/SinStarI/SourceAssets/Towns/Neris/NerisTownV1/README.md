@@ -4,6 +4,16 @@ Created by Louiery R. Sincioco (Sin).
 
 ## Current scene
 
+**[Open Neris Town with the southwest spaceport](../NerisSpaceport01V1/Town/Neris-Town-Spaceport-SW-r001.blend)**.
+Its [matching town document](../NerisSpaceport01V1/Town/Neris-Town-Spaceport-SW-r001.town)
+preserves all 361 placements and the latest saved Day lighting, adds southwest
+water and western land, and connects the full-scale spaceport to Royal Court and
+the town by road. The [spaceport package](../NerisSpaceport01V1/README.md) owns this
+new assembly and its actual native/Blender evidence. Original revisions below
+remain intact. Later live Town Editor changes are still authoritative.
+
+## Preserved Royal Court revision
+
 **[Open Neris-Town-Royal-Castle-r005.blend](Blend/Neris-Town-Royal-Castle-r005.blend)**.
 This saved revision replaces the former Tripo placement with M06-r006 **Royal Court**,
 completes the full-width road to its drawbridge, and retains a rectangular map

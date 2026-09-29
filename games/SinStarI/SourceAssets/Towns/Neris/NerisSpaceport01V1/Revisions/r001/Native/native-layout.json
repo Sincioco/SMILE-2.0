@@ -1,0 +1,238 @@
+{
+  "source_sha256": "1b54016f5b46bd1e1d3b635fe7f0836f301a7d82ef3e8fc13123c4985c2d469a",
+  "triangles": 239864,
+  "parts": 11,
+  "models": 3,
+  "gltf_bounds": {
+    "min": [
+      -360,
+      -56,
+      -230
+    ],
+    "max": [
+      360,
+      300,
+      390
+    ]
+  },
+  "native_chunks": [
+    {
+      "file": "Spaceport-00.glb",
+      "sha256": "0fad91cb818bb455037c19e5019a846c81cad2e7ccf289044617f49601d77148",
+      "vertices": 130187,
+      "triangles": 104339,
+      "parts": [
+        "NSP01.Native.0.0.Gold",
+        "NSP01.Native.0.1.Ivory",
+        "NSP01.Native.0.2.Deck",
+        "NSP01.Native.0.3.Cloth"
+      ],
+      "source_nodes": [
+        [
+          "NSP01.L0.Dock.E.HIGH.30",
+          "NSP01.L0.Dock.E.LOW.25",
+          "NSP01.L0.Dock.W.HIGH.20",
+          "NSP01.L0.Dock.W.LOW.15",
+          "NSP01.L0.Facade.East.114",
+          "NSP01.L0.Facade.Front.106",
+          "NSP01.L0.Facade.Rear.118",
+          "NSP01.L0.Facade.West.110",
+          "NSP01.L0.Hangar.E.121",
+          "NSP01.L0.Hangar.W.120",
+          "NSP01.L0.Hull.125",
+          "NSP01.L0.Interior.Center.140",
+          "NSP01.L0.NSP01.Spire.Central.66",
+          "NSP01.L0.NSP01.Spire.Crown.E.FRONT.88"
+        ],
+        [
+          "NSP01.L0.Facade.Rear.116",
+          "NSP01.L0.Facade.West.108",
+          "NSP01.L0.Hangar.E.48",
+          "NSP01.L0.Hangar.W.32",
+          "NSP01.L0.Hull.5",
+          "NSP01.L0.Interior.Center.127",
+          "NSP01.L0.Interior.East.132",
+          "NSP01.L0.Interior.West.128",
+          "NSP01.L0.NSP01.Lift.E.HIGH.CabinRoot.135",
+          "NSP01.L0.NSP01.Lift.E.LOW.CabinRoot.134",
+          "NSP01.L0.NSP01.Lift.W.HIGH.CabinRoot.131",
+          "NSP01.L0.NSP01.Lift.W.LOW.CabinRoot.130",
+          "NSP01.L0.NSP01.Spire.Central.64",
+          "NSP01.L0.NSP01.Spire.Crown.E.FRONT.86",
+          "NSP01.L0.NSP01.Spire.Crown.E.REAR.89",
+          "NSP01.L0.NSP01.Spire.Crown.W.FRONT.68",
+          "NSP01.L0.NSP01.Spire.Crown.W.REAR.71",
+          "NSP01.L0.NSP01.Tower.Perimeter.E.FRONT.98",
+          "NSP01.L0.NSP01.Tower.Perimeter.E.REAR.101",
+          "NSP01.L0.NSP01.Tower.Perimeter.W.FRONT.80",
+          "NSP01.L0.NSP01.Tower.Perimeter.W.REAR.83",
+          "NSP01.L0.NSP01.Tower.Shoulder.E.FRONT.92"
+        ],
+        [
+          "NSP01.L0.Dock.E.HIGH.27",
+          "NSP01.L0.Dock.E.LOW.22",
+          "NSP01.L0.Dock.W.HIGH.17",
+          "NSP01.L0.Dock.W.LOW.12",
+          "NSP01.L0.Hangar.E.3",
+          "NSP01.L0.Hangar.W.2",
+          "NSP01.L0.Hull.1",
+          "NSP01.L0.Interior.Center.126",
+          "NSP01.L0.Interior.East.133",
+          "NSP01.L0.Interior.West.129",
+          "NSP01.L0.NSP01.Lift.E.HIGH.CabinRoot.135",
+          "NSP01.L0.NSP01.Lift.E.LOW.CabinRoot.134",
+          "NSP01.L0.NSP01.Lift.W.HIGH.CabinRoot.131",
+          "NSP01.L0.NSP01.Lift.W.LOW.CabinRoot.130"
+        ],
+        [
+          "NSP01.L0.Terminal.124"
+        ]
+      ]
+    },
+    {
+      "file": "Spaceport-01.glb",
+      "sha256": "376292dd91273261741d6850d3b5d6bba1fa6020dccf9f16ee60f637562d504c",
+      "vertices": 130809,
+      "triangles": 73478,
+      "parts": [
+        "NSP01.Native.1.0.Ivory",
+        "NSP01.Native.1.1.Teal",
+        "NSP01.Native.1.2.Dark"
+      ],
+      "source_nodes": [
+        [
+          "NSP01.L0.Dock.E.HIGH.28",
+          "NSP01.L0.Dock.E.LOW.23",
+          "NSP01.L0.Dock.W.HIGH.18",
+          "NSP01.L0.Dock.W.LOW.13",
+          "NSP01.L0.Facade.East.112",
+          "NSP01.L0.Facade.Front.104",
+          "NSP01.L0.Facade.Rear.116"
+        ],
+        [
+          "NSP01.L0.Facade.East.113",
+          "NSP01.L0.Facade.Front.105",
+          "NSP01.L0.Facade.Rear.119",
+          "NSP01.L0.Facade.West.109",
+          "NSP01.L0.Hull.6",
+          "NSP01.L0.Interior.Center.139",
+          "NSP01.L0.Interior.East.138",
+          "NSP01.L0.Interior.West.137",
+          "NSP01.L0.NSP01.Hangar.E.Door.1.00.55",
+          "NSP01.L0.NSP01.Hangar.E.Door.1.01.56",
+          "NSP01.L0.NSP01.Hangar.E.Door.1.02.57",
+          "NSP01.L0.NSP01.Hangar.E.Door.1.03.58",
+          "NSP01.L0.NSP01.Hangar.E.Door.1.04.59",
+          "NSP01.L0.NSP01.Hangar.E.Door.1.05.60",
+          "NSP01.L0.NSP01.Hangar.E.Door.-1.00.49",
+          "NSP01.L0.NSP01.Hangar.E.Door.-1.01.50",
+          "NSP01.L0.NSP01.Hangar.E.Door.-1.02.51",
+          "NSP01.L0.NSP01.Hangar.E.Door.-1.03.52",
+          "NSP01.L0.NSP01.Hangar.E.Door.-1.04.53",
+          "NSP01.L0.NSP01.Hangar.E.Door.-1.05.54",
+          "NSP01.L0.NSP01.Hangar.W.Door.1.00.39",
+          "NSP01.L0.NSP01.Hangar.W.Door.1.01.40",
+          "NSP01.L0.NSP01.Hangar.W.Door.1.02.41",
+          "NSP01.L0.NSP01.Hangar.W.Door.1.03.42",
+          "NSP01.L0.NSP01.Hangar.W.Door.1.04.43",
+          "NSP01.L0.NSP01.Hangar.W.Door.1.05.44",
+          "NSP01.L0.NSP01.Hangar.W.Door.-1.00.33",
+          "NSP01.L0.NSP01.Hangar.W.Door.-1.01.34",
+          "NSP01.L0.NSP01.Hangar.W.Door.-1.02.35",
+          "NSP01.L0.NSP01.Hangar.W.Door.-1.03.36",
+          "NSP01.L0.NSP01.Hangar.W.Door.-1.04.37",
+          "NSP01.L0.NSP01.Hangar.W.Door.-1.05.38",
+          "NSP01.L0.NSP01.Lift.E.HIGH.CabinRoot.135",
+          "NSP01.L0.NSP01.Lift.E.LOW.CabinRoot.134",
+          "NSP01.L0.NSP01.Lift.W.HIGH.CabinRoot.131",
+          "NSP01.L0.NSP01.Lift.W.LOW.CabinRoot.130",
+          "NSP01.L0.NSP01.Spire.Central.65",
+          "NSP01.L0.NSP01.Spire.Crown.E.FRONT.87",
+          "NSP01.L0.NSP01.Spire.Crown.E.REAR.90",
+          "NSP01.L0.NSP01.Spire.Crown.W.FRONT.69",
+          "NSP01.L0.NSP01.Spire.Crown.W.REAR.72",
+          "NSP01.L0.NSP01.Tower.Perimeter.E.FRONT.99",
+          "NSP01.L0.NSP01.Tower.Perimeter.E.REAR.102",
+          "NSP01.L0.NSP01.Tower.Perimeter.W.FRONT.81",
+          "NSP01.L0.NSP01.Tower.Perimeter.W.REAR.84",
+          "NSP01.L0.NSP01.Tower.Shoulder.E.FRONT.93",
+          "NSP01.L0.NSP01.Tower.Shoulder.E.REAR.96",
+          "NSP01.L0.NSP01.Tower.Shoulder.W.FRONT.75",
+          "NSP01.L0.NSP01.Tower.Shoulder.W.REAR.78",
+          "NSP01.L0.Terminal.9",
+          "NSP01.L0.Underside.4"
+        ],
+        [
+          "NSP01.L0.Approach.123",
+          "NSP01.L0.Facade.East.115",
+          "NSP01.L0.Facade.Front.107",
+          "NSP01.L0.Facade.Rear.117",
+          "NSP01.L0.Facade.West.111",
+          "NSP01.L0.Hangar.E.61",
+          "NSP01.L0.Hangar.W.45",
+          "NSP01.L0.Hull.7",
+          "NSP01.L0.Terminal.11",
+          "NSP01.L0.Underside.142"
+        ]
+      ]
+    },
+    {
+      "file": "Spaceport-02.glb",
+      "sha256": "075ca57638c7659806427916259ec03a0be8e7a8b959e0bfbf50bbda321b3288",
+      "vertices": 78849,
+      "triangles": 62047,
+      "parts": [
+        "NSP01.Native.2.0.Gold",
+        "NSP01.Native.2.1.Ivory",
+        "NSP01.Native.2.2.Marking",
+        "NSP01.Native.2.3.Crystal"
+      ],
+      "source_nodes": [
+        [
+          "NSP01.L0.NSP01.Spire.Crown.E.FRONT.88",
+          "NSP01.L0.NSP01.Spire.Crown.E.REAR.91",
+          "NSP01.L0.NSP01.Spire.Crown.W.FRONT.70",
+          "NSP01.L0.NSP01.Spire.Crown.W.REAR.73",
+          "NSP01.L0.NSP01.Tower.Perimeter.E.FRONT.100",
+          "NSP01.L0.NSP01.Tower.Perimeter.E.REAR.103",
+          "NSP01.L0.NSP01.Tower.Perimeter.W.FRONT.82",
+          "NSP01.L0.NSP01.Tower.Perimeter.W.REAR.85",
+          "NSP01.L0.NSP01.Tower.Shoulder.E.FRONT.94",
+          "NSP01.L0.NSP01.Tower.Shoulder.E.REAR.97",
+          "NSP01.L0.NSP01.Tower.Shoulder.W.FRONT.76",
+          "NSP01.L0.NSP01.Tower.Shoulder.W.REAR.79",
+          "NSP01.L0.Terminal.10",
+          "NSP01.L0.Underside.141"
+        ],
+        [
+          "NSP01.L0.NSP01.Tower.Shoulder.E.FRONT.92",
+          "NSP01.L0.NSP01.Tower.Shoulder.E.REAR.95",
+          "NSP01.L0.NSP01.Tower.Shoulder.W.FRONT.74",
+          "NSP01.L0.NSP01.Tower.Shoulder.W.REAR.77",
+          "NSP01.L0.Terminal.8",
+          "NSP01.L0.Underside.0"
+        ],
+        [
+          "NSP01.L0.Approach.122",
+          "NSP01.L0.Dock.E.HIGH.29",
+          "NSP01.L0.Dock.E.LOW.24",
+          "NSP01.L0.Dock.W.HIGH.19",
+          "NSP01.L0.Dock.W.LOW.14",
+          "NSP01.L0.Hangar.E.63",
+          "NSP01.L0.Hangar.W.47",
+          "NSP01.L0.Interior.Center.136"
+        ],
+        [
+          "NSP01.L0.Dock.E.HIGH.31",
+          "NSP01.L0.Dock.E.LOW.26",
+          "NSP01.L0.Dock.W.HIGH.21",
+          "NSP01.L0.Dock.W.LOW.16",
+          "NSP01.L0.Hangar.E.62",
+          "NSP01.L0.Hangar.W.46",
+          "NSP01.L0.NSP01.Spire.Central.67"
+        ]
+      ]
+    }
+  ],
+  "method": "Exact triangles and normals, baked translations, material consolidation, planar UVs and explicit orthonormal tangents for untextured PBR; no simplification."
+}

@@ -42,7 +42,7 @@ static double smile_3d_viewport_height(void) {
     return bottom > smile_3d_viewport_y() ? bottom - smile_3d_viewport_y() : 1;
 }
 
-#define SMILE_3D_MAX_MESHES 512
+#define SMILE_3D_MAX_MESHES 1024
 #define SMILE_3D_MAX_OBJECTS 1024
 #define SMILE_3D_MAX_TEXTURES 128
 #define SMILE_3D_MAX_MATERIALS 512
@@ -1025,9 +1025,11 @@ static float smile_3d_degrees(long long degrees)
 
 static long long smile_3d_handle(long long kind, int slot, unsigned short generation)
 {
-    // Materials and meshes reserve nine slot bits for their 512-entry pools.
+    // Meshes reserve ten slot bits; materials retain their nine-bit pool layout.
     // Handles are opaque and never stored in authoring documents.
-    if (kind == SMILE_3D_MATERIAL_HANDLE || kind == SMILE_3D_MESH_HANDLE)
+    if (kind == SMILE_3D_MESH_HANDLE)
+        return kind | ((long long)generation << 10) | (long long)slot;
+    if (kind == SMILE_3D_MATERIAL_HANDLE)
         return kind | ((long long)generation << 9) | (long long)slot;
     return kind | ((long long)generation << 8) | (long long)(slot + 1);
 }
@@ -1035,7 +1037,7 @@ static long long smile_3d_handle(long long kind, int slot, unsigned short genera
 static long long smile_3d_object_handle(int slot, unsigned short generation)
 {
     /* Objects own a 1,024-entry pool, so their generation-safe handle reserves
-       ten low bits for the zero-based slot. Materials and meshes use nine bits; the remaining
+       ten low bits for the zero-based slot. Materials use nine bits; the remaining
        resource pools retain their existing eight-bit layout. */
     return SMILE_3D_OBJECT_HANDLE | ((long long)generation << 10) | (long long)slot;
 }
@@ -1045,8 +1047,8 @@ static SmileMesh3D* smile_3d_mesh(long long handle)
     int slot;
     unsigned short generation;
     if ((handle & SMILE_3D_HANDLE_KIND) != SMILE_3D_MESH_HANDLE) return 0;
-    slot = (int)(handle & 511LL);
-    generation = (unsigned short)((handle >> 9) & 65535LL);
+    slot = (int)(handle & 1023LL);
+    generation = (unsigned short)((handle >> 10) & 65535LL);
     if (slot < 0 || slot >= SMILE_3D_MAX_MESHES || !smile_meshes3d[slot].active ||
         smile_meshes3d[slot].generation != generation) return 0;
     return &smile_meshes3d[slot];

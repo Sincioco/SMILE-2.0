@@ -2,6 +2,41 @@
 
 ## Native Neris Town
 
+Horizon r006 now has a marked rear runway, inset guidance lights, a blinking red
+antenna beacon, parallel glass halls and matching wave roofs on both hangars.
+A third aircraft repeats a three-minute takeoff/landing/taxi cycle. Arin and the
+party can enter the terminal's clear central doorway and explore the ground floor.
+In Follow Party mode, O/Orbit, mouse orbit and arrow orbit stay centered on the
+leader. Free-camera inspection keeps its existing pivot behavior.
+
+The current layout has **Horizon — Gentle Wave** at full size west of the town.
+**Orbit Airport** frames it. The original Spaceport 01 is in the separate
+**Neris Spaceport** town tab. Walk south along the western road to travel there;
+walk north along its arrival causeway to return with the party. The former
+southern map extension is removed. All 362 saved town placements remain.
+See `games/SinStarI/SourceAssets/Towns/Neris/NerisHorizonV1/README.md` for current
+Blender files, actual renders, dimensions and the versioned saves. Future Blender
+exports include the selected town's airport and Royal Court assemblies.
+
+Launching `Character3DViewer.exe` directly now starts the file worker if it is
+missing and restarts it if it exits while the Viewer remains open. Launch.ps1 can
+still be used for character calibration synchronization. A per-process guard
+prevents duplicate workers. Save For Viewer writes the small town document;
+Save For Blender starts a separate conversion that may take several minutes.
+
+The following southwest-layout description records the earlier Spaceport 01 build;
+that airport now lives in its own map.
+
+The current expanded town includes **Neris Spaceport 01** over southwest water,
+western land, and roads to both Royal Court and the town. Use **Orbit Spaceport**
+in the header to inspect it live; Space pauses/resumes the orbit and 1 shows north
+up. The separate saved Blender scene and matching portable town document are in
+`games/SinStarI/SourceAssets/Towns/Neris/NerisSpaceport01V1/Town`.
+The revised facade uses Royal Court windows and swinging main entrance doors, with
+13 glowing tower tips. The entrance opens on approach and exposes a one-shot entry
+event for a cutscene. Elevators and hangar doors have no gameplay controller. See that package's README for native
+resource limits and evidence. The existing castle packages remain unchanged.
+
 The native Viewer opens on **Neris Town**, restoring the latest Town Editor working
 copy. Its initial catalog/layout came from
 `games/SinStarI/SourceAssets/Towns/Neris/NerisTownV1/Blend/Neris-Town-Waterfront.blend`;
@@ -9,12 +44,19 @@ that Blender file does not replace your current editor changes.
 Royal Court replaces the Tripo placement on the northern street circuit,
 beside the existing Royal Castle and military HQ. Tripo remains a reusable palette
 building and loads its geometry/materials only while placed. The saved relocation
-is `NerisTownV1/Blend/Neris-Town-Royal-Castle-r005.blend`; the live document remains
+is preserved as `NerisTownV1/Blend/Neris-Town-Royal-Castle-r005.blend`; the live document remains
 authoritative for subsequent town edits. Eight
 estates occupy the northwest residential area, sixteen homes the southwest,
 fourteen smaller homes the northeast, and three shops the southeast. House/shop
 fronts face inward; civic landmarks and castles face south. City Hall is 2x and
 the communication tower 4x their original size; military HQ is doubled.
+
+When installing a town snapshot from a packaged automation host, verify the
+physical Windows profile as well as that host's redirected LocalAppData. The same
+displayed path can contain different saves. Back up both locations, close the
+Viewer normally, and validate the five Neris recovery/current keys against the
+intended snapshot before checking a fresh native launch. Do not select a map by
+timestamp alone: launching an old map can give it a newer recovery timestamp.
 
 The **Kingdom of Neris** arch is just north of the southern crossroad (Blender
 Y=-265). Arin starts 13 m south of it, facing the town. Connected roads and bridges
@@ -56,8 +98,8 @@ its own four architectural washes. Removing a lamp removes its emitted light.
 | Shift + Middle Drag | Pan in every Viewer tab; gesture stays pan until mouse release |
 | Wheel | Ease zoom without stopping orbit |
 | F / G / B | Floor / grid / shared background |
-| O / C or Orbit | Start a simple map-centered orbit at 33 degrees and 8,725 distance |
-| Right Click | Reset to the same map-centered orbit perspective |
+| O / C or Orbit | Start orbit at the current camera position, target, height, lens and zoom; Orbit also stops it |
+| Right Click | Reset to the map-centered overview |
 | Fit | Fit the entire town; preserve active orbit |
 | M | Show / hide minimap |
 | 1 | North-up top-down view in and out of Edit Town |
@@ -69,9 +111,11 @@ camera position and target XYZ, yaw/pitch, fixed lens FOV and eye-to-target dist
 FPS uses actual frame time rather than the capped animation clock.
 Town entry opens centered behind Arin through the Kingdom of Neris sign. After
 20 seconds without keyboard or mouse activity, inspection orbit starts. The camera
-turns steadily around the map at 2.5 degrees per second, keeping its height,
-target and distance fixed. The starting perspective is 33 degrees vertical,
-8,725 units from the map center, a 32-degree lens and a -179-degree bearing.
+turns steadily around its current target at 2.5 degrees per second, keeping its
+height and distance fixed. O and the Orbit button preserve the displayed shot,
+including existing pan and zoom. Right-click explicitly resets the overview;
+Orbit Spaceport explicitly frames the harbor. The original town overview uses
+33 degrees vertical and 8,725 units; the expanded town fits its larger bounds.
 There is no random building selection, close-up tour or automatic zoom change.
 Space pauses/resumes the orbit. Any input stops an idle-started orbit and
 restarts the idle countdown. WASD moves the party independently of mouse gestures.

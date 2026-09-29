@@ -1,0 +1,910 @@
+{
+  "asset_id": "NSP01",
+  "design_version": "1.0.0",
+  "units": "metres",
+  "axes": "Blender +X east, +Y rear, +Z up; glTF exporter converts to Y-up.",
+  "transform_space": "Asset local equals authoring world, root identity.",
+  "anchors": [
+    {
+      "id": "NSP01.Lift.W.LOW.Stop.GROUND",
+      "kind": "stop-anchor",
+      "position_blender_m": [
+        -88,
+        44,
+        0
+      ],
+      "rotation_blender_radians": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "nominal_lower_z": null,
+      "lower_finish_offset_m": null
+    },
+    {
+      "id": "NSP01.Lift.W.LOW.Stop.UPPER",
+      "kind": "stop-anchor",
+      "position_blender_m": [
+        -88,
+        44,
+        64
+      ],
+      "rotation_blender_radians": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "nominal_lower_z": null,
+      "lower_finish_offset_m": null
+    },
+    {
+      "id": "NSP01.Lift.W.LOW.CabinRoot",
+      "kind": "cabin-root",
+      "position_blender_m": [
+        -88,
+        44,
+        64
+      ],
+      "rotation_blender_radians": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "nominal_lower_z": 0,
+      "lower_finish_offset_m": 0.012
+    },
+    {
+      "id": "NSP01.Lift.W.LOW.DockInterface",
+      "kind": "interface-anchor",
+      "position_blender_m": [
+        -98,
+        44,
+        64
+      ],
+      "rotation_blender_radians": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "nominal_lower_z": null,
+      "lower_finish_offset_m": null
+    },
+    {
+      "id": "NSP01.Lift.W.HIGH.Stop.GROUND",
+      "kind": "stop-anchor",
+      "position_blender_m": [
+        -88,
+        156,
+        0
+      ],
+      "rotation_blender_radians": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "nominal_lower_z": null,
+      "lower_finish_offset_m": null
+    },
+    {
+      "id": "NSP01.Lift.W.HIGH.Stop.UPPER",
+      "kind": "stop-anchor",
+      "position_blender_m": [
+        -88,
+        156,
+        104
+      ],
+      "rotation_blender_radians": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "nominal_lower_z": null,
+      "lower_finish_offset_m": null
+    },
+    {
+      "id": "NSP01.Lift.W.HIGH.CabinRoot",
+      "kind": "cabin-root",
+      "position_blender_m": [
+        -88,
+        156,
+        104
+      ],
+      "rotation_blender_radians": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "nominal_lower_z": 0,
+      "lower_finish_offset_m": 0.012
+    },
+    {
+      "id": "NSP01.Lift.W.HIGH.DockInterface",
+      "kind": "interface-anchor",
+      "position_blender_m": [
+        -98,
+        156,
+        104
+      ],
+      "rotation_blender_radians": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "nominal_lower_z": null,
+      "lower_finish_offset_m": null
+    },
+    {
+      "id": "NSP01.Lift.E.LOW.Stop.GROUND",
+      "kind": "stop-anchor",
+      "position_blender_m": [
+        88,
+        44,
+        0
+      ],
+      "rotation_blender_radians": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "nominal_lower_z": null,
+      "lower_finish_offset_m": null
+    },
+    {
+      "id": "NSP01.Lift.E.LOW.Stop.UPPER",
+      "kind": "stop-anchor",
+      "position_blender_m": [
+        88,
+        44,
+        64
+      ],
+      "rotation_blender_radians": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "nominal_lower_z": null,
+      "lower_finish_offset_m": null
+    },
+    {
+      "id": "NSP01.Lift.E.LOW.CabinRoot",
+      "kind": "cabin-root",
+      "position_blender_m": [
+        88,
+        44,
+        64
+      ],
+      "rotation_blender_radians": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "nominal_lower_z": 0,
+      "lower_finish_offset_m": 0.012
+    },
+    {
+      "id": "NSP01.Lift.E.LOW.DockInterface",
+      "kind": "interface-anchor",
+      "position_blender_m": [
+        98,
+        44,
+        64
+      ],
+      "rotation_blender_radians": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "nominal_lower_z": null,
+      "lower_finish_offset_m": null
+    },
+    {
+      "id": "NSP01.Lift.E.HIGH.Stop.GROUND",
+      "kind": "stop-anchor",
+      "position_blender_m": [
+        88,
+        156,
+        0
+      ],
+      "rotation_blender_radians": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "nominal_lower_z": null,
+      "lower_finish_offset_m": null
+    },
+    {
+      "id": "NSP01.Lift.E.HIGH.Stop.UPPER",
+      "kind": "stop-anchor",
+      "position_blender_m": [
+        88,
+        156,
+        104
+      ],
+      "rotation_blender_radians": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "nominal_lower_z": null,
+      "lower_finish_offset_m": null
+    },
+    {
+      "id": "NSP01.Lift.E.HIGH.CabinRoot",
+      "kind": "cabin-root",
+      "position_blender_m": [
+        88,
+        156,
+        104
+      ],
+      "rotation_blender_radians": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "nominal_lower_z": 0,
+      "lower_finish_offset_m": 0.012
+    },
+    {
+      "id": "NSP01.Lift.E.HIGH.DockInterface",
+      "kind": "interface-anchor",
+      "position_blender_m": [
+        98,
+        156,
+        104
+      ],
+      "rotation_blender_radians": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "nominal_lower_z": null,
+      "lower_finish_offset_m": null
+    },
+    {
+      "id": "NSP01.Entrance.Hinge.West",
+      "kind": "entrance-hinge",
+      "position_blender_m": [
+        -6,
+        -45.7,
+        0.06
+      ],
+      "rotation_blender_radians": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "open_degrees": 95
+    },
+    {
+      "id": "NSP01.Entrance.Hinge.East",
+      "kind": "entrance-hinge",
+      "position_blender_m": [
+        6,
+        -45.7,
+        0.06
+      ],
+      "rotation_blender_radians": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "open_degrees": -95
+    }
+  ],
+  "doors": [
+    {
+      "id": "NSP01.Hangar.W.Door.-1.00",
+      "open_position_blender_m": [
+        -229.4499969482422,
+        -127.5,
+        14
+      ],
+      "closed_position_blender_m": [
+        -178.25,
+        -127.5,
+        14
+      ]
+    },
+    {
+      "id": "NSP01.Hangar.W.Door.-1.01",
+      "open_position_blender_m": [
+        -229.4499969482422,
+        -126.69999694824219,
+        14
+      ],
+      "closed_position_blender_m": [
+        -185.35,
+        -126.7,
+        14
+      ]
+    },
+    {
+      "id": "NSP01.Hangar.W.Door.-1.02",
+      "open_position_blender_m": [
+        -229.4499969482422,
+        -125.9000015258789,
+        14
+      ],
+      "closed_position_blender_m": [
+        -192.45,
+        -125.9,
+        14
+      ]
+    },
+    {
+      "id": "NSP01.Hangar.W.Door.-1.03",
+      "open_position_blender_m": [
+        -229.4499969482422,
+        -125.0999984741211,
+        14
+      ],
+      "closed_position_blender_m": [
+        -199.55,
+        -125.1,
+        14
+      ]
+    },
+    {
+      "id": "NSP01.Hangar.W.Door.-1.04",
+      "open_position_blender_m": [
+        -229.4499969482422,
+        -124.30000305175781,
+        14
+      ],
+      "closed_position_blender_m": [
+        -206.65,
+        -124.3,
+        14
+      ]
+    },
+    {
+      "id": "NSP01.Hangar.W.Door.-1.05",
+      "open_position_blender_m": [
+        -229.4499969482422,
+        -123.5,
+        14
+      ],
+      "closed_position_blender_m": [
+        -213.75,
+        -123.5,
+        14
+      ]
+    },
+    {
+      "id": "NSP01.Hangar.W.Door.1.00",
+      "open_position_blender_m": [
+        -118.55000305175781,
+        -127.5,
+        14
+      ],
+      "closed_position_blender_m": [
+        -169.75,
+        -127.5,
+        14
+      ]
+    },
+    {
+      "id": "NSP01.Hangar.W.Door.1.01",
+      "open_position_blender_m": [
+        -118.55000305175781,
+        -126.69999694824219,
+        14
+      ],
+      "closed_position_blender_m": [
+        -162.65,
+        -126.7,
+        14
+      ]
+    },
+    {
+      "id": "NSP01.Hangar.W.Door.1.02",
+      "open_position_blender_m": [
+        -118.55000305175781,
+        -125.9000015258789,
+        14
+      ],
+      "closed_position_blender_m": [
+        -155.55,
+        -125.9,
+        14
+      ]
+    },
+    {
+      "id": "NSP01.Hangar.W.Door.1.03",
+      "open_position_blender_m": [
+        -118.55000305175781,
+        -125.0999984741211,
+        14
+      ],
+      "closed_position_blender_m": [
+        -148.45,
+        -125.1,
+        14
+      ]
+    },
+    {
+      "id": "NSP01.Hangar.W.Door.1.04",
+      "open_position_blender_m": [
+        -118.55000305175781,
+        -124.30000305175781,
+        14
+      ],
+      "closed_position_blender_m": [
+        -141.35,
+        -124.3,
+        14
+      ]
+    },
+    {
+      "id": "NSP01.Hangar.W.Door.1.05",
+      "open_position_blender_m": [
+        -118.55000305175781,
+        -123.5,
+        14
+      ],
+      "closed_position_blender_m": [
+        -134.25,
+        -123.5,
+        14
+      ]
+    },
+    {
+      "id": "NSP01.Hangar.E.Door.-1.00",
+      "open_position_blender_m": [
+        118.55000305175781,
+        -127.5,
+        14
+      ],
+      "closed_position_blender_m": [
+        169.75,
+        -127.5,
+        14
+      ]
+    },
+    {
+      "id": "NSP01.Hangar.E.Door.-1.01",
+      "open_position_blender_m": [
+        118.55000305175781,
+        -126.69999694824219,
+        14
+      ],
+      "closed_position_blender_m": [
+        162.65,
+        -126.7,
+        14
+      ]
+    },
+    {
+      "id": "NSP01.Hangar.E.Door.-1.02",
+      "open_position_blender_m": [
+        118.55000305175781,
+        -125.9000015258789,
+        14
+      ],
+      "closed_position_blender_m": [
+        155.55,
+        -125.9,
+        14
+      ]
+    },
+    {
+      "id": "NSP01.Hangar.E.Door.-1.03",
+      "open_position_blender_m": [
+        118.55000305175781,
+        -125.0999984741211,
+        14
+      ],
+      "closed_position_blender_m": [
+        148.45,
+        -125.1,
+        14
+      ]
+    },
+    {
+      "id": "NSP01.Hangar.E.Door.-1.04",
+      "open_position_blender_m": [
+        118.55000305175781,
+        -124.30000305175781,
+        14
+      ],
+      "closed_position_blender_m": [
+        141.35,
+        -124.3,
+        14
+      ]
+    },
+    {
+      "id": "NSP01.Hangar.E.Door.-1.05",
+      "open_position_blender_m": [
+        118.55000305175781,
+        -123.5,
+        14
+      ],
+      "closed_position_blender_m": [
+        134.25,
+        -123.5,
+        14
+      ]
+    },
+    {
+      "id": "NSP01.Hangar.E.Door.1.00",
+      "open_position_blender_m": [
+        229.4499969482422,
+        -127.5,
+        14
+      ],
+      "closed_position_blender_m": [
+        178.25,
+        -127.5,
+        14
+      ]
+    },
+    {
+      "id": "NSP01.Hangar.E.Door.1.01",
+      "open_position_blender_m": [
+        229.4499969482422,
+        -126.69999694824219,
+        14
+      ],
+      "closed_position_blender_m": [
+        185.35,
+        -126.7,
+        14
+      ]
+    },
+    {
+      "id": "NSP01.Hangar.E.Door.1.02",
+      "open_position_blender_m": [
+        229.4499969482422,
+        -125.9000015258789,
+        14
+      ],
+      "closed_position_blender_m": [
+        192.45,
+        -125.9,
+        14
+      ]
+    },
+    {
+      "id": "NSP01.Hangar.E.Door.1.03",
+      "open_position_blender_m": [
+        229.4499969482422,
+        -125.0999984741211,
+        14
+      ],
+      "closed_position_blender_m": [
+        199.55,
+        -125.1,
+        14
+      ]
+    },
+    {
+      "id": "NSP01.Hangar.E.Door.1.04",
+      "open_position_blender_m": [
+        229.4499969482422,
+        -124.30000305175781,
+        14
+      ],
+      "closed_position_blender_m": [
+        206.65,
+        -124.3,
+        14
+      ]
+    },
+    {
+      "id": "NSP01.Hangar.E.Door.1.05",
+      "open_position_blender_m": [
+        229.4499969482422,
+        -123.5,
+        14
+      ],
+      "closed_position_blender_m": [
+        213.75,
+        -123.5,
+        14
+      ]
+    }
+  ],
+  "route_graph": {
+    "nodes": [
+      {
+        "id": "CITY",
+        "position": [
+          0,
+          -382,
+          0
+        ]
+      },
+      {
+        "id": "PLAZA",
+        "position": [
+          0,
+          -190,
+          0
+        ]
+      },
+      {
+        "id": "ENTRY",
+        "position": [
+          0,
+          -38,
+          0
+        ]
+      },
+      {
+        "id": "HALL",
+        "position": [
+          0,
+          18,
+          0
+        ]
+      },
+      {
+        "id": "WEST-HUB",
+        "position": [
+          -88,
+          44,
+          0
+        ]
+      },
+      {
+        "id": "EAST-HUB",
+        "position": [
+          88,
+          44,
+          0
+        ]
+      },
+      {
+        "id": "WEST-REAR",
+        "position": [
+          -88,
+          156,
+          0
+        ]
+      },
+      {
+        "id": "EAST-REAR",
+        "position": [
+          88,
+          156,
+          0
+        ]
+      },
+      {
+        "id": "W-LOW-LIFT",
+        "position": [
+          -88,
+          44,
+          64
+        ]
+      },
+      {
+        "id": "E-LOW-LIFT",
+        "position": [
+          88,
+          44,
+          64
+        ]
+      },
+      {
+        "id": "W-HIGH-LIFT",
+        "position": [
+          -88,
+          156,
+          104
+        ]
+      },
+      {
+        "id": "E-HIGH-LIFT",
+        "position": [
+          88,
+          156,
+          104
+        ]
+      },
+      {
+        "id": "W-LOW-PAD",
+        "position": [
+          -306,
+          44,
+          64
+        ]
+      },
+      {
+        "id": "W-HIGH-PAD",
+        "position": [
+          -306,
+          156,
+          104
+        ]
+      },
+      {
+        "id": "E-LOW-PAD",
+        "position": [
+          306,
+          44,
+          64
+        ]
+      },
+      {
+        "id": "E-HIGH-PAD",
+        "position": [
+          306,
+          156,
+          104
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "from": "CITY",
+        "to": "PLAZA",
+        "type": "walk"
+      },
+      {
+        "from": "PLAZA",
+        "to": "ENTRY",
+        "type": "walk"
+      },
+      {
+        "from": "ENTRY",
+        "to": "HALL",
+        "type": "walk"
+      },
+      {
+        "from": "HALL",
+        "to": "WEST-HUB",
+        "type": "walk"
+      },
+      {
+        "from": "HALL",
+        "to": "EAST-HUB",
+        "type": "walk"
+      },
+      {
+        "from": "WEST-HUB",
+        "to": "WEST-REAR",
+        "type": "walk"
+      },
+      {
+        "from": "EAST-HUB",
+        "to": "EAST-REAR",
+        "type": "walk"
+      },
+      {
+        "from": "WEST-HUB",
+        "to": "W-LOW-LIFT",
+        "type": "lift"
+      },
+      {
+        "from": "EAST-HUB",
+        "to": "E-LOW-LIFT",
+        "type": "lift"
+      },
+      {
+        "from": "WEST-REAR",
+        "to": "W-HIGH-LIFT",
+        "type": "lift"
+      },
+      {
+        "from": "EAST-REAR",
+        "to": "E-HIGH-LIFT",
+        "type": "lift"
+      },
+      {
+        "from": "W-LOW-LIFT",
+        "to": "W-LOW-PAD",
+        "type": "walk"
+      },
+      {
+        "from": "E-LOW-LIFT",
+        "to": "E-LOW-PAD",
+        "type": "walk"
+      },
+      {
+        "from": "W-HIGH-LIFT",
+        "to": "W-HIGH-PAD",
+        "type": "walk"
+      },
+      {
+        "from": "E-HIGH-LIFT",
+        "to": "E-HIGH-PAD",
+        "type": "walk"
+      }
+    ]
+  },
+  "runtime_status": "static-native-preview-tested; gameplay-lifts-and-doors-not-implemented",
+  "revision": "r07"
+}

@@ -159,7 +159,8 @@ internal sealed class CompilerDriver
                     buildAssets?.AssetPaths,
                     rememberWindowPlacement: input.Project?.RememberWindowPlacement == true,
                     responsiveWindow: input.Project?.ResponsiveWindow == true,
-                    startupAuthor: input.Project?.WebLoadingAuthor);
+                    startupAuthor: input.Project?.WebLoadingAuthor,
+                    nativeWorkerScript: input.Project?.NativeWorkerScript);
                 File.WriteAllText(assemblyPath, emitter.Emit());
                 _testHooks?.AfterAssemblyEmission?.Invoke(intermediates);
                 if (options.EmitDebugInformation)

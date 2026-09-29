@@ -1,0 +1,141 @@
+''' One regional aircraft: runway departure, approach, rollout and return taxi.
+Module Smile.Tools.NerisRunwayTraffic
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+
+Public Const CYCLE = 180000
+Public Const SCALE = 0.55
+
+Public Type State
+    Time As Number
+End Type
+
+Public Sub Advance(ByRef Value As State, Elapsed As Number)
+
+    Value.Time = (Value.Time + Max(0, Elapsed) Mod CYCLE) Mod CYCLE
+
+End Sub
+
+Private Function Fraction(Time As Number, Start As Number, Duration As Number) As Double
+
+    Dim Result As Double
+
+    Result = Clamp(ToDouble(Time - Start) / ToDouble(Duration), 0.0, 1.0)
+
+    Return Result
+
+End Function
+
+Private Function Ease(Amount As Double) As Double
+
+    Dim Result As Double
+
+    Result = Amount * Amount * (3.0 - 2.0 * Amount)
+
+    Return Result
+
+End Function
+
+Public Function Position(Value As State) As P.Vector3
+
+    Dim Result As P.Vector3
+    Dim T As Double
+
+    Result = P.Vector(-380.0, 0.14, 355.0)
+
+    If Value.Time >= 170000 Then
+
+        T = Ease(Fraction(Value.Time, 170000, 10000))
+        Result.X = -400.0 + 20.0 * T
+
+    Else If Value.Time >= 160000 Then
+
+        T = Ease(Fraction(Value.Time, 160000, 10000))
+        Result.X = -400.0 - 22.5 * Sin(M.Radians(180.0 * T))
+        Result.Z = 332.5 - 22.5 * Cos(M.Radians(180.0 * T))
+
+    Else If Value.Time >= 136000 Then
+
+        T = Ease(Fraction(Value.Time, 136000, 24000))
+        Result.X = 400.0 - 800.0 * T
+        Result.Z = 310.0
+
+    Else If Value.Time >= 126000 Then
+
+        T = Ease(Fraction(Value.Time, 126000, 10000))
+        Result.X = 400.0 + 22.5 * Sin(M.Radians(180.0 * T))
+        Result.Z = 332.5 + 22.5 * Cos(M.Radians(180.0 * T))
+
+    Else If Value.Time >= 108000 Then
+
+        T = Fraction(Value.Time, 108000, 18000)
+        Result.X = -240.0 + 640.0 * (2.0 * T - T * T)
+
+    Else If Value.Time >= 90000 Then
+
+        T = Fraction(Value.Time, 90000, 18000)
+        Result.X = -1700.0 + 1460.0 * T
+        Result.Y = 0.14 + 300.0 * (1.0 - Ease(T))
+
+    Else If Value.Time >= 28000 Then
+
+        T = Fraction(Value.Time, 28000, 17000)
+        Result.X = 180.0 + 1620.0 * T
+        Result.Y = 0.14 + 300.0 * Ease(T)
+
+    Else If Value.Time >= 10000 Then
+
+        T = Fraction(Value.Time, 10000, 18000)
+        Result.X = -380.0 + 560.0 * T * T
+
+    End If
+
+    Return Result
+
+End Function
+
+''' Model nose is +Z after GLB conversion; the world runway heads north (+Z).
+Public Function Heading(Value As State) As Double
+
+    Dim Result As Double
+
+    If Value.Time >= 160000 And Value.Time < 170000 Then
+        Result = 180.0 + 180.0 * Ease(Fraction(Value.Time, 160000, 10000))
+    Else If Value.Time >= 136000 And Value.Time < 160000 Then
+        Result = 180.0
+    Else If Value.Time >= 126000 And Value.Time < 136000 Then
+        Result = 180.0 * Ease(Fraction(Value.Time, 126000, 10000))
+    End If
+
+    Return Result
+
+End Function
+
+Public Function Pitch(Value As State) As Double
+
+    Dim Result As Double
+
+    If Value.Time >= 28000 And Value.Time < 45000 Then
+        Result = -8.0 * Sin(M.Radians(180.0 * Fraction(Value.Time, 28000, 17000)))
+    Else If Value.Time >= 90000 And Value.Time < 108000 Then
+        Result = 6.0 * Sin(M.Radians(180.0 * Fraction(Value.Time, 90000, 18000)))
+    End If
+
+    Return Result
+
+End Function
+
+Public Function Visible(Value As State) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Value.Time < 45000 Or Value.Time >= 90000
+
+    Return Result
+
+End Function
+
+End Module

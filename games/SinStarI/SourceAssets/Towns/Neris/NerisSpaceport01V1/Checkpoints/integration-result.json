@@ -1,0 +1,72 @@
+{
+  "complete": true,
+  "date_utc": "2026-09-28T15:13:55.365977+00:00",
+  "delivered_dimensions_m": [
+    720,
+    620,
+    356
+  ],
+  "required_counts": {
+    "pads": 4,
+    "hangars": 2,
+    "primary_spires": 13,
+    "keel_pylons": 9,
+    "lift_cabins": 4,
+    "hangar_door_panels": 24
+  },
+  "town": {
+    "status": "completed-static-native-preview",
+    "town_blend": "D:\\SMILE 2.0\\games\\SinStarI\\SourceAssets\\Towns\\Neris\\NerisSpaceport01V1\\Town\\Neris-Town-Spaceport-SW-r001.blend",
+    "town_document": "D:\\SMILE 2.0\\games\\SinStarI\\SourceAssets\\Towns\\Neris\\NerisSpaceport01V1\\Town\\Neris-Town-Spaceport-SW-r001.town",
+    "native_viewer": "running-spaceport-orbit",
+    "placement_m": [
+      -550,
+      -760,
+      0.212
+    ],
+    "rotation_degrees": 180,
+    "scale": 1,
+    "preserved_town_placements": 361,
+    "validation": "Native build, routes, foundations, rendering, expanded session, calibration, cleanup and actual orbit passed.",
+    "resources": {
+      "meshes": 485,
+      "materials": 466,
+      "models": 53,
+      "model_capacity": 64
+    },
+    "visual_check": {
+      "seconds": 146.929,
+      "camera_pitch_degrees": 33,
+      "radius_native": 16000,
+      "observed_yaw_samples": [
+        24,
+        -85,
+        -147,
+        97,
+        17
+      ],
+      "result": "No flashing surfaces or disappearing components observed in sampled orbit and close views."
+    }
+  },
+  "source_parity": {
+    "pass": true,
+    "production_objects": 1991,
+    "evaluated_triangles": 239912,
+    "matches_final_source": true,
+    "source_scene_preserved": true,
+    "kinds": {
+      "pad": 4,
+      "primary-tower": 13,
+      "keel-pylon": 9,
+      "door-panel": 24,
+      "lift-cabin": 24
+    }
+  },
+  "commits": false,
+  "pushes": false,
+  "runtime_changes": false,
+  "on_hold": [
+    "SMILE Studio",
+    "Web adoption/publication/browser validation"
+  ]
+}

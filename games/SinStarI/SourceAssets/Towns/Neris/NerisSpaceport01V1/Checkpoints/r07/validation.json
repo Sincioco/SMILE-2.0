@@ -1,0 +1,92 @@
+{
+  "revision": "r07",
+  "counts": {
+    "keel-shell": 1,
+    "approach": 1,
+    "apron": 2,
+    "keel-pylon": 9,
+    "hull": 1,
+    "terminal-wall": 8,
+    "portal": 1,
+    "stepped-roof": 1,
+    "lift-vestibule": 2,
+    "shaft-sleeve": 4,
+    "architectural-rib": 472,
+    "mass": 281,
+    "rear-service": 1,
+    "rear-link": 1,
+    "side-door": 2,
+    "pad": 4,
+    "fascia": 4,
+    "deck-marking": 17,
+    "guardrail": 8,
+    "support": 43,
+    "navigation": 32,
+    "dock-arm": 4,
+    "hangar-shell": 6,
+    "aperture-frame": 6,
+    "door-panel": 24,
+    "hangar-primary": 2,
+    "hangar-rib": 84,
+    "soffit-light": 6,
+    "primary-tower": 13,
+    "ring-trim": 52,
+    "crystal": 1,
+    "halo": 1,
+    "banner": 2,
+    "route-floor": 5,
+    "route-ceiling": 5,
+    "route-wall": 17,
+    "lift-threshold": 8,
+    "lift-cabin": 24,
+    "architectural": 3,
+    "royal-window": 792,
+    "royal-entrance-static": 47,
+    "entrance-door": 22,
+    "tower-tip-crystal": 13,
+    "crystal-socket": 13,
+    "ceremonial-glazing": 2,
+    "tower-crown": 12,
+    "roof-glazing": 4,
+    "gable-structure": 3,
+    "facade-pilaster": 6,
+    "rear-glazing": 1,
+    "exterior-ornament": 350
+  },
+  "hinges": [
+    "NSP01.Entrance.Hinge.West",
+    "NSP01.Entrance.Hinge.East"
+  ],
+  "separated_hangar_ribs": 84,
+  "wall_rib_separation_m": 0.5,
+  "clear_hangar_width_m": 102,
+  "source_sha256": "5fa2be1e5179c176736cc8445de94d59931ffe8a52f6725dabc8100569483595",
+  "round_trip": {
+    "bounds_m": {
+      "min": [
+        -360.0,
+        -390.0,
+        -56.0
+      ],
+      "max": [
+        360.0,
+        230.0,
+        348.0
+      ]
+    },
+    "dimensions_m": [
+      720.0,
+      620.0,
+      404.0
+    ],
+    "triangles": 485800,
+    "uv_meshes": 185
+  },
+  "town": {
+    "path": "D:\\Projects\\Sin-Star-I-Assets\\Neris-Spaceport-01\\town-integration\\Neris-Town-Spaceport-SW-r002.blend",
+    "preserved_non_spaceport_objects": 16837,
+    "preserved_placements": 361,
+    "document_unchanged": true,
+    "source_sha256": "5fa2be1e5179c176736cc8445de94d59931ffe8a52f6725dabc8100569483595"
+  }
+}

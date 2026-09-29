@@ -1,0 +1,12 @@
+{
+  "installed_at": "2026-09-28T15:02:03.826Z",
+  "sha256": "65c88acc6d3433c353e855b9d8249c5c4af764537d37eec92d59b1951eefa35d",
+  "backups": "before-spaceport",
+  "keys": [
+    "TownEditor.PermanentNeris",
+    "TownEditor.Working",
+    "TownEditor.Current",
+    "TownEditor.Recovery.Neris Town",
+    "TownEditor.Town.Neris Town"
+  ]
+}

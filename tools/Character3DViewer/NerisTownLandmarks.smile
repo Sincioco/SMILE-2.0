@@ -1,0 +1,105 @@
+''' Selected-town landmark lifecycle, including standalone spaceport door resources.
+Module Smile.Tools.NerisTownLandmarks
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Tools.NerisCastlePreview As Castle
+Import Smile.Tools.NerisSpaceportPreview As Spaceport
+Import Smile.Tools.NerisHorizonPreview As Horizon
+
+Public Type State
+    Town As Text
+    Doors[2] As Core.Model3D
+    DoorCount As Number
+    Failed As Boolean
+End Type
+
+Public Sub Destroy(ByRef Value As State, ByRef Court As Castle.State,
+    ByRef Original As Spaceport.State, ByRef Airport As Horizon.State)
+
+    Dim Index As Number
+    Dim Empty As State
+
+    Call Horizon.Destroy(Airport)
+    Call Spaceport.Destroy(Original)
+    Call Castle.Destroy(Court)
+
+    For Index = 0 To Value.DoorCount - 1
+        Call G.DestroyModel3D(Value.Doors[Index])
+    End For
+
+    Value = Empty
+
+End Sub
+
+Public Function LoadNext(ByRef Value As State, Name As Text, HasAirport As Boolean,
+    ByRef Court As Castle.State, ByRef Original As Spaceport.State,
+    ByRef Airport As Horizon.State) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Path As Text
+    Dim Ok As Boolean
+
+    If Value.Town <> Name Then
+        Call Destroy(Value, Court, Original, Airport)
+
+        Value.Town = Name
+    End If
+
+    If Name = "Neris Spaceport" Then
+
+        If Value.DoorCount < 2 Then
+
+            Path = "Door-West"
+
+            If Value.DoorCount = 1 Then
+                Path = "Door-East"
+            End If
+
+            Value.Doors[Value.DoorCount] = G.LoadModelGeometry3D("Assets/Neris/CastleV2/" + Path + ".sm3d")
+            Ok = Value.Doors[Value.DoorCount].GeometryReady
+            Ok = G.PrepareModelPbr3D(Value.Doors[Value.DoorCount], G.TEXTURE_FILTER_ANISOTROPIC, 1, 16) And Ok
+            Value.Failed = Not Ok
+            Value.DoorCount = Value.DoorCount + 1
+
+            Return False
+
+        End If
+
+        Call Spaceport.LoadNext(Original, Value.Doors[0], Value.Doors[1])
+
+        Value.Failed = Original.Failed
+        ReturnValue = Original.Ready
+
+        Return ReturnValue
+
+    End If
+
+    If Text_Slice(Name, 0, 10) = "Neris Town" Then
+
+        Ok = Castle.Create(Court)
+        Value.Failed = Not Ok
+
+        If HasAirport And Ok Then
+
+            Call Horizon.LoadNext(Airport)
+
+            Value.Failed = Airport.Failed
+            ReturnValue = Airport.Ready
+
+            Return ReturnValue
+
+        End If
+
+        Return Ok
+
+    End If
+
+    Return True
+
+End Function
+
+End Module

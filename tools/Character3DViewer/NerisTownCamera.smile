@@ -14,6 +14,7 @@ Import Smile.Tools.NerisTownObstacles As Obstacles
 Import Smile.Tools.NerisTownNavigation As Navigation
 Import Smile.Tools.NerisTownEntranceNavigation As Entries
 Import Smile.Tools.TownDocumentNavigation As Edited
+Import Smile.Tools.NerisTownInspectionLimits As Limits
 
 Public Type State
     World As Clearance.World
@@ -65,6 +66,25 @@ Public Sub FinishCursorOrbit(ByRef Value As State, ByRef View As Arena.State,
 
 End Sub
 
+''' Follow-mode orbit keeps the displayed eye and places its pivot on the leader.
+Public Sub AnchorParty(ByRef Value As State, ByRef View As Arena.State,
+    ByRef Base As P.Camera3D, Leader As P.Vector3)
+
+    Base = View.LiveCamera
+    Base.Target = M.Add(Leader, P.Vector(0.0, 14.0, 0.0))
+    Value.OrbitOffset = M.Subtract(Base.Position, Base.Target)
+    Value.OrbitAtParty = True
+    Value.Suspended = True
+    Value.Focusing = False
+    Value.Arrival = False
+    Value.Peeking = False
+    Value.CursorOrbit = False
+
+    Call Motion.Reset(View.Controls, View.Zoom)
+    Call Arena.BeginTransition(View, 0)
+
+End Sub
+
 Public Sub Start(ByRef Value As State)
 
     Dim Empty As State
@@ -98,9 +118,17 @@ Public Function MovingGesture(ByRef Value As State, ByRef View As Arena.State,
     Dim Owned As Boolean
 
     Held = Input.PanHeld Or Input.OrbitHeld
+
+    If Value.OrbitAtParty Then
+        Return False
+    End If
+
     Owned = Value.Peeking Or (PartyCamera And MovingHeld And Not Input.Blocked And Held)
 
-    If PartyCamera And MovingHeld And Not Input.Blocked And Held Then
+    If (PartyCamera And
+        MovingHeld And
+        Not Input.Blocked And
+        Held) Then
 
         Value.Peeking = True
         Value.Arrival = False
@@ -133,7 +161,9 @@ Public Function MovementCamera(ByRef Value As State, Displayed As P.Camera3D,
 
     Dim Result As P.Camera3D
 
-    If Not Value.WasMoving Or Not Value.Enabled Or Value.Suspended Then
+    If (Not Value.WasMoving Or
+        Not Value.Enabled Or
+        Value.Suspended) Then
         Value.MovementView = Displayed
     End If
 
@@ -242,7 +272,9 @@ Public Function Frame(ByRef Value As State, Base As P.Camera3D, Leader As P.Vect
 
     End If
 
-    If Value.Enabled And Not Value.Suspended And Moving Then
+    If (Value.Enabled And
+        Not Value.Suspended And
+        Moving) Then
 
         Goal = BoundaryYaw(Leader, Heading)
         StepValue = (Camera.NormalizeAngle(Goal - Value.Yaw) *
@@ -284,12 +316,17 @@ Public Sub Settle(ByRef Value As State, Displayed As P.Camera3D)
 End Sub
 
 Public Sub ArrivalFrame(ByRef Value As State, ByRef View As Arena.State,
-    ByRef Base As P.Camera3D, Leader As P.Vector3)
+    ByRef Base As P.Camera3D, Leader As P.Vector3, Optional Heading As Double = 180.0)
 
     Base.Target = M.Add(Leader, P.Vector(0.0, 42.0, 55.0))
     Base.Position = M.Add(Leader, P.Vector(0.0, 26.0, -300.0))
 
-    Call Focus(Value, 180.0, Base)
+    If Heading = 0.0 Then
+        Base.Target = M.Add(Leader, P.Vector(0.0, 42.0, -55.0))
+        Base.Position = M.Add(Leader, P.Vector(0.0, 26.0, 300.0))
+    End If
+
+    Call Focus(Value, Heading, Base)
     Call Motion.Reset(View.Controls, View.Zoom)
     Call Arena.BeginTransition(View, 0)
     Call Arena.ComposeCamera(View, Base)
@@ -311,11 +348,19 @@ Public Sub Compose(ByRef Value As State, ByRef View As Arena.State,
 
     If Value.Focusing Or Value.Arrival Then
         Call Settle(Value, Base)
-    Else If Following And Value.Enabled And Not Value.Suspended Then
+    Else If (Following And
+        Value.Enabled And
+        Not Value.Suspended) Then
         Resolved = Resolve(Value, Base, Elapsed)
     End If
 
     Call Constrain(View, Resolved, LowShot, FreeInspect)
+
+    If FreeInspect Then
+        Call Limits.Apply(View, Resolved, Navigation.GroundHeight(Resolved.Position.X, Resolved.Position.Z) + 0.1)
+    Else If Not Following Then
+        Call Limits.Apply(View, Resolved)
+    End If
 
     ' Apply town ground clearance once, translating both eye and target to retain pitch.
     FloorVisible = View.FloorVisible
@@ -382,7 +427,6 @@ Private Sub Constrain(ByRef View As Arena.State, Base As P.Camera3D, LowShot As 
     Dim Offset As P.Vector3
     Dim BasePitch As Double
     Dim Pitch As Double
-    Dim MinimumPan As Double
 
     Offset = M.Subtract(Base.Position, Base.Target)
     BasePitch = Atan2(Offset.Y, Sqrt(Offset.X * Offset.X + Offset.Z * Offset.Z))
@@ -396,15 +440,6 @@ Private Sub Constrain(ByRef View As Arena.State, Base As P.Camera3D, LowShot As 
     End If
 
     View.Controls.OrbitPitch = M.Degrees(Pitch - BasePitch)
-
-    If FreeInspect Then
-        Return
-    End If
-
-    ' A captured cursor orbit may aim below the floor while its eye stays above it.
-    ' Preserve that framing on release; forbid additional downward pan from there.
-    MinimumPan = (Min(25.0, Base.Target.Y) - Base.Target.Y) / Cos(Pitch)
-    View.Controls.PanY = Max(MinimumPan, View.Controls.PanY)
 
 End Sub
 

@@ -1,0 +1,11 @@
+00:01.343  blend            | Read blend: "D:\Projects\Sin-Star-I-Assets\Neris-Spaceport-01\source\NSP01-final-r01.blend"
+Traceback (most recent call last):
+  File "D:\Projects\Sin-Star-I-Assets\Neris-Spaceport-01\automation\hangar-negative-control.py", line 26, in <module>
+    assert abs(gap - .5) < .001, (wall.name, rib.name, gap)
+           ^^^^^^^^^^^^^^^^^^^^
+AssertionError: ('NSP01.Hangar.W.Side.-1', 'NSP01.Hangar.W.InsideRib.-1.0', 0.0)
+
+Error: script failed, file: 'D:\Projects\Sin-Star-I-Assets\Neris-Spaceport-01\automation\hangar-negative-control.py', exiting.
+Blender 5.2.1 LTS (hash 9e2066aef7ef built 2026-08-25 02:38:20)
+
+Blender quit

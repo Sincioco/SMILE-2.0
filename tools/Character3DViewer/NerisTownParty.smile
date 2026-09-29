@@ -136,7 +136,7 @@ Public Sub Start(ByRef Value As State)
 
 End Sub
 
-Public Sub Teleport(ByRef Value As State, Position As P.Vector3)
+Public Sub Teleport(ByRef Value As State, Position As P.Vector3, Optional Heading As Double = 180.0)
 
     Dim Index As Number
 
@@ -144,7 +144,7 @@ Public Sub Teleport(ByRef Value As State, Position As P.Vector3)
 
     For Index = 0 To Value.MemberCount - 1
         Value.Members[Index].Previous = Position
-        Value.Members[Index].Yaw = 180.0
+        Value.Members[Index].Yaw = Heading
         Value.Members[Index].Opacity = 0.0
     End For
 
@@ -444,7 +444,8 @@ Public Sub Update(ByRef Value As State, Leader As P.Vector3, Elapsed As Number)
         If Index = 0 Then
             Value.Members[Index].Opacity = 100.0
             TargetOpacity = 100.0
-        Else If (Separation > 14.0 And PreviousSeparation > 14.0 And
+        Else If (Separation > 14.0 And
+            PreviousSeparation > 14.0 And
             (Value.Path.Moving[0] Or Separation > 28.0)) Then
             TargetOpacity = 100.0
         End If

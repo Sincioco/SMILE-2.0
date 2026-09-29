@@ -1,0 +1,82 @@
+{
+  "asset_id": "NSP01",
+  "revision": "r07",
+  "units": "metres",
+  "status": "native-validated",
+  "source": {
+    "file": "Source/NSP01-final-r07.blend",
+    "bytes": 4582687,
+    "sha256": "5fa2be1e5179c176736cc8445de94d59931ffe8a52f6725dabc8100569483595"
+  },
+  "portable": {
+    "file": "NSP01-preview.glb",
+    "bytes": 26935976,
+    "sha256": "47bd896b79c0148f22d78ee9a33f3287d0551ebdc3801e89bc97da688ae77f1f"
+  },
+  "town": {
+    "file": "Town/Neris-Town-Spaceport-SW-r002.blend",
+    "bytes": 19852864,
+    "sha256": "c1db28373bc79f00da90e1bb7cc53b4d80b55a4486c441ace066bc6154a11942"
+  },
+  "terrain": {
+    "file": "Town/Neris-Town-Spaceport-SW-r001.town",
+    "bytes": 124615,
+    "sha256": "65c88acc6d3433c353e855b9d8249c5c4af764537d37eec92d59b1951eefa35d"
+  },
+  "measurements": {
+    "bounds_m": {
+      "min": [
+        -360,
+        -390,
+        -56
+      ],
+      "max": [
+        360,
+        230,
+        348
+      ]
+    },
+    "dimensions_m": [
+      720,
+      620,
+      404
+    ],
+    "triangles": 485800,
+    "uv_meshes": 185
+  },
+  "component_counts": {
+    "pads": 4,
+    "hangars": 2,
+    "towers": 13,
+    "keels": 9,
+    "cabins": 4,
+    "hangar_panels": 24,
+    "entrance_leaves": 2,
+    "tip_crystals": 13,
+    "window_assemblies": 99
+  },
+  "authoring_objects": 2423,
+  "materials": 11,
+  "native": {
+    "models": 6,
+    "static_parts": 21,
+    "static_triangles": 475992,
+    "borrowed_door_triangles": 9808
+  },
+  "preserved": {
+    "path": "D:\\Projects\\Sin-Star-I-Assets\\Neris-Spaceport-01\\town-integration\\Neris-Town-Spaceport-SW-r002.blend",
+    "preserved_non_spaceport_objects": 16837,
+    "preserved_placements": 361,
+    "document_unchanged": true,
+    "source_sha256": "5fa2be1e5179c176736cc8445de94d59931ffe8a52f6725dabc8100569483595"
+  },
+  "evidence": "Checkpoints/r07",
+  "native_layout": "Native/native-layout.json",
+  "original_manifest": "Revisions/r001/authored-asset-manifest.json",
+  "limitations": [
+    "Simplified concept interpretation; opaque glazing.",
+    "Elevators and hangar panels are static.",
+    "Old collision proxies cover the original shell.",
+    "Cutscene entry event exists; cinematic content is not authored."
+  ]
+}

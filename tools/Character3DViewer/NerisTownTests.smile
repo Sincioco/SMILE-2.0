@@ -7,6 +7,9 @@ Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PrecisionMath3D As M
 Import Smile.Tools.NerisTownNavigation As Navigation
 Import Smile.Tools.NerisCastleRoute As Castle
+Import Smile.Tools.NerisHorizonRoute As Spaceport
+Import Smile.Tools.NerisSpaceportTraffic As Traffic
+Import Smile.Tools.NerisRunwayTraffic As Runway
 
 Dim Path As Trail.State
 Dim Leader As P.Vector3
@@ -14,6 +17,85 @@ Dim Position As P.Vector3
 Dim Index As Number
 Dim MemberIndex As Number
 Dim Failures As Number
+
+Dim Flights As Traffic.State
+
+Call Spaceport.Enable(True)
+
+Position = Navigation.Move(P.Vector(-5500.0, 23.12, 1250.0), -2400.0, 0.0)
+
+Call Check(Abs(Position.X + 7900.0) < 0.001 And Abs(Position.Y - 31.12) < 0.001,
+    "Horizon Arrival Reaches The Central Promenade")
+Call Check(Not Navigation.CanStand(-8480.0, -2400.0), "Pedestrian Route Excludes The Hangar")
+Call Check(Not Navigation.CanStand(-9700.0, 1250.0), "Pedestrian Route Excludes The Control Tower")
+Call Check(Spaceport.CanStand(-7800.0, 2750.0), "Terminal Ground Floor Is Open Beyond The Center Aisle")
+Call Check(Not Spaceport.CanStand(-7710.0, 2050.0), "Passenger Counter Blocks Walking")
+Call Check(Not Spaceport.CanStand(-8000.0, 2050.0), "Waiting Seats Block Walking")
+Call Check(Not Spaceport.CanStand(-7410.0, 1450.0), "Closed Glass Beside The Entrance Blocks Walking")
+Call Check(Not Spaceport.CanStand(-7420.0, 1450.0), "Party Cannot Pass Through Front Glazing")
+Call Check(Not Spaceport.CanStand(-10950.0, 1250.0), "Runway Is Outside The Passenger Route")
+Call Spaceport.Enable(False)
+Call Check(Not Spaceport.Contains(-7900.0, 1250.0), "Spaceport Navigation Releases With Its Asset")
+Call CheckRunway()
+
+Position = Traffic.Position(Flights, False)
+
+Call Check(Position.Y = 0.0 And Position.Z = -90.0, "Transport Starts On Its Apron")
+Call Traffic.Advance(Flights, 60000)
+
+Position = Traffic.Position(Flights, False)
+
+Call Check(Position.Y = 0.0, "Transport Waits Sixty Seconds Before Takeoff")
+Call Traffic.Advance(Flights, 5000)
+
+Position = Traffic.Position(Flights, False)
+
+Call Check(Position.Y = 450.0 And Position.Z = -90.0, "Transport Ascends Vertically With Easing")
+Call Traffic.Advance(Flights, 5000)
+Call Check(Not Traffic.Visible(Flights, False), "Transport Leaves View During Flight")
+Call Traffic.Advance(Flights, 45000)
+
+Position = Traffic.Position(Flights, False)
+
+Call Check(Position.Y = 450.0 And Traffic.Visible(Flights, False), "Transport Descends On Its Original Apron")
+Call Traffic.Advance(Flights, 5000)
+
+Position = Traffic.Position(Flights, False)
+
+Call Check(Position.Y = 0.0 And Flights.TransportTime = 0, "Transport Lands One Minute After Departure")
+
+Flights.RoyalTime = 0
+Position = Traffic.Position(Flights, True)
+
+Call Check(Position.Z = 108.0 And Position.Y = 0.0, "Royal Ship Starts Inside Its Hangar")
+
+Flights.RoyalTime = 37500
+Position = Traffic.Position(Flights, True)
+
+Call Check(Position.Z = 9.0 And Position.Y = 0.0, "Royal Ship Rolls Out At Ground Level")
+
+Flights.RoyalTime = 60000
+Position = Traffic.Position(Flights, True)
+
+Call Check(Position.Z = -90.0 And Position.Y = 450.0, "Royal Ship Clears The Hangar Before Vertical Takeoff")
+
+Flights.RoyalTime = 125000
+Position = Traffic.Position(Flights, True)
+
+Call Check(Position.Z = -90.0 And Position.Y = 0.0, "Royal Ship Lands Before Returning To Its Hangar")
+
+Flights.RoyalTime = 142500
+Position = Traffic.Position(Flights, True)
+
+Call Check(Position.Z = 9.0 And Position.Y = 0.0, "Royal Ship Rolls Back Into Its Hangar")
+
+Flights.RoyalTime = 179999
+
+Call Traffic.Advance(Flights, 1)
+
+Position = Traffic.Position(Flights, True)
+
+Call Check(Position.Z = 108.0 And Flights.RoyalTime = 0, "Royal Ship Repeats Its Three Minute Cycle")
 
 Call Trail.Reset(Path, P.Vector(0.0, 0.0, 0.0), 5, 22.0)
 
@@ -138,6 +220,80 @@ Sub Check(Condition As Boolean, Label As Text)
         Failures = Failures + 1
         Print "FAIL " + Label
     End If
+
+End Sub
+
+Sub CheckRunway()
+
+    Dim Flight As Runway.State
+    Dim Point As P.Vector3
+    Dim Before As P.Vector3
+    Dim Index As Number
+    Dim Boundary As Number
+
+    Flight.Time = 28000
+    Point = Runway.Position(Flight)
+
+    Call Check(Point.X = 180.0 And Point.Y = 0.14, "Runway Aircraft Accelerates Along The Ground Before Liftoff")
+
+    Flight.Time = 36000
+    Point = Runway.Position(Flight)
+
+    Call Check(Point.X > 180.0 And Point.Y > 100.0 And Runway.Pitch(Flight) < 0.0,
+        "Runway Aircraft Climbs Forward With Nose Raised")
+
+    Flight.Time = 60000
+
+    Call Check(Not Runway.Visible(Flight), "Cruising Aircraft Leaves The Airport View")
+
+    Flight.Time = 108000
+    Point = Runway.Position(Flight)
+
+    Call Check(Point.X = -240.0 And Point.Y = 0.14 And Runway.Visible(Flight),
+        "Returning Aircraft Touches Down On The Same Runway")
+
+    Flight.Time = 131000
+    Point = Runway.Position(Flight)
+
+    Call Check(Abs(Point.X - 422.5) < 0.01 And Abs(Point.Z - 332.5) < 0.01 And
+        Runway.Heading(Flight) = 90.0, "Aircraft Follows The Paved End Turn With Matching Heading")
+
+    Flight.Time = 148000
+    Point = Runway.Position(Flight)
+
+    Call Check(Abs(Point.X) < 0.01 And Point.Z = 310.0 And Runway.Heading(Flight) = 180.0,
+        "Aircraft Returns Along The Parallel Taxiway Behind The Glass Halls")
+
+    For Index = 0 To 7
+
+        Select Case Index
+            Case 0
+                Boundary = 10000
+            Case 1
+                Boundary = 28000
+            Case 2
+                Boundary = 108000
+            Case 3
+                Boundary = 126000
+            Case 4
+                Boundary = 136000
+            Case 5
+                Boundary = 160000
+            Case 6
+                Boundary = 170000
+            Case 7
+                Boundary = 180000
+        End Select
+
+        Flight.Time = Boundary - 1
+        Before = Runway.Position(Flight)
+
+        Call Runway.Advance(Flight, 1)
+
+        Point = Runway.Position(Flight)
+
+        Call Check(M.Distance(Before, Point) < 0.2, "Visible Runway Phase Joins And Cycle Wrap Stay Continuous")
+    End For
 
 End Sub
 

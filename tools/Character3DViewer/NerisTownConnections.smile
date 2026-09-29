@@ -1,0 +1,44 @@
+''' Authored walking gateways between Neris Town and its separate original spaceport.
+Module Smile.Tools.NerisTownConnections
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+
+Public Function Destination(Town As Text, Position As P.Vector3, Moving As Boolean) As Text
+
+    If Not Moving Then
+        Return ""
+    End If
+
+    If (Town = "Neris Town" And
+        Abs(Position.X + 5000.0) <= 95.0 And
+        Position.Z <= -3450.0) Then
+        Return "Neris Spaceport"
+    End If
+
+    If (Town = "Neris Spaceport" And
+        Abs(Position.X + 5500.0) <= 95.0 And
+        Position.Z >= -3420.0) Then
+        Return "Neris Town"
+    End If
+
+    Return ""
+
+End Function
+
+Public Function Arrival(Town As Text) As P.Vector3
+
+    Dim Result As P.Vector3
+
+    Result = P.Vector(-5000.0, 23.12, -3250.0)
+
+    If Town = "Neris Spaceport" Then
+        Result = P.Vector(-5500.0, 23.12, -3650.0)
+    End If
+
+    Return Result
+
+End Function
+
+End Module

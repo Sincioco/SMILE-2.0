@@ -5,6 +5,7 @@ Option Explicit
 
 Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownLibrary As Library
+Import Smile.Tools.TownDocumentStore As Storage
 Import Smile.UI.Controls As UI
 
 Public Const CAPACITY = 8
@@ -18,15 +19,59 @@ End Type
 
 Public Sub Ensure(ByRef Value As State, ByRef Town As Document.State)
 
+    Dim Ok As Boolean
+
     If Value.TabCount = 0 Then
 
         Value.TabCount = 1
         Value.Active = 0
         Value.Documents[0] = Town
 
+        If Town.Name <> "Neris Town" Then
+            Return
+        End If
+
+        Ok = Storage.LoadDocument(Value.Documents[1], "TownEditor.Recovery.Neris Spaceport", True)
+
+        If Not Ok Then
+            Ok = Storage.LoadDocument(Value.Documents[1], "TownEditor.Town.Neris Spaceport")
+        End If
+
+        If Ok Then
+            Value.TabCount = 2
+        End If
+
     End If
 
 End Sub
+
+Public Function OpenNamed(ByRef Value As State, ByRef Town As Document.State, Name As Text) As Boolean
+
+    Dim Index As Number
+    Dim Incoming As Document.State
+    Dim Ok As Boolean
+
+    Call Ensure(Value, Town)
+
+    For Index = 0 To Value.TabCount - 1
+
+        If Value.Documents[Index].Name = Name Then
+            Ok = SelectTab(Value, Town, Index, False)
+            Return Ok
+        End If
+
+    End For
+
+    Incoming = Town
+    Ok = Library.OpenNamed(Incoming, Name)
+
+    If Ok Then
+        Ok = Add(Value, Town, Incoming)
+    End If
+
+    Return Ok
+
+End Function
 
 Public Function Add(ByRef Value As State, ByRef Town As Document.State,
     ByRef Incoming As Document.State) As Boolean
@@ -165,14 +210,17 @@ Public Function Input(ByRef Value As State, ByRef Town As Document.State) As Boo
     Dim Width As Number
     Dim Changed As Boolean
 
-    If Pointer_Y() < 96 Or Pointer_Y() >= 123 Or Value.TabCount = 0 Then
+    If (Pointer_Y() < 96 Or
+        Pointer_Y() >= 123 Or
+        Value.TabCount = 0) Then
         Return False
     End If
 
     Width = Min(180, (Window_Width() - 20) / Value.TabCount)
     Index = (Pointer_X() - 10) / Width
 
-    If Pointer_X() >= 10 And (Pointer_Pressed(POINTER_PRIMARY) Or Pointer_Pressed(POINTER_SECONDARY)) Then
+    If (Pointer_X() >= 10 And
+        (Pointer_Pressed(POINTER_PRIMARY) Or Pointer_Pressed(POINTER_SECONDARY))) Then
         Changed = SelectTab(Value, Town, Index, Pointer_Pressed(POINTER_SECONDARY))
     End If
 

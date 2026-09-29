@@ -1,0 +1,1985 @@
+{
+  "asset_id": "NSP01",
+  "milestone_id": "M09",
+  "status": "complete-user-waived-approval-stops",
+  "source": {
+    "file": "source/NSP01-final-r01.blend",
+    "bytes": 1574208,
+    "sha256": "a77787ee639b97ec62a1df78fd213f28435ce35d20254bd735f02713866ef564"
+  },
+  "spec_sha256": "e078aa7385c68a8bfabadfecebf00327d5bbf2ff803812ad52afab28f3c803a3",
+  "camera_spec_sha256": "3e227fc3f66d7b4032c87dc464158b81fc77fa74ecddc79a46f16327a57502d4",
+  "blender_version": "5.2.1 LTS",
+  "connector_version": "1.0.0",
+  "changed_owners": [
+    "Hull",
+    "Terminal",
+    "Docks",
+    "Hangars",
+    "Spires",
+    "DetailKit",
+    "Materials",
+    "InteriorRoute",
+    "Export",
+    "Review"
+  ],
+  "render": {
+    "path": "D:\\Projects\\Sin-Star-I-Assets\\Neris-Spaceport-01\\source\\NSP01-final-r01.blend",
+    "engine": "CYCLES",
+    "samples": 32,
+    "denoise": true,
+    "view_transform": "AgX",
+    "look": "AgX - Medium High Contrast",
+    "exposure": 0,
+    "gamma": 1,
+    "pixel_aspect": [
+      1,
+      1
+    ],
+    "resolution": [
+      2400,
+      2400
+    ],
+    "asset_collections": [
+      "NSP01.00-Hull.Archive-M01",
+      "NSP01.90-Review",
+      "NSP01.10-Terminal.Archive-M01",
+      "NSP01.20-Hangars.Archive-M01",
+      "NSP01.30-Docks.Archive-M01",
+      "NSP01.40-Spires.Archive-M01",
+      "NSP01.91-Review-Proxies",
+      "NSP01.00-Hull",
+      "NSP01.10-Terminal",
+      "NSP01.30-Docks",
+      "NSP01.20-Hangars",
+      "NSP01.40-Spires",
+      "NSP01.60-Materials",
+      "NSP01.51-Facades",
+      "NSP01.52-SurfaceDetail",
+      "NSP01.70-Route",
+      "NSP01.02-UndersideFinish",
+      "NSP01.71-Collision"
+    ],
+    "scene_names": [
+      "NSP01.Export.Coupon",
+      "NSP01.Export.Coupon.001",
+      "NSP01.NerisSpaceportFinal",
+      "NSP01.Review.CouponRoundtrip",
+      "NSP01.Review.CouponRoundtrip.001",
+      "NSP01.Review.MasterKit",
+      "NSP01.Review.RouteCollision",
+      "NSP01.Review.Section.M02",
+      "Scene"
+    ],
+    "dirty": false
+  },
+  "cameras": [
+    {
+      "name": "NSP01.CAM.FRONT",
+      "position": [
+        0,
+        -1500,
+        122
+      ],
+      "rotation": [
+        1.5707963705062866,
+        0,
+        0
+      ],
+      "type": "ORTHO",
+      "ortho_scale": 840,
+      "lens": 50,
+      "shift": [
+        0,
+        0
+      ],
+      "clip": [
+        0.10000000149011612,
+        5000
+      ],
+      "sha256": "26fefd6ce2b577d56f753a34534531c131f71d72a2082eed594b03558392bf02"
+    },
+    {
+      "name": "NSP01.CAM.LEFT-WEST",
+      "position": [
+        -1500,
+        -80,
+        122
+      ],
+      "rotation": [
+        1.5707963705062866,
+        0,
+        -1.5707963705062866
+      ],
+      "type": "ORTHO",
+      "ortho_scale": 840,
+      "lens": 50,
+      "shift": [
+        0,
+        0
+      ],
+      "clip": [
+        0.10000000149011612,
+        5000
+      ],
+      "sha256": "59db7912908594c2a42da74da645c93e5657e95f49ebd8f06be0018023df0cab"
+    },
+    {
+      "name": "NSP01.CAM.RIGHT-EAST",
+      "position": [
+        1500,
+        -80,
+        122
+      ],
+      "rotation": [
+        1.5707963705062866,
+        0,
+        1.5707963705062866
+      ],
+      "type": "ORTHO",
+      "ortho_scale": 840,
+      "lens": 50,
+      "shift": [
+        0,
+        0
+      ],
+      "clip": [
+        0.10000000149011612,
+        5000
+      ],
+      "sha256": "8afc59b916b90ac78bc30962b4a8dfc132f2dd6f9ffcdce106695dce2b669c37"
+    },
+    {
+      "name": "NSP01.CAM.REAR",
+      "position": [
+        0,
+        1500,
+        122
+      ],
+      "rotation": [
+        1.5707963705062866,
+        0,
+        3.1415927410125732
+      ],
+      "type": "ORTHO",
+      "ortho_scale": 840,
+      "lens": 50,
+      "shift": [
+        0,
+        0
+      ],
+      "clip": [
+        0.10000000149011612,
+        5000
+      ],
+      "sha256": "ef4d7a56ce99338eb6a020d1c7bb1d5e164affb45f69282a54721001466fc8ea"
+    },
+    {
+      "name": "NSP01.CAM.TOP",
+      "position": [
+        0,
+        -80,
+        1500
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "type": "ORTHO",
+      "ortho_scale": 840,
+      "lens": 50,
+      "shift": [
+        0,
+        0
+      ],
+      "clip": [
+        0.10000000149011612,
+        5000
+      ],
+      "sha256": "b499a283830f9881d1d978bc06e1d566028c2c44c2046b84063c1a73415c11eb"
+    },
+    {
+      "name": "NSP01.CAM.HERO",
+      "position": [
+        700,
+        -1040,
+        490
+      ],
+      "rotation": [
+        1.2671664953231812,
+        -5.324382712501574e-8,
+        0.5836358070373535
+      ],
+      "type": "PERSP",
+      "ortho_scale": 6,
+      "lens": 45,
+      "shift": [
+        0,
+        0
+      ],
+      "clip": [
+        0.10000000149011612,
+        5000
+      ],
+      "sha256": "e414837f753d1d3d51b34d68ce8878e3277e0897da2c1c35aef10fa5d274aed8"
+    },
+    {
+      "name": "NSP01.CAM.ARRIVAL",
+      "position": [
+        0,
+        -184,
+        1.7000000476837158
+      ],
+      "rotation": [
+        1.7899465560913086,
+        0,
+        0
+      ],
+      "type": "PERSP",
+      "ortho_scale": 6,
+      "lens": 28,
+      "shift": [
+        0,
+        0
+      ],
+      "clip": [
+        0.10000000149011612,
+        5000
+      ],
+      "sha256": "5947675f2baecc26a7c8445d32f922d2c0ceb8884a331f6f232531584e3c6d4d"
+    },
+    {
+      "name": "NSP01.CAM.DOCK",
+      "position": [
+        235,
+        -32,
+        92
+      ],
+      "rotation": [
+        1.3440076112747192,
+        5.136072189770857e-8,
+        -0.7513976097106934
+      ],
+      "type": "PERSP",
+      "ortho_scale": 6,
+      "lens": 32,
+      "shift": [
+        0,
+        0
+      ],
+      "clip": [
+        0.10000000149011612,
+        5000
+      ],
+      "sha256": "dc29db4313bc037c2e900f407292319a38fc6f32898ca0e29c6e6cb6def5df57"
+    },
+    {
+      "name": "NSP01.CAM.UNDER",
+      "position": [
+        530,
+        -700,
+        -235
+      ],
+      "rotation": [
+        1.822799563407898,
+        -2.6616723047823143e-8,
+        0.6585115790367126
+      ],
+      "type": "PERSP",
+      "ortho_scale": 6,
+      "lens": 40,
+      "shift": [
+        0,
+        0
+      ],
+      "clip": [
+        0.10000000149011612,
+        5000
+      ],
+      "sha256": "1e21266f8a328c8b9377636922ce148a1a4ca6fbe6897af577c51c8b1dd04d4c"
+    },
+    {
+      "name": "NSP01.CAM.REAR-SERVICE",
+      "position": [
+        0,
+        420,
+        38
+      ],
+      "rotation": [
+        1.4758447408676147,
+        8.70289795784629e-8,
+        3.1415927410125732
+      ],
+      "type": "PERSP",
+      "ortho_scale": 6,
+      "lens": 40,
+      "shift": [
+        0,
+        0
+      ],
+      "clip": [
+        0.10000000149011612,
+        5000
+      ],
+      "sha256": "b3d24f1b309c81b171bac32f9cb6848d549427345d6bc668644c13b712388485"
+    }
+  ],
+  "images": [
+    {
+      "id": "front",
+      "file": "evidence/NSP01-M09/front.png",
+      "dimensions": [
+        2400,
+        2400
+      ],
+      "sha256": "4eaa68d6fc3c85c43cad091ee0b3c0ed370368fc65ddeabd290d2aee8f93409e"
+    },
+    {
+      "id": "left-west",
+      "file": "evidence/NSP01-M09/left-west.png",
+      "dimensions": [
+        2400,
+        2400
+      ],
+      "sha256": "f79bc6d8819b4fa5cf3e329a44722ada8e93d185d301b48eb549b092c7745d32"
+    },
+    {
+      "id": "right-east",
+      "file": "evidence/NSP01-M09/right-east.png",
+      "dimensions": [
+        2400,
+        2400
+      ],
+      "sha256": "54d265e3e92dd73a879473cfa2e00c86849fa3047a0ff17b4b31e17cc2a921bb"
+    },
+    {
+      "id": "rear",
+      "file": "evidence/NSP01-M09/rear.png",
+      "dimensions": [
+        2400,
+        2400
+      ],
+      "sha256": "2f1229f1fca0a73b4481dca9e59aeefd3180230c95da7851c58478cdbc9cbda9"
+    },
+    {
+      "id": "top",
+      "file": "evidence/NSP01-M09/top.png",
+      "dimensions": [
+        2400,
+        2400
+      ],
+      "sha256": "0b3a82d3a70fd0854423ffad0e01e2dc1acd121cea6923a3290769a91a7d0d3f"
+    },
+    {
+      "id": "hero",
+      "file": "evidence/NSP01-M09/hero.png",
+      "dimensions": [
+        2400,
+        2400
+      ],
+      "sha256": "debd7a98061248806421a5af9f0b6189369d9561616329c9bde07bbe7a476aac"
+    },
+    {
+      "id": "arrival",
+      "file": "evidence/NSP01-M09/arrival.png",
+      "dimensions": [
+        1600,
+        1600
+      ],
+      "sha256": "4dbdcf1284e3a3997a6b90b42dc0aa5841ed83acb245efc17e2b971090331de4"
+    },
+    {
+      "id": "dock",
+      "file": "evidence/NSP01-M09/dock.png",
+      "dimensions": [
+        1600,
+        1600
+      ],
+      "sha256": "698efa665dc1539ea531ebb7ff8e882829c93863231ba25540273d2d88d99a0a"
+    },
+    {
+      "id": "rear-service",
+      "file": "evidence/NSP01-M09/rear-service.png",
+      "dimensions": [
+        1600,
+        1600
+      ],
+      "sha256": "8910ae328555c1489df2c4c2cd178c49f3fe54ce4706d097146d75fea02bf70e"
+    },
+    {
+      "id": "underside",
+      "file": "evidence/NSP01-M09/underside.png",
+      "dimensions": [
+        1600,
+        1600
+      ],
+      "sha256": "0eb24189fadb36653d51425c12e9bff890f64fdb89d26e89cd989dd201168312"
+    },
+    {
+      "id": "hall",
+      "file": "evidence/NSP01-M09/hall.png",
+      "dimensions": [
+        1600,
+        1600
+      ],
+      "sha256": "b684ab3fc55ff62f99ee3caf5377fe79b3a8c8af7989e0083ec932de3e02951c"
+    },
+    {
+      "id": "hangar-west",
+      "file": "evidence/NSP01-M09/hangar-west.png",
+      "dimensions": [
+        1600,
+        1600
+      ],
+      "sha256": "2bb1d8d75faf79a0f9a4b6a0f8f23650f10d81c20ac384ebd5cdc200a35175b6"
+    },
+    {
+      "id": "hangar-east",
+      "file": "evidence/NSP01-M09/hangar-east.png",
+      "dimensions": [
+        1600,
+        1600
+      ],
+      "sha256": "97ec5206f735c072be60ef54c9e45ef2d8cd992dc379089d73dbbfa854c3eed2"
+    }
+  ],
+  "measurements": {
+    "scene": "NSP01.M01-Blockout",
+    "path": "D:\\Projects\\Sin-Star-I-Assets\\Neris-Spaceport-01\\checkpoints\\NSP01-M07-complete-r04.blend",
+    "bounds": {
+      "min": [
+        -360,
+        -390,
+        -56
+      ],
+      "max": [
+        360,
+        230,
+        300
+      ],
+      "dimensions": [
+        720,
+        620,
+        356
+      ]
+    },
+    "owners": {
+      "Hull": {
+        "objects": 96,
+        "triangles": 7888
+      },
+      "Terminal": {
+        "objects": 27,
+        "triangles": 5248
+      },
+      "Docks": {
+        "objects": 140,
+        "triangles": 44960
+      },
+      "Hangars": {
+        "objects": 132,
+        "triangles": 3760
+      },
+      "Spires": {
+        "objects": 268,
+        "triangles": 19608
+      },
+      "DetailKit": {
+        "objects": 1243,
+        "triangles": 153836
+      },
+      "InteriorRoute": {
+        "objects": 85,
+        "triangles": 4612
+      }
+    },
+    "objects": 1991,
+    "evaluated_triangles": 239912,
+    "unique_mesh_data": 699,
+    "materials": [
+      "NSP01.MAT.Marking",
+      "NSP01.MAT.Gold",
+      "NSP01.MAT.Deck",
+      "NSP01.MAT.Crystal",
+      "NSP01.MAT.Ivory",
+      "NSP01.MAT.Teal",
+      "NSP01.MAT.Dark",
+      "NSP01.MAT.Cloth"
+    ],
+    "texture_MiB": 0,
+    "primary_parts": [
+      {
+        "id": "NSP01.Keel.W.HULL-F",
+        "kind": "keel-pylon",
+        "min": [
+          -213.95704650878906,
+          -113.95704650878906,
+          -44
+        ],
+        "max": [
+          -194.04298400878906,
+          -94.04295349121094,
+          -4
+        ],
+        "dimensions": [
+          19.9140625,
+          19.914093017578125,
+          40
+        ]
+      },
+      {
+        "id": "NSP01.Keel.W.HULL-R",
+        "kind": "keel-pylon",
+        "min": [
+          -213.95704650878906,
+          170.04296875,
+          -44
+        ],
+        "max": [
+          -194.04298400878906,
+          189.95704650878906,
+          -4
+        ],
+        "dimensions": [
+          19.9140625,
+          19.914077758789062,
+          40
+        ]
+      },
+      {
+        "id": "NSP01.Keel.W.APRON",
+        "kind": "keel-pylon",
+        "min": [
+          -181.975830078125,
+          -199.975830078125,
+          -36
+        ],
+        "max": [
+          -166.024169921875,
+          -184.024169921875,
+          -4
+        ],
+        "dimensions": [
+          15.95166015625,
+          15.95166015625,
+          32
+        ]
+      },
+      {
+        "id": "NSP01.Keel.W.BRIDGE",
+        "kind": "keel-pylon",
+        "min": [
+          -39.975616455078125,
+          -353.9756164550781,
+          -28
+        ],
+        "max": [
+          -28.024381637573242,
+          -342.0243835449219,
+          -4
+        ],
+        "dimensions": [
+          11.951234817504883,
+          11.95123291015625,
+          24
+        ]
+      },
+      {
+        "id": "NSP01.Keel.E.HULL-F",
+        "kind": "keel-pylon",
+        "min": [
+          194.04295349121094,
+          -113.95704650878906,
+          -44
+        ],
+        "max": [
+          213.95701599121094,
+          -94.04295349121094,
+          -4
+        ],
+        "dimensions": [
+          19.9140625,
+          19.914093017578125,
+          40
+        ]
+      },
+      {
+        "id": "NSP01.Keel.E.HULL-R",
+        "kind": "keel-pylon",
+        "min": [
+          194.04295349121094,
+          170.04296875,
+          -44
+        ],
+        "max": [
+          213.95701599121094,
+          189.95704650878906,
+          -4
+        ],
+        "dimensions": [
+          19.9140625,
+          19.914077758789062,
+          40
+        ]
+      },
+      {
+        "id": "NSP01.Keel.E.APRON",
+        "kind": "keel-pylon",
+        "min": [
+          166.024169921875,
+          -199.975830078125,
+          -36
+        ],
+        "max": [
+          181.975830078125,
+          -184.024169921875,
+          -4
+        ],
+        "dimensions": [
+          15.95166015625,
+          15.95166015625,
+          32
+        ]
+      },
+      {
+        "id": "NSP01.Keel.E.BRIDGE",
+        "kind": "keel-pylon",
+        "min": [
+          28.024381637573242,
+          -353.9756164550781,
+          -28
+        ],
+        "max": [
+          39.975616455078125,
+          -342.0243835449219,
+          -4
+        ],
+        "dimensions": [
+          11.951234817504883,
+          11.95123291015625,
+          24
+        ]
+      },
+      {
+        "id": "NSP01.Keel.Central",
+        "kind": "keel-pylon",
+        "min": [
+          -17.937660217285156,
+          66.06234741210938,
+          -56
+        ],
+        "max": [
+          17.937660217285156,
+          101.93765258789062,
+          -18
+        ],
+        "dimensions": [
+          35.87532043457031,
+          35.87530517578125,
+          38
+        ]
+      },
+      {
+        "id": "NSP01.Dock.W.LOW.Deck",
+        "kind": "pad",
+        "min": [
+          -360,
+          -10,
+          60
+        ],
+        "max": [
+          -252,
+          98,
+          64
+        ],
+        "dimensions": [
+          108,
+          108,
+          4
+        ]
+      },
+      {
+        "id": "NSP01.Dock.W.HIGH.Deck",
+        "kind": "pad",
+        "min": [
+          -360,
+          102,
+          100
+        ],
+        "max": [
+          -252,
+          210,
+          104
+        ],
+        "dimensions": [
+          108,
+          108,
+          4
+        ]
+      },
+      {
+        "id": "NSP01.Dock.E.LOW.Deck",
+        "kind": "pad",
+        "min": [
+          252,
+          -10,
+          60
+        ],
+        "max": [
+          360,
+          98,
+          64
+        ],
+        "dimensions": [
+          108,
+          108,
+          4
+        ]
+      },
+      {
+        "id": "NSP01.Dock.E.HIGH.Deck",
+        "kind": "pad",
+        "min": [
+          252,
+          102,
+          100
+        ],
+        "max": [
+          360,
+          210,
+          104
+        ],
+        "dimensions": [
+          108,
+          108,
+          4
+        ]
+      },
+      {
+        "id": "NSP01.Hangar.W.Roof",
+        "kind": "hangar-primary",
+        "min": [
+          -234,
+          -128,
+          32
+        ],
+        "max": [
+          -114,
+          16,
+          42
+        ],
+        "dimensions": [
+          120,
+          144,
+          10
+        ]
+      },
+      {
+        "id": "NSP01.Hangar.E.Roof",
+        "kind": "hangar-primary",
+        "min": [
+          114,
+          -128,
+          32
+        ],
+        "max": [
+          234,
+          16,
+          42
+        ],
+        "dimensions": [
+          120,
+          144,
+          10
+        ]
+      },
+      {
+        "id": "NSP01.Spire.Central",
+        "kind": "primary-tower",
+        "min": [
+          -26,
+          58,
+          0
+        ],
+        "max": [
+          26,
+          110,
+          300
+        ],
+        "dimensions": [
+          52,
+          52,
+          300
+        ]
+      },
+      {
+        "id": "NSP01.Spire.Central.Crystal",
+        "kind": "crystal",
+        "min": [
+          -9,
+          53,
+          148
+        ],
+        "max": [
+          9,
+          59,
+          252
+        ],
+        "dimensions": [
+          18,
+          6,
+          104
+        ]
+      },
+      {
+        "id": "NSP01.Spire.Central.Halo",
+        "kind": "halo",
+        "min": [
+          -12,
+          83.3499984741211,
+          274
+        ],
+        "max": [
+          11.99921703338623,
+          84.6500015258789,
+          298
+        ],
+        "dimensions": [
+          23.99921703338623,
+          1.3000030517578125,
+          24
+        ]
+      },
+      {
+        "id": "NSP01.Spire.Crown.W.FRONT",
+        "kind": "primary-tower",
+        "min": [
+          -44.20000076293945,
+          39.79999923706055,
+          64
+        ],
+        "max": [
+          -23.799999237060547,
+          60.20000076293945,
+          236
+        ],
+        "dimensions": [
+          20.400001525878906,
+          20.400001525878906,
+          172
+        ]
+      },
+      {
+        "id": "NSP01.Spire.Crown.W.REAR",
+        "kind": "primary-tower",
+        "min": [
+          -44.20000076293945,
+          107.80000305175781,
+          64
+        ],
+        "max": [
+          -23.799999237060547,
+          128.1999969482422,
+          224
+        ],
+        "dimensions": [
+          20.400001525878906,
+          20.399993896484375,
+          160
+        ]
+      },
+      {
+        "id": "NSP01.Tower.Shoulder.W.FRONT",
+        "kind": "primary-tower",
+        "min": [
+          -102.4000015258789,
+          -10.399999618530273,
+          0
+        ],
+        "max": [
+          -73.5999984741211,
+          18.399999618530273,
+          204
+        ],
+        "dimensions": [
+          28.800003051757812,
+          28.799999237060547,
+          204
+        ]
+      },
+      {
+        "id": "NSP01.Tower.Shoulder.W.REAR",
+        "kind": "primary-tower",
+        "min": [
+          -102.4000015258789,
+          141.60000610351562,
+          0
+        ],
+        "max": [
+          -73.5999984741211,
+          170.39999389648438,
+          184
+        ],
+        "dimensions": [
+          28.800003051757812,
+          28.79998779296875,
+          184
+        ]
+      },
+      {
+        "id": "NSP01.Tower.Perimeter.W.FRONT",
+        "kind": "primary-tower",
+        "min": [
+          -241.60000610351562,
+          -119.5999984741211,
+          0
+        ],
+        "max": [
+          -222.39999389648438,
+          -100.4000015258789,
+          112
+        ],
+        "dimensions": [
+          19.20001220703125,
+          19.199996948242188,
+          112
+        ]
+      },
+      {
+        "id": "NSP01.Tower.Perimeter.W.REAR",
+        "kind": "primary-tower",
+        "min": [
+          -241.60000610351562,
+          182.39999389648438,
+          0
+        ],
+        "max": [
+          -222.39999389648438,
+          201.60000610351562,
+          96
+        ],
+        "dimensions": [
+          19.20001220703125,
+          19.20001220703125,
+          96
+        ]
+      },
+      {
+        "id": "NSP01.Spire.Crown.E.FRONT",
+        "kind": "primary-tower",
+        "min": [
+          23.799999237060547,
+          39.79999923706055,
+          64
+        ],
+        "max": [
+          44.20000076293945,
+          60.20000076293945,
+          236
+        ],
+        "dimensions": [
+          20.400001525878906,
+          20.400001525878906,
+          172
+        ]
+      },
+      {
+        "id": "NSP01.Spire.Crown.E.REAR",
+        "kind": "primary-tower",
+        "min": [
+          23.799999237060547,
+          107.80000305175781,
+          64
+        ],
+        "max": [
+          44.20000076293945,
+          128.1999969482422,
+          224
+        ],
+        "dimensions": [
+          20.400001525878906,
+          20.399993896484375,
+          160
+        ]
+      },
+      {
+        "id": "NSP01.Tower.Shoulder.E.FRONT",
+        "kind": "primary-tower",
+        "min": [
+          73.5999984741211,
+          -10.399999618530273,
+          0
+        ],
+        "max": [
+          102.4000015258789,
+          18.399999618530273,
+          204
+        ],
+        "dimensions": [
+          28.800003051757812,
+          28.799999237060547,
+          204
+        ]
+      },
+      {
+        "id": "NSP01.Tower.Shoulder.E.REAR",
+        "kind": "primary-tower",
+        "min": [
+          73.5999984741211,
+          141.60000610351562,
+          0
+        ],
+        "max": [
+          102.4000015258789,
+          170.39999389648438,
+          184
+        ],
+        "dimensions": [
+          28.800003051757812,
+          28.79998779296875,
+          184
+        ]
+      },
+      {
+        "id": "NSP01.Tower.Perimeter.E.FRONT",
+        "kind": "primary-tower",
+        "min": [
+          222.39999389648438,
+          -119.5999984741211,
+          0
+        ],
+        "max": [
+          241.60000610351562,
+          -100.4000015258789,
+          112
+        ],
+        "dimensions": [
+          19.20001220703125,
+          19.199996948242188,
+          112
+        ]
+      },
+      {
+        "id": "NSP01.Tower.Perimeter.E.REAR",
+        "kind": "primary-tower",
+        "min": [
+          222.39999389648438,
+          182.39999389648438,
+          0
+        ],
+        "max": [
+          241.60000610351562,
+          201.60000610351562,
+          96
+        ],
+        "dimensions": [
+          19.20001220703125,
+          19.20001220703125,
+          96
+        ]
+      }
+    ],
+    "door_panel_count": 24,
+    "negative_scale": [],
+    "degenerate_faces": 0,
+    "root": {
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    "checks": [
+      {
+        "check": "bounds",
+        "pass": true,
+        "actual": {
+          "min": [
+            -360,
+            -390,
+            -56
+          ],
+          "max": [
+            360,
+            230,
+            300
+          ],
+          "dimensions": [
+            720,
+            620,
+            356
+          ]
+        }
+      },
+      {
+        "check": "root identity",
+        "pass": true,
+        "actual": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      {
+        "check": "metric units",
+        "pass": true,
+        "actual": {
+          "system": "METRIC",
+          "scale": 1
+        }
+      },
+      {
+        "check": "required components",
+        "pass": true,
+        "actual": {
+          "pad": 4,
+          "hangar-primary": 2,
+          "primary-tower": 13,
+          "keel-pylon": 9,
+          "door-panel": 24
+        }
+      },
+      {
+        "check": "NSP01.Spire.Central tip",
+        "pass": true,
+        "actual": 300
+      },
+      {
+        "check": "NSP01.Spire.Crown.W.FRONT tip",
+        "pass": true,
+        "actual": 236
+      },
+      {
+        "check": "NSP01.Spire.Crown.W.REAR tip",
+        "pass": true,
+        "actual": 224
+      },
+      {
+        "check": "NSP01.Tower.Shoulder.W.FRONT tip",
+        "pass": true,
+        "actual": 204
+      },
+      {
+        "check": "NSP01.Tower.Shoulder.W.REAR tip",
+        "pass": true,
+        "actual": 184
+      },
+      {
+        "check": "NSP01.Tower.Perimeter.W.FRONT tip",
+        "pass": true,
+        "actual": 112
+      },
+      {
+        "check": "NSP01.Tower.Perimeter.W.REAR tip",
+        "pass": true,
+        "actual": 96
+      },
+      {
+        "check": "NSP01.Spire.Crown.E.FRONT tip",
+        "pass": true,
+        "actual": 236
+      },
+      {
+        "check": "NSP01.Spire.Crown.E.REAR tip",
+        "pass": true,
+        "actual": 224
+      },
+      {
+        "check": "NSP01.Tower.Shoulder.E.FRONT tip",
+        "pass": true,
+        "actual": 204
+      },
+      {
+        "check": "NSP01.Tower.Shoulder.E.REAR tip",
+        "pass": true,
+        "actual": 184
+      },
+      {
+        "check": "NSP01.Tower.Perimeter.E.FRONT tip",
+        "pass": true,
+        "actual": 112
+      },
+      {
+        "check": "NSP01.Tower.Perimeter.E.REAR tip",
+        "pass": true,
+        "actual": 96
+      },
+      {
+        "check": "NSP01.Keel.W.HULL-F tip",
+        "pass": true,
+        "actual": -44
+      },
+      {
+        "check": "NSP01.Keel.W.HULL-R tip",
+        "pass": true,
+        "actual": -44
+      },
+      {
+        "check": "NSP01.Keel.W.APRON tip",
+        "pass": true,
+        "actual": -36
+      },
+      {
+        "check": "NSP01.Keel.W.BRIDGE tip",
+        "pass": true,
+        "actual": -28
+      },
+      {
+        "check": "NSP01.Keel.E.HULL-F tip",
+        "pass": true,
+        "actual": -44
+      },
+      {
+        "check": "NSP01.Keel.E.HULL-R tip",
+        "pass": true,
+        "actual": -44
+      },
+      {
+        "check": "NSP01.Keel.E.APRON tip",
+        "pass": true,
+        "actual": -36
+      },
+      {
+        "check": "NSP01.Keel.E.BRIDGE tip",
+        "pass": true,
+        "actual": -28
+      },
+      {
+        "check": "NSP01.Keel.Central tip",
+        "pass": true,
+        "actual": -56
+      },
+      {
+        "check": "NSP01.Dock.W.LOW pad",
+        "pass": true,
+        "actual": {
+          "center": [
+            -306,
+            44,
+            64
+          ],
+          "dimensions": [
+            108,
+            108,
+            4
+          ]
+        }
+      },
+      {
+        "check": "NSP01.Dock.W.HIGH pad",
+        "pass": true,
+        "actual": {
+          "center": [
+            -306,
+            156,
+            104
+          ],
+          "dimensions": [
+            108,
+            108,
+            4
+          ]
+        }
+      },
+      {
+        "check": "NSP01.Dock.E.LOW pad",
+        "pass": true,
+        "actual": {
+          "center": [
+            306,
+            44,
+            64
+          ],
+          "dimensions": [
+            108,
+            108,
+            4
+          ]
+        }
+      },
+      {
+        "check": "NSP01.Dock.E.HIGH pad",
+        "pass": true,
+        "actual": {
+          "center": [
+            306,
+            156,
+            104
+          ],
+          "dimensions": [
+            108,
+            108,
+            4
+          ]
+        }
+      },
+      {
+        "check": "eight lift stops",
+        "pass": true,
+        "actual": [
+          [
+            -88,
+            44,
+            0
+          ],
+          [
+            -88,
+            44,
+            64
+          ],
+          [
+            -88,
+            156,
+            0
+          ],
+          [
+            -88,
+            156,
+            104
+          ],
+          [
+            88,
+            44,
+            0
+          ],
+          [
+            88,
+            44,
+            64
+          ],
+          [
+            88,
+            156,
+            0
+          ],
+          [
+            88,
+            156,
+            104
+          ]
+        ]
+      },
+      {
+        "check": "materials and source budget",
+        "pass": true,
+        "actual": {
+          "materials": [
+            "NSP01.MAT.Marking",
+            "NSP01.MAT.Gold",
+            "NSP01.MAT.Deck",
+            "NSP01.MAT.Crystal",
+            "NSP01.MAT.Ivory",
+            "NSP01.MAT.Teal",
+            "NSP01.MAT.Dark",
+            "NSP01.MAT.Cloth"
+          ],
+          "triangles": 239912
+        }
+      },
+      {
+        "check": "no negative scales or degenerate faces",
+        "pass": true,
+        "actual": {
+          "negative_scale": [],
+          "degenerate_faces": 0
+        }
+      },
+      {
+        "check": "measured reference scale",
+        "pass": true,
+        "actual": {
+          "ruler_m": 10,
+          "human_m": 1.7999999523162842
+        }
+      },
+      {
+        "check": "CAM.FRONT locked frame",
+        "pass": true,
+        "actual": {
+          "frame": [
+            0.0714285746216774,
+            0.9285714030265808,
+            0.2880951464176178,
+            0.7119047045707703
+          ],
+          "right": [
+            1,
+            0,
+            0
+          ],
+          "up": [
+            0,
+            -4.371138828673793e-8,
+            1
+          ],
+          "position": [
+            0,
+            -1500,
+            122
+          ],
+          "scale": 840
+        }
+      },
+      {
+        "check": "CAM.FRONT calibrated ruler",
+        "pass": true,
+        "actual": {
+          "measured_pixels": 28.571462631225586,
+          "expected_pixels": 28.571428571428573
+        }
+      },
+      {
+        "check": "CAM.LEFT-WEST locked frame",
+        "pass": true,
+        "actual": {
+          "frame": [
+            0.13095226883888245,
+            0.8690475225448608,
+            0.2880951166152954,
+            0.7119047045707703
+          ],
+          "right": [
+            -4.371138828673793e-8,
+            -1,
+            0
+          ],
+          "up": [
+            -4.371138828673793e-8,
+            1.910685676922942e-15,
+            1
+          ],
+          "position": [
+            -1500,
+            -80,
+            122
+          ],
+          "scale": 840
+        }
+      },
+      {
+        "check": "CAM.LEFT-WEST calibrated ruler",
+        "pass": true,
+        "actual": {
+          "measured_pixels": 28.571391105651855,
+          "expected_pixels": 28.571428571428573
+        }
+      },
+      {
+        "check": "CAM.RIGHT-EAST locked frame",
+        "pass": true,
+        "actual": {
+          "frame": [
+            0.13095244765281677,
+            0.8690477013587952,
+            0.2880951166152954,
+            0.7119047045707703
+          ],
+          "right": [
+            -4.371138828673793e-8,
+            1,
+            0
+          ],
+          "up": [
+            4.371138828673793e-8,
+            1.910685676922942e-15,
+            1
+          ],
+          "position": [
+            1500,
+            -80,
+            122
+          ],
+          "scale": 840
+        }
+      },
+      {
+        "check": "CAM.RIGHT-EAST calibrated ruler",
+        "pass": true,
+        "actual": {
+          "measured_pixels": 28.571462631225586,
+          "expected_pixels": 28.571428571428573
+        }
+      },
+      {
+        "check": "CAM.REAR locked frame",
+        "pass": true,
+        "actual": {
+          "frame": [
+            0.07142871618270874,
+            0.9285715818405151,
+            0.2880951166152954,
+            0.7119047045707703
+          ],
+          "right": [
+            -1,
+            -8.742277657347586e-8,
+            0
+          ],
+          "up": [
+            -3.821371353845884e-15,
+            4.371138828673793e-8,
+            1
+          ],
+          "position": [
+            0,
+            1500,
+            122
+          ],
+          "scale": 840
+        }
+      },
+      {
+        "check": "CAM.REAR calibrated ruler",
+        "pass": true,
+        "actual": {
+          "measured_pixels": 28.571319580078125,
+          "expected_pixels": 28.571428571428573
+        }
+      },
+      {
+        "check": "CAM.TOP locked frame",
+        "pass": true,
+        "actual": {
+          "frame": [
+            0.0714285746216774,
+            0.9285714030265808,
+            0.130952388048172,
+            0.8690476417541504
+          ],
+          "right": [
+            1,
+            0,
+            0
+          ],
+          "up": [
+            0,
+            1,
+            0
+          ],
+          "position": [
+            0,
+            -80,
+            1500
+          ],
+          "scale": 840
+        }
+      },
+      {
+        "check": "CAM.TOP calibrated ruler",
+        "pass": true,
+        "actual": {
+          "measured_pixels": 28.571462631225586,
+          "expected_pixels": 28.571428571428573
+        }
+      }
+    ],
+    "pass": true,
+    "counts": {
+      "pad": 4,
+      "hangar-primary": 2,
+      "primary-tower": 13,
+      "keel-pylon": 9,
+      "door-panel": 24
+    },
+    "cameras": [
+      {
+        "name": "NSP01.CAM.FRONT",
+        "position": [
+          0,
+          -1500,
+          122
+        ],
+        "rotation": [
+          1.5707963705062866,
+          0,
+          0
+        ],
+        "type": "ORTHO",
+        "ortho_scale": 840,
+        "lens": 50,
+        "shift": [
+          0,
+          0
+        ],
+        "clip": [
+          0.10000000149011612,
+          5000
+        ],
+        "sha256": "26fefd6ce2b577d56f753a34534531c131f71d72a2082eed594b03558392bf02"
+      },
+      {
+        "name": "NSP01.CAM.LEFT-WEST",
+        "position": [
+          -1500,
+          -80,
+          122
+        ],
+        "rotation": [
+          1.5707963705062866,
+          0,
+          -1.5707963705062866
+        ],
+        "type": "ORTHO",
+        "ortho_scale": 840,
+        "lens": 50,
+        "shift": [
+          0,
+          0
+        ],
+        "clip": [
+          0.10000000149011612,
+          5000
+        ],
+        "sha256": "59db7912908594c2a42da74da645c93e5657e95f49ebd8f06be0018023df0cab"
+      },
+      {
+        "name": "NSP01.CAM.RIGHT-EAST",
+        "position": [
+          1500,
+          -80,
+          122
+        ],
+        "rotation": [
+          1.5707963705062866,
+          0,
+          1.5707963705062866
+        ],
+        "type": "ORTHO",
+        "ortho_scale": 840,
+        "lens": 50,
+        "shift": [
+          0,
+          0
+        ],
+        "clip": [
+          0.10000000149011612,
+          5000
+        ],
+        "sha256": "8afc59b916b90ac78bc30962b4a8dfc132f2dd6f9ffcdce106695dce2b669c37"
+      },
+      {
+        "name": "NSP01.CAM.REAR",
+        "position": [
+          0,
+          1500,
+          122
+        ],
+        "rotation": [
+          1.5707963705062866,
+          0,
+          3.1415927410125732
+        ],
+        "type": "ORTHO",
+        "ortho_scale": 840,
+        "lens": 50,
+        "shift": [
+          0,
+          0
+        ],
+        "clip": [
+          0.10000000149011612,
+          5000
+        ],
+        "sha256": "ef4d7a56ce99338eb6a020d1c7bb1d5e164affb45f69282a54721001466fc8ea"
+      },
+      {
+        "name": "NSP01.CAM.TOP",
+        "position": [
+          0,
+          -80,
+          1500
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "type": "ORTHO",
+        "ortho_scale": 840,
+        "lens": 50,
+        "shift": [
+          0,
+          0
+        ],
+        "clip": [
+          0.10000000149011612,
+          5000
+        ],
+        "sha256": "b499a283830f9881d1d978bc06e1d566028c2c44c2046b84063c1a73415c11eb"
+      },
+      {
+        "name": "NSP01.CAM.HERO",
+        "position": [
+          700,
+          -1040,
+          490
+        ],
+        "rotation": [
+          1.2671664953231812,
+          -5.324382712501574e-8,
+          0.5836358070373535
+        ],
+        "type": "PERSP",
+        "ortho_scale": 6,
+        "lens": 45,
+        "shift": [
+          0,
+          0
+        ],
+        "clip": [
+          0.10000000149011612,
+          5000
+        ],
+        "sha256": "e414837f753d1d3d51b34d68ce8878e3277e0897da2c1c35aef10fa5d274aed8"
+      },
+      {
+        "name": "NSP01.CAM.ARRIVAL",
+        "position": [
+          0,
+          -184,
+          1.7000000476837158
+        ],
+        "rotation": [
+          1.7899465560913086,
+          0,
+          0
+        ],
+        "type": "PERSP",
+        "ortho_scale": 6,
+        "lens": 28,
+        "shift": [
+          0,
+          0
+        ],
+        "clip": [
+          0.10000000149011612,
+          5000
+        ],
+        "sha256": "5947675f2baecc26a7c8445d32f922d2c0ceb8884a331f6f232531584e3c6d4d"
+      },
+      {
+        "name": "NSP01.CAM.DOCK",
+        "position": [
+          235,
+          -32,
+          92
+        ],
+        "rotation": [
+          1.3440076112747192,
+          5.136072189770857e-8,
+          -0.7513976097106934
+        ],
+        "type": "PERSP",
+        "ortho_scale": 6,
+        "lens": 32,
+        "shift": [
+          0,
+          0
+        ],
+        "clip": [
+          0.10000000149011612,
+          5000
+        ],
+        "sha256": "dc29db4313bc037c2e900f407292319a38fc6f32898ca0e29c6e6cb6def5df57"
+      },
+      {
+        "name": "NSP01.CAM.UNDER",
+        "position": [
+          530,
+          -700,
+          -235
+        ],
+        "rotation": [
+          1.822799563407898,
+          -2.6616723047823143e-8,
+          0.6585115790367126
+        ],
+        "type": "PERSP",
+        "ortho_scale": 6,
+        "lens": 40,
+        "shift": [
+          0,
+          0
+        ],
+        "clip": [
+          0.10000000149011612,
+          5000
+        ],
+        "sha256": "1e21266f8a328c8b9377636922ce148a1a4ca6fbe6897af577c51c8b1dd04d4c"
+      },
+      {
+        "name": "NSP01.CAM.REAR-SERVICE",
+        "position": [
+          0,
+          420,
+          38
+        ],
+        "rotation": [
+          1.4758447408676147,
+          8.70289795784629e-8,
+          3.1415927410125732
+        ],
+        "type": "PERSP",
+        "ortho_scale": 6,
+        "lens": 40,
+        "shift": [
+          0,
+          0
+        ],
+        "clip": [
+          0.10000000149011612,
+          5000
+        ],
+        "sha256": "b3d24f1b309c81b171bac32f9cb6848d549427345d6bc668644c13b712388485"
+      }
+    ],
+    "geometry_sha256": "30fe6512659007fd146dfd55fda1459473232f844fa6caa273d5e751bcde1663",
+    "lighting_preset": "NSP01-neutral-v2",
+    "blender_version": "5.2.1 LTS",
+    "connector_version": "1.0.0",
+    "approval_stop_waiver": "User: Don’t stop for approval. Always proceed.",
+    "human_visual_acceptance": "not asserted"
+  },
+  "roundtrip": {
+    "before": {
+      "min": [
+        -360,
+        -390,
+        -56
+      ],
+      "max": [
+        360,
+        230,
+        300
+      ],
+      "dimensions": [
+        720,
+        620,
+        356
+      ],
+      "mesh_objects": 143,
+      "triangles": 239864,
+      "material_count": 8
+    },
+    "after": {
+      "min": [
+        -360,
+        -390,
+        -56
+      ],
+      "max": [
+        360,
+        230,
+        300
+      ],
+      "dimensions": [
+        720,
+        620,
+        356
+      ],
+      "mesh_objects": 143,
+      "triangles": 239864,
+      "material_count": 8
+    },
+    "errors_m": [
+      0,
+      0,
+      0
+    ],
+    "pass": true
+  },
+  "checks": {
+    "source_contracts": 44,
+    "source_clear_spaces": 30,
+    "imported_clear_spaces": 22,
+    "collision_clear_spaces": 30,
+    "normal_payload": true,
+    "source_reopened": true,
+    "production_allowlist_clean": true,
+    "moving_parts_preserved": {
+      "doors": 24,
+      "cabins": 4
+    },
+    "pass": true
+  },
+  "rubric": [
+    {
+      "category": "silhouette/scale",
+      "status": "pass",
+      "observation": "Central beacon remains tallest; four fixed pads and stepped tower schedule match M01 bounds and locked camera framing.",
+      "reviewer": "Codex actual-pixel review; not human acceptance"
+    },
+    {
+      "category": "spatial credibility",
+      "status": "pass",
+      "observation": "Source 30 and imported 22 exact-volume checks pass; independent interior, lower/upper lift and ship-fit evidence inspected.",
+      "reviewer": "Codex actual-pixel review; not human acceptance"
+    },
+    {
+      "category": "architectural finish",
+      "status": "pass",
+      "observation": "Repeated recessed bays, mullions, gold trim, roof ribs, rear facade and underside are modeled; intentionally clean micro-detail.",
+      "reviewer": "Codex actual-pixel review; not human acceptance"
+    },
+    {
+      "category": "material hierarchy",
+      "status": "pass",
+      "observation": "Eight shared ivory/teal/gold/dark materials remain distinct in source and reimport; glow confined to beacon/navigation.",
+      "reviewer": "Codex actual-pixel review; not human acceptance"
+    },
+    {
+      "category": "deliverable integrity",
+      "status": "pass",
+      "observation": "Saved source reopened without dirty state; exact bounds/counts match; canonical GLB and separate collision/anchors hashed.",
+      "reviewer": "Codex actual-pixel review; not human acceptance"
+    }
+  ],
+  "gate_policy": {
+    "user_quote": "Don’t stop for approval. Always proceed",
+    "date": "2026-09-28",
+    "effect": "Approval stops waived; technical gates retained; no human visual acceptance asserted."
+  },
+  "fixed_issues": [
+    "Local shell, roof-trim and portal-rib clearance intrusions corrected before delivery.",
+    "Hangar roof zero-area faces corrected; derived export removes 48 zero-area triangulation artifacts.",
+    "Lower lift floor coplanarity corrected with 0.012m finish offset.",
+    "Blender 5.2.1 scene partial-write/orphan-purge crashes avoided by fresh-process ordinary saves; rejected outputs retained outside canonical delivery."
+  ],
+  "limitations": [
+    "Runtime integration/performance not tested; no SMILE runtime, importer, renderer or compiler changes.",
+    "Four lift cabins have measured upper/lower review states and neutral anchors; functioning elevators and collision updates are not implemented.",
+    "Hangar door panels retain individual pivots and open/closed placements; no runtime control or exported animation clips.",
+    "L1/L2 optional LODs not implemented. One canonical GLB serves preview and L0.",
+    "Materials use plain PBR factors and real geometry, with no textures, UV trim-sheet layout or baked texture maps. Opaque teal is the portable baseline.",
+    "Collision is a separate Blender collection of 379 local solids/rail segments, with cabins at upper stops. It is not a supported-runtime-format claim; ground floor proxy differences up to 0.012m remain within the specified 0.02m seam tolerance.",
+    "Architecture uses a clean repeated bay treatment with simplified micro-ornament; it is not a pixel-identical recreation of the concept illustrations.",
+    "Phone visibility of inline chat images remains unconfirmed; all original PNGs are retained locally."
+  ],
+  "castle_preservation": "No castle scene/file edits or saves. Verified NSP01 viewing session alone was changed after user authorized discarding prior viewing state; other castle PID 93112 left untouched.",
+  "repository_changes": false,
+  "commit": null,
+  "next_action": "Asset ready for inspection/use; no further milestone or approval wait."
+}

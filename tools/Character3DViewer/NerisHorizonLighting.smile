@@ -1,0 +1,55 @@
+''' Authored Horizon night lights; the town lighting owner supplies available slots.
+Module Smile.Tools.NerisHorizonLighting
+
+Option Explicit
+
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Tools.NerisHorizonRoute As Route
+
+Public Function Apply(ByRef Slot As Number, Night As Double) As Boolean
+
+    Dim Index As Number
+    Dim Point As P.Vector3
+    Dim Range As Number
+    Dim Ok As Boolean
+
+    Ok = True
+
+    If Not Route.Active() Or Night <= 0.0 Then
+        Return Ok
+    End If
+
+    For Index = 0 To 12
+
+        If Slot >= G.MaximumLocalLightCount3D() Then
+            Return False
+        End If
+
+        Range = 1300
+
+        If Index < 4 Then
+            Point = P.Vector(-195.0 + ToDouble(Index) * 130.0, 42.0, 70.0)
+        Else If Index < 6 Then
+            Point = P.Vector(-365.0 + ToDouble(Index - 4) * 730.0, 28.0, 108.0)
+        Else If Index = 6 Then
+            Point = P.Vector(0.0, 205.0, 230.0)
+            Range = 650
+        Else If Index < 11 Then
+            Point = P.Vector(-195.0 + ToDouble(Index - 7) * 130.0, 12.0, -18.0)
+        Else
+            Point = P.Vector(-235.0 + ToDouble(Index - 11) * 470.0, 18.0, 245.0)
+            Range = 1000
+        End If
+
+        Point = Route.ToWorld(Point)
+        Ok = G.SetPointLight3D(Slot, ToNumber(Point.X), ToNumber(Point.Y), ToNumber(Point.Z),
+            255, 222, 175, ToNumber(Night * 900.0), Range) And Ok
+        Slot = Slot + 1
+    End For
+
+    Return Ok
+
+End Function
+
+End Module

@@ -12,6 +12,7 @@ artifacts/
 *.vsix
 *.vsixmanifest.user
 *.blend[1-9]
+*.blend@
 !games/SinStarI/SourceAssets/Characters/Healer/MiraV2/Source/mira2-mixamo-input.obj
 !games/SinStarI/SourceAssets/Characters/Healer/MiraV3/Source/mira3-mixamo-input.obj
 
@@ -26,4 +27,7 @@ games/SinStarI/SourceAssets/Characters/Healer/MiraTripoV1/Private/TownLocomotion
 # Generated Python import cache from asset-authoring scripts.
 scripts/__pycache__/
 tools/Character3DViewer/__pycache__/
+games/SinStarI/SourceAssets/Towns/Neris/NerisHorizonV1/Source/__pycache__/
+# Local runtime envelopes are recoverable backups, not authored town assets.
+games/SinStarI/SourceAssets/Towns/Neris/NerisHorizonV1/Town/r005/Profile-Backup-*/
 tools/Character3DViewer/Character3DViewer.TownSessionTests.smileproj

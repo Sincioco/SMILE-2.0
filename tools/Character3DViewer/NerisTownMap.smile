@@ -109,9 +109,6 @@ Public Sub Draw(ByRef Value As State, Position As P.Vector3, Yaw As Double,
     Dim Opacity As Number
     Dim MarkerX As Number
     Dim MarkerY As Number
-    Dim Frame As Number
-    Dim SourceX As Number
-    Dim SourceY As Number
     Dim Coordinates As Text
 
     Opacity = ToNumber(Value.Opacity)
@@ -127,15 +124,28 @@ Public Sub Draw(ByRef Value As State, Position As P.Vector3, Yaw As Double,
     MarkerX = MapX(Position.X, X + Width * 30 / 1140, Width * 1080 / 1140)
     MarkerY = MapY(Position.Z, Y + Height * 90 / 1080, Height * 940 / 1080)
     Coordinates = LeaderName + " X: " + Numbers.NumberText(ToNumber(Round(Position.X))) + "  Y: " + Numbers.NumberText(ToNumber(Round(Position.Y))) + "  Z: " + Numbers.NumberText(ToNumber(Round(Position.Z)))
+
+    Draw Image Value.Backing At X, Y Size Width By Height Opacity Opacity Filter Smooth
+
+    Call DrawHeading(Value.Headlight, MarkerX, MarkerY, Yaw, Opacity)
+
+    Draw Image Value.Marker At MarkerX - 5, MarkerY - 5 Size 10 By 10 Opacity Opacity Filter Smooth
+
+    Draw Text Coordinates At X + 6, Y + Height - 13 Size 11 Color RGB(236, 229, 196)
+
+End Sub
+
+Public Sub DrawHeading(Headlight As Image, X As Number, Y As Number, Yaw As Double, Opacity As Number)
+
+    Dim Frame As Number
+    Dim SourceX As Number
+    Dim SourceY As Number
+
     Frame = HeadingFrame(Yaw)
     SourceX = (Frame Mod 12) * 96
     SourceY = (Frame / 12) * 96
 
-    Draw Image Value.Backing At X, Y Size Width By Height Opacity Opacity Filter Smooth
-    Draw Image Value.Headlight From SourceX, SourceY Size 96 By 96 At MarkerX - 28, MarkerY - 28 Size 56 By 56 Opacity Opacity Filter Smooth
-    Draw Image Value.Marker At MarkerX - 5, MarkerY - 5 Size 10 By 10 Opacity Opacity Filter Smooth
-
-    Draw Text Coordinates At X + 6, Y + Height - 13 Size 11 Color RGB(236, 229, 196)
+    Draw Image Headlight From SourceX, SourceY Size 96 By 96 At X - 28, Y - 28 Size 56 By 56 Opacity Opacity Filter Smooth
 
 End Sub
 
