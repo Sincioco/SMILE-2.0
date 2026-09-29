@@ -470,12 +470,12 @@ Sub CheckMapLoads()
     Ok = Links.Remove(Town, 2, 2)
 
     Call History.Record(Journal, Town, Guide.Ink)
-    Call Check(Ok And Town.MapTileCount = 2 And Grid.ReadCell(Town.Surface, 2, 2) = Grid.SURFACE_ROAD,
-        "Deleting A Map Load Tile Retains Its Underlying Road")
+    Call Check(Ok And Town.MapTileCount = 1 And Grid.ReadCell(Town.Surface, 2, 2) = Grid.SURFACE_ROAD,
+        "Deleting A Map Load Area Retains Its Underlying Road And Separate Area")
 
     Ok = History.Restore(Journal, Town, Guide.Ink, False)
 
-    Call Check(Ok And Town.MapTileCount = 3 And Links.Find(Town, 2, 2) >= 0, "Undo Restores Deleted Map Load Tile")
+    Call Check(Ok And Town.MapTileCount = 3 And Links.Find(Town, 2, 2) >= 0, "Undo Restores Complete Map Load Area")
 
     Ok = Storage.SaveDocument(Town, "TownEditor.MapTileFixture", False)
     Town.MapTileCount = 0
@@ -483,6 +483,73 @@ Sub CheckMapLoads()
 
     Call Check(Ok And Town.MapTileCount = 3 And
         Links.DestinationAt(Town, -150.0, -150.0) = "Another Town", "Map Load Destinations Survive Native Save/Open")
+    Call CheckMapAreas()
+
+End Sub
+
+Sub CheckMapAreas()
+
+    Dim Borders As Links.Outline
+    Dim Index As Number
+    Dim Side As Number
+    Dim Edges As Number
+
+    Ok = Document.Blank(Town, "Map Area Fixture", 12, 12, 20.0)
+    Ok = Links.PlaceRectangle(Town, 0, 0, 2, 1, "Neris Spaceport") And Ok
+
+    Call Links.BuildOutline(Town, Borders)
+
+    For Index = 0 To Town.MapTileCount - 1
+
+        For Side = 0 To 3
+
+            If Borders.Edge[Index, Side] Then
+                Edges = Edges + 1
+            End If
+
+        End For
+    End For
+
+    Call Check(Ok And Edges = 10 And Not Borders.Edge[0, 1] And Not Borders.Edge[0, 3],
+        "Rectangle Has Only Its Outer Perimeter Including At The Map Edge")
+
+    Ok = Links.PlaceRectangle(Town, 5, 0, 6, 1, "Neris Spaceport")
+
+    Call History.Reset(Journal, Town, Guide.Ink)
+    Call Links.AssignConnected(Town, 0, "Horizon Airport")
+    Call History.Record(Journal, Town, Guide.Ink)
+    Call Check(Town.MapTiles[5].Destination = "Horizon Airport" And
+        Town.MapTiles[6].Destination = "Neris Spaceport", "Reassign Changes The Whole Area But Not A Separate Island")
+
+    Ok = History.Restore(Journal, Town, Guide.Ink, False)
+
+    Call Check(Ok And Town.MapTiles[0].Destination = "Neris Spaceport" And
+        Town.MapTiles[5].Destination = "Neris Spaceport", "One Undo Restores The Whole Reassigned Area")
+
+    Ok = Links.Remove(Town, 1, 1)
+
+    Call History.Record(Journal, Town, Guide.Ink)
+    Call Check(Ok And Town.MapTileCount = 4 And Links.Find(Town, 0, 0) = -1 And
+        Links.Find(Town, 5, 0) >= 0, "One Interior Click Deletes The Entire Rectangle Only")
+
+    Ok = History.Restore(Journal, Town, Guide.Ink, False)
+
+    Call Check(Ok And Town.MapTileCount = 10, "One Undo Restores Every Cell Of The Deleted Rectangle")
+
+    ' A legacy area with a missing tile must show its actual shape, not a bounding box.
+    Town.MapTiles[1].Destination = "Another Map"
+
+    Call Links.BuildOutline(Town, Borders)
+    Call Check(Borders.Edge[0, 1] And Borders.Edge[2, 0] And Borders.Edge[4, 2],
+        "Different Destination Keeps Its Boundary Inside A Previously Painted Rectangle")
+    Call Links.AssignConnected(Town, 0, "Horizon Airport")
+    Call Check(Town.MapTiles[1].Destination = "Another Map",
+        "Reassign Respects The Same Destination Boundary As The Outline And Delete")
+
+    Ok = Links.Remove(Town, 0, 0)
+
+    Call Check(Ok And Town.MapTileCount = 5 And Links.Find(Town, 1, 0) >= 0,
+        "Delete Preserves Neighboring Areas With A Different Destination")
 
 End Sub
 

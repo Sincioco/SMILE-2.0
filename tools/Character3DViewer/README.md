@@ -58,7 +58,8 @@ is suspended while editing; explicit Orbit remains available.
 
 **Sun:** Save As Day and Save As Night preserve custom presets in the town document.
 Map statistics use U.S. grouping and include area, length and width in metres.
-They appear in the upper-right and move left of the open editor so they remain readable.
+They appear in the lower-right above save progress and camera diagnostics, and move
+left of the open editor so they remain readable.
 
 **Travel:** click a connected road on the minimap to request a road/bridge-only
 route. The destination is marked and the camera follows the party. The minimap's
@@ -69,6 +70,11 @@ editing, a map change or a blocked route cancels the trip. Map Load surface mark
 store a named destination. Draw the yellow rectangle first, then choose a destination
 from the other open map tabs. Connected painted markers inherit it. They can be
 reassigned or deleted and are saved separately from the underlying terrain material.
+Each connected area with the same destination has one yellow perimeter, without
+internal tile lines. Click anywhere inside it to delete or reassign the whole area;
+one Undo restores it. Separate islands remain independent, even when they load the
+same map. Painting areas together joins them, preserving destination inheritance.
+Existing saved areas receive these behaviors without changing the town file format.
 
 **Royal Court:** Items → Buildings → Royal Court opens Select / Move,
 Place / Relocate and Delete. Each map holds at most one Court. Its doors, drawbridge,
@@ -91,10 +97,18 @@ assemblies are still protected; moving those assemblies remains outstanding.
 The current r009 layout has three linked tabs: **Neris Spaceport** west,
 compact **Neris Town** in the middle, and **Horizon Airport** east. All 362 town
 placements remain. Walk through either town road gateway to travel with all four
-party members. Airport tabs immediately start a centered map orbit; walking and
-Visit Horizon Airport retain the party arrival view. The terminal's gold-framed
+party members. Airport tabs immediately start a centered map orbit; walking between
+maps retains the party arrival view. The entrance walkway reaches the deck edge,
+so the party can cross the Horizon road/apron join in either direction, including
+after Ctrl+click relocation. The three map headers omit the Visit Royal Court,
+Orbit Airport and Visit Horizon Airport shortcuts. The terminal's gold-framed
 glass doors open on approach, with a one-shot entry event reserved for a future
 cutscene. No cutscene is played yet.
+
+Spaceport starts from the approved front view (−20° bearing, 25° elevation,
+16,983 distance); Horizon starts at −98° bearing, 33° elevation and 14,682 distance.
+Both use the map floor center and retain the 32° lens. Right-click restores these
+same starting views and resumes orbit.
 
 The sun/moon icon in the header switches day/night in each selected map. Horizon
 has 27 concealed night lights and stronger runway guide lights. Its two banners
@@ -112,7 +126,7 @@ or existing viewing distance supplies the pivot. Follow Party middle/arrow orbit
 keeps Arin as its pivot without moving him to the middle of the screen. Tab switches
 show only the retained static background and loading status until the whole map
 and its initial camera are ready. Ctrl+click outside the editor relocates
-the whole party to the nearest walkable road. Upper-right statistics show map triangles
+the whole party to the nearest walkable road. Lower-right statistics show map triangles
 and render vertices per submitted mesh instance, including offscreen geometry and
 actors, excluding particles and repeated shadow/reflection passes.
 
@@ -139,19 +153,17 @@ Two rear runways connect through U-turn roads. Regional aircraft and occasional
 larger cargo flights arrive and depart at fifteen-second intervals, facing along
 their travel direction. Both strips have inset guidance lights and mip-filtered
 painted markings; the three tower antenna lights flash red one at a time in an
-irregular sequence. **Visit Horizon Airport** brings Arin and the party to its
-entrance, facing into the terminal with the camera behind Arin.
+irregular sequence. The connecting road leads to Horizon's entrance; Tab follows
+Arin and the party while they walk into the terminal.
 Horizon now has a labelled marker at its terminal's position on the minimap.
 In Follow Party mode, mouse orbit and arrow orbit keep the leader as their pivot.
 Right-click restores the active tab's bird's-eye overview and slow orbit.
 O/Orbit retains the current view and uses its center. Free-camera middle-drag uses the
 visible point under the cursor for manual orbit.
 
-The current layout has **Horizon — Gentle Wave** at full size west of the town.
-**Orbit Airport** frames it. The original Spaceport 01 is in the separate
-**Neris Spaceport** town tab. Walk south along the western road to travel there;
-walk north along its arrival causeway to return with the party. The former
-southern map extension is removed. All 362 saved town placements remain.
+The **Neris Spaceport** and **Horizon Airport** tabs have their own full-size maps.
+Town's western road links to Spaceport and its eastern road links to Horizon.
+Walking back through each arrival road returns the party to Neris Town.
 See `games/SinStarI/SourceAssets/Towns/Neris/NerisHorizonV1/README.md` for current
 Blender files, actual renders, dimensions and the versioned saves. Future Blender
 exports include the selected town's airport and Royal Court assemblies.

@@ -22,6 +22,16 @@ Dim Flights As Traffic.State
 
 Call Spaceport.Enable(True)
 
+Position = Navigation.Move(P.Vector(5500.0, 23.12, 1250.0), -100.0, 0.0)
+
+Call Check(Abs(Position.X - 5400.0) < 0.001,
+    "Airport Arrival Walks Across Apron Margin To Connecting Road")
+
+Position = Navigation.Move(P.Vector(5400.0, 23.12, 1250.0), 100.0, 0.0)
+
+Call Check(Abs(Position.X - 5500.0) < 0.001,
+    "Connecting Road Walks Across Apron Margin Into Airport")
+
 Call Trail.Reset(Path, Spaceport.ToWorld(P.Vector(0.0, 0.8, -20.0)), 4, 22.0)
 Call Check(Not Spaceport.CanStand(7390.0, 1250.0), "Closed Terminal Door Blocks Crossing")
 

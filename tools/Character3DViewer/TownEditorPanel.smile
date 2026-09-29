@@ -232,7 +232,7 @@ Private Sub Library(ByRef Value As State, X As Number)
             Call Button(Value, 19, X + 192, 331, 91, "Delete", Value.Tool = 19)
 
             Draw Text "Draw area, then choose a map." At X, 375 Size 13 Color WHITE
-            Draw Text "Connected tiles share a destination." At X, 397 Size 12 Color WHITE
+            Draw Text "Delete/Reassign affects the whole area." At X, 397 Size 12 Color WHITE
 
         Else
 

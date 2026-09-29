@@ -213,6 +213,7 @@ Public Sub Draw(ByRef Value As State, ByRef View As Arena.State,
     Dim WidthMeters As Double
     Dim LengthMeters As Double
     Dim StatsX As Number
+    Dim StatsY As Number
 
     Offset = M.Subtract(View.LiveCamera.Position, View.LiveCamera.Target)
     Horizontal = M.Degrees(Atan2(Offset.X, Offset.Z))
@@ -220,6 +221,8 @@ Public Sub Draw(ByRef Value As State, ByRef View As Arena.State,
     WidthMeters = ToDouble(View.Floor.Width) / 10.0
     LengthMeters = ToDouble(View.Floor.Depth) / 10.0
     StatsX = Window_Width() - 338
+    ' Leave room below for the compact save progress and camera diagnostics.
+    StatsY = Window_Height() - 304
 
     If Editing Then
         StatsX = StatsX - 306
@@ -235,17 +238,17 @@ Public Sub Draw(ByRef Value As State, ByRef View As Arena.State,
     Call Diagnostics(Value.FrameRate, View.LiveCamera, Horizontal, Vertical,
         Orbiting, PartyCamera, DroneEnabled, FlyInspect)
 
-    Fill Rectangle StatsX, 132, 326, 92, RGB(12, 20, 32) Opacity 80
-    Draw Text "Map Polygons (Triangles)" At StatsX + 8, 136 Size 11 Color LIGHT_GRAY
-    Draw Text CountLabel(Value.MapTriangles) At StatsX + 198, 136 Size 11 Color CYAN
-    Draw Text "Map Vertices" At StatsX + 8, 154 Size 11 Color LIGHT_GRAY
-    Draw Text CountLabel(Value.MapVertices) At StatsX + 198, 154 Size 11 Color CYAN
-    Draw Text "Map Area (m²)" At StatsX + 8, 172 Size 11 Color LIGHT_GRAY
-    Draw Text MeasureLabel(WidthMeters * LengthMeters) At StatsX + 198, 172 Size 11 Color CYAN
-    Draw Text "Map Length (m)" At StatsX + 8, 190 Size 11 Color LIGHT_GRAY
-    Draw Text MeasureLabel(LengthMeters) At StatsX + 198, 190 Size 11 Color CYAN
-    Draw Text "Map Width (m)" At StatsX + 8, 208 Size 11 Color LIGHT_GRAY
-    Draw Text MeasureLabel(WidthMeters) At StatsX + 198, 208 Size 11 Color CYAN
+    Fill Rectangle StatsX, StatsY, 326, 92, RGB(12, 20, 32) Opacity 80
+    Draw Text "Map Polygons (Triangles)" At StatsX + 8, StatsY + 4 Size 11 Color LIGHT_GRAY
+    Draw Text CountLabel(Value.MapTriangles) At StatsX + 198, StatsY + 4 Size 11 Color CYAN
+    Draw Text "Map Vertices" At StatsX + 8, StatsY + 22 Size 11 Color LIGHT_GRAY
+    Draw Text CountLabel(Value.MapVertices) At StatsX + 198, StatsY + 22 Size 11 Color CYAN
+    Draw Text "Map Area (m²)" At StatsX + 8, StatsY + 40 Size 11 Color LIGHT_GRAY
+    Draw Text MeasureLabel(WidthMeters * LengthMeters) At StatsX + 198, StatsY + 40 Size 11 Color CYAN
+    Draw Text "Map Length (m)" At StatsX + 8, StatsY + 58 Size 11 Color LIGHT_GRAY
+    Draw Text MeasureLabel(LengthMeters) At StatsX + 198, StatsY + 58 Size 11 Color CYAN
+    Draw Text "Map Width (m)" At StatsX + 8, StatsY + 76 Size 11 Color LIGHT_GRAY
+    Draw Text MeasureLabel(WidthMeters) At StatsX + 198, StatsY + 76 Size 11 Color CYAN
 
 End Sub
 

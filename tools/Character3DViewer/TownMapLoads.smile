@@ -11,6 +11,80 @@ Private Dim Lookup[512, 512] As Number
 Private Dim Queue[4096] As Number
 Private Dim Seen[4096] As Boolean
 
+Public Type Outline
+    Edge[4096, 4] As Boolean
+End Type
+
+Private Sub IndexTiles(ByRef Town As Document.State)
+
+    Dim X As Number
+    Dim Z As Number
+    Dim Index As Number
+
+    For Z = 0 To Town.Surface.Rows - 1
+
+        For X = 0 To Town.Surface.Columns - 1
+            Lookup[X, Z] = 0
+        End For
+    End For
+
+    For Index = 0 To Town.MapTileCount - 1
+        Lookup[Town.MapTiles[Index].X, Town.MapTiles[Index].Z] = Index + 1
+        Seen[Index] = False
+    End For
+
+End Sub
+
+Private Function AdjacentTile(ByRef Town As Document.State,
+    X As Number, Z As Number, Side As Number) As Number
+
+    Dim Result As Number
+
+    If Side = 0 Then
+        X = X - 1
+    Else If Side = 1 Then
+        X = X + 1
+    Else If Side = 2 Then
+        Z = Z - 1
+    Else
+        Z = Z + 1
+    End If
+
+    Result = -1
+
+    If X >= 0 And X < Town.Surface.Columns And Z >= 0 And Z < Town.Surface.Rows Then
+        Result = Lookup[X, Z] - 1
+    End If
+
+    Return Result
+
+End Function
+
+''' Only exposed edges are visible, including holes and separate destinations.
+Public Sub BuildOutline(ByRef Town As Document.State, ByRef Value As Outline)
+
+    Dim Index As Number
+    Dim Side As Number
+    Dim Adjacent As Number
+
+    Call IndexTiles(Town)
+
+    For Index = 0 To Town.MapTileCount - 1
+
+        For Side = 0 To 3
+
+            Adjacent = AdjacentTile(Town, Town.MapTiles[Index].X, Town.MapTiles[Index].Z, Side)
+            Value.Edge[Index, Side] = True
+
+            If Adjacent >= 0 Then
+                Value.Edge[Index, Side] = Town.MapTiles[Adjacent].Destination <> Town.MapTiles[Index].Destination
+            End If
+
+        End For
+    End For
+
+End Sub
+
 Public Function Find(ByRef Town As Document.State, X As Number, Z As Number) As Number
 
     Dim ReturnValue As Number
@@ -66,7 +140,8 @@ Public Function Neighbor(ByRef Town As Document.State, X As Number, Z As Number)
 
 End Function
 
-Public Sub AssignConnected(ByRef Town As Document.State, First As Number, Destination As Text)
+Private Function CollectConnected(ByRef Town As Document.State,
+    First As Number, SameDestination As Boolean) As Number
 
     Dim Index As Number
     Dim X As Number
@@ -74,27 +149,13 @@ Public Sub AssignConnected(ByRef Town As Document.State, First As Number, Destin
     Dim Head As Number
     Dim Tail As Number
     Dim Side As Number
-    Dim NextX As Number
-    Dim NextZ As Number
     Dim Adjacent As Number
 
-    If (First < 0 Or
-        First >= Town.MapTileCount Or
-        Not Document.ValidName(Destination)) Then
-        Return
+    If First < 0 Or First >= Town.MapTileCount Then
+        Return 0
     End If
 
-    For Z = 0 To Town.Surface.Rows - 1
-
-        For X = 0 To Town.Surface.Columns - 1
-            Lookup[X, Z] = 0
-        End For
-    End For
-
-    For Index = 0 To Town.MapTileCount - 1
-        Lookup[Town.MapTiles[Index].X, Town.MapTiles[Index].Z] = Index + 1
-        Seen[Index] = False
-    End For
+    Call IndexTiles(Town)
 
     Queue[0] = First
     Seen[First] = True
@@ -104,33 +165,24 @@ Public Sub AssignConnected(ByRef Town As Document.State, First As Number, Destin
 
         Index = Queue[Head]
         Head = Head + 1
-        Town.MapTiles[Index].Destination = Destination
         X = Town.MapTiles[Index].X
         Z = Town.MapTiles[Index].Z
 
         For Side = 0 To 3
 
-            NextX = X
-            NextZ = Z
+            Adjacent = AdjacentTile(Town, X, Z, Side)
 
-            If Side = 0 Then
-                NextX = X - 1
-            Else If Side = 1 Then
-                NextX = X + 1
-            Else If Side = 2 Then
-                NextZ = Z - 1
-            Else
-                NextZ = Z + 1
+            If Adjacent >= 0 Then
+
+                If SameDestination And Town.MapTiles[Adjacent].Destination <> Town.MapTiles[First].Destination Then
+                    Adjacent = -1
+                End If
+
             End If
 
-            If (NextX >= 0 And
-                NextX < Town.Surface.Columns And
-                NextZ >= 0 And
-                NextZ < Town.Surface.Rows) Then
+            If Adjacent >= 0 Then
 
-                Adjacent = Lookup[NextX, NextZ] - 1
-
-                If Adjacent >= 0 And Not Seen[Adjacent] Then
+                If Not Seen[Adjacent] Then
 
                     Seen[Adjacent] = True
                     Queue[Tail] = Adjacent
@@ -144,7 +196,29 @@ Public Sub AssignConnected(ByRef Town As Document.State, First As Number, Destin
 
     Loop Until Head = Tail
 
-    Town.Revision = Town.Revision + 1
+    Return Tail
+
+End Function
+
+Public Sub AssignConnected(ByRef Town As Document.State, First As Number,
+    Destination As Text, Optional Merge As Boolean = False)
+
+    Dim AreaCount As Number
+    Dim Index As Number
+
+    If Not Document.ValidName(Destination) Then
+        Return
+    End If
+
+    AreaCount = CollectConnected(Town, First, Not Merge)
+
+    For Index = 0 To AreaCount - 1
+        Town.MapTiles[Queue[Index]].Destination = Destination
+    End For
+
+    If AreaCount > 0 Then
+        Town.Revision = Town.Revision + 1
+    End If
 
 End Sub
 
@@ -185,7 +259,7 @@ Public Function Place(ByRef Town As Document.State, X As Number, Z As Number, De
 
     End If
 
-    Call AssignConnected(Town, Index, Destination)
+    Call AssignConnected(Town, Index, Destination, True)
 
     Return True
 
@@ -252,7 +326,7 @@ Public Function PlaceRectangle(ByRef Town As Document.State, X0 As Number, Z0 As
         End For
     End For
 
-    Call AssignConnected(Town, First, Destination)
+    Call AssignConnected(Town, First, Destination, True)
 
     Return True
 
@@ -261,6 +335,8 @@ End Function
 Public Function Remove(ByRef Town As Document.State, X As Number, Z As Number) As Boolean
 
     Dim Index As Number
+    Dim AreaCount As Number
+    Dim Kept As Number
     Dim Last As Document.MapTile
 
     Index = Find(Town, X, Z)
@@ -269,9 +345,22 @@ Public Function Remove(ByRef Town As Document.State, X As Number, Z As Number) A
         Return False
     End If
 
-    Town.MapTileCount = Town.MapTileCount - 1
-    Town.MapTiles[Index] = Town.MapTiles[Town.MapTileCount]
-    Town.MapTiles[Town.MapTileCount] = Last
+    AreaCount = CollectConnected(Town, Index, True)
+
+    For Index = 0 To Town.MapTileCount - 1
+
+        If Not Seen[Index] Then
+            Town.MapTiles[Kept] = Town.MapTiles[Index]
+            Kept = Kept + 1
+        End If
+
+    End For
+
+    For Index = Kept To Town.MapTileCount - 1
+        Town.MapTiles[Index] = Last
+    End For
+
+    Town.MapTileCount = Kept
     Town.Revision = Town.Revision + 1
 
     Return True

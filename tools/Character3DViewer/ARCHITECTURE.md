@@ -1,5 +1,52 @@
 # Character Viewer Architecture
 
+## Current: Map Load areas
+
+TownMapLoads owns connectivity for destination inheritance, reassignment and
+whole-area deletion. A logical area is a four-connected set of tiles with the same
+destination; separate islands remain independent. Painting touching areas merges
+their destinations as before. Reassignment and deletion follow the same boundary,
+and TownHistory records each gesture as one change. Existing saves need no migration.
+
+TownMapLoadTools draws only exposed edges from TownMapLoads.BuildOutline, using its
+existing bounded lookup rather than repeated linear neighbor searches. It renders
+the actual nonuniform cell boundaries, including irregular regions and internal
+destination boundaries. No tile grid appears inside a solid area. The renderer
+owns its outline scratch; the document remains the only authored state. Lookup and
+connectivity scratch are rebuilt for each operation, so no cached map identity or
+undo invalidation is required. No runtime/compiler/dependency/format change.
+
+Foundations covers perimeter edges, one-click deletion, whole-area reassignment,
+separate islands, different destinations and single-step Undo. The session fixture
+exercises deletion through the actual rectangle gesture owner. MapLoadTools grows
+by 27 lines, MapLoads by 89 with its shared connectivity extraction; the existing
+panel changes one help line. No architecture limit or baseline was changed.
+
+## Current: airport access and map presentation
+
+NerisHorizonRoute's central pedestrian corridor reaches local Z=-200, the modeled
+deck edge at world X=5400 where the editable connecting road ends. The apron keeps
+its inset elsewhere; terminal walls, closed doors, furniture and flight areas keep
+their existing collision rules. NerisTownTests covers crossing that margin in both
+directions; TownSessionTests starts the outgoing trip at the airport arrival and
+walks across the join, and exercises entry by all four party members after nearest-road
+teleportation. Earlier round-trip tests teleported beyond the blocked margin.
+
+NerisTownCameraPanel owns lower-right map statistics above the compact save status
+and camera diagnostics, moving left while the editor is open. NerisTown removes the
+three landmark header buttons and their hit regions. NerisTownTour accepts an
+elevation for its existing framing operation; tab opening and right-click reset share
+the approved front-facing Spaceport and Horizon views, anchored at the map floor
+center. O/Orbit retains its current-view behavior.
+
+The complete native town suite and seven-file style check pass; before the route
+fix the two new boundary assertions failed. The full native build validates all
+333 published assets. Ownership stays in the existing route, camera panel and tour
+modules. No runtime, compiler, save format, dependency or guardrail change is needed.
+Production growth is one route comment, three camera-layout lines and one tour
+signature line; the town coordinator shrinks by 55 lines. Camera reset regressions
+check both approved bearings, elevations, distances and map-centered anchors.
+
 ## Current: explicit permanent map updates
 
 TownLibrary owns startup keys for Neris Town, Neris Spaceport and Horizon Airport.

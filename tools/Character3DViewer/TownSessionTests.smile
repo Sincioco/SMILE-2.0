@@ -405,6 +405,10 @@ Sub CheckGuideAndMapControls()
 
     Call Check(Chosen And MapLoads.DestinationAt(Draft, -90.0, -90.0) = "Horizon Airport",
         "Map Choice Reassigns The Existing Connected Area")
+    Call MapLoadTools.Gesture(MapGesture, Draft, P.Vector(-90.0, 23.12, -90.0),
+        True, True, True, 19)
+    Call Check(Draft.MapTileCount = 0 And Not MapGesture.Pending,
+        "One Delete Gesture Removes The Whole Four Cell Map Load Rectangle")
     Call DocumentMap.SetZoom(Draft, P.Vector(0.0, 0.0, 0.0), 1)
 
     Point = DocumentMap.Pick(Draft, Window_Width() - 148, 387)
@@ -591,6 +595,8 @@ Sub CheckWalkingConnection(ByRef Value As Town.State)
     Dim Step As Number
     Dim BeforeModels As Number
     Dim BeforeMeshes As Number
+    Dim RoadPoint As P.Vector3
+    Dim FoundRoad As Boolean
 
     BeforeModels = G.LiveModelCount3D()
     BeforeMeshes = G.LiveMeshCount3D()
@@ -623,6 +629,22 @@ Sub CheckWalkingConnection(ByRef Value As Town.State)
     Call Check(Value.Horizon.Ready And Value.Horizon.Doors.Ready And
         Not Value.Harbor.Ready And Not Value.Comparison.Ready, "East Map Loads Horizon And Operable Doors")
     Call Check(Landmarks.AirportMapLabel() = "Horizon Airport", "Airport Has Its Minimap Marker")
+
+    FoundRoad = DocumentNavigation.NearestRoad(P.Vector(5340.0, 0.0, 1250.0), RoadPoint)
+
+    Call Check(FoundRoad And RoadPoint.X < 5400.0,
+        "Ctrl Click Finds The Connecting Road Outside The Airport")
+    Call Party.Teleport(Value.People, RoadPoint)
+
+    For Step = 1 To 14
+        Call Town.MoveParty(Value, P.Vector(1.0, 0.0, 0.0), 100)
+    End For
+
+    For Step = 0 To Value.People.MemberCount - 1
+        Call Check(Value.People.Path.Positions[Step].X > 5450.0,
+            "Teleported Party Crosses The Road Divider Into The Airport")
+    End For
+
     Call CheckNightToggle(Value)
     Call CheckFleetFrames(Value)
     Call Inspection.MapOrbit(Value, Failures)
@@ -631,8 +653,18 @@ Sub CheckWalkingConnection(ByRef Value As Town.State)
     Call CheckAirportEntry(Value)
     Call Check(Airport.ConsumeEntry(), "Terminal Crossing Emits A Cutscene Entry Event")
     Call Check(Not Airport.ConsumeEntry(), "Terminal Entry Event Is Consumed Only Once")
-    Call Party.Teleport(Value.People, P.Vector(5280.0, 23.12, 1250.0))
-    Call Town.MoveParty(Value, P.Vector(-1.0, 0.0, 0.0), 200)
+    Call Party.Teleport(Value.People, Connections.Arrival("Horizon Airport"))
+
+    For Step = 1 To 16
+
+        Call Town.MoveParty(Value, P.Vector(-1.0, 0.0, 0.0), 100)
+
+        If Editor.TownName() <> "Horizon Airport" Then
+            Exit For
+        End If
+
+    End For
+
     Call Check(Editor.TownName() = "Neris Town", "Airport West Road Returns To Town")
     Call LoadArrival(Value)
     Call Check(Value.People.MemberCount = 4 And Value.People.Path.Positions[0].X = 2500.0,

@@ -7,12 +7,13 @@ Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PrecisionMath3D As M
 
 Public Sub Frame(ByRef Camera As P.Camera3D, Center As P.Vector3,
-    Optional Radius As Double = 8725.0, Optional Heading As Double = -179.0)
+    Optional Radius As Double = 8725.0, Optional Heading As Double = -179.0,
+    Optional Elevation As Double = 33.0)
 
     Dim Pitch As Double
     Dim Bearing As Double
 
-    Pitch = M.Radians(33.0)
+    Pitch = M.Radians(Elevation)
     Bearing = M.Radians(Heading)
     Camera.FovDegrees = 32.0
     Camera.Target = Center

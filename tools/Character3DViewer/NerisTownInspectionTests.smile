@@ -355,6 +355,9 @@ Public Sub RightClickOrbit(ByRef Value As Town.State, ByRef Failures As Number)
     Dim Point As P.Vector3
     Dim Radius As Double
     Dim Index As Number
+    Dim Bearing As Double
+    Dim Elevation As Double
+    Dim Offset As P.Vector3
 
     Call Town.ResetOverview(Value)
     Call Arena.AdvanceTransition(Value.View, 1000)
@@ -374,15 +377,24 @@ Public Sub RightClickOrbit(ByRef Value As Town.State, ByRef Failures As Number)
     Before = Value.View.LiveCamera
     Point = Before.Target
     Radius = M.Distance(Before.Position, Before.Target)
+    Offset = M.Subtract(Before.Position, Before.Target)
+    Bearing = M.Degrees(Atan2(Offset.X, Offset.Z))
+    Elevation = M.Degrees(Atan2(Offset.Y, Sqrt(Offset.X * Offset.X + Offset.Z * Offset.Z)))
 
     Call Check(Value.Cinematic And Not Value.Follow And Not Value.OrbitPaused And
         Radius > 8000.0 And Value.View.Controls.PanX = 0.0,
         "Right Click Restores Bird Eye Zoom And Starts Orbit", Failures)
 
     If Value.Horizon.Ready Then
-        Call Check(Abs(Radius - 20000.0) < 0.01 And
-            M.Distance(Point, P.Vector(8400.0, 700.0, 1250.0)) < 0.01,
-            "Horizon Town Overview Frames The Civic Town At The Requested Distance", Failures)
+        Call Check(Abs(Radius - 14682.0) < 0.01 And
+            M.Distance(Point, Authoring.MapCenter(0.0)) < 0.01 And
+            Abs(Bearing + 98.0) < 0.01 And Abs(Elevation - 33.0) < 0.01,
+            "Horizon Overview Matches The Approved Front View Around Map Center", Failures)
+    Else If Value.Harbor.Ready Then
+        Call Check(Abs(Radius - 16983.0) < 0.01 And
+            M.Distance(Point, Authoring.MapCenter(0.0)) < 0.01 And
+            Abs(Bearing + 20.0) < 0.01 And Abs(Elevation - 25.0) < 0.01,
+            "Spaceport Overview Starts At The Approved Front Angle Around Map Center", Failures)
     Else If Not Value.Harbor.Ready Then
         Call Check(M.Distance(Point, P.Vector(-1225.0, 150.0, 375.0)) < 0.01 And
             M.Distance(M.Subtract(Before.Position, Point), P.Vector(4475.0, 2907.0, -6616.0)) < 0.01,

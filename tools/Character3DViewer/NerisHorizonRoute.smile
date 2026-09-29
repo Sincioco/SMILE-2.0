@@ -54,7 +54,8 @@ Public Function CanStand(X As Double, Z As Double) As Boolean
     LocalZ = (X - ORIGIN_X) / SCALE
 
     Result = Enabled And Abs(LocalX) <= 475.0 And LocalZ >= -195.0 And LocalZ < -3.0
-    Result = Result Or (Enabled And Abs(LocalX) <= 11.0 And LocalZ >= -36.0 And LocalZ <= 4.0)
+    ' The entrance walkway reaches the deck edge where the editable road ends.
+    Result = Result Or (Enabled And Abs(LocalX) <= 11.0 And LocalZ >= -200.0 And LocalZ <= 4.0)
     Result = Result Or (Enabled And GroundFloor(LocalX, LocalZ))
     Result = Result Or (Enabled And Abs(LocalX) >= 272.0 And Abs(LocalX) <= 292.0 And
         LocalZ >= -195.0 And LocalZ <= 185.0)

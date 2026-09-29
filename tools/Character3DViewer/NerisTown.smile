@@ -355,46 +355,6 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
         Blocked = Blocked Or Authoring.CameraBlocked(CameraPanel.Hovered() Or Value.Panel.DragRow > 0)
     End If
 
-    If (CastleRoute.Active() And
-        Not Authoring.Editing() And
-        Not Authoring.CameraBlocked() And
-        Pointer_Pressed(POINTER_PRIMARY) And
-        Pointer_X() >= 770 And
-        Pointer_X() < 944 And
-        Pointer_Y() >= 10 And
-        Pointer_Y() < 39) Then
-        Call VisitLandmark(Value, P.Vector(CastleRoute.CenterX(),
-            CastleRoute.DECK_Y, CastleRoute.CenterZ() - 1558.0), 180.0)
-
-        Return
-    End If
-
-    If ((SpaceportRoute.Active() Or HorizonRoute.Active()) And
-        Not Authoring.Editing() And
-        Not Authoring.CameraBlocked() And
-        Pointer_Pressed(POINTER_PRIMARY) And
-        Pointer_X() >= 954 And
-        Pointer_X() < 1128 And
-        Pointer_Y() >= 10 And
-        Pointer_Y() < 39) Then
-        Call ResetOverview(Value, True)
-
-        Return
-    End If
-
-    If (Value.Edited And
-        Not Authoring.Editing() And
-        Not Authoring.CameraBlocked() And
-        Pointer_Pressed(POINTER_PRIMARY) And
-        Pointer_X() >= 1138 And
-        Pointer_X() < 1368 And
-        Pointer_Y() >= 10 And
-        Pointer_Y() < 39) Then
-        Call VisitAirport(Value)
-
-        Return
-    End If
-
     Value.InputActive = (Key <> KEY_NONE Or Pointer_Delta_X() <> 0 Or
         Pointer_Delta_Y() <> 0 Or Pointer_Wheel_Delta() <> 0 Or
         Pointer_Held(POINTER_PRIMARY) Or Pointer_Held(POINTER_MIDDLE) Or
@@ -735,9 +695,9 @@ Public Sub ResetOverview(ByRef Value As State, Optional Harbor As Boolean = Fals
     Call Tour.Frame(Value.BaseCamera, P.Vector(-1075.0, 150.0, 0.0))
 
     If Value.Horizon.Ready Then
-        Call Tour.Frame(Value.BaseCamera, Authoring.MapCenter(700.0), 20000.0, -90.0)
+        Call Tour.Frame(Value.BaseCamera, Authoring.MapCenter(0.0), 14682.0, -98.0)
     Else If Value.Harbor.Ready Then
-        Call Tour.Frame(Value.BaseCamera, Authoring.MapCenter(900.0), 18000.0, -165.0)
+        Call Tour.Frame(Value.BaseCamera, Authoring.MapCenter(0.0), 16983.0, -20.0, 25.0)
     Else If Value.Edited Then
         Call Authoring.FrameDocument(Value.BaseCamera, Not Value.Harbor.Ready)
     End If
@@ -1183,24 +1143,9 @@ Public Sub Overlay(ByRef Value As State)
         Draw Text "F / G: Floor / Grid   B: Background   M: Map   Tab: Follow   Ctrl+Tab: Leader   R: Run" At 18, Window_Height() - 26 Size 14 Color WHITE
     End If
 
-    If CastleRoute.Active() And Not Authoring.Editing() Then
-        Fill Rectangle 770, 10, 174, 29, RGB(20, 90, 108)
-        Draw Text "Visit " + CastleRoute.DISPLAY_NAME At 780, 17 Size 14 Color WHITE
-    End If
-
     Call CameraPanel.Draw(Value.Panel, Value.View, Value.Cinematic,
         Value.PartyCamera, Value.Flight.Enabled And Not Value.Flight.Suspended,
         Drone.GroundShot(Value.Flight, Value.PartyCamera), Value.Keys.FlyInspect, Authoring.Editing())
-
-    If (SpaceportRoute.Active() Or HorizonRoute.Active()) And Not Authoring.Editing() Then
-        Fill Rectangle 954, 10, 174, 29, RGB(20, 90, 108)
-        Draw Text "Orbit Airport" At 964, 17 Size 14 Color WHITE
-    End If
-
-    If Value.Edited And Not Authoring.Editing() Then
-        Fill Rectangle 1138, 10, 230, 29, RGB(20, 90, 108)
-        Draw Text "Visit Horizon Airport" At 1148, 17 Size 14 Color WHITE
-    End If
 
     If Value.Ready Then
 
