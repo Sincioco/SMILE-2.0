@@ -4,6 +4,7 @@ Module Smile.Tools.TownDocumentStore
 Option Explicit
 
 Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.SurfacePaint3D As Paint
 Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownCatalogData As Catalog
 
@@ -309,6 +310,7 @@ Private Sub Encode(ByRef Value As Document.State, MarkSaved As Boolean)
 
     Dim Index As Number
     Dim ActiveCount As Number
+    Dim Brush As Paint.Brush
 
     Offset = 0
     Valid = True
@@ -316,7 +318,7 @@ Private Sub Encode(ByRef Value As Document.State, MarkSaved As Boolean)
     Call WriteByte(84)
     Call WriteByte(87)
     Call WriteByte(78)
-    Call WriteByte(5)
+    Call WriteByte(6)
     Call WriteName(Catalog.FINGERPRINT)
     Call WriteName(Value.Name)
 
@@ -403,6 +405,25 @@ Private Sub Encode(ByRef Value As Document.State, MarkSaved As Boolean)
         Call WriteByte(0)
     End If
 
+    Call WriteInteger(Value.Surface.Curves.BrushCount)
+
+    If Value.Surface.Curves.BrushCount > 0 Then
+
+        For Index = 0 To Value.Surface.Curves.BrushCount - 1
+
+            Brush = Value.Surface.Curves.Brushes[Index]
+
+            Call WriteInteger(Brush.Form)
+            Call WriteInteger(Brush.Surface)
+            Call WritePrecise(Brush.X0)
+            Call WritePrecise(Brush.Z0)
+            Call WritePrecise(Brush.X1)
+            Call WritePrecise(Brush.Z1)
+            Call WritePrecise(Brush.Width)
+        End For
+
+    End If
+
     ByteCount = Offset
 
 End Sub
@@ -428,7 +449,7 @@ Private Function Decode() As Boolean
 
     Version = ReadByte()
 
-    If Version < 1 Or Version > 5 Then
+    If Version < 1 Or Version > 6 Then
         Return False
     End If
 
@@ -591,6 +612,38 @@ Private Function Decode() As Boolean
         Flag = ReadByte()
         Candidate.CourtPlaced = Flag = 1
         Valid = Valid And Flag <= 1
+
+    End If
+
+    Candidate.Surface.Curves.BrushCount = 0
+
+    If Version >= 6 Then
+
+        Candidate.Surface.Curves.BrushCount = ReadInteger()
+
+        If Candidate.Surface.Curves.BrushCount < 0 Or Candidate.Surface.Curves.BrushCount > Paint.MAX_BRUSHES Then
+            Return False
+        End If
+
+        If Candidate.Surface.Curves.BrushCount > 0 Then
+
+            For Index = 0 To Candidate.Surface.Curves.BrushCount - 1
+
+                Candidate.Surface.Curves.Brushes[Index].Form = ReadInteger()
+                Candidate.Surface.Curves.Brushes[Index].Surface = ReadInteger()
+                Candidate.Surface.Curves.Brushes[Index].X0 = ReadPrecise()
+                Candidate.Surface.Curves.Brushes[Index].Z0 = ReadPrecise()
+                Candidate.Surface.Curves.Brushes[Index].X1 = ReadPrecise()
+                Candidate.Surface.Curves.Brushes[Index].Z1 = ReadPrecise()
+                Candidate.Surface.Curves.Brushes[Index].Width = ReadPrecise()
+
+                If Not Paint.Valid(Candidate.Surface.Curves.Brushes[Index]) Then
+                    Return False
+                End If
+
+            End For
+
+        End If
 
     End If
 

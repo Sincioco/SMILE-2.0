@@ -7,6 +7,7 @@ Import Smile.Tools.TownSurfaceLayers As Layers
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownSectionTests As SectionTests
+Import Smile.Tools.TownCurvesTests As CurveTests
 Import Smile.Tools.TownSelection As Selection
 Import Smile.Tools.TownCatalogData As Catalog
 Import Smile.Tools.TownInitialSurface As Initial
@@ -286,6 +287,7 @@ Failures = Failures + RoadSearchTests.Run()
 Call CheckCastleDecks()
 
 Failures = Failures + SectionTests.Run()
+Failures = Failures + CurveTests.Run()
 Failures = Failures + WorldTests.Run()
 Failures = Failures + GuideEditingTests.Run()
 

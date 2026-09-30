@@ -8,13 +8,15 @@ Import Smile.Tools.TownLibrary As Library
 Import Smile.Tools.TownDocumentStore As Storage
 Import Smile.UI.Controls As UI
 
-Public Const CAPACITY = 8
+Public Const CAPACITY = 16
 
 Public Type State
-    Documents[8] As Document.State
+    Documents[16] As Document.State
     TabCount As Number
     Active As Number
     Message As Text
+    First As Number
+    DisplayedActive As Number
 End Type
 
 Public Sub Ensure(ByRef Value As State, ByRef Town As Document.State)
@@ -166,7 +168,7 @@ Public Function Add(ByRef Value As State, ByRef Town As Document.State,
     Call Ensure(Value, Town)
 
     If Value.TabCount >= CAPACITY Then
-        Value.Message = "Close a town tab first (limit 8)."
+        Value.Message = "Close a town tab first (limit 16)."
         Return False
     End If
 
@@ -187,9 +189,16 @@ Public Function Add(ByRef Value As State, ByRef Town As Document.State,
         End For
 
         If Exists Then
+
             Suffix = Suffix + 1
-            ' At most seven existing tabs can collide, so the suffix is one digit.
-            Incoming.Name = Text_Slice(Label, 0, 70) + " " + Text_From_Code(48 + Suffix)
+            Incoming.Name = Text_Slice(Label, 0, 70) + " "
+
+            If Suffix >= 10 Then
+                Incoming.Name = Incoming.Name + Text_From_Code(48 + Suffix / 10)
+            End If
+
+            Incoming.Name = Incoming.Name + Text_From_Code(48 + Suffix Mod 10)
+
         End If
 
     Loop Until Not Exists
@@ -198,7 +207,7 @@ Public Function Add(ByRef Value As State, ByRef Town As Document.State,
     Value.Active = Value.TabCount
     Value.TabCount = Value.TabCount + 1
     Dirty = Document.Dirty(Incoming)
-    Incoming.Revision = Town.Revision + 1
+    Incoming.Revision = Max(Town.Revision, Town.Surface.Revision) + 1
     Incoming.SavedRevision = Incoming.Revision
 
     If Dirty Then
@@ -268,7 +277,7 @@ Public Function SelectTab(ByRef Value As State, ByRef Town As Document.State,
 
     End If
 
-    Revision = Town.Revision + 1
+    Revision = Max(Town.Revision, Town.Surface.Revision) + 1
     Town = Value.Documents[Index]
     Dirty = Document.Dirty(Town)
     Town.Revision = Revision
@@ -285,11 +294,22 @@ Public Function SelectTab(ByRef Value As State, ByRef Town As Document.State,
 
 End Function
 
+Private Function VisibleCount(ByRef Value As State) As Number
+
+    Dim Result As Number
+
+    Result = Min(Value.TabCount, Max(1, (Window_Width() - 630) / 150))
+
+    Return Result
+
+End Function
+
 Public Function Input(ByRef Value As State, ByRef Town As Document.State) As Boolean
 
     Dim Index As Number
     Dim Width As Number
     Dim Changed As Boolean
+    Dim Visible As Number
 
     If (Pointer_Y() < 96 Or
         Pointer_Y() >= 123 Or
@@ -297,10 +317,24 @@ Public Function Input(ByRef Value As State, ByRef Town As Document.State) As Boo
         Return False
     End If
 
-    Width = Min(180, Max(1, Window_Width() - 358) / Value.TabCount)
-    Index = (Pointer_X() - 10) / Width
+    Visible = VisibleCount(Value)
+    Width = Min(180, Max(1, Window_Width() - 630) / Visible)
 
-    If (Pointer_X() >= 10 And
+    If Pointer_Pressed(POINTER_PRIMARY) Then
+
+        If Pointer_X() >= 10 + Visible * Width And Pointer_X() < 36 + Visible * Width Then
+            Value.First = Max(0, Value.First - Visible)
+            Return False
+        Else If Pointer_X() >= 36 + Visible * Width And Pointer_X() < 62 + Visible * Width Then
+            Value.First = Min(Max(0, Value.TabCount - Visible), Value.First + Visible)
+            Return False
+        End If
+
+    End If
+
+    Index = Value.First + (Pointer_X() - 10) / Width
+
+    If (Pointer_X() >= 10 And Pointer_X() < 10 + Visible * Width And
         (Pointer_Pressed(POINTER_PRIMARY) Or Pointer_Pressed(POINTER_SECONDARY))) Then
         Changed = SelectTab(Value, Town, Index, Pointer_Pressed(POINTER_SECONDARY))
     End If
@@ -314,15 +348,24 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State)
     Dim Index As Number
     Dim Width As Number
     Dim Label As Text
+    Dim Visible As Number
 
     If Value.TabCount = 0 Then
         Return
     End If
 
-    Width = Min(180, Max(1, Window_Width() - 358) / Value.TabCount)
+    Visible = VisibleCount(Value)
+    Width = Min(180, Max(1, Window_Width() - 630) / Visible)
+
+    If Value.Active <> Value.DisplayedActive Then
+        Value.First = Min(Value.Active, Max(0, Value.TabCount - Visible))
+        Value.DisplayedActive = Value.Active
+    End If
+
+    Value.First = Min(Value.First, Max(0, Value.TabCount - Visible))
     Fill Rectangle 0, 94, Window_Width(), 32, RGB(12, 23, 36) Opacity 80
 
-    For Index = 0 To Value.TabCount - 1
+    For Index = Value.First To Value.First + Visible - 1
 
         Label = Value.Documents[Index].Name
 
@@ -330,9 +373,14 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State)
             Label = Town.Name
         End If
 
-        Call UI.DrawButton(10 + Index * Width, 96, Width - 4, 27,
+        Call UI.DrawButton(10 + (Index - Value.First) * Width, 96, Width - 4, 27,
             Text_Slice(Label, 0, Max(8, Width / 8)), Index = Value.Active)
     End For
+
+    If Value.TabCount > Visible Then
+        Call UI.DrawButton(10 + Visible * Width, 96, 24, 27, "<", False)
+        Call UI.DrawButton(36 + Visible * Width, 96, 24, 27, ">", False)
+    End If
 
 End Sub
 

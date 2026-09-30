@@ -128,6 +128,10 @@ Public Function Transfer(ByRef Source As Grid.State, ByRef Target As Grid.State,
 
     Destination = Shift(Area, DeltaX, DeltaZ)
 
+    If Source.Curves.BrushCount > 0 Then
+        Return False
+    End If
+
     If Not Fits(Source, Area) Or Not Fits(Source, Destination) Then
         Return False
     End If

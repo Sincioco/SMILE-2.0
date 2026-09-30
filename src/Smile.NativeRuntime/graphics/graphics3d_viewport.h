@@ -32,13 +32,57 @@ static D3D11_TEXTURE2D_DESC smile_viewport_desc3d;
 // The single active subviewport owns one small finished-color cache.
 static ID3D11Texture2D* smile_viewport_cache3d;
 static D3D11_TEXTURE2D_DESC smile_viewport_cache_desc3d;
+static void* smile_viewport_captures3d[32];
+static long long smile_viewport_capture_ids3d[32];
+static long long smile_viewport_next_capture3d = 1;
 
 static void smile_3d_viewport_release() {
+    for (int i = 0; i < 32; ++i) {
+        smile_graphics_directx_release_snapshot(smile_viewport_captures3d[i]);
+        smile_viewport_captures3d[i] = nullptr;
+        smile_viewport_capture_ids3d[i] = 0;
+    }
     if (smile_viewport_backup3d) smile_viewport_backup3d->Release();
     smile_viewport_backup3d = nullptr;
     smile_viewport_saved3d = false;
     if (smile_viewport_cache3d) smile_viewport_cache3d->Release();
     smile_viewport_cache3d = nullptr;
+}
+
+static long long smile_3d_capture_viewport() {
+    if (!smile_viewport_cache3d || smile_viewport_cache_desc3d.Width > 2048 ||
+        smile_viewport_cache_desc3d.Height > 2048) return 0;
+    for (int i = 0; i < 32; ++i) {
+        if (smile_viewport_captures3d[i]) continue;
+        auto bitmap = smile_graphics_directx_snapshot(smile_viewport_cache3d);
+        if (!bitmap) return 0;
+        smile_viewport_captures3d[i] = bitmap;
+        smile_viewport_capture_ids3d[i] = smile_viewport_next_capture3d++;
+        return smile_viewport_capture_ids3d[i];
+    }
+    return 0;
+}
+
+static bool smile_3d_draw_capture(long long handle, long long x, long long y,
+    long long width, long long height) {
+    if (handle <= 0 || width <= 0 || height <= 0 || width > 1000000 || height > 1000000 ||
+        x < -1000000 || y < -1000000 || x > 1000000 || y > 1000000) return false;
+    for (int i = 0; i < 32; ++i)
+        if (smile_viewport_capture_ids3d[i] == handle)
+            return smile_graphics_directx_draw_snapshot(smile_viewport_captures3d[i],
+                x, y, width, height) != 0;
+    return false;
+}
+
+static void smile_3d_release_capture(long long handle) {
+    if (handle <= 0) return;
+    for (int i = 0; i < 32; ++i) {
+        if (smile_viewport_capture_ids3d[i] != handle) continue;
+        smile_graphics_directx_release_snapshot(smile_viewport_captures3d[i]);
+        smile_viewport_captures3d[i] = nullptr;
+        smile_viewport_capture_ids3d[i] = 0;
+        return;
+    }
 }
 
 static bool smile_3d_set_viewport(long long x, long long y, long long width,

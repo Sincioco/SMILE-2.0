@@ -187,6 +187,66 @@ Public Sub Rotate(ByRef Value As State, ByRef Town As Document.State, Degrees As
 
 End Sub
 
+''' Absolute decimal angle; validate text before the checked language conversion.
+Public Function SetAngle(ByRef Value As State, ByRef Town As Document.State, InputText As Text) As Boolean
+
+    Dim Index As Number
+    Dim Code As Number
+    Dim Digits As Number
+    Dim DecimalSeen As Boolean
+    Dim Angle As Double
+
+    If Text_Length(InputText) < 1 Or Text_Length(InputText) > 12 Or Value.SelectedCount < 1 Then
+        Return False
+    End If
+
+    For Index = 0 To Text_Length(InputText) - 1
+
+        Code = Text_Code_At(InputText, Index)
+
+        If Code >= 48 And Code <= 57 Then
+
+            Digits = Digits + 1
+
+        Else If Code = 46 And Not DecimalSeen Then
+
+            If Digits = 0 Or Index = Text_Length(InputText) - 1 Then
+                Return False
+            End If
+
+            DecimalSeen = True
+
+        Else If Index <> 0 Or (Code <> 43 And Code <> 45) Then
+
+            Return False
+
+        End If
+
+    End For
+
+    If Digits = 0 Then
+        Return False
+    End If
+
+    Angle = Text_To_Double(InputText)
+
+    If Abs(Angle) > 360.0 Then
+        Return False
+    End If
+
+    For Index = 0 To Town.ItemCount - 1
+
+        If Value.Selected[Index] Then
+            Town.Items[Index].Yaw = M.WrapDegrees(Angle)
+        End If
+
+    End For
+
+    Town.Revision = Town.Revision + 1
+    Return True
+
+End Function
+
 Public Sub RemoveSelected(ByRef Value As State, ByRef Town As Document.State)
 
     Dim Index As Number

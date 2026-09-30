@@ -5,8 +5,14 @@ Option Explicit
 
 Import Smile.Tools.TownWorldDocument As World
 Import Smile.Tools.TownWorldCanvas As Canvas
+Import Smile.Tools.TownTabs As Tabs
+Import Smile.Tools.TownDocument As Document
+Import Smile.Simple3D.SurfaceGrid3D As Grid
 
 Private Dim Failures As Number
+Private Dim Opened As Tabs.State
+Private Dim Current As Document.State
+Private Dim Incoming As Document.State
 
 Private Sub Check(Ok As Boolean, Label As Text)
 
@@ -34,6 +40,17 @@ Public Function Run() As Number
     Dim Status As Number
 
     Failures = 0
+
+    Ok = Document.Blank(Current, "Preview First", 4, 4, 20.0)
+    Current.Revision = 4
+    Current.Surface.Revision = 5
+    Incoming = Current
+    Incoming.Name = "Preview Second"
+    Ok = Tabs.Add(Opened, Current, Incoming)
+
+    Call Check(Ok And Current.Surface.Revision > 5,
+        "A New Tab Cannot Reuse The Previous Town Terrain Revision")
+
     Map.Name = "World Ports Fixture"
     Ok = World.Add(Map, "Neris Town", 100, 500)
     Ok = World.Add(Map, "Horizon Airport", 900, 500) And Ok

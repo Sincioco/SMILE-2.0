@@ -36,6 +36,7 @@ Import Smile.Tools.NerisTownConnections As Connections
 Import Smile.Tools.TownSunControls As SunControls
 Import Smile.Tools.TownViewportLayout As Layout
 Import Smile.Tools.TownPartyInset As Inset
+Import Smile.Tools.TownWorldPreviews As WorldPreviews
 Import Smile.Tools.TownDocumentNavigation As DocumentNavigation
 Import Smile.Tools.TownRoadTravel As RoadTravel
 
@@ -199,6 +200,10 @@ Public Sub LoadNext(ByRef Value As State)
         Value.Panel.Loading = False
     End If
 
+    If Authoring.WorldActive() Then
+        Return
+    End If
+
     Call Party.Update(Value.People, Value.People.Path.Positions[0], 0)
 
     Call Arena.ComposeCamera(Value.View, Value.BaseCamera)
@@ -219,7 +224,13 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
     Dim RequestedView As Number
 
     If Not Value.Ready Then
+
+        If Authoring.WorldActive() Then
+            Call Authoring.Input(Value.View.LiveCamera, Key, True)
+        End If
+
         Return
+
     End If
 
     Value.InputActive = (Key <> KEY_NONE Or Pointer_Delta_X() <> 0 Or
@@ -387,6 +398,10 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
 
         Call Authoring.Input(Value.View.LiveCamera, Key,
             Blocked Or CameraPanel.Hovered(Value.Panel.HelpOpen) Or Value.Panel.DragRow > 0)
+
+        If Authoring.WorldActive() Then
+            Return
+        End If
 
         RequestedView = Authoring.TakeViewRequest(OrbitPoint)
 
@@ -776,12 +791,12 @@ Public Sub ResetOverview(ByRef Value As State, Optional Harbor As Boolean = Fals
 
     Call Tour.Frame(Value.BaseCamera, P.Vector(-1075.0, 150.0, 0.0))
 
-    If Value.Horizon.Ready Then
+    If Value.Edited Then
+        Call Authoring.FrameDocument(Value.BaseCamera, True)
+    Else If Value.Horizon.Ready Then
         Call Tour.Frame(Value.BaseCamera, Authoring.MapCenter(0.0), 14682.0, -98.0)
     Else If Value.Harbor.Ready Then
         Call Tour.Frame(Value.BaseCamera, Authoring.MapCenter(1044.0), 11438.0, -21.0, 17.0)
-    Else If Value.Edited Then
-        Call Authoring.FrameDocument(Value.BaseCamera, Not Value.Harbor.Ready)
     End If
 
     If Value.Edited And Authoring.TownName() = "Neris Town" Then
@@ -991,6 +1006,12 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
 
     End If
 
+    If Authoring.WorldActive() Then
+        Call Authoring.Update(Value.People.Path.Positions[0], Elapsed)
+
+        Return
+    End If
+
     Held = Keyboard.ReadKeys(Authoring.CameraBlocked() Or
         (Authoring.Editing() And Key_Held(KEY_CONTROL)))
 
@@ -1035,13 +1056,13 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
             Call RoadTravel.Cancel()
             Call Party.Teleport(Value.People, Leader, ArrivalHeading)
 
-            If Authoring.Editing() Then
-
-                Call FitTown(Value)
-
-            Else If TabOverview Then
+            If TabOverview Then
 
                 Call ResetOverview(Value)
+
+            Else If Authoring.Editing() Then
+
+                Call FitTown(Value)
 
             Else
 
@@ -1181,6 +1202,22 @@ Public Sub Draw(ByRef Value As State)
     If Value.Edited Then
         Ok = Castle.ApplyLighting(Value.Comparison)
         Ok = Authoring.ApplyLocalLighting() And Ok
+    End If
+
+    If Value.Edited And Authoring.BeginWorldPhotograph() Then
+
+        Ok = DrawContents(Value) And Ok
+
+        Call WorldPreviews.Finish()
+
+        Value.PointOfView.UpdatedAt = 0
+
+    End If
+
+    If Authoring.WorldActive() Then
+        Clear RGB(12, 23, 36)
+
+        Return
     End If
 
     Ok = Arena.BeginFrame(Value.View, Value.BaseCamera, True, False) And Ok

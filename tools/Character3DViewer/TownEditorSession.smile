@@ -26,11 +26,16 @@ Import Smile.Tools.TownFileDialog As FileDialog
 Import Smile.Tools.TownFileLocations As FileLocations
 Import Smile.Tools.TownGuideFiles As GuideFiles
 Import Smile.Tools.TownMapLoads As MapLoads
+Import Smile.Tools.TownGatewayJourney As Journey
+Import Smile.Tools.TownDemo As Demo
+Import Smile.Tools.TownStartingCamera As StartingCamera
+Import Smile.Tools.TownViewportLayout As Toolbar
 Import Smile.Tools.TownTabs As Tabs
 Import Smile.Tools.TownDocumentMap As Map
 Import Smile.Tools.TownRoadTravel As RoadTravel
 Import Smile.Simple3D.PrecisionMath3D As Math3D
 Import Smile.Tools.TownWorldEditor As World
+Import Smile.Tools.TownWorldPreviews As Previews
 Import Smile.Tools.TownSelection As Selection
 Import Smile.Simple3D.SurfaceGrid3D As Grid
 Import Smile.Tools.NerisTownTour As Tour
@@ -41,6 +46,8 @@ Private Dim Town As Document.State
 Private Dim Transfers As Files.State
 Private Dim MapLoadOccupied As Boolean
 Private Dim MapLoadCooldown As Number
+Private Dim GatewayJourney As Journey.State
+Private Dim Showcase As Demo.State
 Private Dim OpenTabs As Tabs.State
 Private Dim Incoming As Document.State
 Private Dim Controls As Editor.State
@@ -228,6 +235,11 @@ Public Function LoadNext() As Boolean
 
     Dim Ok As Boolean
 
+    If (Ready And AppliedRevision = Town.Revision And
+        Ground.LiveRevision = Town.Surface.Revision And Not Assets.Failed) Then
+        Return True
+    End If
+
     ' A previous document being ready must not publish this document's unfinished terrain.
     Ready = False
 
@@ -321,6 +333,8 @@ Public Function TravelOnTile(Position As P.Vector3, Moving As Boolean) As Boolea
 
     Dim Name As Text
     Dim Ok As Boolean
+    Dim Origin As Text
+    Dim Returning As Boolean
 
     Name = MapLoads.DestinationAt(Town, Position.X, Position.Z)
 
@@ -336,12 +350,17 @@ Public Function TravelOnTile(Position As P.Vector3, Moving As Boolean) As Boolea
     End If
 
     MapLoadOccupied = True
+    Origin = Town.Name
+    Returning = Journey.Resolve(GatewayJourney, Origin, Name, Position)
     Ok = Tabs.OpenNamed(OpenTabs, Town, Name)
 
     If Ok Then
 
+        Call Journey.Remember(GatewayJourney, Origin, Name, Position)
+
         TeleportPending = True
-        TravelPending = False
+        TravelPending = Returning
+        TravelArrival = Position
         TabOverviewPending = False
         MapLoadCooldown = 1500
 
@@ -359,7 +378,9 @@ End Function
 Public Function TravelTo(Name As Text, Arrival As P.Vector3) As Boolean
 
     Dim Ok As Boolean
+    Dim Returning As Boolean
 
+    Returning = Journey.Resolve(GatewayJourney, Town.Name, Name, Arrival)
     Ok = Tabs.OpenNamed(OpenTabs, Town, Name)
 
     If Ok Then
@@ -367,6 +388,8 @@ Public Function TravelTo(Name As Text, Arrival As P.Vector3) As Boolean
         TeleportPending = True
         TravelPending = True
         TravelArrival = Arrival
+        MapLoadOccupied = Returning
+        MapLoadCooldown = 1500
 
         Call Editor.ResetDocument(Controls, Town)
 
@@ -437,7 +460,7 @@ Private Sub FileCommand(Action As Number)
 
         If ((Action = 305 Or Action = 307 Or Action = 302) And
             OpenTabs.TabCount >= Tabs.CAPACITY) Then
-            Controls.Ui.Message = "Close a town tab first (limit 8)."
+            Controls.Ui.Message = "Close a town tab first (limit 16)."
             Return
         End If
 
@@ -533,7 +556,7 @@ Private Sub FileCommand(Action As Number)
     Else If Action = 303 Then
 
         If OpenTabs.TabCount >= Tabs.CAPACITY Then
-            Controls.Ui.Message = "Close a town tab first (limit 8)."
+            Controls.Ui.Message = "Close a town tab first (limit 16)."
             Return
         End If
 
@@ -560,6 +583,7 @@ Private Sub FileCommand(Action As Number)
             End If
 
             TeleportPending = Ok
+            TabOverviewPending = Ok
 
         End If
 
@@ -631,19 +655,37 @@ Public Sub Input(View As P.Camera3D, Key As Number, Blocked As Boolean)
         Name = World.Input(Key, OpenTabs)
         Controls.Ui.Message = World.LastMessage()
 
+        If Name = "" And Ready And Ground.LiveRevision = Town.Surface.Revision Then
+            Name = World.PreviewRequest(Town.Name)
+        End If
+
         If Text_Length(Name) > 0 Then
 
             Ok = Tabs.OpenNamed(OpenTabs, Town, Name)
 
-            TeleportPending = Ok
+            TeleportPending = Ok And Not World.Active() And World.EnteringTown()
+            TabOverviewPending = TeleportPending
 
             If Ok Then
                 Call Editor.ResetDocument(Controls, Town)
+            Else If Name <> Town.Name Then
+                Call World.PreviewUnavailable(Name)
             End If
 
         End If
 
         Return
+
+    End If
+
+    If Not Controls.Enabled And Toolbar.Clicked(6) Then
+
+        Call Demo.Toggle(Showcase)
+
+        If Showcase.Enabled Then
+            TeleportPending = True
+            TabOverviewPending = True
+        End If
 
     End If
 
@@ -667,6 +709,7 @@ Public Sub Input(View As P.Camera3D, Key As Number, Blocked As Boolean)
 
     If Tabs.Input(OpenTabs, Town) Then
 
+        Showcase.Elapsed = 0
         TeleportPending = True
         TabOverviewPending = True
         Controls.Ui.Message = "Town tab opened. Right-click to close."
@@ -883,6 +926,22 @@ Public Sub Update(Leader As P.Vector3, Elapsed As Number)
 
     RecoveryClock = RecoveryClock + Elapsed
 
+    If Demo.Advance(Showcase, Elapsed, Ready And Not Editing() And
+        Not Files.BlocksEditing(Transfers) And OpenTabs.TabCount > 1) Then
+
+        Ok = Tabs.SelectTab(OpenTabs, Town, (OpenTabs.Active + 1) Mod OpenTabs.TabCount, False)
+
+        If Ok Then
+
+            TeleportPending = True
+            TabOverviewPending = True
+
+            Call Editor.ResetDocument(Controls, Town)
+
+        End If
+
+    End If
+
     If RecoveryRevision <> Town.Revision And RecoveryClock >= 1500 Then
 
         Ok = Library.Remember(Town)
@@ -912,6 +971,7 @@ Public Sub Update(Leader As P.Vector3, Elapsed As Number)
 
             Ok = Tabs.Add(OpenTabs, Town, Transfers.Pending)
             TeleportPending = Ok
+            TabOverviewPending = Ok
 
             If Ok Then
                 Call Editor.ResetDocument(Controls, Town)
@@ -962,8 +1022,11 @@ End Function
 Public Sub Overlay(View As P.Camera3D, Optional Loading As Boolean = False)
 
     Call Tabs.Draw(OpenTabs, Town)
+    Call Toolbar.DrawButton(6, Showcase.Enabled)
 
     If Loading Then
+        Call World.Draw(Town.Name, Progress())
+
         Return
     End If
 
@@ -1100,6 +1163,7 @@ Public Sub Release()
 
     Call Panel.Release(Controls.Ui)
     Call World.Close()
+    Call Previews.Destroy()
     Call Attachments.Destroy(Details)
     Call Terrain.Destroy(Ground)
     Call Renderer.Destroy(Assets)
@@ -1156,6 +1220,29 @@ Public Function TownName() As Text
 
 End Function
 
+Public Function BeginWorldPhotograph() As Boolean
+
+    Dim Result As Boolean
+
+    If (Ready And AppliedRevision = Town.Revision And
+        Ground.LiveRevision = Town.Surface.Revision And Not Controls.Ui.Busy) Then
+        Result = Previews.Begin(Town)
+    End If
+
+    Return Result
+
+End Function
+
+Public Function WorldActive() As Boolean
+
+    Dim Result As Boolean
+
+    Result = World.Active()
+
+    Return Result
+
+End Function
+
 ''' Read-only coverage query for optional landmarks in expanded town revisions.
 Public Function CoversArea(MinX As Double, MinZ As Double, MaxX As Double, MaxZ As Double) As Boolean
 
@@ -1196,7 +1283,7 @@ Public Sub FrameDocument(ByRef Camera As P.Camera3D, Optional Overview As Boolea
         150.0, (Town.Surface.OriginZ + Town.Surface.ZEdges[Town.Surface.Rows]) * 0.5)
 
     If Overview Then
-        Call Tour.Frame(Camera, Camera.Target)
+        Camera = StartingCamera.Frame(Town)
 
         Return
     End If

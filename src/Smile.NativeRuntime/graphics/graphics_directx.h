@@ -19,6 +19,10 @@ double smile_graphics_directx_viewport_width(void);
 double smile_graphics_directx_viewport_height(void);
 int smile_graphics_directx_suspend_2d(void);
 void smile_graphics_directx_resume_2d(void);
+void* smile_graphics_directx_snapshot(void* texture);
+int smile_graphics_directx_draw_snapshot(void* bitmap, long long x, long long y,
+    long long width, long long height);
+void smile_graphics_directx_release_snapshot(void* bitmap);
 
 #ifdef __cplusplus
 }

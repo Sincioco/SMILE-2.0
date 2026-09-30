@@ -1,0 +1,55 @@
+''' One starting perspective shared by town tabs and World Editor thumbnails.
+Module Smile.Tools.TownStartingCamera
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.NerisTownTour As Tour
+
+Public Function Frame(ByRef Town As Document.State) As P.Camera3D
+
+    Dim Camera As P.Camera3D
+    Dim Center As P.Vector3
+    Dim Span As Double
+
+    Center = P.Vector((Town.Surface.OriginX + Town.Surface.XEdges[Town.Surface.Columns]) * 0.5,
+        150.0, (Town.Surface.OriginZ + Town.Surface.ZEdges[Town.Surface.Rows]) * 0.5)
+    Camera.NearPlane = 10.0
+    Camera.FarPlane = 60000.0
+    Span = Max(Town.Surface.XEdges[Town.Surface.Columns] - Town.Surface.OriginX,
+        Town.Surface.ZEdges[Town.Surface.Rows] - Town.Surface.OriginZ)
+
+    Call Tour.Frame(Camera, Center, Max(1500.0, Span * 1.7), -155.0, 42.0)
+
+    If Town.Name = "Neris Town" Then
+
+        Call Tour.TownOverview(Camera, Center)
+
+    Else If Town.Name = "Horizon Airport" Then
+
+        Center.Y = 0.0
+
+        Call Tour.Frame(Camera, Center, 14682.0, -98.0)
+
+        If Span > 10500.0 Then
+            Call Tour.Frame(Camera, Center, Span * 1.7, -98.0, 37.0)
+        End If
+
+    Else If Town.Name = "Neris Spaceport" Then
+
+        Center.Y = 1044.0
+
+        Call Tour.Frame(Camera, Center, 11438.0, -21.0, 17.0)
+
+        If Span > 8500.0 Then
+            Call Tour.Frame(Camera, Center, Span * 1.6, -21.0, 30.0)
+        End If
+
+    End If
+
+    Return Camera
+
+End Function
+
+End Module

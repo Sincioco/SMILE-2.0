@@ -250,7 +250,7 @@ Public Function CanStand(X As Double, Z As Double) As Boolean
     Dim Supported As Boolean
     Dim Opening As Boolean
 
-    Cell = Grid.ReadCell(Surface, Grid.CellX(Surface, X), Grid.CellZ(Surface, Z))
+    Cell = Grid.ReadPoint(Surface, X, Z)
 
     Supported = Cell <> Grid.SURFACE_EMPTY And Cell <> Grid.SURFACE_WATER
 
@@ -311,7 +311,7 @@ Public Function GroundHeight(X As Double, Z As Double) As Double
     Dim Height As Double
     Dim LocalHeight As Double
 
-    Cell = Grid.ReadCell(Surface, Grid.CellX(Surface, X), Grid.CellZ(Surface, Z))
+    Cell = Grid.ReadPoint(Surface, X, Z)
     Height = Layers.GROUND_WALK_Y
 
     If Cell = Grid.SURFACE_ROAD Or Cell = Grid.SURFACE_BRIDGE Then

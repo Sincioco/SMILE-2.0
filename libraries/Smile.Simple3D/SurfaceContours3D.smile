@@ -1,0 +1,169 @@
+''' Continuous boundary tessellation over a surface grid. No GPU ownership.
+Module Smile.Simple3D.SurfaceContours3D
+
+Option Explicit
+
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.SurfacePaint3D As Paint
+Import Smile.Simple3D.Precision3D As P
+
+Public Type Triangle
+    PointA As P.Vector3
+    PointB As P.Vector3
+    PointC As P.Vector3
+    Kind As Number
+End Type
+
+Public Type Slice
+    Faces[6] As Triangle
+    FaceCount As Number
+    EdgeA As P.Vector3
+    EdgeB As P.Vector3
+    Rail As Boolean
+End Type
+
+Public Function Kind(ByRef Surface As Grid.State, Point As P.Vector3, Optional Base As Number = -1) As Number
+
+    Dim Result As Number
+
+    If Base >= 0 Then
+        Result = Paint.Resolve(Surface.Curves, Point.X, Point.Z, Base)
+        Return Result
+    End If
+
+    Result = Grid.ReadPoint(Surface,
+        Clamp(Point.X, Surface.OriginX + 0.000001, Surface.XEdges[Surface.Columns] - 0.000001),
+        Clamp(Point.Z, Surface.OriginZ + 0.000001, Surface.ZEdges[Surface.Rows] - 0.000001))
+
+    Return Result
+
+End Function
+
+Private Function Blend(PointA As P.Vector3, PointB As P.Vector3, Amount As Double) As P.Vector3
+
+    Dim Result As P.Vector3
+
+    Result = P.Vector(PointA.X + (PointB.X - PointA.X) * Amount, 0.0, PointA.Z + (PointB.Z - PointA.Z) * Amount)
+
+    Return Result
+
+End Function
+
+Private Function Boundary(ByRef Surface As Grid.State, PointA As P.Vector3,
+    PointB As P.Vector3, FirstKind As Number, Base As Number) As P.Vector3
+
+    Dim Index As Number
+    Dim Middle As P.Vector3
+
+    For Index = 0 To 11
+
+        Middle = Blend(PointA, PointB, 0.5)
+
+        If Kind(Surface, Middle, Base) = FirstKind Then
+            PointA = Middle
+        Else
+            PointB = Middle
+        End If
+
+    End For
+
+    Middle = Blend(PointA, PointB, 0.5)
+
+    Return Middle
+
+End Function
+
+Private Sub Face(ByRef Result As Slice, PointA As P.Vector3, PointB As P.Vector3,
+    PointC As P.Vector3, Surface As Number)
+
+    If Surface <> 1 And Surface <> 3 And Surface <> 4 Then
+        Return
+    End If
+
+    Result.Faces[Result.FaceCount].PointA = PointA
+    Result.Faces[Result.FaceCount].PointB = PointB
+    Result.Faces[Result.FaceCount].PointC = PointC
+    Result.Faces[Result.FaceCount].Kind = Min(3, Surface)
+    Result.FaceCount = Result.FaceCount + 1
+
+End Sub
+
+Public Function Split(ByRef Surface As Grid.State, PointA As P.Vector3,
+    PointB As P.Vector3, PointC As P.Vector3, Optional Base As Number = -1) As Slice
+
+    Dim Result As Slice
+    Dim Ka As Number
+    Dim Kb As Number
+    Dim Kc As Number
+    Dim Ab As P.Vector3
+    Dim Bc As P.Vector3
+    Dim Ca As P.Vector3
+    Dim Center As P.Vector3
+    Dim Swap As P.Vector3
+    Dim SwapKind As Number
+
+    Ka = Kind(Surface, PointA, Base)
+    Kb = Kind(Surface, PointB, Base)
+    Kc = Kind(Surface, PointC, Base)
+
+    If Ka = Kb And Ka = Kc Then
+        Call Face(Result, PointA, PointB, PointC, Ka)
+
+        Return Result
+    End If
+
+    If Ka = Kb Then
+
+        Swap = PointA
+        PointA = PointC
+        PointC = PointB
+        PointB = Swap
+        SwapKind = Ka
+        Ka = Kc
+        Kc = SwapKind
+
+    Else If Ka = Kc Then
+
+        Swap = PointA
+        PointA = PointB
+        PointB = PointC
+        PointC = Swap
+        SwapKind = Ka
+        Ka = Kb
+        Kb = SwapKind
+
+    End If
+
+    Ab = Boundary(Surface, PointA, PointB, Ka, Base)
+    Ca = Boundary(Surface, PointA, PointC, Ka, Base)
+
+    If Kb = Kc Then
+
+        Call Face(Result, PointA, Ab, Ca, Ka)
+        Call Face(Result, Ab, PointB, PointC, Kb)
+        Call Face(Result, Ab, PointC, Ca, Kb)
+
+        Result.Rail = (Ka = 4 And Kb = 2) Or (Ka = 2 And Kb = 4)
+        Result.EdgeA = Ab
+        Result.EdgeB = Ca
+
+    Else
+
+        Bc = Boundary(Surface, PointB, PointC, Kb, Base)
+        Center = P.Vector((Ab.X + Bc.X + Ca.X) / 3.0, 0.0,
+            (Ab.Z + Bc.Z + Ca.Z) / 3.0)
+
+        Call Face(Result, PointA, Ab, Center, Ka)
+        Call Face(Result, PointA, Center, Ca, Ka)
+        Call Face(Result, PointB, Bc, Center, Kb)
+        Call Face(Result, PointB, Center, Ab, Kb)
+        Call Face(Result, PointC, Ca, Center, Kc)
+        Call Face(Result, PointC, Center, Bc, Kc)
+
+    End If
+
+    Return Result
+
+End Function
+
+End Module

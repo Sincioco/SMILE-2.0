@@ -10586,6 +10586,15 @@ extern "C" long long smile_renderer3d_command(long long command,
             if (a < 1 || a > 21)
             { smile_last_error3d = 50; return 0; }
             return smile_reflections_value((int)a);
+        case SMILE_3D_CAPTURE_VIEWPORT:
+            if (smile_frame_active3d) return 0;
+            return smile_3d_capture_viewport();
+        case SMILE_3D_DRAW_VIEWPORT_CAPTURE:
+            if (smile_frame_active3d) return 0;
+            return smile_3d_draw_capture(a,b,c,d,e) ? 1 : 0;
+        case SMILE_3D_RELEASE_VIEWPORT_CAPTURE:
+            smile_3d_release_capture(a);
+            return 1;
         case SMILE_3D_SET_MODEL_NODE_ROTATION_OFFSET:
             animator = smile_3d_animator(a);
             model = animator == 0 ? 0 : smile_3d_model_resource(animator->model_handle);

@@ -262,9 +262,13 @@ Private Sub Library(ByRef Value As State, X As Number)
             Call Button(Value, 44, X, 367, 34, "-")
             Call Button(Value, 45, X + 248, 367, 34, "+")
 
-            Draw Text "Line Width: " + NumberLabel(Value.Width * 2) + " m" At X + 45, 372 Size 14 Color WHITE
-            Draw Text "Click the start, then the end." At X, 410 Size 14 Color WHITE
-            Draw Text "Esc cancels. Erase restores grass." At X, 432 Size 12 Color WHITE
+            Draw Text "Road / Ring: " + NumberLabel(Value.Width * 2) + " m" At X + 45, 372 Size 14 Color WHITE
+
+            Call Button(Value, 47, X, 403, 139, "Circle / Ring", Value.Tool = 47)
+            Call Button(Value, 48, X + 144, 403, 139, "Filled Circle", Value.Tool = 48)
+
+            Draw Text "Circle: click center, then edge." At X, 441 Size 13 Color WHITE
+            Draw Text "Esc cancels. Erase restores grass." At X, 463 Size 12 Color WHITE
 
         End If
 
@@ -310,9 +314,10 @@ Private Sub Library(ByRef Value As State, X As Number)
 
         End For
 
-        Call Button(Value, 22, X, 308 + (Rows / 2) * 93, 91, "Rotate -15")
-        Call Button(Value, 23, X + 96, 308 + (Rows / 2) * 93, 91, "Rotate +15")
-        Call Button(Value, 24, X + 192, 308 + (Rows / 2) * 93, 91, "Delete")
+        Call Button(Value, 22, X, 308 + (Rows / 2) * 93, 48, "-15")
+        Call Button(Value, 35, X + 53, 308 + (Rows / 2) * 93, 97, "Angle...")
+        Call Button(Value, 23, X + 155, 308 + (Rows / 2) * 93, 48, "+15")
+        Call Button(Value, 24, X + 208, 308 + (Rows / 2) * 93, 75, "Delete")
         Call Button(Value, 34, X, 340 + (Rows / 2) * 93, 283, "Duplicate Selected (Ctrl+D)")
 
     End If

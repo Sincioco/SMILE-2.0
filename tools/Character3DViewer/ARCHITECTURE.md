@@ -1,5 +1,48 @@
 # Character Viewer Architecture
 
+## Current: curved terrain, Luma maps and scene photographs (September 30)
+
+SurfacePaint3D owns a bounded list of 256 ordered analytic brushes. SurfaceGrid3D
+retains base cells and exposes exact point evaluation for navigation. SurfaceContours3D
+owns boundary clipping, preserving triangle winding. TownSurfaceRenderer owns the
+incremental mesh replacement and layers continuous water below grass. It remains
+responsible for bounded upload batches; no per-frame town mesh rebuild is added.
+Contour sampling keeps each legacy cell's base material at its own edges. This
+avoids artificial slivers and the observed capacity failure when adding a single
+circle to the dense original Neris layout; the native rendering fixture covers it.
+TWN6 stores base cells plus brushes and reads versions 1–5. The Python codec retains
+the same document data; Blender's visible terrain is still rasterized. Thin subcell
+features can be missed by the current boundary sampling. Bulk section transfer is
+rejected for curved maps rather than discarding analytic geometry.
+
+TownSurfaceTools owns circle gestures and construction previews; TownSelection owns
+absolute decimal angles. TownStartingCamera supplies the shared initial perspective.
+TownDemo owns elapsed cycling time; TownGatewayJourney remembers airport return
+origins. TownTabs owns sixteen document slots and paging. A tab revision must exceed
+both the outgoing document and terrain revisions, preventing reuse of another map's
+mesh. World preview visits suspend party/camera movement and return to the opening
+town. The graph remains responsive during incremental loading.
+
+TownWorldPreviews replaces the old plan generator with sixteen cached photographs.
+NerisTown coordinates an occasional small scene pass using existing draw owners.
+The native viewport owner exposes Capture/Draw/ReleaseViewportCapture3D; DirectX
+owns the bitmap snapshots, bounded to 32 handles and 2048-square images. Resize,
+device loss and session release invalidate/release captures. World cards contain no
+GPU handles or renderer references in their serialized document. Web adoption is
+not part of this native milestone.
+
+The frame-latency wait runs only when a new Direct2D frame begins. Replaying cached
+cards within an active frame must not wait again; a focused native regression
+guards the observed 100 ms per-card delay. Terrain readiness is retained while
+landmark loading advances, and background photographs never request party teleport.
+
+The reproducible map generators and editable files live in StoryTownsV1. The World
+atlas is separate from Sin's saved Luma world. No compiler grammar change or external
+dependency was introduced. NativeProgram and ViewerWorkflow have no growth. The
+legacy coordinators gain only input/lifecycle delegation; feature math, photograph
+caching, map generation and persistence remain in their respective owners. No
+review baseline or guardrail was raised.
+
 ## Current: cached road routing and POV controls (September 30)
 
 TownRoadNetwork owns collision-validated four-neighbor road connections for one
@@ -81,8 +124,8 @@ TownHistory records completed operations. TownGuideFiles v2 serializes names, re
 v1 and commits validated guides only. Native File_Pick resets pointer capture/deltas
 after a modal picker so its cursor relocation cannot pan the scene.
 
-TownWorldView owns graph pan/zoom and card text layout; TownWorldPreviews caches
-96-square plan previews by document revision. TownWorldImport validates a native
+TownWorldView owns graph pan/zoom and card text layout; TownWorldPreviews now caches
+starting-perspective photographs by document revision. TownWorldImport validates a native
 file transfer before adding the named document/tab/node. Existing WorldDocument,
 WorldFiles and WorldCanvas retain graph persistence and connections. No scene
 renderer or editor-state reference is added to the graph document.

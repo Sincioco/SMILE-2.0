@@ -41,6 +41,10 @@
     <SmileSource Include="ProximityDrawbridge.smile" />
     <SmileSource Include="TownDocument.smile" />
     <SmileSource Include="TownMapLoads.smile" />
+    <SmileSource Include="TownGatewayJourney.smile" />
+    <SmileSource Include="TownDemo.smile" />
+    <SmileSource Include="TownStartingCamera.smile" />
+    <SmileSource Include="TownSurfaceTools.smile" />
     <SmileSource Include="TownPicking.smile" />
     <SmileSource Include="TownEditorPanel.smile" />
     <SmileSource Include="TownSunControls.smile" />

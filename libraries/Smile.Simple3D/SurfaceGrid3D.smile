@@ -3,6 +3,8 @@ Module Smile.Simple3D.SurfaceGrid3D
 
 Option Explicit
 
+Import Smile.Simple3D.SurfacePaint3D As Paint
+
 Public Const MAX_COLUMNS = 512
 Public Const MAX_ROWS = 512
 Public Const SURFACE_EMPTY = 0
@@ -21,6 +23,7 @@ Public Type State
     ZEdges[513] As Double
     ' Sixteen three-bit surface IDs per Number, below the exact integer range on both targets.
     Cells[16384] As Number
+    Curves As Paint.State
     Revision As Number
 End Type
 
@@ -37,6 +40,7 @@ Public Function Initialize(ByRef Value As State, Columns As Number, Rows As Numb
     End If
 
     Value.Columns = Columns
+    Value.Curves.BrushCount = 0
     Value.Rows = Rows
     Value.OriginX = OriginX
     Value.OriginZ = OriginZ
@@ -135,7 +139,7 @@ Private Function CellFactor(Index As Number) As Number
 
 End Function
 
-Public Function ReadCell(ByRef Value As State, X As Number, Z As Number) As Number
+Public Function ReadBase(ByRef Value As State, X As Number, Z As Number) As Number
 
     Dim Result As Number
 
@@ -147,6 +151,59 @@ Public Function ReadCell(ByRef Value As State, X As Number, Z As Number) As Numb
         CellFactor(Z * Value.Columns + X)) Mod 8
 
     Return Result
+
+End Function
+
+''' Exact continuous surface query; cached cells are only a routing approximation.
+Public Function ReadCell(ByRef Value As State, X As Number, Z As Number) As Number
+
+    Dim Result As Number
+
+    Result = ReadBase(Value, X, Z)
+
+    If Value.Curves.BrushCount > 0 And X >= 0 And Z >= 0 And X < Value.Columns And Z < Value.Rows Then
+        Result = Paint.Resolve(Value.Curves, (Value.XEdges[X] + Value.XEdges[X + 1]) * 0.5,
+            (Value.ZEdges[Z] + Value.ZEdges[Z + 1]) * 0.5, Result)
+    End If
+
+    Return Result
+
+End Function
+
+Public Function ReadPoint(ByRef Value As State, X As Double, Z As Double) As Number
+
+    Dim Column As Number
+    Dim Row As Number
+    Dim Result As Number
+
+    Column = CellX(Value, X)
+    Row = CellZ(Value, Z)
+
+    If Column < 0 Or Row < 0 Or Column >= Value.Columns Or Row >= Value.Rows Then
+        Return SURFACE_EMPTY
+    End If
+
+    Result = ReadBase(Value, Column, Row)
+
+    If Value.Curves.BrushCount > 0 Then
+        Result = Paint.Resolve(Value.Curves, X, Z, Result)
+    End If
+
+    Return Result
+
+End Function
+
+''' Retain analytic brushes over the original cells without duplicating the town grid.
+Public Function PaintBrush(ByRef Value As State, Brush As Paint.Brush) As Boolean
+
+    If Not Paint.Valid(Brush) Or Value.Curves.BrushCount >= Paint.MAX_BRUSHES Then
+        Return False
+    End If
+
+    Value.Curves.Brushes[Value.Curves.BrushCount] = Brush
+    Value.Curves.BrushCount = Value.Curves.BrushCount + 1
+    Value.Revision = Value.Revision + 1
+    Return True
 
 End Function
 
@@ -207,6 +264,20 @@ Public Sub PaintRectangle(ByRef Value As State, X1 As Number, Z1 As Number,
     Dim X As Number
     Dim Z As Number
     Dim Changed As Boolean
+    Dim Brush As Paint.Brush
+
+    If Value.Curves.BrushCount > 0 Then
+
+        Brush.Form = Paint.FORM_RECTANGLE
+        Brush.Surface = Surface
+        Brush.X0 = Value.XEdges[Max(0, Min(Min(X1, X2), Value.Columns))]
+        Brush.Z0 = Value.ZEdges[Max(0, Min(Min(Z1, Z2), Value.Rows))]
+        Brush.X1 = Value.XEdges[Max(0, Min(Max(X1, X2) + 1, Value.Columns))]
+        Brush.Z1 = Value.ZEdges[Max(0, Min(Max(Z1, Z2) + 1, Value.Rows))]
+        Changed = PaintBrush(Value, Brush)
+        Return
+
+    End If
 
     If Surface < 0 Or Surface > SURFACE_BRIDGE Then
         Return
@@ -233,6 +304,27 @@ Public Sub PaintLine(ByRef Value As State, X1 As Number, Z1 As Number,
     Dim DeltaZ As Number
     Dim StepX As Number
     Dim StepZ As Number
+    Dim Brush As Paint.Brush
+    Dim Ok As Boolean
+
+    If Value.Curves.BrushCount > 0 Then
+
+        Brush.Form = Paint.FORM_LINE
+        Brush.Surface = Surface
+        Brush.X0 = (Value.XEdges[Max(0, Min(X1, Value.Columns - 1))] +
+            Value.XEdges[Max(1, Min(X1 + 1, Value.Columns))]) * 0.5
+        Brush.Z0 = (Value.ZEdges[Max(0, Min(Z1, Value.Rows - 1))] +
+            Value.ZEdges[Max(1, Min(Z1 + 1, Value.Rows))]) * 0.5
+        Brush.X1 = (Value.XEdges[Max(0, Min(X2, Value.Columns - 1))] +
+            Value.XEdges[Max(1, Min(X2 + 1, Value.Columns))]) * 0.5
+        Brush.Z1 = (Value.ZEdges[Max(0, Min(Z2, Value.Rows - 1))] +
+            Value.ZEdges[Max(1, Min(Z2 + 1, Value.Rows))]) * 0.5
+        Brush.Width = ToDouble(Max(1, Width)) * Value.CellSize
+        Ok = PaintBrush(Value, Brush)
+        Return
+
+    End If
+
     Dim Error As Number
     Dim Twice As Number
     Dim Low As Number
@@ -308,6 +400,21 @@ Public Sub PaintWorldLine(ByRef Value As State, X0 As Double, Z0 As Double,
     Dim Distance As Double
     Dim Radius As Double
     Dim Changed As Boolean
+    Dim Brush As Paint.Brush
+
+    If Value.Curves.BrushCount > 0 Then
+
+        Brush.Form = Paint.FORM_LINE
+        Brush.Surface = Surface
+        Brush.X0 = X0
+        Brush.Z0 = Z0
+        Brush.X1 = X1
+        Brush.Z1 = Z1
+        Brush.Width = Width
+        Changed = PaintBrush(Value, Brush)
+        Return
+
+    End If
 
     If Width <= 0.0 Or Surface < 0 Or Surface > SURFACE_BRIDGE Then
         Return

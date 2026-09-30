@@ -135,6 +135,10 @@ Public Function Prepare(ByRef Source As Document.State, ByRef Candidate As Docum
     Dim MoveCourt As Boolean
     Dim ReplaceCourt As Boolean
 
+    If Source.Surface.Curves.BrushCount > 0 Then
+        Return "Curved terrain: move individual buildings; section transfer is unavailable."
+    End If
+
     Destination = Regions.Shift(Area, DeltaX, DeltaZ)
 
     If Not Regions.Fits(Source.Surface, Area) Or Not Regions.Fits(Source.Surface, Destination) Then

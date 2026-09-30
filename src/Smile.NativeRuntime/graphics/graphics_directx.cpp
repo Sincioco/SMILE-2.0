@@ -651,10 +651,10 @@ static void smile_directx_begin_frame(SmileGraphicsBackend* backend)
 {
     SmileDirectXState* state = static_cast<SmileDirectXState*>(backend->state);
     D2D1_RECT_F viewport;
-    if (state->frame_latency_waitable != 0)
-        WaitForSingleObjectEx(state->frame_latency_waitable, 100, FALSE);
     if (state->frame_active || state->minimized || state->d2d_context == 0 || state->d2d_target == 0)
         return;
+    if (state->frame_latency_waitable != 0)
+        WaitForSingleObjectEx(state->frame_latency_waitable, 100, FALSE);
     state->d2d_context->BeginDraw();
     state->frame_active = 1;
     state->d2d_context->Clear(D2D1::ColorF(D2D1::ColorF::Black));
@@ -1226,6 +1226,52 @@ extern "C" void smile_graphics_directx_create(SmileGraphicsBackend* backend)
 }
 
 extern "C" void* smile_graphics_directx_device(void) { return smile_directx.device; }
+// GPU-only captured image, scaled and clipped by the ordinary 2D compositor.
+extern "C" void* smile_graphics_directx_snapshot(void* texture_value)
+{
+    if (!texture_value || !smile_directx.d2d_context) return nullptr;
+    auto texture = static_cast<ID3D11Texture2D*>(texture_value);
+    D3D11_TEXTURE2D_DESC desc;
+    texture->GetDesc(&desc);
+    desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    ID3D11Texture2D* copy = nullptr;
+    if (FAILED(smile_directx.device->CreateTexture2D(&desc, nullptr, &copy))) return nullptr;
+    smile_directx.context->CopyResource(copy, texture);
+    IDXGISurface* surface = nullptr;
+    ID2D1Bitmap1* bitmap = nullptr;
+    HRESULT hr = copy->QueryInterface(__uuidof(IDXGISurface), (void**)&surface);
+    if (SUCCEEDED(hr)) {
+        auto properties = D2D1::BitmapProperties1(D2D1_BITMAP_OPTIONS_NONE,
+            D2D1::PixelFormat(desc.Format, D2D1_ALPHA_MODE_IGNORE), 96, 96);
+        hr = smile_directx.d2d_context->CreateBitmapFromDxgiSurface(surface, &properties, &bitmap);
+        surface->Release();
+    }
+    copy->Release();
+    return SUCCEEDED(hr) ? bitmap : nullptr;
+}
+
+extern "C" int smile_graphics_directx_draw_snapshot(void* bitmap, long long x, long long y,
+    long long width, long long height)
+{
+    if (!bitmap || !smile_directx.d2d_context || width <= 0 || height <= 0) return 0;
+    SmileGraphicsBackend backend = {};
+    backend.state = &smile_directx;
+    smile_directx_begin_frame(&backend);
+    if (!smile_directx.frame_active) return 0;
+    auto destination = D2D1::RectF(
+        (FLOAT)smile_graphics_map_x(&smile_directx.viewport, (double)x),
+        (FLOAT)smile_graphics_map_y(&smile_directx.viewport, (double)y),
+        (FLOAT)smile_graphics_map_x(&smile_directx.viewport, (double)(x + width)),
+        (FLOAT)smile_graphics_map_y(&smile_directx.viewport, (double)(y + height)));
+    smile_directx.d2d_context->DrawBitmap(static_cast<ID2D1Bitmap1*>(bitmap), destination,
+        1.0f, D2D1_INTERPOLATION_MODE_LINEAR);
+    return 1;
+}
+
+extern "C" void smile_graphics_directx_release_snapshot(void* bitmap)
+{
+    if (bitmap) static_cast<ID2D1Bitmap1*>(bitmap)->Release();
+}
 extern "C" void* smile_graphics_directx_context(void) { return smile_directx.context; }
 extern "C" void* smile_graphics_directx_render_target(void) { return smile_directx.render_target; }
 extern "C" int smile_graphics_directx_physical_width(void) { return smile_directx.physical_width; }

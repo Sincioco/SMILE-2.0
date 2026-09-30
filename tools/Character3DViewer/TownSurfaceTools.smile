@@ -1,0 +1,74 @@
+''' Circular terrain gestures: precise brushes and their world-space construction preview.
+Module Smile.Tools.TownSurfaceTools
+
+Option Explicit
+
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.SurfacePaint3D As Paint
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Tools.TownGuides As Guides
+
+Public Function Apply(ByRef Surface As Grid.State, Center As P.Vector3,
+    Edge As P.Vector3, Kind As Number, Width As Double, Filled As Boolean) As Boolean
+
+    Dim Brush As Paint.Brush
+    Dim Result As Boolean
+
+    Brush.Form = Paint.FORM_RING
+
+    If Filled Then
+        Brush.Form = Paint.FORM_CIRCLE
+    End If
+
+    Brush.Surface = Kind
+    Brush.X0 = Center.X
+    Brush.Z0 = Center.Z
+    Brush.X1 = Sqrt((Edge.X - Center.X) * (Edge.X - Center.X) +
+        (Edge.Z - Center.Z) * (Edge.Z - Center.Z))
+    Brush.Width = Width
+    Result = Grid.PaintBrush(Surface, Brush)
+
+    Return Result
+
+End Function
+
+Public Sub Preview(Center As P.Vector3, Edge As P.Vector3, Width As Double,
+    Filled As Boolean, Camera As P.Camera3D)
+
+    Dim Segment As Number
+    Dim Side As Number
+    Dim Radius As Double
+    Dim ActualRadius As Double
+    Dim Line As Guides.Marker
+    Dim Angle As Double
+
+    Radius = Sqrt((Edge.X - Center.X) * (Edge.X - Center.X) +
+        (Edge.Z - Center.Z) * (Edge.Z - Center.Z))
+
+    For Side = 0 To 1
+
+        ActualRadius = Radius
+
+        If Not Filled Then
+            ActualRadius = Max(0.0, Radius + Width * (ToDouble(Side) - 0.5))
+        Else If Side = 1 Then
+            Return
+        End If
+
+        For Segment = 0 To 95
+
+            Angle = ToDouble(Segment) * M.PI / 48.0
+            Line.First = P.Vector(Center.X + Cos(Angle) * ActualRadius, Center.Y,
+                Center.Z + Sin(Angle) * ActualRadius)
+            Angle = ToDouble(Segment + 1) * M.PI / 48.0
+            Line.Last = P.Vector(Center.X + Cos(Angle) * ActualRadius, Center.Y,
+                Center.Z + Sin(Angle) * ActualRadius)
+
+            Call Guides.DrawMarker(Line, Camera, RGB(70, 230, 215))
+        End For
+    End For
+
+End Sub
+
+End Module

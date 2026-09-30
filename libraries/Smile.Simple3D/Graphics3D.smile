@@ -142,6 +142,9 @@ Private Const COMMAND_SET_OBJECT_REFLECTION_MODE = 134
 Private Const COMMAND_REFLECTION_VALUE = 135
 Private Const COMMAND_SET_VIEWPORT = 136
 Private Const COMMAND_REPLAY_VIEWPORT = 137
+Private Const COMMAND_CAPTURE_VIEWPORT = 138
+Private Const COMMAND_DRAW_VIEWPORT_CAPTURE = 139
+Private Const COMMAND_RELEASE_VIEWPORT_CAPTURE = 140
 
 Public Const MATERIAL_INSPECTION_LIT = 0
 Public Const MATERIAL_INSPECTION_BASE_COLOR = 1
@@ -4225,6 +4228,36 @@ Public Function ReplayViewport3D(X As Number, Y As Number, Width As Number, Heig
     Return Result
 
 End Function
+
+''' Native GPU image of the last preserved viewport; zero means unavailable.
+Public Function CaptureViewport3D() As Number
+
+    Dim Result As Number
+
+    Result = Dispatch(COMMAND_CAPTURE_VIEWPORT, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+
+    Return Result
+
+End Function
+
+''' Scaled and clipped by the 2D compositor without rendering a 3D scene.
+Public Function DrawViewportCapture3D(Handle As Number, X As Number, Y As Number,
+    Width As Number, Height As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_DRAW_VIEWPORT_CAPTURE, Handle, X, Y, Width, Height,
+        0, 0, 0, 0, 0) <> 0
+
+    Return Result
+
+End Function
+
+Public Sub ReleaseViewportCapture3D(Handle As Number)
+
+    Call Execute(COMMAND_RELEASE_VIEWPORT_CAPTURE, Handle, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+
+End Sub
 
 Public Sub ResetRenderer3D()
 

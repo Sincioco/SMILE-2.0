@@ -1,0 +1,124 @@
+''' Regression for stair-stepped terrain, exact shoreline collision and decimal orientation.
+Module Smile.Tools.TownCurvesTests
+
+Option Explicit
+
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.SurfacePaint3D As Paint
+Import Smile.Simple3D.SurfaceContours3D As Contours
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownDocumentStore As Storage
+Import Smile.Tools.TownDocumentNavigation As Navigation
+Import Smile.Tools.TownCatalogData As Catalog
+Import Smile.Tools.TownSelection As Selection
+
+Private Dim Town As Document.State
+Private Dim Loaded As Document.State
+
+Private Sub Check(Condition As Boolean, Label As Text, ByRef Failures As Number)
+
+    If Not Condition Then
+        Print "FAIL " + Label
+        Failures = Failures + 1
+    End If
+
+End Sub
+
+Public Function Run() As Number
+
+    Dim Brush As Paint.Brush
+    Dim Slice As Contours.Slice
+    Dim Selected As Selection.State
+    Dim Ok As Boolean
+    Dim Failures As Number
+    Dim Radius As Double
+
+    Ok = Document.Blank(Town, "Smooth Circle Regression", 40, 40, 10.0)
+
+    Call Grid.PaintRectangle(Town.Surface, 0, 0, 39, 39, Grid.SURFACE_WATER)
+
+    Brush.Form = Paint.FORM_RING
+    Brush.Surface = Grid.SURFACE_ROAD
+    Brush.X1 = 100.0
+    Brush.Width = 20.0
+    Ok = Grid.PaintBrush(Town.Surface, Brush) And Ok
+
+    Call Check(Ok And Grid.ReadPoint(Town.Surface, 100.0, 0.0) = Grid.SURFACE_BRIDGE,
+        "Ring Road Crosses Water", Failures)
+    Call Check(Grid.ReadPoint(Town.Surface, 0.0, 0.0) = Grid.SURFACE_WATER,
+        "Ring Preserves Its Center", Failures)
+    Call Navigation.Rebuild(Town)
+    Call Check(Navigation.CanStand(77.0, 77.0) And Not Navigation.CanStand(78.0, 78.0),
+        "Shoreline Collision Follows Circle Within The Same Grid Cell", Failures)
+
+    Slice = Contours.Split(Town.Surface, P.Vector(100.0, 0.0, 0.0),
+        P.Vector(120.0, 0.0, 0.0), P.Vector(120.0, 0.0, 10.0))
+    Radius = Sqrt(Slice.EdgeB.X * Slice.EdgeB.X + Slice.EdgeB.Z * Slice.EdgeB.Z)
+
+    Call Check(Slice.FaceCount = 1 And Slice.Rail And Abs(Radius - 110.0) < 0.01,
+        "Mesh Boundary Follows Analytic Arc Instead Of Tile Edge", Failures)
+
+    Slice = Contours.Split(Town.Surface, P.Vector(120.0, 0.0, 0.0),
+        P.Vector(120.0, 0.0, 10.0), P.Vector(100.0, 0.0, 0.0))
+
+    Call Check((Slice.Faces[0].PointB.X - Slice.Faces[0].PointA.X) *
+        (Slice.Faces[0].PointC.Z - Slice.Faces[0].PointA.Z) -
+        (Slice.Faces[0].PointB.Z - Slice.Faces[0].PointA.Z) *
+        (Slice.Faces[0].PointC.X - Slice.Faces[0].PointA.X) > 0.0,
+        "Arc Triangles Keep Their Winding And Do Not Shade As Dark Teeth", Failures)
+
+    Slice = Contours.Split(Town.Surface, P.Vector(120.0, 0.0, 0.0),
+        P.Vector(100.0, 0.0, 0.0), P.Vector(120.0, 0.0, -10.0))
+
+    Call Check((Slice.Faces[0].PointB.X - Slice.Faces[0].PointA.X) *
+        (Slice.Faces[0].PointC.Z - Slice.Faces[0].PointA.Z) -
+        (Slice.Faces[0].PointB.Z - Slice.Faces[0].PointA.Z) *
+        (Slice.Faces[0].PointC.X - Slice.Faces[0].PointA.X) > 0.0,
+        "Second Boundary Rotation Preserves Front Face", Failures)
+
+    Brush.Form = Paint.FORM_CIRCLE
+    Brush.Surface = Grid.SURFACE_GROUND
+    Brush.X1 = 50.0
+    Ok = Grid.PaintBrush(Town.Surface, Brush)
+
+    Call Grid.PaintWorldLine(Town.Surface, -130.0, 0.0, 130.0, 0.0, Grid.SURFACE_ROAD, 14.0)
+    Call Grid.PaintRectangle(Town.Surface, 18, 18, 21, 21, Grid.SURFACE_GROUND)
+    Call Check(Grid.ReadPoint(Town.Surface, 0.0, 0.0) = Grid.SURFACE_GROUND And
+        Grid.ReadPoint(Town.Surface, 60.0, 0.0) = Grid.SURFACE_BRIDGE,
+        "Rectangle And Line Retain Ordered Curved Painting", Failures)
+
+    Ok = Storage.SaveDocument(Town, "TownEditor.CurveRegression")
+    Ok = Storage.LoadDocument(Loaded, "TownEditor.CurveRegression") And Ok
+
+    Call Check(Ok And Loaded.Surface.Curves.BrushCount = 4 And
+        Grid.ReadPoint(Loaded.Surface, 77.0, 77.0) = Grid.SURFACE_BRIDGE,
+        "Curves And Base Terrain Survive Save Reopen", Failures)
+
+    Town.Items[0] = Catalog.InitialItem(0)
+    Town.ItemCount = 1
+    Selected.Selected[0] = True
+    Selected.SelectedCount = 1
+    Ok = Selection.SetAngle(Selected, Town, "-22.5")
+
+    Call Check(Ok And Town.Items[0].Yaw = 337.5, "Exact Decimal Building Rotation", Failures)
+    Call Check(Not Selection.SetAngle(Selected, Town, "bad") And
+        Not Selection.SetAngle(Selected, Town, "999"), "Invalid Rotation Leaves Pose Intact", Failures)
+    Call Check(Not Selection.SetAngle(Selected, Town, ".5") And
+        Not Selection.SetAngle(Selected, Town, "1."), "Incomplete Decimal Cannot Trigger Runtime Error", Failures)
+
+    Ok = Grid.Initialize(Town.Surface, 2, 1, 0.0, 0.0, 20.0, Grid.SURFACE_GROUND)
+
+    Call Grid.PaintRectangle(Town.Surface, 1, 0, 1, 0, Grid.SURFACE_WATER)
+
+    Slice = Contours.Split(Town.Surface, P.Vector(0.0, 0.0, 0.0),
+        P.Vector(0.0, 0.0, 20.0), P.Vector(20.0, 0.0, 20.0), Grid.ReadBase(Town.Surface, 0, 0))
+
+    Call Check(Ok And Slice.FaceCount = 1 And Slice.Faces[0].PointC.X = 20.0,
+        "Legacy Tile Owns Its Edge Without Artificial Curve Slivers", Failures)
+
+    Return Failures
+
+End Function
+
+End Module

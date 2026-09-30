@@ -1,4 +1,4 @@
-"""Bounded TWN1–TWN5 codec shared by the existing Blender document worker."""
+"""Bounded TWN1–TWN6 codec shared by the existing Blender document worker."""
 import hashlib
 import json
 import struct
@@ -102,7 +102,7 @@ def decode(payload, catalog, request=False):
     if bytes(r.byte() for _ in range(3)) != b'TWN':
         raise ValueError('Unsupported town format')
     version = r.byte()
-    if version not in (1, 2, 3, 4, 5):
+    if version not in (1, 2, 3, 4, 5, 6):
         raise ValueError('Unsupported town format')
     fingerprint = catalog.get('document_fingerprint') or hashlib.sha256(json.dumps(catalog, sort_keys=True).encode()).hexdigest()
     if r.name() != fingerprint:
@@ -163,6 +163,22 @@ def decode(payload, catalog, request=False):
     if version >= 5:
         result['court_offset'] = [r.precise(), r.precise()]
         result['court_placed'] = r.flag()
+    if version >= 6:
+        count = r.integer()
+        if not 0 <= count <= 256:
+            raise ValueError('Invalid curved surface count')
+        if count:
+            result['base_cells'] = result['cells'][:]
+            brushes = []
+            for _ in range(count):
+                brush = [r.integer(), r.integer()] + [r.precise() for _ in range(5)]
+                form, kind, x0, z0, x1, z1, width = brush
+                if not (1 <= form <= 4 and 0 <= kind <= 4 and width >= 0
+                        and (form not in (2, 3) or x1 > 0)):
+                    raise ValueError('Invalid curved surface brush')
+                brushes.append(brush)
+            result['curves'] = brushes
+            result['cells'] = raster_curves(result)
     result['payload'] = payload[:r.offset]
     if request:
         result['mode'], result['request_id'] = r.integer(), r.integer()
@@ -173,17 +189,50 @@ def decode(payload, catalog, request=False):
     return result
 
 
+def raster_curves(document):
+    """Derived cells for legacy consumers; the exact brush stack stays authoritative."""
+    import bisect
+    cells = document['base_cells'][:]
+    xs, zs, columns = document['xs'], document['zs'], document['columns']
+    for form, kind, x0, z0, x1, z1, width in document['curves']:
+        if form in (2, 3):
+            extent = x1 + (width / 2 if form == 3 else 0)
+            low_x, high_x, low_z, high_z = x0-extent, x0+extent, z0-extent, z0+extent
+        else:
+            extent = width / 2 if form == 4 else 0
+            low_x, high_x = min(x0, x1)-extent, max(x0, x1)+extent
+            low_z, high_z = min(z0, z1)-extent, max(z0, z1)+extent
+        for row in range(max(0,bisect.bisect_right(zs,low_z)-1), min(len(zs)-1,bisect.bisect_right(zs,high_z))):
+            z = (zs[row]+zs[row+1]) / 2
+            for col in range(max(0,bisect.bisect_right(xs,low_x)-1), min(len(xs)-1,bisect.bisect_right(xs,high_x))):
+                x = (xs[col]+xs[col+1]) / 2
+                dx, dz = x-x0, z-z0
+                if form == 1:
+                    hit = x0 <= x <= x1 and z0 <= z <= z1
+                elif form == 2:
+                    hit = dx*dx+dz*dz <= x1*x1
+                elif form == 3:
+                    hit = max(0,x1-width/2)**2 <= dx*dx+dz*dz <= (x1+width/2)**2
+                else:
+                    t = max(0,min(1,(dx*(x1-x0)+dz*(z1-z0))/max(.000001,(x1-x0)**2+(z1-z0)**2)))
+                    hit = (dx-t*(x1-x0))**2+(dz-t*(z1-z0))**2 <= width*width/4
+                if hit:
+                    index = row*columns+col
+                    cells[index] = 4 if kind == 3 and cells[index] in (2,4) else kind
+    return cells
+
+
 def encode(document, catalog):
     fingerprint = catalog.get('document_fingerprint') or hashlib.sha256(json.dumps(catalog, sort_keys=True).encode()).hexdigest()
     # Eight-value legacy snapshots must retain their checksum when opened.
-    version = (5 if 'court_placed' in document else 4 if 'presets' in document else 3 if 'map_tiles' in document
+    version = (6 if document.get('curves') else 5 if 'court_placed' in document else 4 if 'presets' in document else 3 if 'map_tiles' in document
                else 2 if len(document['sun']) == 9 else 1)
     result = bytearray(b'TWN') + bytes([version]) + name(fingerprint) + name(document['name']) + b'\0'
     precise = lambda value: integer(round(value * 1000000))
     result += integer(document['columns']) + integer(document['rows']) + precise(document['cell_size'])
     for edge in document['xs'] + document['zs']:
         result += precise(edge)
-    cells = document['cells']
+    cells = document['base_cells'] if document.get('curves') else document['cells']
     for start in range(0, len(cells), 16):
         result += integer(sum(cell * 8**i for i, cell in enumerate(cells[start:start+16])))
     result += integer(len(document['items']))
@@ -213,6 +262,11 @@ def encode(document, catalog):
     if version >= 5:
         result += b''.join(precise(value) for value in document['court_offset'])
         result += bytes([int(document['court_placed'])])
+    if version >= 6:
+        result += integer(len(document['curves']))
+        for brush in document['curves']:
+            result += integer(brush[0]) + integer(brush[1])
+            result += b''.join(precise(value) for value in brush[2:])
     decode(result, catalog)  # Same format/range checks apply in both directions.
     return bytes(result)
 

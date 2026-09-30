@@ -1,0 +1,42 @@
+''' A remembered return journey through either shared airport; owned by the town session.
+Module Smile.Tools.TownGatewayJourney
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+
+Public Type State
+    Origin As Text
+    Gateway As Text
+    Position As P.Vector3
+End Type
+
+Public Sub Remember(ByRef Value As State, Origin As Text, Destination As Text,
+    Position As P.Vector3)
+
+    If Destination = "Neris Spaceport" Or Destination = "Horizon Airport" Then
+
+        Value.Origin = Origin
+        Value.Gateway = Destination
+        Value.Position = Position
+
+    End If
+
+End Sub
+
+Public Function Resolve(ByRef Value As State, Current As Text, ByRef Destination As Text,
+    ByRef Position As P.Vector3) As Boolean
+
+    If (Current <> Value.Gateway Or Destination <> "Neris Town" Or
+        Text_Length(Value.Origin) = 0) Then
+        Return False
+    End If
+
+    Destination = Value.Origin
+    Position = Value.Position
+
+    Return True
+
+End Function
+
+End Module

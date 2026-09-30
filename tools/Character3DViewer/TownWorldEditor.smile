@@ -23,8 +23,11 @@ Private Dim Images As Previews.State
 Private Dim Enabled As Boolean
 Private Dim Dirty As Boolean
 Private Dim Choosing As Boolean
-Private Dim TownNames[8] As Text
+Private Dim TownNames[16] As Text
 Private Dim TownCount As Number
+Private Dim ReturnTown As Text
+Private Dim PreviewFailed[16] As Boolean
+Private Dim Entering As Boolean
 
 Public Function Active() As Boolean
 
@@ -38,6 +41,7 @@ Public Sub Open(CreateNew As Boolean, Town As Text)
     Dim Empty As Document.State
     Dim EmptyGraph As Canvas.State
     Dim Ok As Boolean
+    Dim Index As Number
 
     Call Update()
 
@@ -89,6 +93,16 @@ Public Sub Open(CreateNew As Boolean, Town As Text)
     End If
 
     Enabled = True
+    Entering = False
+
+    If Town <> "" Then
+        ReturnTown = Town
+    End If
+
+    For Index = 0 To 15
+        PreviewFailed[Index] = False
+    End For
+
     Graph = EmptyGraph
     Graph.Selected = -1
     Choosing = False
@@ -156,7 +170,7 @@ Public Function Input(Key As Number, ByRef OpenTabs As Tabs.State) As Text
         Ui.Message = Incoming.Message
     End If
 
-    Call Previews.Update(Images, Map, OpenTabs)
+    Call Previews.Update(Images, Map)
 
     TownCount = OpenTabs.TabCount
 
@@ -284,11 +298,13 @@ Public Function Input(Key As Number, ByRef OpenTabs As Tabs.State) As Text
 
             Dirty = False
             Enabled = False
+            Result = ReturnTown
 
             If (Action = 5 And
                 Graph.Selected >= 0 And
                 Graph.Selected < Map.NodeCount) Then
                 Result = Map.Nodes[Graph.Selected].Town
+                Entering = True
             End If
 
         Else
@@ -339,7 +355,7 @@ Public Function Input(Key As Number, ByRef OpenTabs As Tabs.State) As Text
 
 End Function
 
-Public Sub Draw()
+Public Sub Draw(Optional LoadingTown As Text = "", Optional Progress As Number = 0)
 
     Dim Index As Number
     Dim X As Number
@@ -404,9 +420,17 @@ Public Sub Draw()
 
     End If
 
-    If Transfer.Job > 0 Or Transfer.Progress > 0 Then
+    If LoadingTown <> "" Then
+
+        Draw Text "Preparing " + LoadingTown At X, Window_Height() - 134 Size 13 Color CYAN
+        Fill Rectangle X, Window_Height() - 108, 283, 12, RGB(29, 48, 65)
+        Fill Rectangle X, Window_Height() - 108, 283 * Max(0, Min(100, Progress)) / 100, 12, RGB(40, 200, 195)
+
+    Else If Transfer.Job > 0 Then
+
         Fill Rectangle X, Window_Height() - 108, 283, 12, RGB(29, 48, 65)
         Fill Rectangle X, Window_Height() - 108, 283 * Transfer.Progress / 100, 12, RGB(40, 200, 195)
+
     End If
 
     Draw Text "Wheel: Zoom   Middle / Space+Drag: Pan   Yellow Points: Connect" At 30, Window_Height() - 65 Size 14 Color WHITE
@@ -427,6 +451,49 @@ Public Sub Close()
 
 End Sub
 
+''' Visits missing photographs behind the world canvas, then restores the opening town.
+Public Function PreviewRequest(CurrentTown As Text) As Text
+
+    Dim Index As Number
+    Dim Result As Text
+
+    If Not Enabled Or Transfer.Job > 0 Or Incoming.Job > 0 Or Not Previews.Has(CurrentTown) Then
+        Return ""
+    End If
+
+    For Index = 0 To Map.NodeCount - 1
+
+        If Not PreviewFailed[Index] And Not Previews.Has(Map.Nodes[Index].Town) Then
+            Result = Map.Nodes[Index].Town
+            Return Result
+        End If
+
+    End For
+
+    If CurrentTown <> ReturnTown Then
+        Result = ReturnTown
+    End If
+
+    Return Result
+
+End Function
+
+Public Sub PreviewUnavailable(Name As Text)
+
+    Dim Index As Number
+
+    For Index = 0 To Map.NodeCount - 1
+
+        If Map.Nodes[Index].Town = Name Then
+            PreviewFailed[Index] = True
+        End If
+
+    End For
+
+    Ui.Message = "Town file unavailable for preview: " + Name
+
+End Sub
+
 Public Function LastMessage() As Text
 
     Dim Result As Text
@@ -434,6 +501,12 @@ Public Function LastMessage() As Text
     Result = Ui.Message
 
     Return Result
+
+End Function
+
+Public Function EnteringTown() As Boolean
+
+    Return Entering
 
 End Function
 

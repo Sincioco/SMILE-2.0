@@ -1,295 +1,177 @@
-''' Cached top-down thumbnails of authored terrain and placed building footprints.
+''' Cached scene photographs, rendered once per town revision at its starting camera.
 Module Smile.Tools.TownWorldPreviews
 
 Option Explicit
 
-Import Smile.Simple3D.SurfaceGrid3D As Grid
-Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Scene3D As Scene
 Import Smile.Tools.TownDocument As Town
-Import Smile.Tools.TownGeometry As Geometry
-Import Smile.Tools.TownCatalogData As Catalog
 Import Smile.Tools.TownWorldDocument As World
-Import Smile.Tools.TownLibrary As Library
-Import Smile.Tools.TownTabs As Tabs
+Import Smile.Tools.TownStartingCamera As Starting
 
 Public Type State
     Names[16] As Text
-    Revisions[16] As Number
-    Cells[16, 9216] As Number
-    Aspect[16] As Double
-    Ready[16] As Boolean
 End Type
 
-Private Function Coordinate(Value As Double, Low As Double, High As Double) As Number
+Private Type Photograph
+    Name As Text
+    Revision As Number
+    Handle As Number
+End Type
 
-    Dim Result As Number
+Private Dim Photos[16] As Photograph
+Private Dim PendingSlot As Number
+Private Dim PendingName As Text
+Private Dim PendingRevision As Number
+Private Dim NextSlot As Number
+Private Dim UpdatedAt As Number
 
-    Result = ToNumber(Clamp((Value - Low) * 96.0 / Max(1.0, High - Low), 0.0, 95.0))
+Private Function Find(Name As Text) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Index As Number
+
+    For Index = 0 To 15
+
+        If Photos[Index].Name = Name Then
+            Return Index
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+Public Function Has(Name As Text) As Boolean
+
+    Dim Slot As Number
+    Dim Result As Boolean
+
+    Slot = Find(Name)
+
+    If Slot >= 0 Then
+        Result = Photos[Slot].Handle > 0
+    End If
 
     Return Result
 
 End Function
 
-Private Function LandmarkKind(ByRef Map As Town.State, Point As P.Vector3, Kind As Number) As Number
+''' Caller draws its existing scene only when a new photograph is needed.
+Public Function Begin(ByRef Map As Town.State) As Boolean
 
-    Dim X As Double
-    Dim Z As Double
+    Dim Slot As Number
+    Dim Ok As Boolean
 
-    If Map.CourtPlaced Then
+    Slot = Find(Map.Name)
 
-        X = (Point.X + 3660.0 - Map.CourtOffsetX) / 17.0
-        Z = (Point.Z - 2440.0 - Map.CourtOffsetZ) / 17.0
+    If Slot >= 0 Then
 
-        If (Abs(X) <= 64.0 And
-            Z >= -80.0 And
-            Z <= 24.0) Then
-
-            Kind = 3
-
-            If (Abs(X) > 53.0 Or
-                Z < -61.0 Or
-                Z > 15.0) Then
-                Kind = 7
-            End If
-
+        If Photos[Slot].Revision = Map.Revision And Photos[Slot].Handle > 0 Then
+            Return False
         End If
+
+    Else
+        Slot = NextSlot
 
     End If
 
-    If Map.Name = "Horizon Airport" Then
-
-        X = (1250.0 - Point.Z) / 10.0
-        Z = (Point.X - 7400.0) / 10.0
-
-        If (Abs(X) < 480.0 And
-            Z > -200.0 And
-            Z < 385.0) Then
-
-            Kind = 3
-
-            If ((Abs(X) < 250.0 And Z > 0.0 And Z < 100.0) Or
-                (Abs(X) > 310.0 And Abs(X) < 440.0 And Z > 0.0 And Z < 100.0)) Then
-                Kind = 7
-            Else If Z > 185.0 And Z < 340.0 Then
-                Kind = 8
-            End If
-
-        End If
-
-    Else If Map.Name = "Neris Spaceport" Then
-
-        X = (-5500.0 - Point.X) / 10.0
-        Z = (-7600.0 - Point.Z) / 10.0
-
-        If Abs(X) < 110.0 And Abs(Z) < 120.0 Then
-            Kind = 7
-        Else If (Abs(X) < 235.0 And
-            Z > -145.0 And
-            Z < 15.0) Then
-            Kind = 6
-        Else If (Abs(X) < 22.0 And
-            Z > -390.0 And
-            Z < 0.0) Then
-            Kind = 3
-        Else If ((Abs(X) < 280.0 And Abs(Abs(Z) - 135.0) < 9.0) Or
-            ((Abs(X) - 280.0) * (Abs(X) - 280.0) + (Abs(Z) - 135.0) * (Abs(Z) - 135.0) < 2304.0)) Then
-            Kind = 3
-        End If
-
+    If Timer() - UpdatedAt < 500 Then
+        Return False
     End If
 
-    Return Kind
+    UpdatedAt = Timer()
+    NextSlot = (Slot + 1) Mod 16
+    PendingSlot = Slot
+    PendingName = Map.Name
+    PendingRevision = Map.Revision
+    Ok = G.SetViewport3D(0, 0, Min(384, Window_Width()), Min(240, Window_Height()), True)
+
+    If Ok Then
+        Ok = Scene.BeginPrecise(Starting.Frame(Map), 12, 20, 32)
+    End If
+
+    If Not Ok Then
+        Call G.ResetViewport3D()
+    End If
+
+    Return Ok
 
 End Function
 
-Public Sub Build(ByRef Value As State, Slot As Number, ByRef Map As Town.State)
+Public Sub Finish()
 
-    Dim X As Number
-    Dim Z As Number
-    Dim Index As Number
-    Dim CellX As Number
-    Dim CellZ As Number
-    Dim LowX As Double
-    Dim LowZ As Double
-    Dim HighX As Double
-    Dim HighZ As Double
-    Dim Point As P.Vector3
-    Dim First As P.Vector3
-    Dim Last As P.Vector3
-    Dim Shape As Catalog.Template
-    Dim Corner As Number
-
-    LowX = Map.Surface.OriginX
-    LowZ = Map.Surface.OriginZ
-    HighX = Map.Surface.XEdges[Map.Surface.Columns]
-    HighZ = Map.Surface.ZEdges[Map.Surface.Rows]
-    Value.Aspect[Slot] = (HighX - LowX) / Max(1.0, HighZ - LowZ)
-
-    For Z = 0 To 95
-
-        For X = 0 To 95
-
-            Point = P.Vector(LowX + (ToDouble(X) + 0.5) / 96.0 * (HighX - LowX), 0.0,
-                LowZ + (ToDouble(Z) + 0.5) / 96.0 * (HighZ - LowZ))
-            CellX = Grid.CellX(Map.Surface, Point.X)
-            CellZ = Grid.CellZ(Map.Surface, Point.Z)
-            Value.Cells[Slot, Z * 96 + X] = LandmarkKind(Map, Point, Grid.ReadCell(Map.Surface, CellX, CellZ))
-        End For
-    End For
-
-    For Index = 0 To Map.ItemCount - 1
-
-        If Map.Items[Index].Active And Map.Items[Index].Category = Town.CATEGORY_BUILDINGS Then
-
-            Shape = Catalog.TemplateAt(Map.Items[Index].Template)
-            First = Geometry.ToWorld(Map.Items[Index], Shape.Low)
-            Last = First
-
-            For Corner = 1 To 3
-
-                Point = Shape.Low
-
-                If Corner Mod 2 = 1 Then
-                    Point.X = Shape.High.X
-                End If
-
-                If Corner >= 2 Then
-                    Point.Z = Shape.High.Z
-                End If
-
-                Point = Geometry.ToWorld(Map.Items[Index], Point)
-                First.X = Min(First.X, Point.X)
-                First.Z = Min(First.Z, Point.Z)
-                Last.X = Max(Last.X, Point.X)
-                Last.Z = Max(Last.Z, Point.Z)
-            End For
-
-            For Z = Coordinate(Min(First.Z, Last.Z), LowZ, HighZ) To Coordinate(Max(First.Z, Last.Z), LowZ, HighZ)
-
-                For X = Coordinate(Min(First.X, Last.X), LowX, HighX) To Coordinate(Max(First.X, Last.X), LowX, HighX)
-
-                    Point = P.Vector(LowX + (ToDouble(X) + 0.5) / 96.0 * (HighX - LowX), 0.0,
-                        LowZ + (ToDouble(Z) + 0.5) / 96.0 * (HighZ - LowZ))
-
-                    If Geometry.Contains(Map.Items[Index], Point.X, Point.Z) Then
-                        Value.Cells[Slot, Z * 96 + X] = 6
-                    End If
-
-                End For
-            End For
-
-        End If
-
-    End For
-
-    Value.Names[Slot] = Map.Name
-    Value.Revisions[Slot] = Map.Revision
-    Value.Ready[Slot] = True
-
-End Sub
-
-''' At most one stale preview is rebuilt per frame. Open documents are authoritative.
-Public Sub Update(ByRef Value As State, ByRef Map As World.State, ByRef OpenTabs As Tabs.State)
-
-    Dim Slot As Number
-    Dim Index As Number
-    Dim Found As Number
-    Dim Incoming As Town.State
     Dim Ok As Boolean
+    Dim Handle As Number
 
-    For Slot = 0 To Map.NodeCount - 1
+    Ok = Scene.EndScene()
 
-        Found = -1
+    If Ok Then
 
-        For Index = 0 To OpenTabs.TabCount - 1
+        Call G.ReleaseViewportCapture3D(Photos[PendingSlot].Handle)
 
-            If OpenTabs.Documents[Index].Name = Map.Nodes[Slot].Town Then
-                Found = Index
-            End If
+        Handle = G.CaptureViewport3D()
+        Photos[PendingSlot].Name = PendingName
+        Photos[PendingSlot].Revision = PendingRevision
+        Photos[PendingSlot].Handle = Handle
 
-        End For
+    End If
 
-        If Found >= 0 Then
+    Call G.ResetViewport3D()
 
-            If (Value.Names[Slot] <> Map.Nodes[Slot].Town Or
-                Value.Revisions[Slot] <> OpenTabs.Documents[Found].Revision) Then
-                Call Build(Value, Slot, OpenTabs.Documents[Found])
+End Sub
 
-                Return
-            End If
+Public Sub Update(ByRef Value As State, ByRef Map As World.State)
 
-        Else If Value.Names[Slot] <> Map.Nodes[Slot].Town Then
+    Dim Index As Number
 
-            Ok = Library.RecoverNamed(Incoming, Map.Nodes[Slot].Town)
-            Value.Names[Slot] = Map.Nodes[Slot].Town
-            Value.Ready[Slot] = False
-
-            If Ok Then
-                Call Build(Value, Slot, Incoming)
-            End If
-
-            Return
-
-        End If
-
+    For Index = 0 To Map.NodeCount - 1
+        Value.Names[Index] = Map.Nodes[Index].Town
     End For
 
 End Sub
 
-Public Sub Draw(ByRef Value As State, Slot As Number, Left As Number, Top As Number,
+Public Sub Draw(ByRef Value As State, Slot As Number, ScreenX As Number, ScreenY As Number,
     Width As Number, Height As Number)
 
-    Dim X As Number
-    Dim Z As Number
-    Dim First As Number
-    Dim Kind As Number
-    Dim ColorValue As Number
-    Dim ActualWidth As Number
-    Dim ActualHeight As Number
+    Dim Index As Number
+    Dim Ok As Boolean
 
-    Fill Rectangle Left, Top, Width, Height, RGB(8, 17, 25)
-
-    If Not Value.Ready[Slot] Then
-        Draw Text "Preview Unavailable" At Left + Width / 2, Top + Height / 2 Size 11 Color LIGHT_GRAY Centered
+    If Width <= 0 Or Height <= 0 Then
         Return
     End If
 
-    ActualWidth = Min(Width, ToNumber(ToDouble(Height) * Value.Aspect[Slot]))
-    ActualHeight = Min(Height, ToNumber(ToDouble(Width) / Max(0.01, Value.Aspect[Slot])))
-    Left = Left + (Width - ActualWidth) / 2
-    Top = Top + (Height - ActualHeight) / 2
+    Fill Rectangle ScreenX, ScreenY, Width, Height, RGB(8, 17, 25)
+    Index = Find(Value.Names[Slot])
 
-    For Z = 0 To 95
+    If Index >= 0 Then
 
-        X = 0
+        Ok = G.DrawViewportCapture3D(Photos[Index].Handle, ScreenX, ScreenY, Width, Height)
 
-        Do
-            First = X
-            Kind = Value.Cells[Slot, Z * 96 + X]
+        If Not Ok Then
+            Photos[Index].Handle = 0
+        End If
 
-            Do
-                X = X + 1
+    End If
 
-            Loop Until X >= 96 Or Value.Cells[Slot, Z * 96 + X] <> Kind
+    If Not Ok Then
+        Draw Text "Preparing Preview..." At ScreenX + Width / 2, ScreenY + Height / 2 Size 11 Color LIGHT_GRAY Centered
+    End If
 
-            ColorValue = RGB(48, 96, 36)
+End Sub
 
-            If Kind = 2 Then
-                ColorValue = RGB(28, 79, 178)
-            Else If Kind = 6 Then
-                ColorValue = RGB(222, 211, 177)
-            Else If Kind = 7 Then
-                ColorValue = RGB(28, 103, 123)
-            Else If Kind = 8 Then
-                ColorValue = RGB(67, 79, 87)
-            Else If Kind >= 3 Then
-                ColorValue = RGB(166, 183, 188)
-            End If
+Public Sub Destroy()
 
-            Fill Rectangle Left + First * ActualWidth / 96, Top + (95 - Z) * ActualHeight / 96, Max(1, X * ActualWidth / 96 - First * ActualWidth / 96), Max(1, (96 - Z) * ActualHeight / 96 - (95 - Z) * ActualHeight / 96), ColorValue
+    Dim Index As Number
 
-        Loop Until X >= 96
+    For Index = 0 To 15
+        Call G.ReleaseViewportCapture3D(Photos[Index].Handle)
 
+        Photos[Index].Handle = 0
     End For
 
 End Sub

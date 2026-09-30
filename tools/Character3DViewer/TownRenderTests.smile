@@ -21,6 +21,7 @@ Import Smile.Tools.TownGuideList As GuideList
 Import Smile.Tools.TownSelection As Selection
 Import Smile.Tools.TownHistory As History
 Import Smile.Tools.TownEditorPanel As Panel
+Import Smile.Tools.TownSurfaceTools As SurfaceTools
 
 Dim Town As Document.State
 Dim Assets As Renderer.State
@@ -40,6 +41,7 @@ Dim Controls As Editor.State
 Dim UntilTime As Number
 Dim Action As Number
 Dim WithoutCastle[5] As Number
+Dim Photograph As Number
 
 Game Window "Town Editor Catalog Check" Size 1100 By 720
 
@@ -173,6 +175,25 @@ Call Check(Not G.ReplayViewport3D(800, 500, 257, 170),
 Call Check(Not G.ReplayViewport3D(-1, 500, 256, 170),
     "Cached POV Rejects An Out Of Bounds Destination")
 
+Photograph = G.CaptureViewport3D()
+
+Call Check(Photograph > 0 And G.DrawViewportCapture3D(Photograph, 420, 215, 240, 150),
+    "Town Photograph Draws At Its World Card Coordinates")
+
+Before = Timer()
+
+For Index = 0 To 15
+    Ok = G.DrawViewportCapture3D(Photograph, 420, 215, 240, 150)
+End For
+
+Call Check(Timer() - Before < 500,
+    "Cached Photographs Do Not Wait For Another Display Frame Per Card")
+Call Check(Not G.DrawViewportCapture3D(Photograph, 420, 215, 0, 150),
+    "Photograph Rejects An Empty Card Without A Clip Crash")
+Call G.ReleaseViewportCapture3D(Photograph)
+Call Check(Not G.DrawViewportCapture3D(Photograph, 420, 215, 240, 150),
+    "Released Photograph Handle Cannot Replay Stale GPU Memory")
+
 Print "Meshes"
 Print G.LiveMeshCount3D()
 Print "Materials"
@@ -277,6 +298,24 @@ Loop Until Ground.Stage = 0 Or Ground.Failed Or Frames >= 200
 
 Call Check(Not Ground.Failed And Ground.LiveRevision = Town.Surface.Revision,
     "Edited Terrain Commits As One Complete Replacement")
+
+Ok = SurfaceTools.Apply(Town.Surface, P.Vector(-3940.0, 23.12, -1664.0),
+    P.Vector(-3540.0, 23.12, -1664.0), Grid.SURFACE_ROAD, 120.0, False)
+
+Call Terrain.BeginBuild(Ground, Town)
+
+Frames = 0
+
+Do
+
+    Call Terrain.Update(Ground, 16)
+
+    Frames = Frames + 1
+
+Loop Until Ground.Stage = 0 Or Ground.Failed Or Frames >= 600
+
+Call Check(Ok And Not Ground.Failed And Ground.LiveRevision = Town.Surface.Revision,
+    "Adding One Circle To Dense Legacy Neris Does Not Exhaust Terrain Capacity")
 Call Attachments.Destroy(Doors)
 Call Terrain.Destroy(Ground)
 

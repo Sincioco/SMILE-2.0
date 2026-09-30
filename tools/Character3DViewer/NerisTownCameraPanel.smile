@@ -112,7 +112,7 @@ Public Function Hovered(Optional HelpOpen As Boolean = False) As Boolean
         Pointer_Y() >= 8 And Pointer_Y() <= 120) Or
         (HelpOpen And UI.Contains(18, Window_Height() - 236, 570, 184)) Or
         Layout.Hovered(0) Or Layout.Hovered(1) Or Layout.Hovered(2) Or
-        Layout.Hovered(3) Or Layout.Hovered(4) Or Layout.Hovered(5))
+        Layout.Hovered(3) Or Layout.Hovered(4) Or Layout.Hovered(5) Or Layout.Hovered(6))
 
     Return Result
 

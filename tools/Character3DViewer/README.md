@@ -35,10 +35,24 @@ most about 12 times per second and reuses its cached image between updates.
 **High FPS: On** refreshes every game frame for demonstrations, at additional GPU
 and CPU cost. Hidden POV skips both scene submission and cached-image replay.
 
-World Editor has large top-down **plan thumbnails** (terrain and building footprints),
-centered wrapped labels, pointer-anchored wheel zoom, zoom/pan buttons and middle-drag
-panning. **Open Town File...** adds a checked `.town` document through a native picker.
-These are generated map previews rather than captured photographic screenshots.
+World Editor has large **perspective scene thumbnails inside each town card**, with
+the same starting camera as its town tab. Images are cached by town revision;
+missing images prepare one town at a time behind the graph. Centered wrapped labels,
+pointer-anchored wheel zoom, zoom/pan buttons and middle-drag panning remain.
+**Open Town File...** adds a checked `.town` document through a native picker.
+
+Items → Surfaces includes **Circle / Ring** and **Filled Circle**: click the center,
+then the radius, using the current surface and brush width. TWN6 saves ordered
+analytic brushes while retaining older town compatibility. **Angle...** sets an
+absolute decimal building angle, including negative values. The 15-degree buttons
+remain shortcuts. Curved maps currently disable bulk section transfer to avoid
+silently losing their brushes; individual item editing remains available.
+
+**Demo** at the bottom cycles open town tabs every minute and starts map orbit.
+Editing and file operations pause the cycle. Up to sixteen tabs are available;
+the arrows page through them without shrinking their labels. The generated Luma
+designs and separate World atlas are documented in
+[StoryTownsV1](../../games/SinStarI/SourceAssets/Towns/Neris/StoryTownsV1/README.md).
 
 Royal Castle has a gilded operable entrance, leafy evergreens and sculpted flower
 urns. Exterior masonry lines and added vertical tower joints are removed to stop

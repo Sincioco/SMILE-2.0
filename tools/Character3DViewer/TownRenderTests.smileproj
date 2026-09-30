@@ -24,6 +24,7 @@
     <SmileSource Include="TownEditorPanel.smile" />
     <SmileSource Include="TownSunControls.smile" />
     <SmileSource Include="TownEditor.smile" />
+    <SmileSource Include="TownSurfaceTools.smile" />
     <SmileSource Include="TownCatalogData.smile" />
     <SmileSource Include="TownCatalogFeatures.smile" />
     <SmileSource Include="TownInitialSurface.smile" />

@@ -10,6 +10,7 @@ Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As G
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.SurfaceContours3D As Contours
 
 Private Type Patch
     X0 As Double
@@ -20,16 +21,18 @@ Private Type Patch
     Y0 As Double
     Y1 As Double
     Plane As Number
+    X2 As Double
+    Z2 As Double
 End Type
 
 Private Dim Pending As Grid.State
-Private Dim Patches[32768] As Patch
+Private Dim Patches[65536] As Patch
 Private Dim PatchCount As Number
 
 Public Type State
     Openings As Decks.State
-    Objects[32] As Core.Object3D
-    NextObjects[32] As Core.Object3D
+    Objects[64] As Core.Object3D
+    NextObjects[64] As Core.Object3D
     Water[4] As Core.RibbonBatch3D
     NextWater[4] As Core.RibbonBatch3D
     Materials[7] As Core.Material3D
@@ -110,7 +113,7 @@ Private Sub AddPatch(ByRef Value As State, X0 As Double, Z0 As Double,
     X1 As Double, Z1 As Double, Kind As Number, Optional Y0 As Double = 0.0,
     Optional Y1 As Double = 0.0, Optional Plane As Number = 0)
 
-    If PatchCount >= 32768 Then
+    If PatchCount >= 65536 Then
         Value.Failed = True
         Return
     End If
@@ -124,6 +127,130 @@ Private Sub AddPatch(ByRef Value As State, X0 As Double, Z0 As Double,
     Patches[PatchCount].Y1 = Y1
     Patches[PatchCount].Plane = Plane
     PatchCount = PatchCount + 1
+
+End Sub
+
+Private Sub CurveTriangle(ByRef Value As State, PointA As P.Vector3, PointB As P.Vector3,
+    PointC As P.Vector3, Base As Number)
+
+    Dim Slice As Contours.Slice
+    Dim Index As Number
+    Dim Face As Contours.Triangle
+
+    Slice = Contours.Split(Pending, PointA, PointB, PointC, Base)
+
+    For Index = 0 To Slice.FaceCount - 1
+
+        Face = Slice.Faces[Index]
+
+        Call AddPatch(Value, Face.PointA.X, Face.PointA.Z, Face.PointB.X, Face.PointB.Z, Face.Kind, 0.0, 0.0, 3)
+
+        If Value.Failed Then
+            Return
+        End If
+
+        Patches[PatchCount - 1].X2 = Face.PointC.X
+        Patches[PatchCount - 1].Z2 = Face.PointC.Z
+    End For
+
+    If Slice.Rail Then
+        Call AddPatch(Value, Slice.EdgeA.X, Slice.EdgeA.Z, Slice.EdgeB.X, Slice.EdgeB.Z,
+            4, Layers.RAIL_BASE_Y, Layers.RAIL_TOP_Y, 4)
+    End If
+
+End Sub
+
+Private Sub CurveRow(ByRef Value As State)
+
+    Dim X As Number
+    Dim First As Number
+    Dim Surface As Number
+    Dim PointA As P.Vector3
+    Dim PointB As P.Vector3
+    Dim PointC As P.Vector3
+    Dim PointD As P.Vector3
+    Dim Center As P.Vector3
+    Dim Uniform As Boolean
+    Dim RunKind As Number
+    Dim Base As Number
+
+    ' Continuous water sits below the lawn; legacy cell water keeps its authored height.
+
+    If Value.Row = 0 Then
+        Call AddPatch(Value, Pending.OriginX, Pending.OriginZ,
+            Pending.XEdges[Pending.Columns], Pending.ZEdges[Pending.Rows], 2, Layers.GROUND_Y - 1.0)
+        Call AddPatch(Value, Pending.OriginX, Pending.OriginZ,
+            Pending.XEdges[Pending.Columns], Pending.ZEdges[Pending.Rows], 6, Layers.GROUND_Y - 1.2)
+    End If
+
+    First = -1
+
+    For X = 0 To Pending.Columns - 1
+
+        PointA = P.Vector(Pending.XEdges[X], 0.0, Pending.ZEdges[Value.Row])
+        PointB = P.Vector(PointA.X, 0.0, Pending.ZEdges[Value.Row + 1])
+        PointC = P.Vector(Pending.XEdges[X + 1], 0.0, PointB.Z)
+        PointD = P.Vector(PointC.X, 0.0, PointA.Z)
+        Center = P.Vector((PointA.X + PointC.X) * 0.5, 0.0, (PointA.Z + PointC.Z) * 0.5)
+        ' A cell owns its base up to its edge. Do not tessellate a neighboring
+        ' legacy tile into thousands of artificial slivers when adding one curve.
+        Base = Grid.ReadBase(Pending, X, Value.Row)
+        Surface = Min(3, Contours.Kind(Pending, Center, Base))
+        Uniform = (Min(3, Contours.Kind(Pending, PointA, Base)) = Surface And
+            Min(3, Contours.Kind(Pending, PointB, Base)) = Surface And
+            Min(3, Contours.Kind(Pending, PointC, Base)) = Surface And
+            Min(3, Contours.Kind(Pending, PointD, Base)) = Surface)
+
+        If First >= 0 And (Not Uniform Or Surface <> RunKind) Then
+            Call AddPatch(Value, Pending.XEdges[First], PointA.Z, PointA.X, PointC.Z, RunKind)
+
+            First = -1
+        End If
+
+        If Uniform Then
+
+            If (Surface = 1 Or Surface = 3) And First < 0 Then
+                First = X
+                RunKind = Surface
+            End If
+
+        Else
+
+            Call CurveTriangle(Value, PointA, PointB, Center, Base)
+            Call CurveTriangle(Value, PointB, PointC, Center, Base)
+            Call CurveTriangle(Value, PointC, PointD, Center, Base)
+            Call CurveTriangle(Value, PointD, PointA, Center, Base)
+
+        End If
+
+        ' Preserve authored grid-bridge rails when a curve is added elsewhere.
+        ' Generated curved maps use water as their base and get analytic rails above.
+
+        If Base = Grid.SURFACE_BRIDGE And Grid.ReadPoint(Pending, Center.X, Center.Z) = Base Then
+
+            If Grid.ReadPoint(Pending, PointA.X - 0.001, Center.Z) = Grid.SURFACE_WATER Then
+                Call Rail(Value, PointA.X, PointA.Z, PointA.X, PointC.Z, 2)
+            End If
+
+            If Grid.ReadPoint(Pending, PointC.X + 0.001, Center.Z) = Grid.SURFACE_WATER Then
+                Call Rail(Value, PointC.X, PointC.Z, PointC.X, PointA.Z, 2)
+            End If
+
+            If Grid.ReadPoint(Pending, Center.X, PointA.Z - 0.001) = Grid.SURFACE_WATER Then
+                Call Rail(Value, PointC.X, PointA.Z, PointA.X, PointA.Z, 1)
+            End If
+
+            If Grid.ReadPoint(Pending, Center.X, PointC.Z + 0.001) = Grid.SURFACE_WATER Then
+                Call Rail(Value, PointA.X, PointC.Z, PointC.X, PointC.Z, 1)
+            End If
+
+        End If
+
+    End For
+
+    If First >= 0 Then
+        Call AddPatch(Value, Pending.XEdges[First], PointA.Z, PointC.X, PointC.Z, RunKind)
+    End If
 
 End Sub
 
@@ -177,6 +304,7 @@ Private Sub Skirt(ByRef Value As State, Surface As Number, Neighbor As Number,
 
     Dim Kind As Number
     Dim Height As Double
+    Dim WaterHeight As Double
 
     Kind = Min(Surface, Grid.SURFACE_ROAD)
 
@@ -209,6 +337,12 @@ Private Sub ScanRow(ByRef Value As State)
     Dim Z0 As Double
     Dim Z1 As Double
 
+    If Pending.Curves.BrushCount > 0 Then
+        Call CurveRow(Value)
+
+        Return
+    End If
+
     Z = Value.Row
     Z0 = Pending.ZEdges[Z]
     Z1 = Pending.ZEdges[Z + 1]
@@ -228,10 +362,10 @@ Private Sub ScanRow(ByRef Value As State)
         Loop Until X >= Pending.Columns Or Grid.ReadCell(Pending, X, Z) <> Surface
 
         If Kind = Grid.SURFACE_WATER Then
-            ' A submerged opaque bed seals the height gap and receives building shadows.
+            ' PointA submerged opaque bed seals the height gap and receives building shadows.
 
             Call AddPatch(Value, Pending.XEdges[StartX] - 1.0, Z0 - 1.0,
-                Pending.XEdges[X] + 1.0, Z1 + 1.0, 6, Layers.BED_Y)
+                Pending.XEdges[X] + 1.0, Z1 + 1.0, 6, Layers.GROUND_Y - 1.2)
         End If
 
         If Kind > 0 Then
@@ -308,6 +442,7 @@ Private Sub UploadNext(ByRef Value As State)
     Dim Point As Number
     Dim Part As Patch
     Dim Height As Double
+    Dim WaterHeight As Double
     Dim Ok As Boolean
 
     StopIndex = Value.Cursor
@@ -348,7 +483,7 @@ Private Sub UploadNext(ByRef Value As State)
 
         Else
 
-            If Value.NextCount >= 32 Then
+            If Value.NextCount >= 64 Then
                 Value.Failed = True
                 Return
             End If
@@ -366,18 +501,39 @@ Private Sub UploadNext(ByRef Value As State)
 
                 If Value.Kind = 2 Then
 
+                    WaterHeight = Layers.WATER_Y
+
+                    If Part.Y0 > 0.0 Then
+                        WaterHeight = Part.Y0
+                    End If
+
                     Ok = P.SetRibbonPoint(Value.NextWater[Value.NextWaterCount], Point,
-                        P.Vector(Part.X0, Layers.WATER_Y, Part.Z0), P.Vector(Part.X0, Layers.WATER_Y, Part.Z0), 0.0) And Ok
+                        P.Vector(Part.X0, WaterHeight, Part.Z0), P.Vector(Part.X0, WaterHeight, Part.Z0), 0.0) And Ok
                     Ok = P.SetRibbonPoint(Value.NextWater[Value.NextWaterCount], Point + 1,
-                        P.Vector(Part.X0, Layers.WATER_Y, Part.Z0), P.Vector(Part.X1, Layers.WATER_Y, Part.Z0), 0.0) And Ok
+                        P.Vector(Part.X0, WaterHeight, Part.Z0), P.Vector(Part.X1, WaterHeight, Part.Z0), 0.0) And Ok
                     Ok = P.SetRibbonPoint(Value.NextWater[Value.NextWaterCount], Point + 2,
-                        P.Vector(Part.X0, Layers.WATER_Y, Part.Z1), P.Vector(Part.X1, Layers.WATER_Y, Part.Z1), 1.0) And Ok
+                        P.Vector(Part.X0, WaterHeight, Part.Z1), P.Vector(Part.X1, WaterHeight, Part.Z1), 1.0) And Ok
                     Ok = P.SetRibbonPoint(Value.NextWater[Value.NextWaterCount], Point + 3,
-                        P.Vector(Part.X1, Layers.WATER_Y, Part.Z1), P.Vector(Part.X1, Layers.WATER_Y, Part.Z1), 1.0) And Ok
+                        P.Vector(Part.X1, WaterHeight, Part.Z1), P.Vector(Part.X1, WaterHeight, Part.Z1), 1.0) And Ok
+
                     Ok = G.SetRibbonPointColor3D(Value.NextWater[Value.NextWaterCount], Point, 255, 255, 255, 100) And Ok
                     Ok = G.SetRibbonPointColor3D(Value.NextWater[Value.NextWaterCount], Point + 1, 255, 255, 255, 100) And Ok
                     Ok = G.SetRibbonPointColor3D(Value.NextWater[Value.NextWaterCount], Point + 2, 255, 255, 255, 100) And Ok
                     Ok = G.SetRibbonPointColor3D(Value.NextWater[Value.NextWaterCount], Point + 3, 255, 255, 255, 100) And Ok
+
+                Else If Part.Plane = 3 Then
+
+                    Ok = Vertex(Mesh, Point, Part.X0, Height, Part.Z0, Value.Kind) And Ok
+                    Ok = Vertex(Mesh, Point + 1, Part.X1, Height, Part.Z1, Value.Kind) And Ok
+                    Ok = Vertex(Mesh, Point + 2, Part.X2, Height, Part.Z2, Value.Kind) And Ok
+                    Ok = Vertex(Mesh, Point + 3, Part.X2, Height, Part.Z2, Value.Kind) And Ok
+
+                Else If Part.Plane = 4 Then
+
+                    Ok = Vertex(Mesh, Point, Part.X0, Part.Y0, Part.Z0, Value.Kind) And Ok
+                    Ok = Vertex(Mesh, Point + 1, Part.X0, Part.Y1, Part.Z0, Value.Kind) And Ok
+                    Ok = Vertex(Mesh, Point + 2, Part.X1, Part.Y1, Part.Z1, Value.Kind) And Ok
+                    Ok = Vertex(Mesh, Point + 3, Part.X1, Part.Y0, Part.Z1, Value.Kind) And Ok
 
                 Else If Part.Plane = 1 Then
 
@@ -452,6 +608,7 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
 
     Dim Index As Number
     Dim Ok As Boolean
+    Dim Deadline As Number
 
     Value.Time = (Value.Time + Max(0, Elapsed)) Mod 3600000
     Ok = G.SetEffectMaterialWater3D(Value.Materials[2], True, 45, 0, Value.Time / 8, 2)
@@ -461,6 +618,8 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
     End If
 
     If Value.Stage = 1 Then
+
+        Deadline = Timer() + 3
 
         For Index = 1 To 12
 
@@ -473,6 +632,10 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
                 Exit For
             End If
 
+            If Timer() >= Deadline Then
+                Exit For
+            End If
+
         End For
 
     Else If Value.Stage = 2 Then
@@ -481,7 +644,7 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
 
         If Value.Kind > 6 And Not Value.Failed Then
 
-            For Index = 0 To 31
+            For Index = 0 To 63
                 Call G.DestroyObject3D(Value.Objects[Index])
 
                 Value.Objects[Index] = Value.NextObjects[Index]
@@ -532,7 +695,7 @@ Public Sub Destroy(ByRef Value As State)
 
     Dim Index As Number
 
-    For Index = 0 To 31
+    For Index = 0 To 63
         Call G.DestroyObject3D(Value.Objects[Index])
         Call G.DestroyObject3D(Value.NextObjects[Index])
     End For

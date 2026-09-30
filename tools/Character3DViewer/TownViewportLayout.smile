@@ -18,6 +18,8 @@ Public Function Label(Index As Number) As Text
             Return "Fit"
         Case 5
             Return "Fly Inspect"
+        Case 6
+            Return "Demo"
     End Select
 
     Return ""
@@ -44,7 +46,7 @@ Public Function ButtonLeft(Index As Number) As Number
     Dim Item As Number
     Dim Result As Number
 
-    For Item = 0 To 5
+    For Item = 0 To 6
 
         ' Preserve action IDs while placing Edit Town at the right end.
 

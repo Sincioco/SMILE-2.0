@@ -1,0 +1,38 @@
+''' Reusable one-minute tab showcase timer, paused while editing or loading.
+Module Smile.Tools.TownDemo
+
+Option Explicit
+
+Public Const INTERVAL = 60000
+
+Public Type State
+    Enabled As Boolean
+    Elapsed As Number
+End Type
+
+Public Sub Toggle(ByRef Value As State)
+
+    Value.Enabled = Not Value.Enabled
+    Value.Elapsed = 0
+
+End Sub
+
+Public Function Advance(ByRef Value As State, Elapsed As Number, Ready As Boolean) As Boolean
+
+    If Not Value.Enabled Or Not Ready Then
+        Return False
+    End If
+
+    Value.Elapsed = Value.Elapsed + Max(0, Min(Elapsed, 1000))
+
+    If Value.Elapsed < INTERVAL Then
+        Return False
+    End If
+
+    Value.Elapsed = 0
+
+    Return True
+
+End Function
+
+End Module

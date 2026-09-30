@@ -1,0 +1,110 @@
+''' Ordered analytic surface brushes. Coordinates remain independent of navigation cells.
+Module Smile.Simple3D.SurfacePaint3D
+
+Option Explicit
+
+Public Const MAX_BRUSHES = 256
+Public Const FORM_RECTANGLE = 1
+Public Const FORM_CIRCLE = 2
+Public Const FORM_RING = 3
+Public Const FORM_LINE = 4
+
+Public Type Brush
+    Form As Number
+    Surface As Number
+    X0 As Double
+    Z0 As Double
+    X1 As Double
+    Z1 As Double
+    Width As Double
+End Type
+
+Public Type State
+    Brushes[256] As Brush
+    BrushCount As Number
+End Type
+
+Public Function Valid(Value As Brush) As Boolean
+
+    Dim Result As Boolean
+
+    Result = (Value.Form >= FORM_RECTANGLE And Value.Form <= FORM_LINE And
+        Value.Surface >= 0 And Value.Surface <= 4 And
+        Abs(Value.X0) <= 1000000000.0 And Abs(Value.Z0) <= 1000000000.0 And
+        Abs(Value.X1) <= 1000000000.0 And Abs(Value.Z1) <= 1000000000.0 And
+        Value.Width >= 0.0 And Value.Width <= 1000000000.0)
+
+    If Value.Form = FORM_CIRCLE Or Value.Form = FORM_RING Then
+        Result = Result And Value.X1 > 0.0
+    End If
+
+    Return Result
+
+End Function
+
+Public Function Contains(Value As Brush, X As Double, Z As Double) As Boolean
+
+    Dim Distance As Double
+    Dim Amount As Double
+    Dim DeltaX As Double
+    Dim DeltaZ As Double
+    Dim Result As Boolean
+
+    If Value.Form = FORM_RECTANGLE Then
+        Result = X >= Value.X0 And X <= Value.X1 And Z >= Value.Z0 And Z <= Value.Z1
+        Return Result
+    End If
+
+    DeltaX = X - Value.X0
+    DeltaZ = Z - Value.Z0
+
+    If Value.Form = FORM_LINE Then
+
+        Amount = Clamp((DeltaX * (Value.X1 - Value.X0) + DeltaZ * (Value.Z1 - Value.Z0)) /
+            Max(0.000001, (Value.X1 - Value.X0) * (Value.X1 - Value.X0) +
+            (Value.Z1 - Value.Z0) * (Value.Z1 - Value.Z0)), 0.0, 1.0)
+        DeltaX = DeltaX - Amount * (Value.X1 - Value.X0)
+        DeltaZ = DeltaZ - Amount * (Value.Z1 - Value.Z0)
+        Result = DeltaX * DeltaX + DeltaZ * DeltaZ <= Value.Width * Value.Width * 0.25
+        Return Result
+
+    End If
+
+    Distance = DeltaX * DeltaX + DeltaZ * DeltaZ
+    Result = Distance <= Value.X1 * Value.X1
+
+    If Value.Form = FORM_RING Then
+        Result = (Distance <= (Value.X1 + Value.Width * 0.5) * (Value.X1 + Value.Width * 0.5) And
+            Distance >= Max(0.0, Value.X1 - Value.Width * 0.5) * Max(0.0, Value.X1 - Value.Width * 0.5))
+    End If
+
+    Return Result
+
+End Function
+
+Public Function Resolve(ByRef Value As State, X As Double, Z As Double, Base As Number) As Number
+
+    Dim Index As Number
+    Dim Surface As Number
+
+    For Index = 0 To Value.BrushCount - 1
+
+        If Contains(Value.Brushes[Index], X, Z) Then
+
+            Surface = Value.Brushes[Index].Surface
+
+            If Surface = 3 And (Base = 2 Or Base = 4) Then
+                Surface = 4
+            End If
+
+            Base = Surface
+
+        End If
+
+    End For
+
+    Return Base
+
+End Function
+
+End Module

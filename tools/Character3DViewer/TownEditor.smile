@@ -23,6 +23,7 @@ Import Smile.Tools.TownMapLoadTools As MapLoadTools
 Import Smile.Tools.TownSunControls As Sun
 Import Smile.Tools.TownSectionTools As SectionTools
 Import Smile.Tools.TownCourtTools As CourtTools
+Import Smile.Tools.TownSurfaceTools As SurfaceTools
 
 Public Type State
     ViewRequest As Number
@@ -237,6 +238,20 @@ Public Function Command(ByRef Value As State, ByRef Town As Document.State, Acti
 
         Call Selection.RemoveSelected(Value.Selected, Town)
 
+    Else If Action = 35 Then
+
+        If Value.Selected.SelectedCount > 0 Then
+
+            InputText = Text_Prompt("Building Rotation", "Set selected buildings to an angle in degrees (decimals allowed).", "0")
+            Ok = Selection.SetAngle(Value.Selected, Town, InputText)
+            Value.Ui.Message = "Enter an angle from -360 to 360 degrees."
+
+            If Ok Then
+                Value.Ui.Message = "Rotation applied. Ctrl+Z undoes it."
+            End If
+
+        End If
+
     Else If Action = 32 Or Action = 33 Then
 
         Ok = History.Restore(Value.HistoryState, Town, Value.Guide.Ink, Action = 33)
@@ -284,6 +299,11 @@ Public Function Command(ByRef Value As State, ByRef Town As Document.State, Acti
     Else If Action = 44 Then
 
         Value.Ui.Width = Max(1, Value.Ui.Width - 1)
+
+    Else If Action = 47 Or Action = 48 Then
+
+        Value.Ui.Tool = Action
+        Value.Ui.Message = "Click the center, then the circle edge."
 
     Else If Action = 45 Then
 
@@ -464,6 +484,7 @@ Private Sub Paint(ByRef Value As State, ByRef Town As Document.State)
     Dim Z2 As Number
     Dim Surface As Number
     Dim Before As Number
+    Dim Ok As Boolean
 
     X1 = Grid.CellX(Town.Surface, Value.Anchor.X)
     Z1 = Grid.CellZ(Town.Surface, Value.Anchor.Z)
@@ -476,7 +497,10 @@ Private Sub Paint(ByRef Value As State, ByRef Town As Document.State)
         Surface = Grid.SURFACE_GROUND
     End If
 
-    If Value.Ui.Tool = 12 Then
+    If Value.Ui.Tool = 47 Or Value.Ui.Tool = 48 Then
+        Ok = SurfaceTools.Apply(Town.Surface, Value.Anchor, Value.Current, Surface,
+            ToDouble(Value.Ui.Width * 20), Value.Ui.Tool = 48)
+    Else If Value.Ui.Tool = 12 Then
         Call Grid.PaintWorldLine(Town.Surface, Value.Anchor.X, Value.Anchor.Z,
             Value.Current.X, Value.Current.Z, Surface, ToDouble(Value.Ui.Width * 20))
     Else
@@ -605,6 +629,7 @@ Public Function Input(ByRef Value As State, ByRef Town As Document.State,
         Value.Current.Z >= Town.Surface.ZEdges[0] And
         Value.Current.Z < Town.Surface.ZEdges[Town.Surface.Rows])
     RawPoint = Value.Current
+
     Point = Camera.ProjectViewerPoint(RawPoint, View, Window_Width(), Window_Height())
     Radius = Camera.WorldSizeForPixels(14, Max(View.NearPlane, Point.Depth), View.FovDegrees, Window_Height())
 
@@ -750,10 +775,17 @@ Public Function Input(ByRef Value As State, ByRef Town As Document.State,
         Else If Value.Ui.Category = 2 And OnGround Then
 
             If Value.Anchored Then
+
                 Call Paint(Value, Town)
+
             Else
                 Value.Anchor = Value.Current
                 Value.Anchored = True
+
+                If Value.Ui.Tool = 47 Or Value.Ui.Tool = 48 Then
+                    Value.Ui.Message = "Center set. Click the circle edge."
+                End If
+
             End If
 
         Else If Value.Ui.Tool = 11 And OnGround Then
@@ -887,7 +919,13 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State, View As P.Ca
             Preview = TileGuides.CellRectangle(Town.Surface, Value.Anchor, Value.Current)
         End If
 
-        Call Guides.DrawMarker(Preview, View, RGB(70, 230, 215))
+        If Value.Ui.Tool = 47 Or Value.Ui.Tool = 48 Then
+            Call SurfaceTools.Preview(Value.Anchor, Value.Current, ToDouble(Value.Ui.Width * 20),
+                Value.Ui.Tool = 48, View)
+        Else
+
+            Call Guides.DrawMarker(Preview, View, RGB(70, 230, 215))
+        End If
 
     End If
 

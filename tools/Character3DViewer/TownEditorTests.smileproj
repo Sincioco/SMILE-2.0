@@ -7,6 +7,7 @@
   <ItemGroup>
     <SmileSource Include="TownEditorTests.smile" StartupOnly="true" />
     <SmileSource Include="TownSectionTests.smile" />
+    <SmileSource Include="TownCurvesTests.smile" />
     <SmileSource Include="TownDocument.smile" />
     <SmileSource Include="TownMapLoads.smile" />
     <SmileSource Include="TownGeometry.smile" />
@@ -39,6 +40,8 @@
     <SmileSource Include="TownWorldDocument.smile" />
     <SmileSource Include="TownWorldView.smile" />
     <SmileSource Include="TownWorldPreviews.smile" />
+    <SmileSource Include="TownStartingCamera.smile" />
+    <SmileSource Include="NerisTownTour.smile" />
     <SmileSource Include="TownWorldImport.smile" />
     <SmileSource Include="TownTabs.smile" />
     <SmileSource Include="TownLibrary.smile" />
