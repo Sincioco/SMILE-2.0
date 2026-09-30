@@ -1,0 +1,62 @@
+''' Pending minimap destinations, owned by the single active road journey.
+Module Smile.Tools.TownRoadStops
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+
+Private Dim Points[64] As P.Vector3
+Private Dim Pending As Number
+
+Public Sub Reset()
+
+    Pending = 0
+
+End Sub
+
+Public Function Size() As Number
+
+    Return Pending
+
+End Function
+
+Public Function Point(Index As Number) As P.Vector3
+
+    Dim Result As P.Vector3
+
+    Result = Points[Index]
+
+    Return Result
+
+End Function
+
+Public Function Append(Destination As P.Vector3) As Boolean
+
+    If Pending >= 64 Then
+        Return False
+    End If
+
+    Points[Pending] = Destination
+    Pending = Pending + 1
+
+    Return True
+
+End Function
+
+Public Function Take() As P.Vector3
+
+    Dim Result As P.Vector3
+    Dim Index As Number
+
+    Result = Points[0]
+    Pending = Pending - 1
+
+    For Index = 0 To Pending - 1
+        Points[Index] = Points[Index + 1]
+    End For
+
+    Return Result
+
+End Function
+
+End Module

@@ -460,7 +460,7 @@ Public Function TemplateAt(Index As Number) As Template
             Result.PaletteVisible = True
             Result.Low = P.Vector(-386.448555, -14.060316, -547.999992)
             Result.High = P.Vector(386.448555, 588.650017, 320.000000)
-            Result.PartCount = 28
+            Result.PartCount = 27
             Result.SolidCount = 164
             Result.CameraCount = 211
             Result.StepCount = 27
@@ -494,7 +494,6 @@ Public Function TemplateAt(Index As Number) As Template
             Result.Parts[24] = 560
             Result.Parts[25] = 561
             Result.Parts[26] = 562
-            Result.Parts[27] = 563
 
         Case 14
             Result.Label = "Bench"

@@ -10,6 +10,8 @@ Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownCatalogData As Catalog
 Import Smile.Tools.TownEditorPanel As Panel
 Import Smile.Tools.NerisTownMap As Heading
+Import Smile.Tools.TownRoadTravel As Travel
+Import Smile.Tools.TownRoadStops As Stops
 
 Private Dim Cells[64, 64] As Number
 Private Dim Revision As Number
@@ -137,6 +139,9 @@ Public Sub DrawDestination(ByRef Town As Document.State, Destination As P.Vector
 
     Dim X As Number
     Dim Y As Number
+    Dim Index As Number
+    Dim Point As P.Vector3
+    Dim SplitAt As Number
 
     If Active And Inside(Destination) Then
 
@@ -148,14 +153,48 @@ Public Sub DrawDestination(ByRef Town As Document.State, Destination As P.Vector
         Draw Rectangle X - 5, Y - 5, 11, 11, YELLOW
         Draw Line X - 8, Y, X + 8, Y, YELLOW
         Draw Line X, Y - 8, X, Y + 8, YELLOW
+        Draw Text "1" At X + 8, Y - 12 Size 11 Color YELLOW
+
+    End If
+
+    If Active Then
+
+        For Index = 0 To Stops.Size() - 1
+
+            Point = Stops.Point(Index)
+
+            If Inside(Point) Then
+
+                X = Window_Width() - 276 + Coordinate(Point.X, LowX, HighX) * 4
+                Y = 259 + (63 - Coordinate(Point.Z, LowZ, HighZ)) * 4
+                Fill Rectangle X - 3, Y - 3, 7, 7, WHITE
+                Draw Text Panel.NumberLabel(Index + 2) At X + 6, Y - 12 Size 11 Color WHITE
+
+            End If
+
+        End For
 
     End If
 
     If Message <> "" Then
 
+        SplitAt = Min(38, Text_Length(Message))
+
+        If Text_Length(Message) > 38 Then
+
+            For Index = 0 To 37
+
+                If Text_Slice(Message, Index, 1) = " " Then
+                    SplitAt = Index
+                End If
+
+            End For
+
+        End If
+
         Fill Rectangle Window_Width() - 282, StatusY, 268, 38, RGB(10, 22, 35)
-        Draw Text Text_Slice(Message, 0, 38) At Window_Width() - 276, StatusY + 4 Size 11 Color YELLOW
-        Draw Text Text_Slice(Message, 38, 38) At Window_Width() - 276, StatusY + 20 Size 11 Color YELLOW
+        Draw Text Text_Slice(Message, 0, SplitAt) At Window_Width() - 276, StatusY + 4 Size 11 Color YELLOW
+        Draw Text Text_Slice(Message, SplitAt + 1, 38) At Window_Width() - 276, StatusY + 20 Size 11 Color YELLOW
 
     End If
 
@@ -170,6 +209,42 @@ Private Function Coordinate(Value As Double, Low As Double, High As Double) As N
     Return Result
 
 End Function
+
+Private Sub DrawRoute(Leader As P.Vector3, MapLeft As Number)
+
+    Dim Index As Number
+    Dim Point As P.Vector3
+    Dim X As Number
+    Dim Y As Number
+    Dim NextX As Number
+    Dim NextY As Number
+    Dim ColorValue As Number
+
+    ColorValue = RGB(40, 225, 255)
+    X = MapLeft + ToNumber((Leader.X - LowX) * 256.0 / Max(1.0, HighX - LowX))
+    Y = 515 - ToNumber((Leader.Z - LowZ) * 256.0 / Max(1.0, HighZ - LowZ))
+
+    For Index = 0 To Travel.RouteCount() - 1
+
+        Point = Travel.RoutePoint(Index)
+        NextX = MapLeft + ToNumber((Point.X - LowX) * 256.0 / Max(1.0, HighX - LowX))
+        NextY = 515 - ToNumber((Point.Z - LowZ) * 256.0 / Max(1.0, HighZ - LowZ))
+
+        If NextX <> X Or NextY <> Y Then
+
+            Draw Line X - 1, Y, NextX - 1, NextY, ColorValue
+            Draw Line X + 1, Y, NextX + 1, NextY, ColorValue
+            Draw Line X, Y - 1, NextX, NextY - 1, ColorValue
+            Draw Line X, Y + 1, NextX, NextY + 1, ColorValue
+            Draw Line X, Y, NextX, NextY, ColorValue
+
+        End If
+
+        X = NextX
+        Y = NextY
+    End For
+
+End Sub
 
 Private Sub Rebuild(ByRef Town As Document.State)
 
@@ -313,6 +388,7 @@ Public Sub Draw(ByRef Town As Document.State, Position As P.Vector3,
 
     Call DrawLandmark(Town, MapLeft, Opacity, LandmarkName, LandmarkPosition)
     Call DrawLandmark(Town, MapLeft, Opacity, AirportName, AirportPosition)
+    Call DrawRoute(Position, MapLeft)
 
     X = Coordinate(Position.X, LowX, HighX)
     Z = Coordinate(Position.Z, LowZ, HighZ)

@@ -11,17 +11,30 @@ Import Smile.Simple3D.Scene3D As Scene
 Public Const PANEL_TOP = 531
 Public Const VIEW_TOP = PANEL_TOP + 22
 Public Const REFRESH_MILLISECONDS = 83
+Public Const HOLD_MILLISECONDS = 6000
 
 Public Type State
     Hidden As Boolean
     UpdatedAt As Number
+    HoldRemaining As Number
+    HighFps As Boolean
 End Type
 
-Public Function Visible(Moving As Boolean, Editing As Boolean, Optional Hidden As Boolean = False) As Boolean
+Public Sub Update(ByRef Value As State, Moving As Boolean, Elapsed As Number)
+
+    If Moving Then
+        Value.HoldRemaining = HOLD_MILLISECONDS
+    Else
+        Value.HoldRemaining = Max(0, Value.HoldRemaining - Max(0, Elapsed))
+    End If
+
+End Sub
+
+Public Function Visible(ByRef Value As State, Editing As Boolean) As Boolean
 
     Dim Result As Boolean
 
-    Result = Moving And Not Editing And Not Hidden
+    Result = Value.HoldRemaining > 0 And Not Editing And Not Value.Hidden
 
     Return Result
 
@@ -41,7 +54,7 @@ Public Function Bottom() As Number
 
     Dim Result As Number
 
-    Result = VIEW_TOP + Height() + 2
+    Result = VIEW_TOP + Height() + 6
 
     Return Result
 
@@ -69,7 +82,8 @@ Public Function Begin(ByRef Value As State, Leader As P.Vector3, Yaw As Double) 
 
     Dim Ok As Boolean
 
-    If Value.UpdatedAt > 0 And Timer() - Value.UpdatedAt < REFRESH_MILLISECONDS Then
+    If (Not Value.HighFps And Value.UpdatedAt > 0 And
+        Timer() - Value.UpdatedAt < REFRESH_MILLISECONDS) Then
 
         If G.ReplayViewport3D(Window_Width() - 276, VIEW_TOP, 256, Height()) Then
             Return False
@@ -102,9 +116,46 @@ Public Sub Finish(ByRef Value As State)
 
 End Sub
 
-Public Sub Label(Name As Text)
+Public Function Hovered(ByRef Value As State, Editing As Boolean) As Boolean
 
-    Fill Rectangle Window_Width() - 282, PANEL_TOP, 268, 22, RGB(10, 22, 35) Opacity 90
+    Dim Result As Boolean
+
+    Result = (Visible(Value, Editing) And Pointer_X() >= Window_Width() - 282 And
+        Pointer_X() < Window_Width() - 14 And Pointer_Y() >= PANEL_TOP And Pointer_Y() < Bottom())
+
+    Return Result
+
+End Function
+
+Public Sub Input(ByRef Value As State)
+
+    If (Pointer_Pressed(POINTER_PRIMARY) And Pointer_X() >= Window_Width() - 132 And
+        Pointer_Y() < VIEW_TOP) Then
+        Value.HighFps = Not Value.HighFps
+        Value.UpdatedAt = 0
+    End If
+
+End Sub
+
+Public Sub Label(ByRef Value As State, Name As Text)
+
+    Dim X As Number
+    Dim ButtonLabel As Text
+
+    X = Window_Width() - 282
+    ButtonLabel = "High FPS: Off"
+
+    If Value.HighFps Then
+        ButtonLabel = "High FPS: On"
+    End If
+
+    ' Opaque backing around the rendered image; do not paint over the cached viewport.
+    Fill Rectangle X, PANEL_TOP, 268, 22, RGB(10, 22, 35)
+    Fill Rectangle X, VIEW_TOP, 6, Height() + 6, RGB(10, 22, 35)
+    Fill Rectangle X + 262, VIEW_TOP, 6, Height() + 6, RGB(10, 22, 35)
+    Fill Rectangle X + 6, VIEW_TOP + Height(), 256, 6, RGB(10, 22, 35)
+    Fill Rectangle Window_Width() - 132, PANEL_TOP + 2, 114, 18, RGB(29, 62, 79)
+    Draw Text ButtonLabel At Window_Width() - 127, PANEL_TOP + 4 Size 11 Color WHITE
     Draw Text Name + "'s POV" At Window_Width() - 276, PANEL_TOP + 3 Size 12 Color CYAN
     Draw Rectangle Window_Width() - 282, PANEL_TOP, 268, Bottom() - PANEL_TOP, RGB(45, 180, 190)
 

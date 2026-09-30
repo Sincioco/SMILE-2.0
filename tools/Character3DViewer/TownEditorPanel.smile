@@ -31,6 +31,7 @@ Public Type State
     Message As Text
     Busy As Boolean
     ProgressPercent As Number
+    RoadPreparation As Number
     CanUndo As Boolean
     RecentLabels[10] As Text
     RecentCount As Number
@@ -525,6 +526,14 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State,
     If Value.Busy Then
         Fill Rectangle X, Window_Height() - 169, 283, 4, RGB(29, 48, 65)
         Fill Rectangle X, Window_Height() - 169, 283 * Max(0, Min(100, Value.ProgressPercent)) / 100, 4, RGB(70, 225, 220)
+    End If
+
+    If Value.Section = 2 Then
+
+        Draw Text "Road Preparation: " + NumberLabel(Value.RoadPreparation) + "%" At X, Window_Height() - 294 Size 12 Color RGB(70, 225, 220)
+        Fill Rectangle X, Window_Height() - 276, 283, 4, RGB(29, 48, 65)
+        Fill Rectangle X, Window_Height() - 276, 283 * Value.RoadPreparation / 100, 4, RGB(70, 225, 220)
+
     End If
 
 End Sub

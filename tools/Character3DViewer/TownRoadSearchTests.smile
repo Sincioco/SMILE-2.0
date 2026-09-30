@@ -1,0 +1,133 @@
+''' Regression: unequal road tiles must minimize distance, with reusable safe connections.
+Module Smile.Tools.TownRoadSearchTests
+
+Option Explicit
+
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownDocumentNavigation As Navigation
+Import Smile.Tools.TownRoadNetwork As Network
+Import Smile.Tools.TownRoadSearch As Search
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+
+Private Dim Town As Document.State
+Private Dim Failures As Number
+
+Private Sub Check(Ok As Boolean, Label As Text)
+
+    If Not Ok Then
+        Failures = Failures + 1
+        Print "FAIL " + Label
+    End If
+
+End Sub
+
+Private Function Solve(Start As Number, Goal As Number) As Number
+
+    Dim Frame As Number
+    Dim Status As Number
+
+    Call Network.Adopt(Town)
+    Call Search.Begin(Start, Goal)
+
+    For Frame = 0 To 1000
+
+        Status = Search.Advance()
+
+        If Status <> 1 Then
+            Exit For
+        End If
+
+    End For
+
+    Return Status
+
+End Function
+
+Public Function Run() As Number
+
+    Dim Ok As Boolean
+    Dim Row As Number
+    Dim Frame As Number
+    Dim Status As Number
+    Dim ChecksBefore As Number
+    Dim Cell As Number
+    Dim Counted As Number
+
+    Failures = 0
+    Ok = Document.Blank(Town, "Unequal Road Costs", 7, 7, 10.0)
+    Ok = Grid.Initialize(Town.Surface, 7, 7, 0.0, 0.0, 10.0, Grid.SURFACE_GROUND) And Ok
+
+    For Row = 2 To 7
+        Town.Surface.ZEdges[Row] = 1000.0 + ToDouble(Row - 2) * 10.0
+    End For
+
+    Call Grid.PaintLine(Town.Surface, 0, 1, 6, 1, Grid.SURFACE_ROAD)
+    Call Grid.PaintLine(Town.Surface, 0, 5, 6, 5, Grid.SURFACE_ROAD)
+    Call Grid.PaintLine(Town.Surface, 0, 1, 0, 5, Grid.SURFACE_ROAD)
+    Call Grid.PaintLine(Town.Surface, 6, 1, 6, 5, Grid.SURFACE_ROAD)
+    Call Navigation.Rebuild(Town)
+
+    Status = Solve(14, 20)
+
+    Call Check(Ok And Status = 2 And Abs(Search.RouteLength() - 120.0) < 0.001,
+        "Shortest Distance Chooses Twelve Short Edges Over Eight Long Edges")
+
+    Cell = 20
+
+    For Frame = 0 To 48
+
+        Counted = Counted + 1
+        Cell = Search.Parent(Cell)
+
+        If Cell < 0 Then
+            Exit For
+        End If
+
+    End For
+
+    Call Check(Counted = 13, "Optimal Route Has A Complete Acyclic Parent Chain")
+
+    For Frame = 0 To 1000
+
+        Call Network.Prepare(Town)
+
+        If Network.Progress() = 100 Then
+            Exit For
+        End If
+
+    End For
+
+    ChecksBefore = Network.CollisionChecks()
+    Status = Solve(20, 14)
+
+    Call Check(Network.Progress() = 100 And Status = 2 And
+        Network.CollisionChecks() = ChecksBefore And Abs(Search.RouteLength() - 120.0) < 0.001,
+        "Prepared Reverse Route Reuses Collision Checks And Exact Travel Costs")
+
+    ' Same name and document revision, different committed surface: cached edges must expire.
+
+    Call Grid.PaintRectangle(Town.Surface, 3, 5, 3, 5, Grid.SURFACE_WATER)
+    Call Navigation.Rebuild(Town)
+
+    Status = Solve(14, 20)
+
+    Call Check(Status = 2 And Abs(Search.RouteLength() - 1060.0) < 0.001,
+        "Editing The Short Road Invalidates The Cache And Uses The Remaining Road")
+
+    Call Grid.PaintRectangle(Town.Surface, 3, 1, 3, 1, Grid.SURFACE_WATER)
+    Call Navigation.Rebuild(Town)
+
+    Status = Solve(14, 20)
+
+    Call Check(Status = 3, "Disconnected Destination Does Not Produce A Speculative Route")
+
+    Status = Solve(14, 14)
+
+    Call Check(Status = 2 And Search.RouteLength() = 0.0 And Search.Parent(14) = -1,
+        "Same Road Cell Has A Zero Length Route")
+
+    Return Failures
+
+End Function
+
+End Module

@@ -15,9 +15,10 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT.parent / 'NerisBuildingsV1/Source'))
 from geometry import Geometry, material
 
-# Replace the old fine bright joints with fewer, broader and lower-contrast joints.
+# Remove exterior masonry lines entirely; retain structural carved cornices.
 FINE_MASONRY = ('Fortress Mortar Line', 'Fortress Masonry Joint',
-                'Side Mortar Course', 'Limestone Course', 'Tower Stone Course')
+                'Side Mortar Course', 'Limestone Course', 'Tower Stone Course',
+                'Royal Broad Masonry', 'Royal Broad Palace', 'Royal Broad Tower')
 
 
 def palette():
@@ -30,48 +31,7 @@ def palette():
         'fresh': material('Royal Garden New Leaves', (.18, .29, .08), roughness=.76),
         'flower': material('Royal Garden Ivory Petals', (.89, .79, .63), roughness=.58),
         'rose': material('Royal Garden Rose Petals', (.49, .075, .17), roughness=.58),
-        'mortar': material('Royal Broad Masonry Mortar', (.62, .59, .52), roughness=.88),
     }
-
-
-def masonry(g, towers):
-    """Large ashlar blocks retain stone character without subpixel bright strips."""
-    def wall(x, y, width, side=False):
-        for row, z in enumerate((2.0, 4.5, 7.0)):
-            size = (1.30, width, .16) if side else (width, 1.30, .16)
-            g.box('Royal Broad Masonry Course', (x, y, z), size, 'mortar', 0)
-            start = -width/2 + 3 + (row % 2)*3
-            while start < width/2 - .4:
-                center = (x, y+start, z+1.25) if side else (x+start, y, z+1.25)
-                size = (1.30, .16, 2.34) if side else (.16, 1.30, 2.34)
-                g.box('Royal Broad Masonry Joint', center, size, 'mortar', 0)
-                start += 6
-    for x in (-22, 22):
-        wall(x, -30, 30)
-    wall(0, 30, 74)
-    for x in (-37, 37):
-        wall(x, 0, 60, True)
-    for x,y,w,d,h,base in ((0,14,58,25,14,0), (0,15,42,23,25,0),
-                           (0,3.6,13,1.7,28.5,14.1), (0,26.4,13,1.7,28.5,14.1)):
-        for row in range(1, math.ceil(h/2.7)):
-            z = base + row*2.7
-            g.box('Royal Broad Palace Course', (x,y,z), (w+.18,d+.18,.16), 'mortar', 0)
-            for sign in (-1,1):
-                u = -w/2 + 3 + (row % 2)*3
-                while u < w/2-.4 and z+2.55 < base+h:
-                    g.box('Royal Broad Palace Joint', (x+u,y+sign*(d/2+.065),z+1.35),
-                          (.16,.05,2.54), 'mortar', 0)
-                    u += 6
-    for (x,y,radius), levels in towers.items():
-        for row,z in enumerate(range(round(min(levels)),round(max(levels))+1,4)):
-            g.lathe('Royal Broad Tower Course', [(radius+.06,0),(radius+.06,.16)],
-                    (x,y,z), 'mortar', 24)
-            for index in range(8):
-                angle = (index+(row % 2)*.5)*math.tau/8
-                xx, yy = x+math.cos(angle)*(radius+.04), y+math.sin(angle)*(radius+.04)
-                end = min(z+3.92,max(levels)+.04)
-                if end > z+.2:
-                    g.beam('Royal Broad Tower Joint', (xx,yy,z+.08), (xx,yy,end), .075, 'mortar', 6)
 
 
 def foliage(g, center, radius, height, seed):
@@ -176,20 +136,15 @@ def door_leaves(g, marker):
 
 def apply(catalog=None):
     castle = bpy.data.objects['Royal Castle of Neris']
-    if castle.get('royal_detail_revision') == 2:
+    if castle.get('royal_detail_revision') == 3:
         return castle
     bpy.context.view_layer.update()
     inverse = castle.matrix_world.inverted()
     trees, pots, remove = [], [], []
-    towers = {}
     for obj in list(castle.children_recursive):
         points = [inverse @ obj.matrix_world @ Vector(p) for p in obj.bound_box]
         low = Vector(tuple(min(p[i] for p in points) for i in range(3)))
         high = Vector(tuple(max(p[i] for p in points) for i in range(3)))
-        if obj.name.startswith('Tower Stone Course'):
-            key = (round((low.x+high.x)/2,4), round((low.y+high.y)/2,4),
-                   round(max(high.x-low.x,high.y-low.y)/2,4))
-            towers.setdefault(key,[]).append(low.z)
         if obj.name.startswith(('Clipped Cypress','Royal Cypress Foliage')):
             trees.append(((low.x+high.x)/2,(low.y+high.y)/2,low.z,
                           max(high.x-low.x, high.y-low.y)/2,high.z-low.z))
@@ -202,7 +157,6 @@ def apply(catalog=None):
     for obj in remove:
         bpy.data.objects.remove(obj, do_unlink=True)
     g = Geometry('Royal Castle Detailed Garden', palette())
-    masonry(g,towers)
     for index, (x,y,z,radius,height) in enumerate(trees):
         foliage(g,(x,y,z),radius,height,1709+index)
     for index,(x,y,z,radius) in enumerate(pots):
@@ -230,7 +184,7 @@ def apply(catalog=None):
             continue
         obj.parent=castle
     bpy.data.objects.remove(g.root,do_unlink=True)
-    castle['royal_detail_revision']=2
+    castle['royal_detail_revision']=3
     bpy.context.view_layer.update()
     if catalog is not None:
         for instance in catalog['instances']:

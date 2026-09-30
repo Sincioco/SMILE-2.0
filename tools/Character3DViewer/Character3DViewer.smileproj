@@ -48,6 +48,9 @@
     <SmileSource Include="TownLibrary.smile" />
     <SmileSource Include="TownDocumentMap.smile" />
     <SmileSource Include="TownRoadTravel.smile" />
+    <SmileSource Include="TownRoadNetwork.smile" />
+    <SmileSource Include="TownRoadSearch.smile" />
+    <SmileSource Include="TownRoadStops.smile" />
     <SmileSource Include="TownWorldDocument.smile" />
     <SmileSource Include="TownWorldView.smile" />
     <SmileSource Include="TownWorldPreviews.smile" />

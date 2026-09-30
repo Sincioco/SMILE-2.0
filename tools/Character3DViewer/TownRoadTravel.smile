@@ -1,4 +1,4 @@
-''' One active road journey. Breadth-first search yields between frames; movement uses normal collision.
+''' One active road journey. Cached distance-based A* yields between frames; movement uses normal collision.
 Module Smile.Tools.TownRoadTravel
 
 Option Explicit
@@ -9,16 +9,23 @@ Import Smile.Simple3D.PrecisionMath3D As M
 Import Smile.Simple3D.SurfaceGrid3D As Grid
 Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownDocumentNavigation As Navigation
+Import Smile.Tools.TownRoadNetwork As Network
+Import Smile.Tools.TownRoadSearch As Search
+Import Smile.Tools.TownRoadStops As Stops
 
 Private Dim Surface As Grid.State
-Private Dim Parents[262144] As Number
 Private Dim Queue[262144] As Number
-Private Dim Head As Number
-Private Dim Tail As Number
+Private Dim Turns[262144] As Number
+Private Dim TurnCount As Number
+Private Dim TurnCursor As Number
+Private Dim BuildCell As Number
+Private Dim StartedAt As Number
+Private Dim PlanningTime As Number
 Private Dim GoalCell As Number
 Private Dim Cursor As Number
 Private Dim Stage As Number
 Private Dim Revision As Number
+Private Dim CollisionVersion As Number
 Private Dim TownName As Text
 Private Dim Destination As P.Vector3
 Private Dim Previous As P.Vector3
@@ -31,6 +38,8 @@ Public Sub Cancel(Optional Message As Text = "")
 
     Stage = 0
     Notice = Message
+
+    Call Stops.Reset()
 
 End Sub
 
@@ -53,6 +62,33 @@ End Function
 Public Function Target() As P.Vector3
 
     Return Destination
+
+End Function
+
+''' Remaining route bends for the minimap; completed straight sections need no points.
+Public Function RouteCount() As Number
+
+    Dim Result As Number
+
+    If Stage = 2 Then
+        Result = TurnCursor + 2
+    End If
+
+    Return Result
+
+End Function
+
+Public Function RoutePoint(Index As Number) As P.Vector3
+
+    Dim Result As P.Vector3
+
+    Result = Destination
+
+    If Index <= TurnCursor Then
+        Result = Center(Queue[Turns[TurnCursor - Index]])
+    End If
+
+    Return Result
 
 End Function
 
@@ -186,19 +222,51 @@ Private Function LaneCenter(Cell As Number) As P.Vector3
 
 End Function
 
+Public Function Append(ByRef Town As Document.State, Clicked As P.Vector3) As Boolean
+
+    Dim Point As P.Vector3
+    Dim PickRadius As Double
+
+    PickRadius = Max(Town.Surface.XEdges[Town.Surface.Columns] - Town.Surface.OriginX,
+        Town.Surface.ZEdges[Town.Surface.Rows] - Town.Surface.OriginZ) / 128.0
+
+    If Not Navigation.NearestRoad(Clicked, Point) Then
+        Notice = "No walkable road found."
+        Return False
+    End If
+
+    If M.Length(M.Subtract(Clicked, Point)) > PickRadius Then
+        Notice = "Click a road on the minimap."
+        Return False
+    End If
+
+    If Not Stops.Append(Point) Then
+        Notice = "Destination queue is full (64 stops)."
+        Return False
+    End If
+
+    Return True
+
+End Function
+
 Public Function Begin(ByRef Town As Document.State, Leader As P.Vector3,
-    Clicked As P.Vector3) As Boolean
+    Clicked As P.Vector3, Optional ContinueTrip As Boolean = False) As Boolean
 
     Dim StartPoint As P.Vector3
     Dim StartCell As Number
-    Dim Index As Number
     Dim PickRadius As Double
 
-    Call Cancel()
+    Stage = 0
+    Notice = ""
+
+    If Not ContinueTrip Then
+        Call Stops.Reset()
+    End If
 
     If (Not Navigation.NearestRoad(Leader, StartPoint) Or
         Not Navigation.NearestRoad(Clicked, Destination)) Then
-        Notice = "No walkable road found."
+        Call Cancel("No walkable road found.")
+
         Return False
     End If
 
@@ -207,7 +275,8 @@ Public Function Begin(ByRef Town As Document.State, Leader As P.Vector3,
         Surface.ZEdges[Surface.Rows] - Surface.OriginZ) / 128.0
 
     If M.Length(M.Subtract(Clicked, Destination)) > PickRadius Then
-        Notice = "Click a road on the minimap."
+        Call Cancel("Click a road on the minimap.")
+
         Return False
     End If
 
@@ -217,109 +286,115 @@ Public Function Begin(ByRef Town As Document.State, Leader As P.Vector3,
 
     If (Not ClearSegment(Leader, Center(StartCell), False) Or
         Not ClearSegment(Center(GoalCell), Destination)) Then
-        Notice = "The nearest road is obstructed."
+        Call Cancel("The nearest road is obstructed.")
+
         Return False
     End If
 
-    For Index = 0 To Surface.Columns * Surface.Rows - 1
-        Parents[Index] = 0
-    End For
+    Call Network.Adopt(Town)
+    Call Search.Begin(StartCell, GoalCell)
 
-    Parents[StartCell] = -1
-    Queue[0] = StartCell
-    Head = 0
-    Tail = 1
+    StartedAt = Timer()
+    PlanningTime = 0
     WaypointCursor = -2
     Stage = 1
     Revision = Town.Revision
+    CollisionVersion = Navigation.Version()
     TownName = Town.Name
     Previous = Leader
     Stalled = 0
-    Notice = "Finding a connected road route..."
+    Notice = "Acquiring GPS signal, stand by..."
 
     Return True
 
 End Function
 
-Private Sub Visit(X As Number, Z As Number, FromCell As Number)
+Public Sub Prepare(ByRef Town As Document.State)
 
-    Dim Cell As Number
-    Dim Point As P.Vector3
-
-    If (X < 0 Or
-        Z < 0 Or
-        X >= Surface.Columns Or
-        Z >= Surface.Rows Or
-        Not Road(X, Z)) Then
-        Return
+    If Stage <> 1 And Stage <> 3 Then
+        Call Network.Prepare(Town)
     End If
-
-    Cell = Z * Surface.Columns + X
-
-    If Parents[Cell] <> 0 Then
-        Return
-    End If
-
-    Point = Center(Cell)
-
-    If Not Navigation.CanStand(Point.X, Point.Z) Then
-        Parents[Cell] = -2
-        Return
-    End If
-
-    If Not ClearSegment(Center(FromCell), Point) Then
-        Return
-    End If
-
-    Parents[Cell] = FromCell + 1
-    Queue[Tail] = Cell
-    Tail = Tail + 1
 
 End Sub
 
-Private Sub Search()
+Public Function Preparation() As Number
 
+    Dim Result As Number
+
+    Result = Network.Progress()
+
+    Return Result
+
+End Function
+
+Public Function ThinkingTime() As Number
+
+    Return PlanningTime
+
+End Function
+
+Private Sub Plan()
+
+    Dim Status As Number
     Dim Work As Number
-    Dim Cell As Number
-    Dim X As Number
-    Dim Z As Number
 
-    For Work = 0 To 127
+    If Stage = 1 Then
 
-        If Head = Tail Then
+        Status = Search.Advance()
+
+        If Status = 3 Then
             Call Cancel("That road is disconnected or obstructed.")
 
             Return
         End If
 
-        Cell = Queue[Head]
-        Head = Head + 1
-
-        If Cell = GoalCell Then
+        If Status = 2 Then
 
             Cursor = -1
-
-            Do
-                Cursor = Cursor + 1
-                Queue[Cursor] = Cell
-                Cell = Parents[Cell] - 1
-
-            Loop Until Cell < 0
-
-            Stage = 2
-            Notice = "Running to the minimap destination."
-            Return
+            BuildCell = GoalCell
+            TurnCount = 1
+            Turns[0] = 0
+            Stage = 3
 
         End If
 
-        X = Cell Mod Surface.Columns
-        Z = Cell / Surface.Columns
+    End If
 
-        Call Visit(X - 1, Z, Cell)
-        Call Visit(X + 1, Z, Cell)
-        Call Visit(X, Z - 1, Cell)
-        Call Visit(X, Z + 1, Cell)
-    End For
+    If Stage = 3 Then
+
+        For Work = 0 To 1023
+
+            Cursor = Cursor + 1
+            Queue[Cursor] = BuildCell
+            BuildCell = Search.Parent(BuildCell)
+
+            If Cursor >= 2 Then
+
+                If Queue[Cursor] - Queue[Cursor - 1] <> Queue[Cursor - 1] - Queue[Cursor - 2] Then
+                    Turns[TurnCount] = Cursor - 1
+                    TurnCount = TurnCount + 1
+                End If
+
+            End If
+
+            If BuildCell < 0 Then
+
+                If Cursor > Turns[TurnCount - 1] Then
+                    Turns[TurnCount] = Cursor
+                    TurnCount = TurnCount + 1
+                End If
+
+                TurnCursor = TurnCount - 1
+                Stage = 2
+                PlanningTime = Timer() - StartedAt
+                Notice = "GPS signal acquired, going to destination..."
+                Return
+
+            End If
+
+        End For
+
+    End If
 
 End Sub
 
@@ -330,19 +405,22 @@ Public Function Direction(ByRef Town As Document.State, Leader As P.Vector3,
     Dim Point As P.Vector3
     Dim Delta As P.Vector3
     Dim Distance As Double
+    Dim NextStop As P.Vector3
+    Dim Started As Boolean
 
     If Stage = 0 Then
         Return Result
     End If
 
-    If Town.Name <> TownName Or Town.Revision <> Revision Then
+    If (Town.Name <> TownName Or Town.Revision <> Revision Or
+        Navigation.Version() <> CollisionVersion) Then
         Call Cancel("Route canceled because the map changed.")
 
         Return Result
     End If
 
-    If Stage = 1 Then
-        Call Search()
+    If Stage = 1 Or Stage = 3 Then
+        Call Plan()
 
         Return Result
     End If
@@ -365,6 +443,20 @@ Public Function Direction(ByRef Town As Document.State, Leader As P.Vector3,
 
     End If
 
+    Do
+
+        If TurnCursor < 0 Then
+            Exit Do
+        End If
+
+        If Turns[TurnCursor] <= Cursor Then
+            Exit Do
+        End If
+
+        TurnCursor = TurnCursor - 1
+
+    Loop
+
     Point = Waypoint
     Delta = M.Subtract(Point, Leader)
     Delta.Y = 0.0
@@ -376,7 +468,15 @@ Public Function Direction(ByRef Town As Document.State, Leader As P.Vector3,
         Stalled = 0
 
         If Cursor < -1 Then
-            Call Cancel("Destination reached.")
+
+            If Stops.Size() > 0 Then
+                NextStop = Stops.Take()
+                Started = Begin(Town, Leader, NextStop, True)
+            Else
+
+                Call Cancel("Destination reached.")
+            End If
+
         End If
 
         Return Result

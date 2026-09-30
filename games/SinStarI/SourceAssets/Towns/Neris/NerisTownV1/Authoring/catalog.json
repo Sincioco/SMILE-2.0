@@ -5604,10 +5604,6 @@
         [
           35,
           2
-        ],
-        [
-          35,
-          3
         ]
       ],
       "doors": [
@@ -31592,14 +31588,14 @@
     {
       "file": "Templates/Catalog-34.glb",
       "parts": 7,
-      "triangles": 129142,
-      "sha256": "1d4ff3ea7358268eb585bddc17e15e95ccd1f88cdfc8ec505d48c7db4a34019c"
+      "triangles": 129374,
+      "sha256": "fdf59e726db1eef27fb8359de1a1bed3419ef7b73df765a67e28d6918415c319"
     },
     {
       "file": "Templates/Catalog-35.glb",
-      "parts": 4,
-      "triangles": 52102,
-      "sha256": "116704db6d7908d51d59c2959aabf0b7457461bb51c715bebb7f17f2d2700739"
+      "parts": 3,
+      "triangles": 20402,
+      "sha256": "e41142fedcb9b393c8c8f070234d2bc1837c887544813131a38f933a938e2fbf"
     }
   ],
   "terrain": {
@@ -32606,5 +32602,5 @@
   "removed_duplicate_triangles": 940672,
   "document_fingerprint": "a0be1e73b6bd14876474e016d063eb257fd031c2de7ad2a332cbac25d8541d9d",
   "blend_source": "Authoring/Catalog-r004.blend",
-  "royal_detail_revision": 2
+  "royal_detail_revision": 3
 }

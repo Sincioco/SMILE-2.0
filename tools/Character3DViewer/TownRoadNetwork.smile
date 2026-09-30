@@ -1,0 +1,248 @@
+''' Derived road connections for one committed map; no authored document mutations.
+Module Smile.Tools.TownRoadNetwork
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownDocumentNavigation As Navigation
+Import Smile.Tools.TownSurfaceLayers As Layers
+
+Private Dim Surface As Grid.State
+Private Dim Generation As Number
+Private Dim CellsSeen[262144] As Number
+Private Dim Walkable[262144] As Boolean
+Private Dim EdgesSeen[524288] As Number
+Private Dim EdgesOpen[524288] As Boolean
+Private Dim WarmCursor As Number
+Private Dim PendingEdge As Number
+Private Dim SampleIndex As Number
+Private Dim SampleCount As Number
+Private Dim SampleStart As P.Vector3
+Private Dim SampleDelta As P.Vector3
+Private Dim Checks As Number
+
+Public Sub Adopt(ByRef Town As Document.State)
+
+    If Generation = Navigation.Version() And Generation > 0 Then
+        Return
+    End If
+
+    Surface = Town.Surface
+    Generation = Navigation.Version()
+    WarmCursor = 0
+    PendingEdge = -1
+    Checks = 0
+
+End Sub
+
+Public Function Size() As Number
+
+    Dim Result As Number
+
+    Result = Surface.Columns * Surface.Rows
+
+    Return Result
+
+End Function
+
+Public Function Center(Cell As Number) As P.Vector3
+
+    Dim X As Number
+    Dim Z As Number
+    Dim Result As P.Vector3
+
+    X = Cell Mod Surface.Columns
+    Z = Cell / Surface.Columns
+    Result = P.Vector((Surface.XEdges[X] + Surface.XEdges[X + 1]) * 0.5, Layers.ROAD_Y,
+        (Surface.ZEdges[Z] + Surface.ZEdges[Z + 1]) * 0.5)
+
+    Return Result
+
+End Function
+
+Public Function Neighbor(Cell As Number, Side As Number) As Number
+
+    Dim Result As Number
+
+    Result = -1
+
+    If Side = 0 And Cell Mod Surface.Columns > 0 Then
+        Result = Cell - 1
+    Else If Side = 1 And Cell Mod Surface.Columns + 1 < Surface.Columns Then
+        Result = Cell + 1
+    Else If Side = 2 And Cell >= Surface.Columns Then
+        Result = Cell - Surface.Columns
+    Else If Side = 3 And Cell + Surface.Columns < Size() Then
+        Result = Cell + Surface.Columns
+    End If
+
+    Return Result
+
+End Function
+
+Private Function CanUse(Cell As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Kind As Number
+    Dim Point As P.Vector3
+
+    If CellsSeen[Cell] <> Generation Then
+
+        CellsSeen[Cell] = Generation
+        Kind = Grid.ReadCell(Surface, Cell Mod Surface.Columns, Cell / Surface.Columns)
+        Walkable[Cell] = False
+
+        If Kind = Grid.SURFACE_ROAD Or Kind = Grid.SURFACE_BRIDGE Then
+
+            Point = Center(Cell)
+            Walkable[Cell] = Navigation.CanStand(Point.X, Point.Z)
+            Checks = Checks + 1
+
+        End If
+
+    End If
+
+    ReturnValue = Walkable[Cell]
+
+    Return ReturnValue
+
+End Function
+
+''' 0 yields for more work, 1 is open, 2 is blocked. Only adjacent road centers connect.
+Public Function Connection(Cell As Number, Side As Number, Deadline As Number) As Number
+
+    Dim Other As Number
+    Dim Edge As Number
+    Dim Point As P.Vector3
+    Dim Work As Number
+
+    Other = Neighbor(Cell, Side)
+
+    If Other < 0 Then
+        Return 2
+    End If
+
+    Edge = Min(Cell, Other) * 2
+
+    If Side >= 2 Then
+        Edge = Edge + 1
+    End If
+
+    If EdgesSeen[Edge] = Generation Then
+
+        If EdgesOpen[Edge] Then
+            Return 1
+        Else
+            Return 2
+        End If
+
+    End If
+
+    If PendingEdge <> Edge Then
+
+        If Not CanUse(Cell) Or Not CanUse(Other) Then
+
+            EdgesSeen[Edge] = Generation
+            EdgesOpen[Edge] = False
+            Return 2
+
+        End If
+
+        PendingEdge = Edge
+        SampleStart = Center(Cell)
+        SampleDelta = M.Subtract(Center(Other), SampleStart)
+        SampleCount = Max(1, ToNumber(Floor(M.Length(SampleDelta) / 5.0)) + 1)
+        SampleIndex = 1
+
+    End If
+
+    For Work = 0 To 255
+
+        If SampleIndex >= SampleCount Then
+
+            EdgesSeen[Edge] = Generation
+            EdgesOpen[Edge] = True
+            PendingEdge = -1
+            Return 1
+
+        End If
+
+        If Timer() >= Deadline Then
+            Return 0
+        End If
+
+        Point = M.Add(SampleStart, M.Scale(SampleDelta, ToDouble(SampleIndex) / ToDouble(SampleCount)))
+        Checks = Checks + 1
+
+        If Not Navigation.CanStand(Point.X, Point.Z) Then
+
+            EdgesSeen[Edge] = Generation
+            EdgesOpen[Edge] = False
+            PendingEdge = -1
+            Return 2
+
+        End If
+
+        SampleIndex = SampleIndex + 1
+    End For
+
+    Return 0
+
+End Function
+
+''' Cooperative preparation continues during editing, without locking any editor input.
+Public Sub Prepare(ByRef Town As Document.State, Optional Budget As Number = 2)
+
+    Dim Deadline As Number
+    Dim Work As Number
+    Dim Side As Number
+    Dim Status As Number
+
+    Call Adopt(Town)
+
+    Deadline = Timer() + Budget
+
+    For Work = 0 To 4095
+
+        If WarmCursor >= Size() * 2 Or Timer() >= Deadline Then
+            Return
+        End If
+
+        Side = 1
+
+        If WarmCursor Mod 2 = 1 Then
+            Side = 3
+        End If
+
+        Status = Connection(WarmCursor / 2, Side, Deadline)
+
+        If Status = 0 Then
+            Return
+        End If
+
+        WarmCursor = WarmCursor + 1
+    End For
+
+End Sub
+
+Public Function Progress() As Number
+
+    Dim Result As Number
+
+    Result = Min(100, WarmCursor * 100 / Max(1, Size() * 2))
+
+    Return Result
+
+End Function
+
+Public Function CollisionChecks() As Number
+
+    Return Checks
+
+End Function
+
+End Module

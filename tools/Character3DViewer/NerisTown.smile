@@ -289,6 +289,12 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
 
     Blocked = Blocked Or (HeaderHovered And Not CameraPanel.Hovered(Value.Panel.HelpOpen))
 
+    If Inset.Hovered(Value.PointOfView, Authoring.Editing()) Then
+        Call Inset.Input(Value.PointOfView)
+
+        Blocked = True
+    End If
+
     If (Value.Edited And
         Not Blocked And
         Not Authoring.Editing() And
@@ -1059,6 +1065,7 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
     Call Castle.Synchronize(Value.Comparison, Authoring.CourtExists(), Authoring.CourtOffset())
     Call Castle.Update(Value.Comparison, Elapsed)
     Call TownMap.Update(Value.Map, Party.IsMoving(Value.People), Elapsed)
+    Call Inset.Update(Value.PointOfView, Party.IsMoving(Value.People), Elapsed)
 
     If Value.Cinematic And Not Value.OrbitPaused Then
         Value.View.Controls.OrbitYaw = Camera.NormalizeAngle(Value.View.Controls.OrbitYaw + ToDouble(Elapsed) * 0.0025)
@@ -1189,7 +1196,7 @@ Public Sub Draw(ByRef Value As State)
 
     End If
 
-    If Inset.Visible(Party.IsMoving(Value.People), Authoring.Editing(), Value.PointOfView.Hidden) Then
+    If Inset.Visible(Value.PointOfView, Authoring.Editing()) Then
 
         If Inset.Begin(Value.PointOfView, Value.People.Path.Positions[0], Value.People.Members[0].Yaw) Then
             Ok = DrawContents(Value) And Ok
@@ -1238,7 +1245,7 @@ Public Sub Overlay(ByRef Value As State)
 
     MapStatusY = 533
 
-    If Inset.Visible(Party.IsMoving(Value.People), Authoring.Editing(), Value.PointOfView.Hidden) Then
+    If Inset.Visible(Value.PointOfView, Authoring.Editing()) Then
         MapStatusY = Inset.Bottom()
     End If
 
@@ -1261,7 +1268,7 @@ Public Sub Overlay(ByRef Value As State)
 
             If Value.Edited Then
 
-                If Not Value.Cinematic Or Party.IsMoving(Value.People) Then
+                If Not Value.Cinematic Or Inset.Visible(Value.PointOfView, False) Then
                     Call Authoring.DrawMap(Value.People.Path.Positions[0], ToNumber(Value.Map.Opacity), Party.LeaderName(Value.People),
                         CastleRoute.MapLabel(), P.Vector(CastleRoute.CenterX(), CastleRoute.DECK_Y, CastleRoute.CenterZ()),
                         Landmarks.AirportMapLabel(), Landmarks.AirportMapPosition(),
@@ -1305,8 +1312,8 @@ Public Sub Overlay(ByRef Value As State)
         Value.PartyCamera, Value.Flight.Enabled And Not Value.Flight.Suspended,
         Drone.GroundShot(Value.Flight, Value.PartyCamera), Value.Keys.FlyInspect, Authoring.Editing())
 
-    If Inset.Visible(Party.IsMoving(Value.People), Authoring.Editing(), Value.PointOfView.Hidden) Then
-        Call Inset.Label(Party.LeaderName(Value.People))
+    If Inset.Visible(Value.PointOfView, Authoring.Editing()) Then
+        Call Inset.Label(Value.PointOfView, Party.LeaderName(Value.People))
     End If
 
     Call CameraPanel.MapStatistics(Value.Panel, Value.View)

@@ -18,6 +18,7 @@ Private Dim Items[1024] As Document.Item
 Private Dim Shapes[35] As Catalog.Template
 Private Dim ItemCount As Number
 Private Dim Enabled As Boolean
+Private Dim SnapshotVersion As Number
 Private Dim CameraDirty As Boolean
 Private Dim CameraAnchor As P.Vector3
 Private Dim CameraWorld As Clearance.World
@@ -35,6 +36,7 @@ Public Sub Rebuild(ByRef Town As Document.State)
     Dim Shape As Catalog.Template
 
     Surface = Town.Surface
+    SnapshotVersion = SnapshotVersion + 1
     ItemCount = Town.ItemCount
 
     For Index = 0 To ItemCount - 1
@@ -89,8 +91,16 @@ End Function
 Public Sub Disable()
 
     Enabled = False
+    SnapshotVersion = SnapshotVersion + 1
 
 End Sub
+
+''' A new committed collision snapshot invalidates derived road connections.
+Public Function Version() As Number
+
+    Return SnapshotVersion
+
+End Function
 
 Public Function Active() As Boolean
 

@@ -55,8 +55,8 @@ def run():
     castle=apply()
     assert not any(o.name.startswith(FINE_MASONRY) for o in castle.children_recursive)
     assert any(o.name.startswith('Fortress Carved Course') for o in castle.children_recursive)
-    assert any(o.name.startswith('Royal Broad Masonry Joint') for o in castle.children_recursive)
-    assert any(o.name.startswith('Royal Broad Tower Course') for o in castle.children_recursive)
+    assert any(o.name.startswith('Royal Portal Archivolt') for o in castle.children_recursive)
+    assert any(o.name.startswith('Royal Cypress Leaf Sprays') for o in castle.children_recursive)
     parts=collect([o for o in castle.children_recursive if not o.get('neris_door_leaf')],castle.matrix_world.inverted())
     assert len(parts)<=32, len(parts)
     batches=[]
@@ -86,7 +86,7 @@ def run():
         assert len(side_parts)==2,len(side_parts)
         door.extend(sorted(side_parts,key=lambda p: 'Gold' in p[0]))
     write(ROOT/'Runtime/Royal-Door-Leaves.glb',door)
-    catalog['royal_detail_revision']=2
+    catalog['royal_detail_revision']=3
     path.write_text(json.dumps(catalog,indent=2)+'\n')
     generate(catalog)
     print('ROYAL EXPORT',len(parts),'parts,',len(batches),'chunks,',sum(p[3] for p in parts),'vertices',flush=True)

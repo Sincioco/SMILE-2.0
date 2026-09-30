@@ -22,6 +22,7 @@ Dim Failures As Number
 Dim Flights As Traffic.State
 Dim EyeView As P.Camera3D
 Dim Facing As P.Vector3
+Dim PointOfView As Inset.State
 
 For Index = 0 To 3
 
@@ -37,9 +38,22 @@ End For
 
 Call Check(Inset.PANEL_TOP = 531 And Inset.VIEW_TOP = 553,
     "Inset Joins The Minimap Bottom Without A Floating Gap")
-Call Check(Inset.Visible(True, False) And Not Inset.Visible(True, False, True) And
-    Not Inset.Visible(False, False) And Not Inset.Visible(True, True),
-    "POV Is Only Drawn While Moving Visible And Outside Editing")
+Call Check(Not PointOfView.HighFps And Not Inset.Visible(PointOfView, False),
+    "POV Starts With High FPS Off And No Stationary Render")
+Call Inset.Update(PointOfView, True, 16)
+Call Check(Inset.Visible(PointOfView, False) And Not Inset.Visible(PointOfView, True),
+    "Movement Shows POV Outside Editing")
+Call Inset.Update(PointOfView, False, 5999)
+Call Check(Inset.Visible(PointOfView, False), "POV Remains For Nearly Six Seconds After Stopping")
+
+PointOfView.Hidden = True
+
+Call Check(Not Inset.Visible(PointOfView, False), "Ctrl F Overrides The POV Hold")
+
+PointOfView.Hidden = False
+
+Call Inset.Update(PointOfView, False, 1)
+Call Check(Not Inset.Visible(PointOfView, False), "POV Stops Rendering When The Six Second Hold Ends")
 
 Call Spaceport.Enable(True)
 

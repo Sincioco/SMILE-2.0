@@ -1,5 +1,68 @@
 # Character Viewer Architecture
 
+## Current: cached road routing and POV controls (September 30)
+
+TownRoadNetwork owns collision-validated four-neighbor road connections for one
+committed navigation snapshot. TownDocumentNavigation exposes a monotonic snapshot
+version; even an identically named/revisioned replacement expires the cache.
+Generation stamps avoid whole-array clearing. Undirected connections resume
+interior collision samples within a time budget. There is no authored document
+mutation or background thread reading live editor state.
+
+TownRoadSearch owns an exact A* query, indexed binary heap, distance costs, parents
+and progress. World Manhattan distance is admissible for this axis-aligned graph,
+including nonuniform cells. TownRoadTravel retains destination validation, safe
+road-center walking, movement collision and cancellation. It delegates planning and
+retains route indices and compressed bends. TownRoadStops owns pending destinations;
+arrival starts the next leg, normal clicks/cancellation clear the queue, and Shift
+click appends without reframing the camera. TownDocumentMap draws remaining bends
+and numbered stops. Unplanned future legs have markers, not speculative route lines.
+TownEditorSession schedules cooperative preparation and passes progress to Files.
+Search yields around 3 ms, preparation around 2 ms. Preparation pauses during an
+active search so their resumable collision sample cannot overwrite each other.
+
+Research: [Red Blob Games A*](https://www.redblobgames.com/pathfinding/a-star/introduction.html),
+[heap implementation](https://www.redblobgames.com/pathfinding/a-star/implementation.html),
+and [Likhachev et al., ARA*](https://www.cs.cmu.edu/~maxim/files/ara_nips03.pdf).
+Exact cached A* is sufficient here; a full confirmed route precedes movement.
+All-pairs double costs for the saved town's 45,360 road cells would require about
+16.5 GB. This cache instead stores local connections and rebuilds after edits/load;
+it is per-session and not serialized into `.town` files.
+
+One saved-town planning measurement: previous FIFO 173 calls/292 ms CPU; cold A*
+30 calls/80 ms; prepared A* 5 calls/5 ms. These are one route's planning work, not
+global latency guarantees or an FPS benchmark. Preparation used about 593 ms
+distributed over 301 calls. Focused regressions cover shorter physical routes with
+more cells, reverse cache reuse, edits, disconnected and zero-length routes,
+minimap bends, ordered queued arrivals and normal-click queue replacement.
+
+TownPartyInset owns a six-second hold after movement and High FPS, default Off.
+High FPS bypasses its 83 ms refresh delay; hidden state bypasses both scene render
+and cached replay. Opaque header/side/bottom backing surrounds the inset image.
+TownViewportLayout preserves action IDs while placing the compact toolbar left,
+with Edit Town last. Royal detail revision 3 removes original fine and replacement
+broad exterior masonry/tower joints. Native and Blender share the generator;
+structure, cornices, doors, foliage, floors and collision remain intact.
+
+Validation: the full native town foundations, routes, renderer and party-session
+checks pass, including queue continuation/replacement. Native hardening and all 59
+graphics/pointer/audio checks pass. The real Blender save/reopen/import round trip
+passes with revision 3. Publication verifies all 340 runtime assets. Live inspection
+confirms all three map tabs load, the new left toolbar works, the castle no longer
+has the removed line geometry, road travel reaches its marker, and the POV toggle
+and post-arrival hold work. Shift-click queue mechanics are covered by native
+regression; the desktop automation API cannot hold a keyboard modifier during a
+mouse click, so that exact physical chord was not automated.
+
+Ownership/growth review versus 2011584c: no entry-point growth or new runtime,
+compiler, dependency or persistence format. NerisTown +7 and TownEditorSession +13
+lines are coordination. RoadTravel +100 retains journey/waypoint coordination while
+Network (248 lines), Search (255), and Stops (62) own graph, query and queue state.
+DocumentMap +76 owns route/status presentation; PartyInset +51 owns hold/refresh UI;
+Navigation +10 exposes its snapshot stamp. No architecture baseline, exclusion or
+limit was raised. The existing 506-line journey owner is still cohesive but should
+not absorb new search algorithms or rendering logic.
+
 ## Current: precision views, guide editing and map presentation (September 30)
 
 Precision3D.Camera3D owns explicit orthographic height; PrecisionCamera3D owns its
@@ -45,9 +108,8 @@ navigation follows the same height. The earlier leaf-only clearance below is
 superseded. Royal Castle detail generation appends six catalog chunks without
 changing template IDs, source placements, footprint or document fingerprint.
 The Blender worker applies the same decorative changes to its fresh immutable
-catalog copy. Thin bright mortar strips are replaced by larger blocks with broader,
-lower-contrast joints to suppress moving subpixel mosaic patterns while retaining
-visible masonry. Flag wind derivatives retain original part
+catalog copy. Detail revision 3 now removes the exterior masonry strips and later broad joints;
+see the current slice above for Sin's superseding appearance request. Flag wind derivatives retain original part
 slots and bind geometry, skin only the flag details, and keep other parts on a
 stationary root. TownCatalogRenderer owns those animators and their lifecycle.
 

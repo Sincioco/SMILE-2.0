@@ -21,17 +21,19 @@ handles. Resize participates in Undo. `.guide` version 2 adds names and still re
 version 1. Native file dialogs reset pointer capture so loading a guide cannot turn
 the dialog's mouse motion into a map pan.
 
-The header is an 80% opaque overlay over the full scene. The centered bottom row
-contains Help, Day/Night, Edit Town, Orbit, Fit and Fly Inspect, sized to their labels.
+The header is an 80% opaque overlay over the full scene. The left-aligned bottom row
+contains Help, Day/Night, Orbit, Fit, Fly Inspect and Edit Town, sized to their labels.
 Orbit/zoom and camera diagnostics sit at the upper right; geometry, dimensions and
 measured map loading milliseconds sit at the lower right. `Ctrl+M` hides or shows
 that statistics panel; `M` alone toggles the minimap. A second live camera
 attached below the minimap looks ahead from Arin's eye position while the party moves,
 independent of the main view. Route status appears below that inset.
 The inset is labeled **Arin's POV** (or the active leader's name). `Ctrl+F` toggles
-it. Hidden or stationary POV submits no second scene. Visible POV refreshes at most
-about 12 times per second and reuses its cached image between updates; it still has
-some rendering cost on refresh frames, rather than a second render on every frame.
+it. Its opaque navy frame remains attached beneath the minimap for six seconds
+after movement stops. **High FPS: Off** is the default: visible POV refreshes at
+most about 12 times per second and reuses its cached image between updates.
+**High FPS: On** refreshes every game frame for demonstrations, at additional GPU
+and CPU cost. Hidden POV skips both scene submission and cached-image replay.
 
 World Editor has large top-down **plan thumbnails** (terrain and building footprints),
 centered wrapped labels, pointer-anchored wheel zoom, zoom/pan buttons and middle-drag
@@ -39,9 +41,10 @@ panning. **Open Town File...** adds a checked `.town` document through a native 
 These are generated map previews rather than captured photographic screenshots.
 
 Royal Castle has a gilded operable entrance, leafy evergreens and sculpted flower
-urns. Larger stone blocks with broad, lower-contrast mortar joints replace the fine
-raised strips that shimmered into a moving mosaic. The Military HQ flag has a
-subtle looping wind deformation. Native and Blender exports share the detail sources.
+urns. Exterior masonry lines and added vertical tower joints are removed to stop
+those details shimmering during orbit; structural cornices and portal details remain.
+The Military HQ flag has a subtle looping wind deformation. Native and Blender
+exports share the detail sources.
 The latest Spaceport overview uses heading -21°, elevation 17°, distance 11,438,
 anchored at its map center at Y=1,044. Existing saved placements remain authoritative.
 
@@ -51,6 +54,33 @@ road railings stop at those footprints instead of forming barriers across the br
 Walls, side railings and fountains remain obstacles; surrounding water stays blocked.
 Native rendering and Blender export use the same catalog floor metadata. Moving or
 removing the castle rebuilds the terrain openings without changing painted cells.
+
+## Minimap road routing
+
+Click a connected road to run there in Follow Party mode. A cyan line shows the
+remaining road bends, with a yellow destination marker. Planning says
+**Acquiring GPS signal, stand by...**, followed by
+**GPS signal acquired, going to destination...**.
+
+**Shift + left-click** appends up to 64 pending destinations, marked in numbered
+order. A normal click replaces the queue. Each next leg is planned automatically
+on arrival; its confirmed route then appears in cyan. An obstructed/disconnected
+leg stops the trip, and editing the map or manually canceling travel clears the
+queue. Appending a stop preserves the current camera-follow transition.
+
+Routing uses distance-weighted A* with a Manhattan lower bound and an indexed
+priority queue. It finds the shortest path on the collision-validated four-neighbor
+road grid, including nonuniform tile dimensions. Existing safe road-center walking
+and collision checks remain. This is not a claim of a globally shortest continuous
+path across all terrain; parties stay on roads and bridges.
+
+Road connections prepare automatically after loading or committing map edits,
+including while the Town Editor stays interactive. The Files tab shows **Road
+Preparation** progress. Preparation uses roughly 2 ms work slices, foreground
+search roughly 3 ms, and unfinished work resumes next frame. Movement starts only
+once a connected route is confirmed. The in-memory cache stores local connections,
+not every possible origin/destination pair, and rebuilds after navigation changes
+or relaunch. It does not change `.town` files or add a slow saving step.
 
 ## Safe native builds and launch
 

@@ -139,6 +139,13 @@ Public Function BeginRoadTrip(Leader As P.Vector3) As Boolean
     End If
 
     Point = Map.Pick(Town, Pointer_X(), Pointer_Y())
+
+    If Key_Held(KEY_SHIFT) And RoadTravel.Active() Then
+        Result = RoadTravel.Append(Town, Point)
+        ' Appending does not restart the active camera-follow transition.
+        Return False
+    End If
+
     Result = RoadTravel.Begin(Town, Leader, Point)
 
     Return Result
@@ -867,6 +874,12 @@ Public Sub Update(Leader As P.Vector3, Elapsed As Number)
     Call Renderer.Update(Assets, Elapsed)
     Call Attachments.Update(Details, Town, Leader, Elapsed)
     Call Editor.UpdateGuideFiles(Controls, Town)
+
+    If Ground.LiveRevision = Town.Surface.Revision Then
+        Call RoadTravel.Prepare(Town)
+    End If
+
+    Controls.Ui.RoadPreparation = RoadTravel.Preparation()
 
     RecoveryClock = RecoveryClock + Elapsed
 

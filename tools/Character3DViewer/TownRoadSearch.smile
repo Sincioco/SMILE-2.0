@@ -1,0 +1,255 @@
+''' Exact distance-based A* over validated road connections; bounded work each frame.
+Module Smile.Tools.TownRoadSearch
+
+Option Explicit
+
+Import Smile.Tools.TownRoadNetwork As Network
+Import Smile.Simple3D.Precision3D As P
+
+Private Dim Heap[262144] As Number
+Private Dim Positions[262144] As Number
+Private Dim Seen[262144] As Number
+Private Dim Costs[262144] As Double
+Private Dim Priorities[262144] As Double
+Private Dim Parents[262144] As Number
+Private Dim HeapSize As Number
+Private Dim Query As Number
+Private Dim Goal As Number
+Private Dim Current As Number
+Private Dim Side As Number
+Private Dim State As Number
+Private Dim Expanded As Number
+
+Private Function Distance(First As Number, Last As Number) As Double
+
+    Dim Start As P.Vector3
+    Dim Finish As P.Vector3
+    Dim Result As Double
+
+    Start = Network.Center(First)
+    Finish = Network.Center(Last)
+    Result = Abs(Finish.X - Start.X) + Abs(Finish.Z - Start.Z)
+
+    Return Result
+
+End Function
+
+Private Function Before(First As Number, Last As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = (Priorities[First] < Priorities[Last] Or
+        (Priorities[First] = Priorities[Last] And Costs[First] > Costs[Last]))
+
+    Return Result
+
+End Function
+
+Private Sub Promote(Cell As Number)
+
+    Dim Index As Number
+    Dim Parent As Number
+
+    Index = Positions[Cell]
+
+    If Index < 0 Then
+        Index = HeapSize
+        HeapSize = HeapSize + 1
+    End If
+
+    Do
+
+        If Index = 0 Then
+            Exit Do
+        End If
+
+        Parent = (Index - 1) / 2
+
+        If Not Before(Cell, Heap[Parent]) Then
+            Exit Do
+        End If
+
+        Heap[Index] = Heap[Parent]
+        Positions[Heap[Index]] = Index
+        Index = Parent
+
+    Loop
+
+    Heap[Index] = Cell
+    Positions[Cell] = Index
+
+End Sub
+
+Private Function Pop() As Number
+
+    Dim Result As Number
+    Dim Cell As Number
+    Dim Index As Number
+    Dim Child As Number
+
+    Result = Heap[0]
+    HeapSize = HeapSize - 1
+    Positions[Result] = -1
+
+    If HeapSize > 0 Then
+
+        Cell = Heap[HeapSize]
+
+        Do
+
+            Child = Index * 2 + 1
+
+            If Child >= HeapSize Then
+                Exit Do
+            End If
+
+            If Child + 1 < HeapSize Then
+
+                If Before(Heap[Child + 1], Heap[Child]) Then
+                    Child = Child + 1
+                End If
+
+            End If
+
+            If Not Before(Heap[Child], Cell) Then
+                Exit Do
+            End If
+
+            Heap[Index] = Heap[Child]
+            Positions[Heap[Index]] = Index
+            Index = Child
+
+        Loop
+
+        Heap[Index] = Cell
+        Positions[Cell] = Index
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Sub Begin(Start As Number, Finish As Number)
+
+    Query = Query + 1
+    Goal = Finish
+    HeapSize = 0
+    Current = -1
+    Expanded = 0
+    State = 1
+    Seen[Start] = Query
+    Costs[Start] = 0.0
+    Priorities[Start] = Distance(Start, Finish)
+    Parents[Start] = -1
+    Positions[Start] = -1
+
+    Call Promote(Start)
+
+End Sub
+
+''' 1 is planning, 2 found the shortest road-grid route, 3 is disconnected.
+Public Function Advance(Optional Budget As Number = 3) As Number
+
+    Dim Deadline As Number
+    Dim Work As Number
+    Dim Other As Number
+    Dim Status As Number
+    Dim Candidate As Double
+
+    Deadline = Timer() + Budget
+
+    For Work = 0 To 32767
+
+        If State <> 1 Or Timer() >= Deadline Then
+            Return State
+        End If
+
+        If Current < 0 Then
+
+            If HeapSize = 0 Then
+                State = 3
+                Return State
+            End If
+
+            Current = Pop()
+            Expanded = Expanded + 1
+            Side = 0
+
+            If Current = Goal Then
+                State = 2
+                Return State
+            End If
+
+        End If
+
+        Status = Network.Connection(Current, Side, Deadline)
+
+        If Status = 0 Then
+            Return State
+        End If
+
+        If Status = 1 Then
+
+            Other = Network.Neighbor(Current, Side)
+            Candidate = Costs[Current] + Distance(Current, Other)
+
+            If Seen[Other] <> Query Then
+
+                Seen[Other] = Query
+                Costs[Other] = 1.0E+30
+                Positions[Other] = -1
+
+            End If
+
+            If Candidate < Costs[Other] Then
+
+                Costs[Other] = Candidate
+                Priorities[Other] = Candidate + Distance(Other, Goal)
+                Parents[Other] = Current
+
+                Call Promote(Other)
+
+            End If
+
+        End If
+
+        Side = Side + 1
+
+        If Side = 4 Then
+            Current = -1
+        End If
+
+    End For
+
+    Return State
+
+End Function
+
+Public Function Parent(Cell As Number) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = Parents[Cell]
+
+    Return ReturnValue
+
+End Function
+
+Public Function RouteLength() As Double
+
+    Dim ReturnValue As Double
+
+    ReturnValue = Costs[Goal]
+
+    Return ReturnValue
+
+End Function
+
+Public Function Visited() As Number
+
+    Return Expanded
+
+End Function
+
+End Module

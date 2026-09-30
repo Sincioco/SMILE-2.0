@@ -21,6 +21,8 @@ Import Smile.Tools.TownHistory As History
 Import Smile.Tools.TownMapLoads As Links
 Import Smile.Tools.TownGuideFiles As GuideFiles
 Import Smile.Tools.TownRoadTravel As Roads
+Import Smile.Tools.TownRoadStops As Stops
+Import Smile.Tools.TownRoadSearchTests As RoadSearchTests
 Import Smile.Tools.TownDocumentNavigation As Navigation
 Import Smile.Tools.TownDecks As Decks
 Import Smile.Tools.TownGeometry As Geometry
@@ -278,6 +280,9 @@ Call CheckEditing()
 Call CheckMapLoads()
 Call CheckPresetsAndGuideFiles()
 Call CheckRoadTrips()
+
+Failures = Failures + RoadSearchTests.Run()
+
 Call CheckCastleDecks()
 
 Failures = Failures + SectionTests.Run()
@@ -306,6 +311,9 @@ Sub CheckRoadTrips()
     Dim Frame As Number
     Dim Kind As Number
     Dim StayedOnRoad As Boolean
+    Dim RouteChecked As Boolean
+    Dim FirstBend As P.Vector3
+    Dim LastBend As P.Vector3
 
     Ok = Document.Blank(Town, "Road Fixture", 20, 12, 20.0)
     Ok = Grid.Initialize(Town.Surface, 20, 12, 0.0, 0.0, 20.0, Grid.SURFACE_GROUND) And Ok
@@ -325,6 +333,20 @@ Sub CheckRoadTrips()
     For Frame = 0 To 1000
 
         Direction = Roads.Direction(Town, Leader, 3.0, 16)
+
+        If Not RouteChecked And Roads.RouteCount() > 0 Then
+
+            FirstBend = Roads.RoutePoint(1)
+            LastBend = Roads.RoutePoint(Roads.RouteCount() - 1)
+
+            Call Check(Roads.RouteCount() = 5 And FirstBend.X = 170.0 And FirstBend.Z = 50.0 And
+                LastBend.X = 310.0 And LastBend.Z = 170.0,
+                "Minimap Route Keeps Both Road Bends And The Destination")
+
+            RouteChecked = True
+
+        End If
+
         Leader = Math3D.Add(Leader, Math3D.Scale(Direction, 3.0))
         Kind = Grid.ReadCell(Town.Surface, Grid.CellX(Town.Surface, Leader.X), Grid.CellZ(Town.Surface, Leader.Z))
         StayedOnRoad = StayedOnRoad And (Kind = Grid.SURFACE_ROAD Or Kind = Grid.SURFACE_BRIDGE)
@@ -337,6 +359,33 @@ Sub CheckRoadTrips()
 
     Call Check(Ok And StayedOnRoad And Abs(Leader.X - 310.0) < 0.5 And Abs(Leader.Z - 170.0) < 0.5,
         "Auto Run Follows Road Bends And Bridge Without Cutting Across Ground")
+    Call Check(RouteChecked And Roads.RouteCount() = 0, "Arrived Route Releases Its Minimap Line")
+
+    Ok = Roads.Begin(Town, Leader, P.Vector(170.0, 23.12, 170.0))
+    Ok = Roads.Append(Town, P.Vector(30.0, 23.12, 50.0)) And Ok
+
+    Call Check(Stops.Size() = 1, "Shift Click Retains The Current Leg And Queues A Destination")
+
+    For Frame = 0 To 2000
+
+        Direction = Roads.Direction(Town, Leader, 3.0, 16)
+        Leader = Math3D.Add(Leader, Math3D.Scale(Direction, 3.0))
+
+        If Not Roads.Active() Then
+            Exit For
+        End If
+
+    End For
+
+    Call Check(Ok And Stops.Size() = 0 And Not Roads.Active() And
+        Abs(Leader.X - 30.0) < 0.5 And Abs(Leader.Z - 50.0) < 0.5,
+        "Queued Trip Reaches Each Destination In Order Without Another Click")
+
+    Ok = Roads.Begin(Town, Leader, P.Vector(170.0, 23.12, 170.0))
+    Ok = Roads.Append(Town, P.Vector(310.0, 23.12, 170.0)) And Ok
+    Ok = Roads.Begin(Town, Leader, P.Vector(170.0, 23.12, 50.0)) And Ok
+
+    Call Check(Ok And Stops.Size() = 0, "Normal Minimap Click Replaces The Destination Queue")
 
     Ok = Roads.Begin(Town, Leader, P.Vector(250.0, 23.12, 70.0))
 

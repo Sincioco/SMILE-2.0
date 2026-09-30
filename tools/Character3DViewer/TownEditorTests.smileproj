@@ -16,6 +16,10 @@
     <SmileSource Include="NerisCastleRoute.smile" />
     <SmileSource Include="ProximityDrawbridge.smile" />
     <SmileSource Include="TownRoadTravel.smile" />
+    <SmileSource Include="TownRoadNetwork.smile" />
+    <SmileSource Include="TownRoadSearch.smile" />
+    <SmileSource Include="TownRoadStops.smile" />
+    <SmileSource Include="TownRoadSearchTests.smile" />
     <SmileSource Include="TownDocumentNavigation.smile" />
     <SmileSource Include="TownCatalogFeatures.smile" />
     <SmileSource Include="TownSelection.smile" />
