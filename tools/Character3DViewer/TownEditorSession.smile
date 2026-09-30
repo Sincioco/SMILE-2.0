@@ -351,7 +351,7 @@ Public Function TravelOnTile(Position As P.Vector3, Moving As Boolean) As Boolea
 
     MapLoadOccupied = True
     Origin = Town.Name
-    Returning = Journey.Resolve(GatewayJourney, Origin, Name, Position)
+    Returning = Journey.ResolveTile(GatewayJourney, Town, Name, Position)
     Ok = Tabs.OpenNamed(OpenTabs, Town, Name)
 
     If Ok Then
@@ -1050,6 +1050,8 @@ Public Function TakeSpawn(ByRef Position As P.Vector3, ByRef Overview As Boolean
     Overview = TabOverviewPending
     TabOverviewPending = False
 
+    Found = Journey.TakeArrival(GatewayJourney, Town, Position)
+
     If TravelPending Then
 
         Position = TravelArrival
@@ -1057,6 +1059,10 @@ Public Function TakeSpawn(ByRef Position As P.Vector3, ByRef Overview As Boolean
         Position.Y = Navigation.GroundHeight(Position.X, Position.Z)
         Return True
 
+    End If
+
+    If Found Then
+        Return True
     End If
 
     If Town.Name = "Neris Spaceport" Or Town.Name = "Horizon Airport" Then

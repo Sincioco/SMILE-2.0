@@ -48,10 +48,12 @@ The journey maps reserve clearings for future encounters; monsters, combat and
 leveling in these maps are not implemented. NPC inhabitants remain outstanding.
 The atlas is not a claim that every Sin Star I location has been implemented.
 
-The six journey maps contain west/east destination markers and collision-validated
-routes between them. Not every atlas edge has a reciprocal physical marker in the
-older settlements yet; use Enter Selected Town to inspect any atlas node. Completing
-those physical transitions is tracked alongside the remaining NPC work.
+All 25 atlas connections have reciprocal road markers. The original Neris receives
+only two additional marker pads; its edited buildings, terrain and existing markers
+are retained. Arrival uses the matching entrance and a collision-checked adjacent
+road cell outside the trigger. Explicit airport destinations retain their names;
+legacy shared-airport exits still remember their origin. The native route check
+covers all 50 directed entrances. NPC inhabitants remain the next implementation.
 
 ## Reproduce and install
 
@@ -59,6 +61,10 @@ Run `Source/build_towns.py`, `Source/build_journeys.py`, then `Source/build_worl
 runtime. The generator validates document round trips, authoring/resource bounds,
 road connectivity, destination tiles and intended mirror symmetry. `manifest.json`
 records counts and design notes. `world-layout.json` records graph positions/links.
+After regeneration, run `Source/connect_world.py --original <current-Neris.town>
+--output <staging-folder>` to add the atlas's reciprocal road markers. It prepares
+an additive Neris copy in staging and updates the thirteen generated source maps.
+`travel-connections.json` records the resulting destination network.
 
 Close Studio normally before using `Source/install_maps.py --data <Data folder>
 --backup <new backup folder>`. It validates each input and retains every replaced
@@ -67,6 +73,9 @@ original Neris and the user's original Luma world stay intact. The runtime Data
 folder is `%LOCALAPPDATA%\SMILE 2.0\Games\<SHA256 of
 smile.tools.character3d-viewer>\Data`. Generated runtime `.bin` files are not source
 assets and are not committed.
+To install the original Neris marker additions too, pass `--original
+<staging-folder>/Neris Town.town`. The installer rejects a stale copy if any current
+terrain, assembly, lighting or existing marker differs, and backs up the old save.
 
 ## Curved terrain
 

@@ -1,5 +1,29 @@
 # Character Viewer Architecture
 
+## Current: reciprocal Luma entrances (September 30)
+
+TownGatewayJourney owns matching an origin name to an arrival road cell. It consults
+TownDocumentNavigation and TownMapLoads after the new document navigation is ready;
+the session only delegates and applies the returned position. Arrival avoids trigger
+cells and checks the connecting segment, so it cannot skip across water or immediately
+trigger the return trip. Named airport road markers override the legacy remembered
+return only when an explicit marker for that origin exists. The older airport interior
+return contract is unchanged. TownGatewayTests covers these observed arrival risks.
+TownRoadTravel retains the selected gate cell as its final point instead of moving
+that point to the road lane center. The live Neris check exposed a small gate that
+was otherwise missed; the focused regression covers this endpoint behavior.
+
+StoryTownsV1/Source/connect_world.py authors reciprocal road markers from the atlas
+without changing scenery or terrain. Its native release check covers fifty directed
+entrances and road connectivity. The original Neris additive copy stays in staging;
+installation verifies current non-marker fields and retains every existing marker.
+No format, compiler, runtime, NativeProgram or ViewerWorkflow change is needed.
+Native validation: Town Editor Foundations and all fifty directed entrance/road
+checks pass. A live minimap trip from original Neris Town entered Neris Waterworks
+and placed Arin off its reciprocal gate without retriggering. The rebuilt 341-asset
+publication is installed. Changed owners: Journey +124 lines, Session +7,
+RoadTravel +5; no architecture thresholds or exclusions changed.
+
 ## Current: Luma journey terrain and expanded atlas (September 30)
 
 TownTerrainStyles maps the document's four appearances to the existing renderer's

@@ -1,18 +1,27 @@
-''' A remembered return journey through either shared airport; owned by the town session.
+''' Entry placement and remembered airport returns; owned by the town session.
 Module Smile.Tools.TownGatewayJourney
 
 Option Explicit
 
 Import Smile.Simple3D.Precision3D As P
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownDocumentNavigation As Navigation
+Import Smile.Tools.TownMapLoads As Tiles
+Import Smile.Simple3D.SurfaceGrid3D As Grid
 
 Public Type State
     Origin As Text
     Gateway As Text
     Position As P.Vector3
+    ArrivalOrigin As Text
+    ArrivalTown As Text
 End Type
 
 Public Sub Remember(ByRef Value As State, Origin As Text, Destination As Text,
     Position As P.Vector3)
+
+    Value.ArrivalOrigin = Origin
+    Value.ArrivalTown = Destination
 
     If Destination = "Neris Spaceport" Or Destination = "Horizon Airport" Then
 
@@ -36,6 +45,119 @@ Public Function Resolve(ByRef Value As State, Current As Text, ByRef Destination
     Position = Value.Position
 
     Return True
+
+End Function
+
+''' Explicit return tiles take precedence over the legacy shared-airport fallback.
+Public Function ResolveTile(ByRef Value As State, ByRef Town As Document.State,
+    ByRef Destination As Text, ByRef Position As P.Vector3) As Boolean
+
+    Dim Index As Number
+    Dim Result As Boolean
+
+    For Index = 0 To Town.MapTileCount - 1
+
+        If Town.MapTiles[Index].Destination = Value.Origin Then
+            Return False
+        End If
+
+    End For
+
+    Result = Resolve(Value, Town.Name, Destination, Position)
+
+    Return Result
+
+End Function
+
+''' Place the leader off the matching gate on a connected, unobstructed road cell.
+Public Function Arrival(ByRef Town As Document.State, Origin As Text,
+    ByRef Position As P.Vector3) As Boolean
+
+    Dim Index As Number
+    Dim Radius As Number
+    Dim Dx As Number
+    Dim Dz As Number
+    Dim X As Number
+    Dim Z As Number
+    Dim Step As Number
+    Dim Gate As P.Vector3
+    Dim Candidate As P.Vector3
+    Dim CanArrive As Boolean
+
+    If Text_Length(Origin) = 0 Then
+        Return False
+    End If
+
+    For Radius = 1 To 8
+
+        For Index = 0 To Town.MapTileCount - 1
+
+            If Town.MapTiles[Index].Destination = Origin Then
+
+                X = Town.MapTiles[Index].X
+                Z = Town.MapTiles[Index].Z
+                Gate = P.Vector((Town.Surface.XEdges[X] + Town.Surface.XEdges[X + 1]) * 0.5,
+                    0.0, (Town.Surface.ZEdges[Z] + Town.Surface.ZEdges[Z + 1]) * 0.5)
+
+                For Dz = -Radius To Radius
+
+                    For Dx = -Radius To Radius
+
+                        X = Town.MapTiles[Index].X + Dx
+                        Z = Town.MapTiles[Index].Z + Dz
+
+                        If (Max(Abs(Dx), Abs(Dz)) = Radius And X >= 0 And Z >= 0 And
+                            X < Town.Surface.Columns And Z < Town.Surface.Rows) Then
+
+                            Candidate = P.Vector((Town.Surface.XEdges[X] + Town.Surface.XEdges[X + 1]) * 0.5,
+                                0.0, (Town.Surface.ZEdges[Z] + Town.Surface.ZEdges[Z + 1]) * 0.5)
+                            CanArrive = (Grid.ReadCell(Town.Surface, X, Z) >= Grid.SURFACE_ROAD And
+                                Tiles.Find(Town, X, Z) < 0)
+
+                            For Step = 0 To 8
+
+                                If CanArrive Then
+                                    CanArrive = Navigation.CanStand(Gate.X + (Candidate.X - Gate.X) * ToDouble(Step) / 8.0,
+                                        Gate.Z + (Candidate.Z - Gate.Z) * ToDouble(Step) / 8.0)
+                                End If
+
+                            End For
+
+                            If CanArrive Then
+
+                                Position = Candidate
+                                Position.Y = Navigation.GroundHeight(Position.X, Position.Z)
+                                Return True
+
+                            End If
+
+                        End If
+
+                    End For
+                End For
+
+            End If
+
+        End For
+    End For
+
+    Return False
+
+End Function
+
+Public Function TakeArrival(ByRef Value As State, ByRef Town As Document.State,
+    ByRef Position As P.Vector3) As Boolean
+
+    Dim Result As Boolean
+
+    If Town.Name = Value.ArrivalTown Then
+        Result = Arrival(Town, Value.ArrivalOrigin, Position)
+    End If
+
+    Value.ArrivalOrigin = ""
+    Value.ArrivalTown = ""
+
+    Return Result
 
 End Function
 

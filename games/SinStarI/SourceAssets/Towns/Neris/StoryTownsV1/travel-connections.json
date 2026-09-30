@@ -1,0 +1,122 @@
+[
+  {
+    "name": "Neris Spaceport",
+    "destinations": [
+      "East Valley",
+      "Horizon Airport",
+      "Neris Canals",
+      "Neris Crown Isles",
+      "Neris Star Lake",
+      "Neris Town",
+      "Orin's Village"
+    ]
+  },
+  {
+    "name": "Neris Town",
+    "destinations": [
+      "Horizon Airport",
+      "Neris Relief Quarter",
+      "Neris Spaceport",
+      "Neris Waterworks"
+    ]
+  },
+  {
+    "name": "Horizon Airport",
+    "destinations": [
+      "East Valley",
+      "Neris Canals",
+      "Neris Crown Isles",
+      "Neris Spaceport",
+      "Neris Star Lake",
+      "Neris Town",
+      "Orin's Village",
+      "Sunglass Expanse"
+    ]
+  },
+  {
+    "name": "Neris Canals",
+    "destinations": [
+      "Horizon Airport",
+      "Neris Spaceport"
+    ]
+  },
+  {
+    "name": "Neris Star Lake",
+    "destinations": [
+      "Horizon Airport",
+      "Neris Spaceport",
+      "Verdant Reach"
+    ]
+  },
+  {
+    "name": "Neris Crown Isles",
+    "destinations": [
+      "Horizon Airport",
+      "Neris Spaceport",
+      "Sunglass Expanse"
+    ]
+  },
+  {
+    "name": "East Valley",
+    "destinations": [
+      "Greyglass Pass",
+      "Horizon Airport",
+      "Neris Spaceport",
+      "Orin's Village"
+    ]
+  },
+  {
+    "name": "Orin's Village",
+    "destinations": [
+      "East Valley",
+      "Horizon Airport",
+      "Neris Spaceport"
+    ]
+  },
+  {
+    "name": "Neris Waterworks",
+    "destinations": [
+      "Ancient Relay",
+      "Neris Relief Quarter",
+      "Neris Town",
+      "Verdant Reach"
+    ]
+  },
+  {
+    "name": "Verdant Reach",
+    "destinations": [
+      "Greyglass Pass",
+      "Neris Star Lake",
+      "Neris Waterworks"
+    ]
+  },
+  {
+    "name": "Greyglass Pass",
+    "destinations": [
+      "East Valley",
+      "Verdant Reach"
+    ]
+  },
+  {
+    "name": "Sunglass Expanse",
+    "destinations": [
+      "Ancient Relay",
+      "Horizon Airport",
+      "Neris Crown Isles"
+    ]
+  },
+  {
+    "name": "Ancient Relay",
+    "destinations": [
+      "Neris Waterworks",
+      "Sunglass Expanse"
+    ]
+  },
+  {
+    "name": "Neris Relief Quarter",
+    "destinations": [
+      "Neris Town",
+      "Neris Waterworks"
+    ]
+  }
+]

@@ -12,6 +12,7 @@ Import Smile.Tools.TownDocumentNavigation As Navigation
 Import Smile.Tools.TownRoadNetwork As Network
 Import Smile.Tools.TownRoadSearch As Search
 Import Smile.Tools.TownRoadStops As Stops
+Import Smile.Tools.TownMapLoads As Tiles
 
 Private Dim Surface As Grid.State
 Private Dim Queue[262144] As Number
@@ -283,6 +284,10 @@ Public Function Begin(ByRef Town As Document.State, Leader As P.Vector3,
     StartCell = Grid.CellZ(Surface, StartPoint.Z) * Surface.Columns + Grid.CellX(Surface, StartPoint.X)
     GoalCell = Grid.CellZ(Surface, Destination.Z) * Surface.Columns + Grid.CellX(Surface, Destination.X)
     Destination = LaneCenter(GoalCell)
+
+    If Text_Length(Tiles.DestinationAt(Town, Clicked.X, Clicked.Z)) > 0 Then
+        Destination = Center(GoalCell)
+    End If
 
     If (Not ClearSegment(Leader, Center(StartCell), False) Or
         Not ClearSegment(Center(GoalCell), Destination)) Then

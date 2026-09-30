@@ -1,0 +1,106 @@
+''' Regression: connected-map travel must arrive beside the reciprocal entrance.
+Module Smile.Tools.TownGatewayTests
+
+Option Explicit
+
+Import Smile.Tools.TownGatewayJourney As Journey
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownDocumentNavigation As Navigation
+Import Smile.Tools.TownMapLoads As Tiles
+Import Smile.Tools.TownRoadTravel As Travel
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.Precision3D As P
+
+Public Function Run() As Number
+
+    Dim Town As Document.State
+    Dim Trip As Journey.State
+    Dim Position As P.Vector3
+    Dim Name As Text
+    Dim Ok As Boolean
+    Dim Failures As Number
+    Dim Index As Number
+    Dim Clicked As P.Vector3
+
+    Ok = Document.Blank(Town, "Destination", 12, 12, 30.0)
+
+    For Index = 0 To 11
+        Call Grid.PaintRectangle(Town.Surface, Index, 6, Index, 6, Grid.SURFACE_ROAD)
+    End For
+
+    Ok = Tiles.Place(Town, 2, 6, "Origin")
+
+    Call Navigation.Rebuild(Town)
+    Call Journey.Remember(Trip, "Origin", "Destination", P.Vector(900.0, 0.0, 900.0))
+
+    Ok = Journey.TakeArrival(Trip, Town, Position)
+
+    If (Not Ok Or Not Navigation.CanStand(Position.X, Position.Z) Or
+        Text_Length(Tiles.DestinationAt(Town, Position.X, Position.Z)) > 0 Or
+        Abs(Position.X - (Town.Surface.XEdges[2] + 15.0)) > 31.0) Then
+        Print "FAIL Reciprocal Gateway Arrival"
+        Failures = Failures + 1
+    End If
+
+    Ok = Journey.TakeArrival(Trip, Town, Position)
+
+    If Ok Then
+        Print "FAIL Gateway Arrival Must Be Consumed Once"
+        Failures = Failures + 1
+    End If
+
+    Call Grid.PaintRectangle(Town.Surface, 1, 6, 1, 6, Grid.SURFACE_WATER)
+    Call Grid.PaintRectangle(Town.Surface, 3, 6, 3, 6, Grid.SURFACE_WATER)
+    Call Navigation.Rebuild(Town)
+
+    Ok = Journey.Arrival(Town, "Origin", Position)
+
+    If Ok Then
+        Print "FAIL Gateway Arrival Cannot Jump Across Water"
+        Failures = Failures + 1
+    End If
+
+    Town.Name = "Horizon Airport"
+    Name = "Neris Town"
+
+    Call Journey.Remember(Trip, "Origin", Town.Name, Position)
+
+    Ok = Journey.ResolveTile(Trip, Town, Name, Position)
+
+    If Ok Or Name <> "Neris Town" Then
+        Print "FAIL Explicit Airport Destination Must Be Preserved"
+        Failures = Failures + 1
+    End If
+
+    Town.MapTileCount = 0
+    Ok = Journey.ResolveTile(Trip, Town, Name, Position)
+
+    If Not Ok Or Name <> "Origin" Then
+        Print "FAIL Legacy Airport Return Must Be Preserved"
+        Failures = Failures + 1
+    End If
+
+    Call Grid.PaintRectangle(Town.Surface, 0, 5, 11, 7, Grid.SURFACE_ROAD)
+
+    Ok = Tiles.Place(Town, 4, 5, "Side Entrance")
+    Clicked = P.Vector(Town.Surface.XEdges[4] + 15.0, 0.0, Town.Surface.ZEdges[5] + 15.0)
+
+    Call Navigation.Rebuild(Town)
+
+    Position = P.Vector(Town.Surface.XEdges[6] + 15.0, 0.0, Town.Surface.ZEdges[6] + 15.0)
+    Clicked.Y = Navigation.GroundHeight(Clicked.X, Clicked.Z)
+    Ok = Travel.Begin(Town, Position, Clicked)
+    Position = Travel.Target()
+
+    If Not Ok Or Tiles.DestinationAt(Town, Position.X, Position.Z) <> "Side Entrance" Then
+        Print "FAIL Road Centering Must Not Pull Destination Off A Travel Marker"
+        Failures = Failures + 1
+    End If
+
+    Call Travel.Cancel()
+
+    Return Failures
+
+End Function
+
+End Module

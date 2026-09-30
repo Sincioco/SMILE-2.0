@@ -47,6 +47,8 @@
     <SmileSource Include="TownLibrary.smile" />
     <SmileSource Include="TownWorldCanvas.smile" />
     <SmileSource Include="TownWorldTests.smile" />
+    <SmileSource Include="TownGatewayJourney.smile" />
+    <SmileSource Include="TownGatewayTests.smile" />
     <SmileSource Include="TownGuideEditingTests.smile" />
     <SmileSource Include="TownWorldFiles.smile" />
     <SmileProjectReference Include="..\..\libraries\Smile.UI\Smile.UI.smilelibproj" />
