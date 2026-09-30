@@ -196,9 +196,11 @@ town before relaunching the complete 333-asset publication.
 Physical mouse acceptance remains for Court/section dragging: the automation
 input probe received only a press/release at the requested destination, without
 held movement. Explicit gesture regressions pass, but that tool result cannot
-prove an interactive drag. The existing short-window palette crowding and exact
-duplicated-lamp street-view acceptance also remain; the 75-lamp rendering check
-passes. These are separate from the protected airport-assembly work above.
+prove an interactive drag. The existing short-window palette crowding remains.
+Sin confirmed on September 30 that the previously duplicated street lamps now
+illuminate their surroundings. That visual acceptance is complete, alongside the
+passing 75-lamp rendering check. These are separate from the protected
+airport-assembly work above.
 
 Growth review against 32c5a350: NerisTown adds five net coordinator lines,
 TownEditor adds 61, TownEditorSession 82 and TownMapLoads 75. The new focused owners
