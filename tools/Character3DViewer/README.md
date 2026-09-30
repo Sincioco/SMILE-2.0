@@ -1,5 +1,11 @@
 # SMILE 2.0 - Sin Star I - Game Engine and Studio
 
+## October 1 loading correction
+
+Large curved towns now upload terrain in bounded blocks while retaining the previous
+complete surface until replacement is ready. This fixes the cleaned Neris Canals
+load failure. A failed scene also allows switching to another map to recover.
+
 ## September 30 map access and residents
 
 **Maps** replaces tab paging arrows with a four-column gallery of the open towns.

@@ -72,6 +72,15 @@ $project.Save($generatedProject)
 Invoke-Check $generatedProject (Join-Path $output 'EditedRoutes.exe') 'PASS Neris Town Routes'
 
 if (-not $SkipRendering) {
+    # Reproduce the real canal document that exhausted the bounded terrain scratch buffer.
+    $renderHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData(
+        [Text.Encoding]::UTF8.GetBytes('smile.tests.town-render'))).ToLowerInvariant()
+    $canalHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData(
+        [Text.Encoding]::UTF8.GetBytes('TownRender.Canals'))).ToLowerInvariant()
+    $renderData = Join-Path $env:LOCALAPPDATA "SMILE 2.0\Games\$renderHash\Data"
+    $null = New-Item -ItemType Directory -Path $renderData -Force
+    Copy-Item -LiteralPath (Join-Path $root 'games/SinStarI/SourceAssets/Towns/Neris/StoryTownsV1/Towns/Neris Canals.town') `
+        -Destination (Join-Path $renderData "$canalHash.bin") -Force
     Invoke-Check (Join-Path $viewer 'TownRenderTests.smileproj') (Join-Path $output 'TownRenderTests.exe') 'PASS Town Editor Rendering'
 
     [xml]$project = Get-Content (Join-Path $viewer 'Character3DViewer.smileproj') -Raw

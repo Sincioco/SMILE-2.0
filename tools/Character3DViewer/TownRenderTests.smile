@@ -8,6 +8,7 @@ Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.Scene3D As Scene
 Import Smile.Simple3D.SurfaceGrid3D As Grid
 Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownDocumentStore As Store
 Import Smile.Tools.TownCatalogData As Catalog
 Import Smile.Tools.TownInitialSurface As Initial
 Import Smile.Tools.TownCatalogRenderer As Renderer
@@ -24,6 +25,7 @@ Import Smile.Tools.TownEditorPanel As Panel
 Import Smile.Tools.TownSurfaceTools As SurfaceTools
 
 Dim Town As Document.State
+Dim CanalTown As Document.State
 Dim Assets As Renderer.State
 Dim Ground As Terrain.State
 Dim Doors As Attachments.State
@@ -316,6 +318,31 @@ Loop Until Ground.Stage = 0 Or Ground.Failed Or Frames >= 600
 
 Call Check(Ok And Not Ground.Failed And Ground.LiveRevision = Town.Surface.Revision,
     "Adding One Circle To Dense Legacy Neris Does Not Exhaust Terrain Capacity")
+
+' The cleaned canal map exceeded the scratch buffer with its entrance walks.
+Before = Ground.LiveRevision
+Ok = Store.LoadDocument(CanalTown, "TownRender.Canals")
+
+Call Check(Ok, "Cleaned Canal Regression Document Loads")
+Call Terrain.BeginBuild(Ground, CanalTown)
+
+Frames = 0
+
+Do
+
+    Call Terrain.Update(Ground, 16)
+
+    Frames = Frames + 1
+
+    If Ground.Stage <> 0 Then
+        Call Check(Ground.LiveRevision = Before,
+            "Canal Upload Blocks Never Expose A Partial Terrain Replacement")
+    End If
+
+Loop Until Ground.Stage = 0 Or Ground.Failed Or Frames >= 1500
+
+Call Check(Not Ground.Failed And Ground.Stage = 0 And Ground.ObjectCount > 32,
+    "Canal Terrain Streams Beyond One Scratch Buffer Within Existing Object Limits")
 Call Attachments.Destroy(Doors)
 Call Terrain.Destroy(Ground)
 

@@ -1,5 +1,20 @@
 # Character Viewer Architecture
 
+## October 1: bounded terrain uploads and failed-map recovery
+
+TownSurfaceRenderer now drains its existing 65,536-patch scratch buffer in blocks
+while scanning large curved documents. The cleaned Neris Canals document exceeded
+that buffer at row 222 of 240. Every new object stays in the existing staging arrays
+until the entire map is ready, preserving atomic replacement and the existing
+64-object limit. No geometry, runtime capacity, format or library boundary changes.
+TownRenderTests loads that real document and checks both completion beyond one
+buffer and retention of the previous live revision during incremental uploads.
+
+NerisTown retains the name of the current load attempt. Selecting another town
+clears a previous scene failure, and failed scenes keep tab input available.
+TownSessionTests exercises arrival with an outgoing failed scene. This is lifecycle
+coordination in the existing scene owner; terrain construction stays in its renderer.
+
 ## Current: map access, navigation gallery and residents (September 30)
 
 TownMapPicker owns responsive card layout and modal input (161 lines). TownTabs
@@ -44,8 +59,20 @@ session compares fully loaded resident populations before/after airport travel;
 its decoration paging expectations include the four existing landforms. An ad hoc
 rerun against the fixture's mutated saves was invalid; the normal test script
 creates a fresh isolated application identity and passes. Live map installation,
-thumbnail appearance, NPC interaction and Demo acceptance remain pending because
-desktop control stopped on a physical Escape signal during this turn.
+thumbnail appearance and NPC interaction were accepted on October 1 after the
+earlier desktop interruption. The cleaned maps and 359-asset build are installed;
+live airport lighting and saves were preserved in backups. The atlas generated all
+fourteen photographs, its double-click entered the Spaceport, and the four-column
+picker selected Star Lake. Live views confirmed airport plot/apron clearance,
+Star Lake's removals, Crown Isles, Orin's Village, Relay and Relief Quarter access.
+Original Neris displayed Tessa's greeting and residents walking and idling.
+Demo was enabled with fourteen tabs open; after one minute it wrapped from Relief
+Quarter to original Neris and was already orbiting within seconds of arrival.
+
+The canal streaming and failed-scene recovery changes add 15 and 12 net lines to
+their existing owners respectively. Focused native Foundations, Routes, Rendering
+and Session checks pass, including the two observed loading regressions. Four-file
+SMILE formatting and the diff check pass; no resource/architecture limits changed.
 
 ## Current: reciprocal Luma entrances (September 30)
 

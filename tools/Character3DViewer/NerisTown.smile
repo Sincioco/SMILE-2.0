@@ -68,6 +68,7 @@ Public Type State
     Doors As Entrances.State
     Ready As Boolean
     Failed As Boolean
+    LoadingTown As Text
     Edited As Boolean
 End Type
 
@@ -83,6 +84,7 @@ Public Sub Start(ByRef Value As State)
     Value.Follow = True
     Value.PartyCamera = True
     Value.Edited = Authoring.Available()
+    Value.LoadingTown = Authoring.TownName()
     Value.BaseCamera.UpDirection = P.Vector(0.0, 1.0, 0.0)
     ' Town-scale depth precision keeps thin paving layers separated during orbit.
     Value.BaseCamera.NearPlane = 25.0
@@ -103,6 +105,14 @@ Public Sub LoadNext(ByRef Value As State)
 
     Dim Ok As Boolean
     Dim AuthoringReady As Boolean
+
+    If Value.Edited And Value.LoadingTown <> Authoring.TownName() Then
+
+        Value.LoadingTown = Authoring.TownName()
+        Value.Failed = False
+        Value.Ready = False
+
+    End If
 
     If Value.Residents.Enabled And Authoring.TownName() <> "Neris Town" Then
         Call Residents.Destroy(Value.Residents)
@@ -231,7 +241,7 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
 
     If Not Value.Ready Then
 
-        If Authoring.PreviewActive() Then
+        If Authoring.PreviewActive() Or Value.Failed Then
             Call Authoring.Input(Value.View.LiveCamera, Key, True)
         End If
 
@@ -244,7 +254,9 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
         Pointer_Held(POINTER_PRIMARY) Or Pointer_Held(POINTER_MIDDLE) Or
         Pointer_Held(POINTER_SECONDARY))
 
-    If Not Blocked And Not Authoring.Editing() And Not Authoring.PreviewActive() Then
+    If (Not Blocked And
+        Not Authoring.Editing() And
+        Not Authoring.PreviewActive()) Then
 
         If Residents.Input(Value.Residents, Key) Then
 

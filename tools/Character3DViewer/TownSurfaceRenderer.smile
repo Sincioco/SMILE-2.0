@@ -638,7 +638,12 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
 
             Value.Row = Value.Row + 1
 
-            If Value.Row >= Pending.Rows Or Value.Failed Then
+            ' Flush a bounded block before the next row can fill the scratch array.
+            ' Uploaded objects remain private until every row has finished.
+
+            If (PatchCount >= 32768 Or
+                Value.Row >= Pending.Rows Or
+                Value.Failed) Then
                 Value.Stage = 2
                 Exit For
             End If
@@ -654,6 +659,16 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
         Call UploadNext(Value)
 
         If Value.Kind > 6 And Not Value.Failed Then
+
+            If Value.Row < Pending.Rows Then
+
+                PatchCount = 0
+                Value.Kind = 1
+                Value.Cursor = 0
+                Value.Stage = 1
+                Return
+
+            End If
 
             For Index = 0 To 63
                 Call G.DestroyObject3D(Value.Objects[Index])

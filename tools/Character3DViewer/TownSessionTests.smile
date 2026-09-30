@@ -666,6 +666,11 @@ Sub CheckWalkingConnection(ByRef Value As Town.State)
     Call Party.Teleport(Value.People, P.Vector(-5120.0, 23.12, 900.0))
     Call Town.MoveParty(Value, P.Vector(-1.0, 0.0, 0.0), 200)
     Call Check(Editor.TownName() = "Neris Spaceport", "West Road Travels To Neris Spaceport")
+
+    ' A failed previous scene must not lock the newly selected destination out.
+    Value.Ready = False
+    Value.Failed = True
+
     Call LoadArrival(Value)
     Call Check(Not Value.Residents.Enabled And Value.Residents.Loaded = 0,
         "Leaving Neris Releases Its Nine Residents Before Loading The Airport")
