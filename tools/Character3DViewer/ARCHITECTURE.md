@@ -1,5 +1,52 @@
 # Character Viewer Architecture
 
+## Current: map access, navigation gallery and residents (September 30)
+
+TownMapPicker owns responsive card layout and modal input (161 lines). TownTabs
+retains document switching and schedules missing photographs behind that modal;
+TownWorldPreviews remains the only photograph cache. The modal is drawn during
+incremental loading too. TownWorldCanvas owns the double-click gesture, separate
+from drag/port gestures; TownWorldEditor owns save-before-leave and reopening.
+The existing session delegates these behaviors. No new serialized UI/GPU state,
+compiler grammar, runtime budget or external dependency is introduced.
+
+TownResidents owns nine original-Neris actors (280 lines). TownResidentMovement
+owns short road errands (157); TownResidentDialogue owns identities and greeting
+presentation (79). NerisTown holds resident state and delegates input, update,
+draw and lifetime. Residents are released before another town starts loading.
+Movement reads TownDocumentNavigation without sharing the party search's mutable
+state. Future quest content can replace the dialogue owner independently.
+
+The procedural NerisResidentsV1 package owns models, palette textures, animation
+sources, clip descriptors, grounding measurements, hashes and previews. One palette
+material per actor fixes the demonstrated full-town material exhaustion. An isolated
+load test was insufficient: the complete live Neris document now loads all nine
+using 500 of 512 material slots. Additional unique assets still require budget review.
+
+StoryTownsV1's town_access.py owns authoring-time plot clearance and entrance walks.
+It changes generated documents, not runtime/editor placement semantics. Continuous
+brush queries, rotated complete model footprints and short clear connections address
+the reported obstructions; native reciprocal-road checks still validate travel.
+Original Neris geometry and the approved central Relay tower remain intact.
+
+Changed legacy coordinators: NerisTown +35 net lines, TownEditorSession +32,
+TownTabs +68; native bootstrap/ViewerWorkflow have no growth. UI algorithms,
+resident simulation and map geometry stay in focused owners. Manual ownership/diff
+review found no new dependency cycle or generic shared state bag. No architecture
+baseline/exclusion was changed; there is no separate automated architecture check
+for these owners. Focused native validation and live acceptance are tracked in the
+current task handoff; a build alone does not establish visual correctness.
+
+Validation passes: the 359-asset native publication, Town Editor Foundations,
+original/edited route regressions, renderer fixture, complete town session,
+thirteen-map footprint/entry checks and fifty reciprocal road connections. The
+session compares fully loaded resident populations before/after airport travel;
+its decoration paging expectations include the four existing landforms. An ad hoc
+rerun against the fixture's mutated saves was invalid; the normal test script
+creates a fresh isolated application identity and passes. Live map installation,
+thumbnail appearance, NPC interaction and Demo acceptance remain pending because
+desktop control stopped on a physical Escape signal during this turn.
+
 ## Current: reciprocal Luma entrances (September 30)
 
 TownGatewayJourney owns matching an origin name to an arrival road cell. It consults

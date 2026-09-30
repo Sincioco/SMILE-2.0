@@ -7,6 +7,8 @@ Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PrecisionMath3D As M
 Import Smile.Tools.NerisTownNavigation As Navigation
 Import Smile.Tools.NerisCastleRoute As Castle
+Import Smile.Tools.NerisSpaceportRoute As CrystalPort
+Import Smile.Tools.TownSurfaceLayers As Layers
 Import Smile.Tools.NerisHorizonRoute As Spaceport
 Import Smile.Tools.NerisSpaceportTraffic As Traffic
 Import Smile.Tools.NerisRunwayTraffic As Runway
@@ -23,6 +25,9 @@ Dim Flights As Traffic.State
 Dim EyeView As P.Camera3D
 Dim Facing As P.Vector3
 Dim PointOfView As Inset.State
+
+Call Check(CrystalPort.DECK_Y - Layers.ROAD_Y >= Layers.STRUCTURE_CLEARANCE,
+    "Spaceport Apron Is Separated From The Editable Road Beneath It")
 
 For Index = 0 To 3
 

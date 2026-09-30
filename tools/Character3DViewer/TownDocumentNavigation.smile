@@ -171,6 +171,20 @@ Public Function NearestRoad(Point As P.Vector3, ByRef Result As P.Vector3) As Bo
 
 End Function
 
+''' Read the committed road mask without borrowing the party's route planner.
+Public Function IsRoad(Point As P.Vector3) As Boolean
+
+    Dim Cell As Number
+    Dim Result As Boolean
+
+    Cell = Grid.ReadPoint(Surface, Point.X, Point.Z)
+    Result = Enabled And (Cell = Grid.SURFACE_ROAD Or Cell = Grid.SURFACE_BRIDGE)
+    Result = Result And CanStand(Point.X, Point.Z)
+
+    Return Result
+
+End Function
+
 Public Sub SurfaceBounds(ByRef Low As P.Vector3, ByRef High As P.Vector3)
 
     Low = P.Vector(-4900.0, Layers.ROAD_Y, -3550.0)

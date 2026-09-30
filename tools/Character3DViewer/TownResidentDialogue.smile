@@ -1,0 +1,79 @@
+''' Civilian identities and the greeting presentation; later quests can replace content here.
+Module Smile.Tools.TownResidentDialogue
+
+Option Explicit
+
+Public Function NameAt(Index As Number) As Text
+
+    If Index = 0 Then
+        Return "Tessa"
+    Else If Index = 1 Then
+        Return "Maren"
+    Else If Index = 2 Then
+        Return "Ilan"
+    Else If Index = 3 Then
+        Return "Bram"
+    Else If Index = 4 Then
+        Return "Sera"
+    Else If Index = 5 Then
+        Return "Pip"
+    Else If Index = 6 Then
+        Return "Nia"
+    Else If Index = 7 Then
+        Return "Tobin"
+    End If
+
+    Return "Mochi"
+
+End Function
+
+Public Function Greeting(Index As Number) As Text
+
+    Dim Result As Text
+
+    Result = "Hi, my name is " + NameAt(Index) + "."
+
+    If Index = 8 Then
+        Result = "Woof!  (The collar reads: Mochi.)"
+    End If
+
+    Return Result
+
+End Function
+
+Public Sub Draw(Nearest As Number, Speaking As Number, Loaded As Number, Failed As Boolean)
+
+    Dim Top As Number
+    Dim Width As Number
+
+    Width = Min(680, Window_Width() - 64)
+    Top = Window_Height() - 174
+
+    If Speaking >= 0 Then
+
+        Fill Rectangle 24, Top, Width, 112, RGB(10, 23, 36) Opacity 96
+        Fill Rectangle 24, Top, 4, 112, RGB(58, 198, 201)
+        Draw Text NameAt(Speaking) At 44, Top + 12 Size 20 Color RGB(90, 226, 220)
+        Draw Text Greeting(Speaking) At 44, Top + 43 Size 16 Color WHITE
+        Draw Text "E / Enter / Esc: Continue" At 44, Top + 80 Size 13 Color RGB(174, 193, 207)
+
+    Else If Nearest >= 0 Then
+
+        Fill Rectangle 24, Top + 63, Width, 46, RGB(10, 23, 36) Opacity 88
+        Draw Text "E: Talk To " + NameAt(Nearest) At 40, Top + 76 Size 16 Color WHITE
+
+    Else If Failed Then
+
+        Draw Text "A resident could not load. Reopen this town to retry." At 24, Top + 80 Size 14 Color RGB(255, 205, 110)
+
+    Else If Loaded < 9 Then
+
+        Draw Text "Welcoming Residents..." At 24, Top + 70 Size 14 Color RGB(90, 226, 220)
+        Fill Rectangle 24, Top + 94, 180, 5, RGB(24, 49, 67)
+        Fill Rectangle 24, Top + 94, Loaded * 20, 5, RGB(90, 226, 220)
+
+    End If
+
+End Sub
+
+End Module

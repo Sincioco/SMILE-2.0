@@ -44,11 +44,16 @@
     <SmileSource Include="NerisTownTour.smile" />
     <SmileSource Include="TownWorldImport.smile" />
     <SmileSource Include="TownTabs.smile" />
+    <SmileSource Include="TownMapPicker.smile" />
     <SmileSource Include="TownLibrary.smile" />
     <SmileSource Include="TownWorldCanvas.smile" />
     <SmileSource Include="TownWorldTests.smile" />
     <SmileSource Include="TownGatewayJourney.smile" />
     <SmileSource Include="TownGatewayTests.smile" />
+    <SmileSource Include="TownResidents.smile" />
+    <SmileSource Include="TownResidentMovement.smile" />
+    <SmileSource Include="TownResidentDialogue.smile" />
+    <SmileSource Include="TownResidentTests.smile" />
     <SmileSource Include="TownGuideEditingTests.smile" />
     <SmileSource Include="TownWorldFiles.smile" />
     <SmileProjectReference Include="..\..\libraries\Smile.UI\Smile.UI.smilelibproj" />

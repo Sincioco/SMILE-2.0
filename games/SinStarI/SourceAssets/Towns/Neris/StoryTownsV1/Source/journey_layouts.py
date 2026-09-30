@@ -135,8 +135,8 @@ def relay():
     t.path([(-268,0),(268,0)],18)
     t.path([(0,-200),(0,200)],18)
     t.place(10,0,0,2.2,180)
-    for angle in range(0,360,60):
-        a=math.radians(angle+30)
+    for angle in (25,65,145,205,245,325):
+        a=math.radians(angle)
         t.place(38,130*math.cos(a),130*math.sin(a),1.0,angle)
         t.place(27,65*math.cos(a),65*math.sin(a),1.5,angle)
     for x,z in ((-200,-190),(200,-190),(-200,190),(200,190)):

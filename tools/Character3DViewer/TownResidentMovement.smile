@@ -1,0 +1,157 @@
+''' Small road errands, independent of the party's active minimap search.
+Module Smile.Tools.TownResidentMovement
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Tools.TownDocumentNavigation As Navigation
+
+Public Type State
+    Home As P.Vector3
+    Position As P.Vector3
+    Destination As P.Vector3
+    WaitTime As Number
+    Trip As Number
+    Heading As Double
+    Moving As Boolean
+    Running As Boolean
+End Type
+
+Public Function ClearRoad(Start As P.Vector3, Finish As P.Vector3,
+    Optional RequireRoad As Boolean = True) As Boolean
+
+    Dim Index As Number
+    Dim Steps As Number
+    Dim Point As P.Vector3
+
+    Steps = Max(1, ToNumber(M.Distance(Start, Finish) / 8.0) + 1)
+
+    For Index = 0 To Steps
+
+        Point = M.Add(Start, M.Scale(M.Subtract(Finish, Start), ToDouble(Index) / ToDouble(Steps)))
+
+        If RequireRoad And Not Navigation.IsRoad(Point) Then
+            Return False
+        End If
+
+        If Not RequireRoad And Not Navigation.CanStand(Point.X, Point.Z) Then
+            Return False
+        End If
+
+    End For
+
+    Return True
+
+End Function
+
+Public Sub Start(ByRef Value As State, Position As P.Vector3, Index As Number)
+
+    Dim Empty As State
+
+    Value = Empty
+    Value.Position = Position
+    Value.Home = Position
+    Value.Trip = Index * 7
+    Value.WaitTime = 3500 + Index * 650
+
+End Sub
+
+Private Sub Plan(ByRef Value As State)
+
+    Dim Attempt As Number
+    Dim Bearing As Number
+    Dim Length As Double
+    Dim Target As P.Vector3
+
+    Value.Trip = Value.Trip + 1
+
+    For Attempt = 0 To 7
+
+        Bearing = (Value.Trip + Attempt) Mod 4
+        Length = 90.0 + ToDouble(Value.Trip Mod 4) * 35.0
+        Target = Value.Position
+
+        If Attempt >= 4 Then
+            Length = 50.0
+        End If
+
+        If Bearing = 0 Then
+            Target.X = Target.X + Length
+        Else If Bearing = 1 Then
+            Target.Z = Target.Z + Length
+        Else If Bearing = 2 Then
+            Target.X = Target.X - Length
+        Else
+            Target.Z = Target.Z - Length
+        End If
+
+        If M.Distance(Target, Value.Home) < 420.0 And ClearRoad(Value.Position, Target) Then
+
+            Value.Destination = Target
+            Value.Moving = True
+            Value.Running = Value.Trip Mod 5 = 0
+            Value.Heading = Atan2(Target.X - Value.Position.X, Target.Z - Value.Position.Z) * 180.0 / 3.141592653589793
+            Return
+
+        End If
+
+    End For
+
+    Value.WaitTime = 4000
+
+End Sub
+
+Public Sub Update(ByRef Value As State, Paused As Boolean, Elapsed As Number)
+
+    Dim Distance As Double
+    Dim StepLength As Double
+    Dim NextPoint As P.Vector3
+
+    If Paused Then
+        Return
+    End If
+
+    If Not Value.Moving Then
+
+        Value.WaitTime = Max(0, Value.WaitTime - Elapsed)
+
+        If Value.WaitTime = 0 Then
+            Call Plan(Value)
+        End If
+
+        Return
+
+    End If
+
+    Distance = M.Distance(Value.Position, Value.Destination)
+    StepLength = 28.0 * ToDouble(Min(100, Elapsed)) / 1000.0
+
+    If Value.Running Then
+        StepLength = StepLength * 2.2
+    End If
+
+    If Distance <= StepLength Then
+
+        Value.Position = Value.Destination
+        Value.Moving = False
+        Value.WaitTime = 5000 + (Value.Trip Mod 7) * 1000
+
+    Else
+
+        NextPoint = M.Add(Value.Position, M.Scale(M.Subtract(Value.Destination, Value.Position), StepLength / Distance))
+
+        If ClearRoad(Value.Position, NextPoint) Then
+            Value.Position = NextPoint
+        Else
+            Value.Moving = False
+            Value.WaitTime = 2000
+        End If
+
+    End If
+
+    Value.Position.Y = Navigation.GroundHeight(Value.Position.X, Value.Position.Z)
+
+End Sub
+
+End Module

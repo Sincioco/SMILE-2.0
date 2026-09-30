@@ -7,6 +7,8 @@ Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownLibrary As Library
 Import Smile.Tools.TownDocumentStore As Storage
 Import Smile.UI.Controls As UI
+Import Smile.Tools.TownMapPicker As Picker
+Import Smile.Tools.TownWorldPreviews As Previews
 
 Public Const CAPACITY = 16
 
@@ -17,6 +19,8 @@ Public Type State
     Message As Text
     First As Number
     DisplayedActive As Number
+    Menu As Picker.State
+    ReturnIndex As Number
 End Type
 
 Public Sub Ensure(ByRef Value As State, ByRef Town As Document.State)
@@ -304,12 +308,32 @@ Private Function VisibleCount(ByRef Value As State) As Number
 
 End Function
 
-Public Function Input(ByRef Value As State, ByRef Town As Document.State) As Boolean
+Public Function Input(ByRef Value As State, ByRef Town As Document.State, Optional Key As Number = 0) As Boolean
 
     Dim Index As Number
     Dim Width As Number
     Dim Changed As Boolean
     Dim Visible As Number
+
+    Index = Picker.Input(Value.Menu, Key)
+
+    If Index >= 0 Then
+
+        Changed = SelectTab(Value, Town, Index, False)
+        Changed = Changed Or Index = Value.Active
+        Return Changed
+
+    End If
+
+    If Value.Menu.Consumed Then
+
+        If Not Value.Menu.Visible Then
+            Changed = SelectTab(Value, Town, Value.ReturnIndex, False)
+        End If
+
+        Return Changed
+
+    End If
 
     If (Pointer_Y() < 96 Or
         Pointer_Y() >= 123 Or
@@ -322,12 +346,13 @@ Public Function Input(ByRef Value As State, ByRef Town As Document.State) As Boo
 
     If Pointer_Pressed(POINTER_PRIMARY) Then
 
-        If Pointer_X() >= 10 + Visible * Width And Pointer_X() < 36 + Visible * Width Then
-            Value.First = Max(0, Value.First - Visible)
+        If Pointer_X() >= 10 + Visible * Width And Pointer_X() < 62 + Visible * Width Then
+
+            Value.Menu.Visible = True
+            Value.Menu.Consumed = True
+            Value.ReturnIndex = Value.Active
             Return False
-        Else If Pointer_X() >= 36 + Visible * Width And Pointer_X() < 62 + Visible * Width Then
-            Value.First = Min(Max(0, Value.TabCount - Visible), Value.First + Visible)
-            Return False
+
         End If
 
     End If
@@ -338,6 +363,35 @@ Public Function Input(ByRef Value As State, ByRef Town As Document.State) As Boo
         (Pointer_Pressed(POINTER_PRIMARY) Or Pointer_Pressed(POINTER_SECONDARY))) Then
         Changed = SelectTab(Value, Town, Index, Pointer_Pressed(POINTER_SECONDARY))
     End If
+
+    Return Changed
+
+End Function
+
+''' Prepare missing photographs behind the modal without advancing the party.
+Public Function PreparePicker(ByRef Value As State, ByRef Town As Document.State) As Boolean
+
+    Dim Index As Number
+    Dim Changed As Boolean
+
+    If Not Value.Menu.Visible Or Not Previews.Has(Town.Name) Then
+        Return False
+    End If
+
+    For Index = 0 To Value.TabCount - 1
+
+        If Not Previews.Has(Value.Documents[Index].Name) Then
+            Changed = SelectTab(Value, Town, Index, False)
+            Return Changed
+        End If
+
+    End For
+
+    If Value.Active = Value.ReturnIndex Then
+        Return False
+    End If
+
+    Changed = SelectTab(Value, Town, Value.ReturnIndex, False)
 
     Return Changed
 
@@ -378,9 +432,23 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State)
     End For
 
     If Value.TabCount > Visible Then
-        Call UI.DrawButton(10 + Visible * Width, 96, 24, 27, "<", False)
-        Call UI.DrawButton(36 + Visible * Width, 96, 24, 27, ">", False)
+        Call UI.DrawButton(10 + Visible * Width, 96, 50, 27, "Maps", Value.Menu.Visible)
     End If
+
+End Sub
+
+Public Sub DrawPicker(ByRef Value As State)
+
+    Dim Index As Number
+
+    Value.Menu.EntryCount = Value.TabCount
+    Value.Menu.Active = Value.ReturnIndex
+
+    For Index = 0 To Value.TabCount - 1
+        Value.Menu.Names[Index] = Value.Documents[Index].Name
+    End For
+
+    Call Picker.Draw(Value.Menu)
 
 End Sub
 

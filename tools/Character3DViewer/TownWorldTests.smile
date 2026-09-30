@@ -6,6 +6,7 @@ Option Explicit
 Import Smile.Tools.TownWorldDocument As World
 Import Smile.Tools.TownWorldCanvas As Canvas
 Import Smile.Tools.TownTabs As Tabs
+Import Smile.Tools.TownMapPicker As Picker
 Import Smile.Tools.TownDocument As Document
 Import Smile.Simple3D.SurfaceGrid3D As Grid
 
@@ -51,6 +52,13 @@ Public Function Run() As Number
     Call Check(Ok And Current.Surface.Revision > 5,
         "A New Tab Cannot Reuse The Previous Town Terrain Revision")
 
+    Call Check(Picker.Pick(16, 222, 0, 16) = 0 And Picker.Pick(730, 700, 0, 16) = 15,
+        "Map Picker Exposes First And Sixteenth Maps At Once")
+    Call Check(Picker.Pick(245, 222, 0, 16) = -1 And Picker.Pick(730, 700, 0, 14) = -1,
+        "Map Picker Gaps And Empty Rows Cannot Select A Map")
+    Call Check(Picker.Pick(450, 470, 0, 16, 600, 80) = 15,
+        "Map Picker Hit Targets Follow The Compact Thumbnail Layout")
+
     Map.Name = "World Ports Fixture"
     Ok = World.Add(Map, "Neris Town", 100, 500)
     Ok = World.Add(Map, "Horizon Airport", 900, 500) And Ok
@@ -61,6 +69,25 @@ Public Function Run() As Number
 
     Call Check(Ok And StartX = 300 And EndX = 700 And StartY = 450 And EndY = 450,
         "World Ports Sit At The Centers Of Town Edges")
+
+    Ok = Canvas.Gesture(Gesture, Map, 180, 450, True, True, True, 1000, 900, 1000)
+    Ok = Canvas.Gesture(Gesture, Map, 180, 450, False, False, True, 1000, 900, 1050)
+    Ok = Canvas.Gesture(Gesture, Map, 182, 450, True, True, True, 1000, 900, 1200)
+
+    Call Check(Gesture.EnterRequested And Gesture.Selected = 0 And Not Gesture.DragNode,
+        "Double Click Enters The Town Without Moving Its Card")
+
+    Gesture.EnterRequested = False
+    Ok = Canvas.Gesture(Gesture, Map, 180, 450, True, True, True, 1000, 900, 2000)
+    Ok = Canvas.Gesture(Gesture, Map, 190, 450, False, True, True, 1000, 900, 2100)
+    Ok = Canvas.Gesture(Gesture, Map, 190, 450, False, False, True, 1000, 900, 2120)
+    Ok = Canvas.Gesture(Gesture, Map, 190, 450, True, True, True, 1000, 900, 2200)
+
+    Call Check(Not Gesture.EnterRequested, "Dragging A Town Does Not Become A Double Click")
+
+    Ok = Canvas.Gesture(Gesture, Map, 190, 450, False, False, True, 1000, 900, 2230)
+    Map.Nodes[0].X = 100
+    Gesture.ClickNode = 0
 
     Ok = Canvas.Gesture(Gesture, Map, StartX, StartY, True, True, True, 1000, 900)
 

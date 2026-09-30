@@ -8,7 +8,8 @@ Import Smile.Simple3D.PartyTrail3D As Trail
 
 Public Const ORIGIN_X = -5500.0
 Public Const ORIGIN_Z = -7600.0
-Public Const DECK_Y = Layers.ROAD_Y
+' Keep the authored terminal apron above the editable road beneath it.
+Public Const DECK_Y = Layers.ROAD_Y + Layers.STRUCTURE_CLEARANCE
 Public Const SCALE = 10.0
 
 Private Dim Enabled As Boolean

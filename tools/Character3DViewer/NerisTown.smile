@@ -39,8 +39,10 @@ Import Smile.Tools.TownPartyInset As Inset
 Import Smile.Tools.TownWorldPreviews As WorldPreviews
 Import Smile.Tools.TownDocumentNavigation As DocumentNavigation
 Import Smile.Tools.TownRoadTravel As RoadTravel
+Import Smile.Tools.TownResidents As Residents
 
 Public Type State
+    Residents As Residents.State
     PointOfView As Inset.State
     Town As Assets.State
     Comparison As Castle.State
@@ -101,6 +103,10 @@ Public Sub LoadNext(ByRef Value As State)
 
     Dim Ok As Boolean
     Dim AuthoringReady As Boolean
+
+    If Value.Residents.Enabled And Authoring.TownName() <> "Neris Town" Then
+        Call Residents.Destroy(Value.Residents)
+    End If
 
     If Value.Ready Or Value.Failed Then
         Return
@@ -200,7 +206,7 @@ Public Sub LoadNext(ByRef Value As State)
         Value.Panel.Loading = False
     End If
 
-    If Authoring.WorldActive() Then
+    If Authoring.PreviewActive() Then
         Return
     End If
 
@@ -225,7 +231,7 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
 
     If Not Value.Ready Then
 
-        If Authoring.WorldActive() Then
+        If Authoring.PreviewActive() Then
             Call Authoring.Input(Value.View.LiveCamera, Key, True)
         End If
 
@@ -237,6 +243,19 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
         Pointer_Delta_Y() <> 0 Or Pointer_Wheel_Delta() <> 0 Or
         Pointer_Held(POINTER_PRIMARY) Or Pointer_Held(POINTER_MIDDLE) Or
         Pointer_Held(POINTER_SECONDARY))
+
+    If Not Blocked And Not Authoring.Editing() And Not Authoring.PreviewActive() Then
+
+        If Residents.Input(Value.Residents, Key) Then
+
+            Call RoadTravel.Cancel()
+
+            Value.IdleTime = 0
+            Return
+
+        End If
+
+    End If
 
     ' Wake idle orbit before deciding which visible control owns this event.
 
@@ -399,7 +418,7 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
         Call Authoring.Input(Value.View.LiveCamera, Key,
             Blocked Or CameraPanel.Hovered(Value.Panel.HelpOpen) Or Value.Panel.DragRow > 0)
 
-        If Authoring.WorldActive() Then
+        If Authoring.PreviewActive() Then
             Return
         End If
 
@@ -786,6 +805,8 @@ Public Sub ResetOverview(ByRef Value As State, Optional Harbor As Boolean = Fals
     Value.Cinematic = True
     Value.OverviewOrbit = True
     Value.OrbitPaused = False
+    Value.IdleOrbit = False
+    Value.IdleTime = 0
     Value.Follow = False
     Value.Flight.Suspended = True
 
@@ -891,6 +912,12 @@ Public Sub AdvanceKeyboard(ByRef Value As State, Keys As Keyboard.HeldKeys, Elap
     Dim Direction As P.Vector3
     Dim Translating As Boolean
     Dim Walking As Boolean
+
+    If Residents.Talking(Value.Residents) Then
+        Call Party.Stand(Value.People, Elapsed)
+
+        Return
+    End If
 
     Direction = Keyboard.CameraDirection(Value.View.LiveCamera, Keys, Value.Keys.FlyInspect)
     Translating = Keyboard.Translate(Value.Keys, Value.View, Value.BaseCamera, Direction, Elapsed)
@@ -1006,7 +1033,7 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
 
     End If
 
-    If Authoring.WorldActive() Then
+    If Authoring.PreviewActive() Then
         Call Authoring.Update(Value.People.Path.Positions[0], Elapsed)
 
         Return
@@ -1016,7 +1043,7 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
         (Authoring.Editing() And Key_Held(KEY_CONTROL)))
 
     Call UpdateIdle(Value, Value.InputActive Or Keyboard.Active(Held) Or RoadTravel.Active() Or
-        Authoring.GestureActive(), Elapsed)
+        Authoring.GestureActive() Or Residents.Talking(Value.Residents), Elapsed)
 
     If CastleRoute.Active() Then
         Call CastleRoute.Update(Value.People.Path, Value.People.MemberCount, Elapsed)
@@ -1087,6 +1114,7 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
     Call Castle.Update(Value.Comparison, Elapsed)
     Call TownMap.Update(Value.Map, Party.IsMoving(Value.People), Elapsed)
     Call Inset.Update(Value.PointOfView, Party.IsMoving(Value.People), Elapsed)
+    Call Residents.Update(Value.Residents, Authoring.TownName(), Authoring.Editing(), Leader, Elapsed)
 
     If Value.Cinematic And Not Value.OrbitPaused Then
         Value.View.Controls.OrbitYaw = Camera.NormalizeAngle(Value.View.Controls.OrbitYaw + ToDouble(Elapsed) * 0.0025)
@@ -1214,7 +1242,7 @@ Public Sub Draw(ByRef Value As State)
 
     End If
 
-    If Authoring.WorldActive() Then
+    If Authoring.PreviewActive() Then
         Clear RGB(12, 23, 36)
 
         Return
@@ -1255,6 +1283,7 @@ Private Function DrawContents(ByRef Value As State) As Boolean
     Dim Ok As Boolean
 
     Ok = Party.Draw(Value.People)
+    Ok = Residents.Draw(Value.Residents, Authoring.TownName()) And Ok
 
     If Value.Edited Then
 
@@ -1355,9 +1384,15 @@ Public Sub Overlay(ByRef Value As State)
 
     Call CameraPanel.MapStatistics(Value.Panel, Value.View)
 
+    If Not Authoring.Editing() And Not Authoring.PreviewActive() Then
+        Call Residents.Overlay(Value.Residents)
+    End If
+
 End Sub
 
 Public Sub Destroy(ByRef Value As State)
+
+    Call Residents.Destroy(Value.Residents)
 
     Call Landmarks.Destroy(Value.Landmarks, Value.Comparison, Value.Harbor, Value.Horizon)
 

@@ -109,6 +109,55 @@ Public Sub Open(CreateNew As Boolean, Town As Text)
 
 End Sub
 
+Public Sub Reopen(Town As Text)
+
+    If Map.NodeCount = 0 Then
+        Call Open(False, Town)
+
+        Return
+    End If
+
+    Enabled = True
+    Entering = False
+    ReturnTown = Town
+    Graph.DragNode = False
+    Graph.DragPort = False
+    Graph.ClickNode = 0
+    Graph.EnterRequested = False
+    Choosing = False
+
+End Sub
+
+Private Function Leave(Action As Number) As Text
+
+    Dim Ok As Boolean
+    Dim Result As Text
+
+    If Transfer.Job > 0 Or Incoming.Job > 0 Then
+        Ui.Message = "Wait for the file transfer to finish."
+        Return ""
+    End If
+
+    Ok = Document.SaveWorld(Map)
+
+    If Not Ok Then
+        Ui.Message = "Save failed; changes retained."
+        Return ""
+    End If
+
+    Dirty = False
+    Enabled = False
+    Result = ReturnTown
+
+    If Action = 5 And Graph.Selected >= 0 And Graph.Selected < Map.NodeCount Then
+        Result = Map.Nodes[Graph.Selected].Town
+        Entering = True
+    End If
+
+    Return Result
+
+End Function
+
 Private Function ContainsTown(Name As Text) As Boolean
 
     Dim Index As Number
@@ -279,31 +328,7 @@ Public Function Input(Key As Number, ByRef OpenTabs As Tabs.State) As Text
         Action = 6 Or
         Key = KEY_ESCAPE) Then
 
-        If Transfer.Job > 0 Or Incoming.Job > 0 Then
-            Ui.Message = "Wait for the file transfer to finish."
-            Return ""
-        End If
-
-        Ok = Document.SaveWorld(Map)
-
-        If Ok Then
-
-            Dirty = False
-            Enabled = False
-            Result = ReturnTown
-
-            If (Action = 5 And
-                Graph.Selected >= 0 And
-                Graph.Selected < Map.NodeCount) Then
-                Result = Map.Nodes[Graph.Selected].Town
-                Entering = True
-            End If
-
-        Else
-
-            Ui.Message = "Save failed; changes retained."
-
-        End If
+        Result = Leave(Action)
 
     Else
 
@@ -327,6 +352,11 @@ Public Function Input(Key As Number, ByRef OpenTabs As Tabs.State) As Text
             Pointer_X() < Panel.LeftEdge() And Pointer_Y() >= 180,
             Panel.LeftEdge(), Window_Height())
         Dirty = Dirty Or Ok
+
+        If Graph.EnterRequested Then
+            Graph.EnterRequested = False
+            Result = Leave(5)
+        End If
 
     End If
 
@@ -425,7 +455,7 @@ Public Sub Draw(Optional LoadingTown As Text = "", Optional Progress As Number =
 
     End If
 
-    Draw Text "Wheel: Zoom   Middle / Space+Drag: Pan   Yellow Points: Connect" At 30, Window_Height() - 65 Size 14 Color WHITE
+    Draw Text "Double-click Town: Enter   Wheel: Zoom   Middle-drag: Pan   Yellow Points: Connect" At 30, Window_Height() - 65 Size 14 Color WHITE
     Draw Text Ui.Message At 30, Window_Height() - 40 Size 14 Color RGB(240, 205, 140)
 
 End Sub

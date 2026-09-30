@@ -15,6 +15,7 @@ Import Smile.Tools.TownDocumentStore As Storage
 Import Smile.Tools.TownWorldDocument As World
 Import Smile.Tools.TownWorldTests As WorldTests
 Import Smile.Tools.TownGatewayTests As GatewayTests
+Import Smile.Tools.TownResidentTests As ResidentTests
 Import Smile.Tools.TownGuideEditingTests As GuideEditingTests
 Import Smile.Tools.TownGuides As Guides
 Import Smile.Tools.TownTileGuides As TileGuides
@@ -291,6 +292,7 @@ Failures = Failures + SectionTests.Run()
 Failures = Failures + CurveTests.Run()
 Failures = Failures + WorldTests.Run()
 Failures = Failures + GatewayTests.Run()
+Failures = Failures + ResidentTests.Run()
 Failures = Failures + GuideEditingTests.Run()
 
 If Failures = 0 Then

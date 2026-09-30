@@ -1,5 +1,24 @@
 # SMILE 2.0 - Sin Star I - Game Engine and Studio
 
+## September 30 map access and residents
+
+**Maps** replaces tab paging arrows with a four-column gallery of the open towns.
+Cards reuse the World Map's cached starting-angle photographs; missing previews
+prepare incrementally while the dialog stays interactive. **World Map** is also
+available in the bottom toolbar. Double-click a town card to enter. World labels
+have a readable minimum font size and wrap within the card.
+
+Demo starts orbit immediately at every map change, including after the party's
+idle camera was active. Generated maps have clear building plots, entrance paths,
+and scenery moved away from roads. Star Lake's six central shops are removed.
+Both airport terminal assemblies remain; their approach landscaping is corrected.
+
+Original Neris Town has nine prototype residents: five adults, three children and
+a dog. Approach one and press **E** to talk; E, Enter or Esc closes the greeting.
+They idle, walk and occasionally run between short road errands, pausing nearby
+and while talking. The character package and current visual/behavior limits are in
+[NerisResidentsV1](../../games/SinStarI/SourceAssets/Characters/Civilians/NerisResidentsV1/README.md).
+
 ## September 30 precision editing and presentation
 
 Items and Guides offer **True 2D / 3D View**. True 2D uses an orthographic camera,
@@ -50,7 +69,7 @@ silently losing their brushes; individual item editing remains available.
 
 **Demo** at the bottom cycles open town tabs every minute and starts map orbit.
 Editing and file operations pause the cycle. Up to sixteen tabs are available;
-the arrows page through them without shrinking their labels. The generated Luma
+the **Maps** gallery shows their names and thumbnails. The generated Luma
 designs and separate World atlas are documented in
 [StoryTownsV1](../../games/SinStarI/SourceAssets/Towns/Neris/StoryTownsV1/README.md).
 

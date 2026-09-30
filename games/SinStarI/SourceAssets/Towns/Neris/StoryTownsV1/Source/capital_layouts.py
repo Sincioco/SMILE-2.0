@@ -11,11 +11,16 @@ def canals():
     for z in (-180,-60,90,210):
         t.rect(-300,z-10,300,z+10,WATER)
     t.rect(-85,150,85,325)
-    t.path([(0,-330),(0,178)],18)
+    for start,end in ((-330,-148),(-92,24),(96,178)):
+        t.path([(0,start),(0,end)],18)
     for x in (-305,-180,180,305):
         t.path([(x,-315),(x,315)],12)
     for z in (-315,-240,-120,0,150,315):
-        t.path([(-345,z),(345,z)],12 if z else 20)
+        if z == -120:
+            t.path([(-345,z),(-28,z)],12)
+            t.path([(28,z),(345,z)],12)
+        else:
+            t.path([(-345,z),(345,z)],12 if z else 20)
     # Detours around civic and relay landmarks keep the ceremonial avenue walkable.
     t.ring(0,60,36,12)
     t.ring(0,-120,28,12)
@@ -35,7 +40,7 @@ def canals():
                 continue
             t.place(19,side*46,z,2.0,side*25)
         t.grove(side*118,265,2,4,12,2.2)
-        for template,z in ((8,-275),(11,-232),(12,-198)):
+        for template,z in ((8,-275),(11,-210),(12,-150)):
             t.place(template,side*40,z,1.3,side*90)
         for z in (-30,130):
             t.disk(side*42,z,13,ROAD)
@@ -70,25 +75,26 @@ def star_lake():
     t.ring(0,0,278,16)
     t.ring(0,0,149,12)
     for a in range(0,360,45):
-        t.path([polar(149,a),polar(316,a)],14)
-    t.path([(-348,0),(348,0)],16)
-    t.path([(0,-320),(0,55)],16)
+        t.path([polar(150,a),polar(316,a)],14)
+    # The cross-island street passes in front of the drawbridge, not under its rails.
+    t.path([(-348,0),(-149,0),(-112,-42),(112,-42),(149,0),(348,0)],16)
+    t.path([(0,-320),(0,-94)],16)
+    t.path([(0,-36),(0,-28)],16)
     t.ring(0,-65,29,10)
     t.place(13,0,51,1.5)
     t.place(9,0,-65,1.4)
     for side in (-1,1):
-        t.place(10,side*83,-47,1.15)
+        t.place(10,side*83,-65,1.15,side*90)
         for z in (-70,-30,10,50):
             t.place(19,side*108,z,1.55)
-        for template,x in ((8,25),(11,55),(12,83)):
-            t.place(template,side*x,-91,1.0)
         for a in (45,135):
             x,z=polar(201,a)
             x*=side
             t.disk(x,z,34)
             t.path([polar(165,a*side),polar(238,a*side)],14)
-            t.grove(x-side*15,z+15,2,2,8,1.8)
-            t.grove(x+side*15,z-15,2,2,8,1.8)
+            angle=math.radians(a*side)
+            for offset in (-20,20):
+                t.grove(x+offset*math.cos(angle),z-offset*math.sin(angle),2,2,8,1.8)
     # Homes face the orbital promenade; the inward ring stays mostly open water.
     for a in range(0,360,30):
         for offset in (-9,9):
@@ -96,7 +102,10 @@ def star_lake():
             x,z=polar(302,angle)
             t.place(3 if a%60==0 else 4,x,z,1.35,angle)
     for a in range(0,360,10):
-        x,z=polar(319,a+5)
+        angle=a+5
+        if angle % 45 == 0:
+            angle += 5
+        x,z=polar(319,angle)
         t.place(18 if a%20 else 19,x,z,1.8,180-a)
     for a in range(0,360,15):
         x,z=polar(258,a+7.5)
@@ -129,33 +138,47 @@ def crown_isles():
     centers=[(x,z) for x in (-228,0,228) for z in (-228,0,228)]
     for x,z in centers:
         t.disk(x,z,100)
-    t.rect(-72,140,72,310)
+    t.rect(-99,130,99,325)
     for x,z in centers:
-        t.ring(x,z,69,12)
+        if (x,z) != (0,228):
+            t.ring(x,z,69,12)
+    t.path([(-84,145),(-84,310),(84,310),(84,145),(-84,145)],14)
     for x in (-228,0,228):
-        t.path([(x,-330),(x,300)],16)
+        if x == 0:
+            t.path([(x,-330),(x,-69)],16)
+            t.path([(x,69),(x,145)],16)
+        else:
+            t.path([(x,-330),(x,159)],16)
+            t.path([(x,297),(x,310)],16)
     for z in (-228,0,228):
-        t.path([(-365,z),(365,z)],16)
+        if z == 228:
+            for x0,x1 in ((-365,-297),(-159,-84),(84,159),(297,365)):
+                t.path([(x0,z),(x1,z)],16)
+        else:
+            t.path([(-365,z),(365,z)],16)
     t.place(13,0,242,1.5)
     t.place(9,0,37,1.65)
-    t.place(10,0,-38,1.55)
+    t.place(10,0,-38,1.55,180)
     for side in (-1,1):
-        t.place(7,side*228,244,1.2,0)
+        t.place(7,side*228,228,1.1,0)
+        t.path([(side*228,159),(side*228,187)],8)
         # Twin northern academies/garrisons frame the single palace.
         for z in (160,195,285):
             t.grove(side*288,z,2,2,10,2.2)
         for z in (175,295):
             t.grove(side*168,z,2,2,10,2.0)
-        for template,z in ((8,-39),(11,0),(12,39)):
-            t.place(template,side*263,z,1.15,side*90)
-            t.place(17,side*201,z,1.6,-side*90)
-        t.place(20,side*43,0,1.7)
-        t.grove(side*44,-43,2,2,10,1.8)
-        t.grove(side*44,43,2,2,10,1.8)
+        for template,z in ((8,-29),(11,18),(12,29)):
+            x=315 if template==11 else 257
+            t.place(template,side*x,z,1.0,side*90)
+            t.place(17,side*201,z if template!=11 else -16,1.6,-side*90)
+        t.place(20,side*33,18,1.5)
+        t.grove(side*34,-43,2,2,10,1.8)
+        t.grove(side*34,43,2,2,10,1.8)
     for x in (-228,0,228):
         for side in (-1,1):
-            for dz in (-39,0,39):
-                t.place(3 if dz else 4,x+side*42,-228+dz,1.3,side*90)
+            for dz in (-28,28):
+                t.place(3,x+side*31,-228+dz,1.15,side*90)
+            t.place(4,x+side*87,-210,1.15,side*90)
             for dz in (-66,66):
                 t.grove(x+side*37,-228+dz,3,1,10,1.9)
     for x,z in centers:
@@ -166,8 +189,9 @@ def crown_isles():
     for side in (-1,1):
         for x,z in ((114,0),(114,-228),(114,228),(228,-114),(228,114)):
             for off in (-12,12):
-                t.disk(side*x,z+off,4)
-                t.place(15,side*x,z+off,2.2)
+                px,pz=(side*x+off,z) if x==228 else (side*x,z+off)
+                t.disk(px,pz,4)
+                t.place(15,px,pz,2.2)
     t.gates()
     t.notes=['Nine garden islands separated by deep, clear waterways',
         'Long illuminated processional bridges',

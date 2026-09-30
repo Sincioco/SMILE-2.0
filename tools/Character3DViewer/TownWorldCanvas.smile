@@ -21,6 +21,11 @@ Public Type State
     PendingDelete As Boolean
     DeleteFirst As Number
     DeleteSecond As Number
+    ClickNode As Number
+    ClickTime As Number
+    ClickX As Number
+    ClickY As Number
+    EnterRequested As Boolean
 End Type
 
 Public Function X(ByRef Value As State, ByRef Map As Document.State, Index As Number, RightEdge As Number,
@@ -155,12 +160,16 @@ End Function
 
 Public Function Gesture(ByRef Value As State, ByRef Map As Document.State,
     Px As Number, Py As Number, Pressed As Boolean, Held As Boolean, Available As Boolean,
-    RightEdge As Number, Height As Number) As Boolean
+    RightEdge As Number, Height As Number, Optional Now As Number = -1) As Boolean
 
     Dim Picked As Number
     Dim Index As Number
     Dim Other As Number
     Dim Changed As Boolean
+
+    If Now < 0 Then
+        Now = Timer()
+    End If
 
     Value.PointerX = Px
     Value.PointerY = Py
@@ -191,8 +200,9 @@ Public Function Gesture(ByRef Value As State, ByRef Map As Document.State,
 
         Value.DragNode = Held
 
-        If Held And Available Then
+        If Held And Available And (Abs(Px - Value.ClickX) > 5 Or Abs(Py - Value.ClickY) > 5) Then
 
+            Value.ClickNode = 0
             Map.Nodes[Value.Selected].X = Max(0, Min(Document.MAX_COORDINATE,
                 (View.World(Value.Camera, Px - Value.OffsetX, RightEdge / 2, False) - 100) * 1000 / Max(100, RightEdge - 200)))
             Map.Nodes[Value.Selected].Y = Max(0, Min(Document.MAX_COORDINATE,
@@ -207,6 +217,7 @@ Public Function Gesture(ByRef Value As State, ByRef Map As Document.State,
 
         If Picked >= 0 Then
 
+            Value.ClickNode = 0
             Value.SourceNode = Picked / 4
             Value.SourcePort = Picked Mod 4
             Value.Selected = Value.SourceNode
@@ -221,6 +232,20 @@ Public Function Gesture(ByRef Value As State, ByRef Map As Document.State,
                 Abs(Py - Y(Value, Map, Index, Height)) < View.HalfHeight(Value.Camera)) Then
 
                 Value.Selected = Index
+
+                If (Value.ClickNode = Index + 1 And Now - Value.ClickTime <= 450 And
+                    Now >= Value.ClickTime And Abs(Px - Value.ClickX) <= 5 And Abs(Py - Value.ClickY) <= 5) Then
+
+                    Value.EnterRequested = True
+                    Value.ClickNode = 0
+                    Return False
+
+                End If
+
+                Value.ClickNode = Index + 1
+                Value.ClickTime = Now
+                Value.ClickX = Px
+                Value.ClickY = Py
                 Value.DragNode = True
                 Value.OffsetX = Px - X(Value, Map, Index, RightEdge)
                 Value.OffsetY = Py - Y(Value, Map, Index, Height)
@@ -248,6 +273,7 @@ Public Function Gesture(ByRef Value As State, ByRef Map As Document.State,
         End For
 
         Value.Selected = -1
+        Value.ClickNode = 0
 
     End If
 
@@ -322,9 +348,9 @@ Public Sub Draw(ByRef Value As State, ByRef Map As Document.State, ByRef Images 
         EndY = View.HalfHeight(Value.Camera)
         Fill Rectangle Ax - Bx, Ay - EndY, Bx * 2, EndY * 2, ColorValue
 
-        Call Previews.Draw(Images, Index, Ax - Bx + 6, Ay - EndY + 6, Bx * 2 - 12, EndY * 3 / 2 - 12)
-        Call View.Label(Map.Nodes[Index].Town, Ax, Ay + EndY / 2, Bx * 2 - 12,
-            Max(6, 13 * View.Scale(Value.Camera) / 100), EndY / 2 - 3)
+        Call Previews.Draw(Images, Index, Ax - Bx + 6, Ay - EndY + 6, Bx * 2 - 12, EndY * 2 - 54)
+        Call View.Label(Map.Nodes[Index].Town, Ax, Ay + EndY - 42, Bx * 2 - 12,
+            Max(13, Min(18, 16 * View.Scale(Value.Camera) / 100)), 38)
 
         For Side = 0 To 3
             Fill Rectangle X(Value, Map, Index, RightEdge, Side) - 4, Y(Value, Map, Index, Height, Side) - 4, 8, 8, RGB(245, 210, 70)

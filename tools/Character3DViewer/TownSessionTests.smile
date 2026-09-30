@@ -3,6 +3,7 @@
 Option Explicit
 
 Import Smile.Tools.NerisTown As Town
+Import Smile.Tools.TownResidents As Residents
 Import Smile.Tools.TownEditorSession As Editor
 Import Smile.Tools.Character3DViewerCalibration As Calibration
 Import Smile.Tools.NerisTownInspectionTests As Inspection
@@ -104,6 +105,19 @@ For Index = 0 To 180
 End For
 
 Call Check(Value.Ready And Value.Edited And Not Value.Failed, "Editable Town And Party Load Together")
+
+If Value.Ready And Editor.TownName() = "Neris Town" Then
+
+    For Index = 0 To 8
+        Call Residents.Update(Value.Residents, "Neris Town", False,
+            Value.People.Path.Positions[0], 16)
+    End For
+
+    Call Check(Value.Residents.Loaded = 9 And Not Value.Residents.Failed,
+        "Nine Residents Fit The Full Town Material Budget")
+    Call Residents.Destroy(Value.Residents)
+
+End If
 
 If Value.Horizon.Failed Then
 
@@ -211,7 +225,14 @@ If Value.Ready Then
             Abs(Value.View.LiveCamera.Position.Y - Value.View.LiveCamera.Target.Y) * 0.0003 And
         Abs(Value.View.LiveCamera.Position.X - Value.View.LiveCamera.Target.X) < 0.001,
         "One Key Selects A North Up Overhead Editor View Even Over The Header")
+
+    Value.IdleOrbit = True
+    Value.IdleTime = 10000
+
     Call Town.ResetOverview(Value)
+    Call Check(Value.Cinematic And Value.OverviewOrbit And Not Value.IdleOrbit And
+        Value.IdleTime = 0 And Not Value.OrbitPaused,
+        "Demo Overview Immediately Orbits After An Idle Party Camera")
     Call Town.Input(Value, KEY_TAB, False)
     Call Check(Value.PartyCamera And Not Editor.Editing(), "Tab Leaves Editing And Follows The Party")
     Call Town.Input(Value, KEY_1, False)
@@ -634,6 +655,8 @@ Sub CheckWalkingConnection(ByRef Value As Town.State)
     Dim RoadPoint As P.Vector3
     Dim FoundRoad As Boolean
 
+    Call LoadResidents(Value)
+
     BeforeModels = G.LiveModelCount3D()
     BeforeMeshes = G.LiveMeshCount3D()
 
@@ -644,6 +667,8 @@ Sub CheckWalkingConnection(ByRef Value As Town.State)
     Call Town.MoveParty(Value, P.Vector(-1.0, 0.0, 0.0), 200)
     Call Check(Editor.TownName() = "Neris Spaceport", "West Road Travels To Neris Spaceport")
     Call LoadArrival(Value)
+    Call Check(Not Value.Residents.Enabled And Value.Residents.Loaded = 0,
+        "Leaving Neris Releases Its Nine Residents Before Loading The Airport")
     Call Check(Value.Harbor.Ready And Not Value.Horizon.Ready And Not Value.Comparison.Ready,
         "West Map Loads Only The Original Spaceport")
     Call Check(Value.Harbor.Doors.Ready And Value.Harbor.Light.Ready, "Original Doors And Crystals Remain Ready")
@@ -705,10 +730,25 @@ Sub CheckWalkingConnection(ByRef Value As Town.State)
     Call LoadArrival(Value)
     Call Check(Value.People.MemberCount = 4 And Value.People.Path.Positions[0].X = 2500.0,
         "All Four Party Members Return At The East Town Gate")
+    Call LoadResidents(Value)
     Call Check(G.LiveModelCount3D() = BeforeModels And G.LiveMeshCount3D() = BeforeMeshes,
         "Three Map Round Trip Releases All Airport Resources")
 
     Print "Walking: West Spaceport And East Horizon Round Trips, Four Members, Door Entry, Day Night, No Resource Growth"
+
+End Sub
+
+Sub LoadResidents(ByRef Value As Town.State)
+
+    Dim Step As Number
+
+    For Step = 0 To 8
+        Call Residents.Update(Value.Residents, "Neris Town", False,
+            Value.People.Path.Positions[0], 16)
+    End For
+
+    Call Check(Value.Residents.Loaded = 9 And Not Value.Residents.Failed,
+        "Resident Loading Completes Before Comparing Town Resource Counts")
 
 End Sub
 
@@ -942,7 +982,7 @@ Sub CheckDecorPalette()
     Dim Entry As Catalog.Template
     Dim Command As Number
 
-    For Page = 0 To 10 / Panel.PaletteRows()
+    For Page = 0 To 14 / Panel.PaletteRows()
 
         Call Panel.Draw(Controls.Ui, Draft, Controls.Guide, 0)
 
@@ -960,9 +1000,9 @@ Sub CheckDecorPalette()
         Command = Commands.Command(Controls, Draft, 21)
     End For
 
-    Call Check(VisibleCount = 11 And Seen[20] = 1 And Seen[27] = 1,
-        "Decor Pages Contain One Fountain And One Crystal Circle")
-    Call Check(Controls.Ui.Page = 10 / Panel.PaletteRows(),
+    Call Check(VisibleCount = 15 And Seen[20] = 1 And Seen[27] = 1,
+        "Decor Pages Include Four Landforms And One Of Each Consolidated Ornament")
+    Call Check(Controls.Ui.Page = 14 / Panel.PaletteRows(),
         "Next Stops At The Last Consolidated Decor Page")
 
     For Item = 14 To Catalog.TEMPLATE_COUNT - 1

@@ -222,7 +222,7 @@ Public Function CameraBlocked(Optional CameraControl As Boolean = False) As Bool
 
     Dim Result As Boolean
 
-    Result = (Files.BlocksEditing(Transfers) Or World.Active() Or Controls.Ui.SunSlider.DragOwner > 0 Or
+    Result = (OpenTabs.Menu.Visible Or OpenTabs.Menu.Consumed Or Files.BlocksEditing(Transfers) Or World.Active() Or Controls.Ui.SunSlider.DragOwner > 0 Or
         (Controls.Enabled And (Panel.Hovered() Or GuideList.Hovered(Controls.GuideBrowser) Or (Pointer_Y() < 126 And Not CameraControl) Or
         (Not CameraControl And ((Editor.CapturesMap(Controls) And Not Key_Held(KEY_SHIFT) And
         Pointer_Held(POINTER_PRIMARY)) Or GestureActive())))))
@@ -663,8 +663,12 @@ Public Sub Input(View As P.Camera3D, Key As Number, Blocked As Boolean)
 
             Ok = Tabs.OpenNamed(OpenTabs, Town, Name)
 
-            TeleportPending = Ok And Not World.Active() And World.EnteringTown()
+            TeleportPending = Not World.Active() And World.EnteringTown() And Town.Name = Name
             TabOverviewPending = TeleportPending
+
+            If TeleportPending Then
+                Controls.Enabled = False
+            End If
 
             If Ok Then
                 Call Editor.ResetDocument(Controls, Town)
@@ -672,6 +676,20 @@ Public Sub Input(View As P.Camera3D, Key As Number, Blocked As Boolean)
                 Call World.PreviewUnavailable(Name)
             End If
 
+        End If
+
+        Return
+
+    End If
+
+    If Toolbar.Clicked(7) Then
+
+        Ok = Library.Remember(Town)
+
+        If Ok Then
+            OpenTabs.Documents[OpenTabs.Active] = Town
+
+            Call World.Reopen(Town.Name)
         End If
 
         Return
@@ -707,7 +725,7 @@ Public Sub Input(View As P.Camera3D, Key As Number, Blocked As Boolean)
 
     End If
 
-    If Tabs.Input(OpenTabs, Town) Then
+    If Tabs.Input(OpenTabs, Town, Key) Then
 
         Showcase.Elapsed = 0
         TeleportPending = True
@@ -723,7 +741,7 @@ Public Sub Input(View As P.Camera3D, Key As Number, Blocked As Boolean)
         OpenTabs.Message = ""
     End If
 
-    If Pointer_Y() >= 94 And Pointer_Y() < 126 Then
+    If OpenTabs.Menu.Consumed Or (Pointer_Y() >= 94 And Pointer_Y() < 126) Then
         Return
     End If
 
@@ -918,6 +936,14 @@ Public Sub Update(Leader As P.Vector3, Elapsed As Number)
     Call Attachments.Update(Details, Town, Leader, Elapsed)
     Call Editor.UpdateGuideFiles(Controls, Town)
 
+    If Ready And Ground.LiveRevision = Town.Surface.Revision Then
+
+        If Tabs.PreparePicker(OpenTabs, Town) Then
+            Call Editor.ResetDocument(Controls, Town)
+        End If
+
+    End If
+
     If Ground.LiveRevision = Town.Surface.Revision Then
         Call RoadTravel.Prepare(Town)
     End If
@@ -927,6 +953,7 @@ Public Sub Update(Leader As P.Vector3, Elapsed As Number)
     RecoveryClock = RecoveryClock + Elapsed
 
     If Demo.Advance(Showcase, Elapsed, Ready And Not Editing() And
+        Not World.Active() And Not OpenTabs.Menu.Visible And
         Not Files.BlocksEditing(Transfers) And OpenTabs.TabCount > 1) Then
 
         Ok = Tabs.SelectTab(OpenTabs, Town, (OpenTabs.Active + 1) Mod OpenTabs.TabCount, False)
@@ -1023,16 +1050,21 @@ Public Sub Overlay(View As P.Camera3D, Optional Loading As Boolean = False)
 
     Call Tabs.Draw(OpenTabs, Town)
     Call Toolbar.DrawButton(6, Showcase.Enabled)
+    Call Toolbar.DrawButton(7, World.Active())
 
     If Loading Then
+
         Call World.Draw(Town.Name, Progress())
+        Call Tabs.DrawPicker(OpenTabs)
 
         Return
+
     End If
 
     Call Editor.Draw(Controls, Town, View)
     Call World.Draw()
     Call FileDialog.Draw(Transfers, Controls.Enabled And Controls.Ui.Section = 2)
+    Call Tabs.DrawPicker(OpenTabs)
 
 End Sub
 
@@ -1239,11 +1271,11 @@ Public Function BeginWorldPhotograph() As Boolean
 
 End Function
 
-Public Function WorldActive() As Boolean
+Public Function PreviewActive() As Boolean
 
     Dim Result As Boolean
 
-    Result = World.Active()
+    Result = World.Active() Or OpenTabs.Menu.Visible
 
     Return Result
 

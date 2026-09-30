@@ -29,7 +29,9 @@ It does not overwrite Sin's `Luma.world`. Graph connections visualize the networ
 actual scene transitions use the destination tiles in each town document.
 Open the atlas through **Edit Town → Files → Open World**. Missing images are
 prepared by visiting saved maps, which also opens their tabs. **Demo** cycles the
-open tabs once per minute; click it again to stop. Tab arrows page long lists.
+open tabs once per minute and immediately starts orbit; click it again to stop.
+**Maps** displays the open tabs as a four-column gallery with perspective thumbnails.
+The bottom **World Map** button reopens the atlas; double-click a card to enter.
 
 ## Story authority and remaining work
 
@@ -45,7 +47,8 @@ The Waterworks, relief/clinic area and ancient relay interpret chapter 1. The re
 is not chapter 5's off-world observatory. Verdant Reach, Greyglass Pass, Sunglass
 Expanse and the district labels are working design names, not new script canon.
 The journey maps reserve clearings for future encounters; monsters, combat and
-leveling in these maps are not implemented. NPC inhabitants remain outstanding.
+leveling in these maps are not implemented. Original Neris has nine prototype
+residents; the generated alternatives do not yet have inhabitants.
 The atlas is not a claim that every Sin Star I location has been implemented.
 
 All 25 atlas connections have reciprocal road markers. The original Neris receives
@@ -53,7 +56,30 @@ only two additional marker pads; its edited buildings, terrain and existing mark
 are retained. Arrival uses the matching entrance and a collision-checked adjacent
 road cell outside the trigger. Explicit airport destinations retain their names;
 legacy shared-airport exits still remember their origin. The native route check
-covers all 50 directed entrances. NPC inhabitants remain the next implementation.
+covers all 50 directed entrances.
+
+## Road and placement cleanup
+
+`Source/town_access.py` owns generated-map plot placement, front-door connections
+and full scenery-footprint clearance. It considers rotated model bounds and whole
+tree clusters. Small paths join the existing street network without passing through
+another building. `validate_access.py` protects the reported blocked-road and
+missing-entrance defects; it checks all thirteen generated maps and 161 entrances.
+The user-approved center tower in Ancient Relay and Waterworks pump platforms have
+explicit exceptions. Castles and airport terminals retain their authored approaches.
+
+Star Lake keeps its enlarged royal island and smooth rings, removes the six shops,
+and routes the cross-island avenue in front of the castle bridge. Orin's Village
+uses a clear perimeter street and two garden ponds. Crown Isles has building plots
+off its through roads. Relay obelisks are offset from axial paths. Forest/mountain
+encounter clearings and the desert oasis loop are retained as requested.
+
+Spaceport keeps its terminal and overall landscape. Its service drive joins the
+approaches, seven travel exits sit on dedicated outer spurs, the arrival circle is
+beyond the apron, and trees/fountains occupy gardens. `validate_spaceport.py` checks
+those specific regressions. Horizon retains its design with corrected plots and
+entrance paths. These latest cleanup documents still need installation and visual
+acceptance in Studio; passing geometry checks alone does not establish appearance.
 
 ## Reproduce and install
 

@@ -1,0 +1,87 @@
+''' Focused proofs for town errands and conversation state, without a graphics window.
+Module Smile.Tools.TownResidentTests
+
+Option Explicit
+
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownDocumentNavigation As Navigation
+Import Smile.Tools.TownResidentMovement As Movement
+Import Smile.Tools.TownResidentDialogue As Dialogue
+Import Smile.Tools.TownResidents As Residents
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+
+Public Function Run() As Number
+
+    Dim Town As Document.State
+    Dim Errand As Movement.State
+    Dim People As Residents.State
+    Dim Point As P.Vector3
+    Dim Initial As P.Vector3
+    Dim Index As Number
+    Dim Failures As Number
+    Dim Ok As Boolean
+
+    Ok = Document.Blank(Town, "Resident Roads", 20, 20, 20.0)
+
+    Call Grid.PaintRectangle(Town.Surface, 0, 8, 19, 11, Grid.SURFACE_ROAD)
+    Call Navigation.Rebuild(Town)
+
+    Initial = P.Vector(Town.Surface.XEdges[10] + 10.0, 23.12, Town.Surface.ZEdges[10] + 10.0)
+
+    Call Movement.Start(Errand, Initial, 0)
+
+    For Index = 0 To 250
+        Call Movement.Update(Errand, False, 100)
+    End For
+
+    If M.Distance(Errand.Position, Initial) < 10.0 Or Not Navigation.IsRoad(Errand.Position) Then
+        Print "FAIL Resident Must Complete A Safe Road Errand"
+        Failures = Failures + 1
+    End If
+
+    Point = Errand.Position
+
+    For Index = 0 To 10
+        Call Movement.Update(Errand, True, 100)
+    End For
+
+    If M.Distance(Point, Errand.Position) > 0.001 Then
+        Print "FAIL Talking Must Pause Resident Movement"
+        Failures = Failures + 1
+    End If
+
+    Call Grid.PaintRectangle(Town.Surface, 9, 8, 9, 11, Grid.SURFACE_WATER)
+    Call Navigation.Rebuild(Town)
+
+    Point = Initial
+    Point.X = Town.Surface.XEdges[8] + 10.0
+
+    If Movement.ClearRoad(Initial, Point) Then
+        Print "FAIL Resident Cannot Cross A Water Gap"
+        Failures = Failures + 1
+    End If
+
+    People.Enabled = True
+    People.Nearest = 2
+    People.Speaking = -1
+    Ok = Residents.Input(People, KEY_E)
+
+    If Not Ok Or Not Residents.Talking(People) Or Dialogue.Greeting(2) <> "Hi, my name is Ilan." Then
+        Print "FAIL Nearest Resident Greeting"
+        Failures = Failures + 1
+    End If
+
+    Ok = Residents.Input(People, KEY_ESCAPE)
+
+    If Not Ok Or Residents.Talking(People) Then
+        Print "FAIL Conversation Must Close"
+        Failures = Failures + 1
+    End If
+
+    Return Failures
+
+End Function
+
+End Module

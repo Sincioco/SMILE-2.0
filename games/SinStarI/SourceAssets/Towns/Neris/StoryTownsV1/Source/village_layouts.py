@@ -45,34 +45,33 @@ def east_valley():
 def home_village():
     t=Town("Orin's Village",420,smooth=True)
     t.disk(0,0,177)
-    # Twin crescent lakes behind a compact horseshoe of homes.
+    # Quiet ponds occupy gardens; the village streets and home plots stay on land.
+    t.rect(-149,-149,149,149)
     for side in (-1,1):
-        t.disk(side*96,35,59,WATER)
-        t.disk(side*96,35,29)
-    t.ring(0,0,150,12)
+        for x,z,r in ((87,55,26),(99,67,20),(74,45,17)):
+            t.disk(side*x,z,r,WATER)
+    t.path([(-132,-132),(132,-132),(132,132),(-132,132),(-132,-132)],12)
     t.path([(-190,0),(190,0)],14)
     t.path([(0,-177),(0,95)],14)
-    for z in (-105,105):
-        t.path([(-110,z),(110,z)],10)
     for side in (-1,1):
-        t.path([(side*100,-105),(side*100,110)],10)
-        for x,z in ((39,-134),(82,-127),(128,-81),(146,-36),(52,125)):
-            t.place(1 if x==39 else 0,side*x,z,1.25,side*30)
+        for x,z,yaw in ((52,-108,0),(92,-108,0),(110,-66,-side*90),
+                        (110,-30,-side*90),(72,108,180)):
+            t.place(1 if x==52 else 0,side*x,z,1.25,yaw)
         t.place(8,side*37,-56,1.1,side*90)
         t.place(17,side*29,-18,1.5,side*90)
-        t.grove(side*110,35,2,3,8,1.8)
+        t.grove(side*48,51,2,3,8,1.8)
         t.grove(side*30,36,2,4,9,1.9)
-        t.grove(side*85,-58,2,3,9,1.65)
-        t.grove(side*19,-126,1,4,9,1.75)
-        for x,z in ((17,-165),(17,-100),(17,-35),(17,70),(81,-110),
-                    (109,-45),(109,15),(106,57),(122,100),(64,139),(157,-17)):
+        t.grove(side*79,-57,2,3,9,1.65)
+        t.grove(side*19,-90,1,4,9,1.75)
+        for x,z in ((17,-165),(17,-100),(17,-35),(17,70),(81,-144),
+                    (145,-45),(145,15),(145,57),(122,112),(64,144),(157,-17)):
             t.place(15,side*x,z,1.65)
-        t.place(20,side*95,35,1.2)
-        t.place(14,side*95,18,1.4)
-        t.place(16,side*76,130,1.5)
+        t.place(20,side*47,91,1.2)
+        t.place(14,side*43,78,1.4)
+        t.place(16,side*87,121,1.5)
     t.place(9,0,119,1.25)
     t.gates()
     t.notes=["Working label for Orin's unnamed home village; not a new canon proper name",
         'Castle-free City Hall, family homes and armor-repair stalls',
-        'Twin garden lakes, intimate bridges and a lantern-ring promenade']
+        'Sheltered garden ponds, clear village streets and lantern-lit home entrances']
     return t

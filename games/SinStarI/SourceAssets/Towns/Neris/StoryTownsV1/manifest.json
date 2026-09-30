@@ -22,13 +22,13 @@
     "name": "Neris Star Lake",
     "file": "Neris Star Lake.town",
     "size_m": 720,
-    "items": 218,
+    "items": 212,
     "trees": 100,
     "lamps": 76,
     "houses": 24,
     "castles": 1,
     "city_halls": 1,
-    "draw_cost": 1523,
+    "draw_cost": 1293,
     "local_lights": 88,
     "water_percent": 52.5,
     "story_spaces": [
@@ -49,7 +49,7 @@
     "city_halls": 1,
     "draw_cost": 1484,
     "local_lights": 78,
-    "water_percent": 52.7,
+    "water_percent": 51.6,
     "story_spaces": [
       "Nine garden islands separated by deep, clear waterways",
       "Long illuminated processional bridges",
@@ -87,28 +87,28 @@
     "city_halls": 1,
     "draw_cost": 625,
     "local_lights": 36,
-    "water_percent": 52.2,
+    "water_percent": 42.9,
     "story_spaces": [
       "Working label for Orin's unnamed home village; not a new canon proper name",
       "Castle-free City Hall, family homes and armor-repair stalls",
-      "Twin garden lakes, intimate bridges and a lantern-ring promenade"
+      "Sheltered garden ponds, clear village streets and lantern-lit home entrances"
     ]
   },
   {
     "name": "Neris Spaceport",
     "file": "Neris Spaceport.town",
     "size_m": 1200,
-    "items": 132,
+    "items": 138,
     "trees": 64,
-    "lamps": 42,
+    "lamps": 48,
     "houses": 6,
     "castles": 0,
     "city_halls": 2,
-    "draw_cost": 738,
-    "local_lights": 54,
-    "water_percent": 37.0,
+    "draw_cost": 756,
+    "local_lights": 60,
+    "water_percent": 37.1,
     "story_spaces": [
-      "Orbital welcome gardens and eight illuminated approach bridges",
+      "Connected service drive and seven outward destination spurs",
       "Embassy pavilions, arrival plaza and water observatories",
       "Original terminal, doors, pads and alien arrival schedules retained"
     ]
@@ -117,13 +117,13 @@
     "name": "Horizon Airport",
     "file": "Horizon Airport.town",
     "size_m": 1400,
-    "items": 182,
-    "trees": 128,
+    "items": 174,
+    "trees": 120,
     "lamps": 38,
     "houses": 12,
     "castles": 0,
     "city_halls": 2,
-    "draw_cost": 954,
+    "draw_cost": 922,
     "local_lights": 46,
     "water_percent": 51.5,
     "story_spaces": [

@@ -2,10 +2,11 @@
 import json
 from pathlib import Path
 from journey_layouts import BUILDERS
+from town_access import prepare
 folder=Path(__file__).resolve().parent.parent
 records=json.loads((folder/'manifest.json').read_text(encoding='utf-8'))
 for make in BUILDERS:
-    town=make()
+    town=prepare(make())
     record=town.save(folder/'Towns')
     records=[r for r in records if r['name']!=record['name']]+[record]
     print(json.dumps(record),flush=True)

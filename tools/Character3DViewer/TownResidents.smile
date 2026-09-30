@@ -1,0 +1,280 @@
+''' Neris-only resident lifecycle. Incremental loading, bounded errands and conversations.
+Module Smile.Tools.TownResidents
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Simple3D.Character3D As Character
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Tools.TownDocumentNavigation As Navigation
+Import Smile.Tools.TownResidentMovement As Movement
+Import Smile.Tools.TownResidentDialogue As Dialogue
+
+Public Type Resident
+    Actor As Character.Actor
+    Motion As Movement.State
+    Clip As Text
+    Ready As Boolean
+End Type
+
+Public Type State
+    People[9] As Resident
+    Loaded As Number
+    Version As Number
+    Nearest As Number
+    Speaking As Number
+    Enabled As Boolean
+    Failed As Boolean
+End Type
+
+Private Function Home(Index As Number) As P.Vector3
+
+    Dim Result As P.Vector3
+
+    Result = P.Vector(-65.0, 0.0, -2660.0)
+
+    If Index = 1 Then
+        Result = P.Vector(60.0, 0.0, -2560.0)
+    Else If Index = 2 Then
+        Result = P.Vector(0.0, 0.0, -2280.0)
+    Else If Index = 3 Then
+        Result = P.Vector(-700.0, 0.0, -2450.0)
+    Else If Index = 4 Then
+        Result = P.Vector(650.0, 0.0, -2450.0)
+    Else If Index = 5 Then
+        Result = P.Vector(-600.0, 0.0, -1800.0)
+    Else If Index = 6 Then
+        Result = P.Vector(700.0, 0.0, -1200.0)
+    Else If Index = 7 Then
+        Result = P.Vector(-400.0, 0.0, -1000.0)
+    Else If Index = 8 Then
+        Result = P.Vector(45.0, 0.0, -2735.0)
+    End If
+
+    Return Result
+
+End Function
+
+Public Sub Destroy(ByRef Value As State)
+
+    Dim Index As Number
+    Dim Empty As State
+
+    For Index = 0 To Value.Loaded - 1
+        Call Character.Destroy(Value.People[Index].Actor)
+    End For
+
+    Value = Empty
+    Value.Speaking = -1
+    Value.Nearest = -1
+
+End Sub
+
+Private Sub LoadNext(ByRef Value As State)
+
+    Dim Index As Number
+    Dim Position As P.Vector3
+    Dim Bounds As Character.Bounds3D
+    Dim Height As Double
+    Dim Ok As Boolean
+
+    Index = Value.Loaded
+    Ok = Navigation.NearestRoad(Home(Index), Position)
+
+    If Not Ok Then
+        Value.Failed = True
+        Return
+    End If
+
+    Value.People[Index].Actor = Character.LoadActor("Assets/Neris/Residents/" + Dialogue.NameAt(Index) + ".sm3d")
+    Ok = Character.IsValid(Value.People[Index].Actor)
+    Bounds = Character.LocalBounds(Value.People[Index].Actor)
+    Height = 21.0
+
+    If Index >= 5 Then
+        Height = 14.5
+    End If
+
+    If Index = 8 Then
+        Height = 8.5
+    End If
+
+    Ok = Character.SetScale(Value.People[Index].Actor,
+        ToNumber(Round(Height * 100000.0 / ToDouble(Max(1, Bounds.Size.Y))))) And Ok
+    Ok = Character.PlayAnimation(Value.People[Index].Actor, "Idle", True) And Ok
+    Value.People[Index].Clip = "Idle"
+
+    Call Movement.Start(Value.People[Index].Motion, Position, Index)
+
+    Value.People[Index].Ready = Ok
+    Value.Loaded = Value.Loaded + 1
+    Value.Failed = Not Ok
+
+End Sub
+
+Public Function Talking(ByRef Value As State) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Value.Enabled And Value.Speaking >= 0
+
+    Return Result
+
+End Function
+
+Public Function Input(ByRef Value As State, Key As Number) As Boolean
+
+    If Not Value.Enabled Then
+        Return False
+    End If
+
+    If Value.Speaking >= 0 Then
+
+        If Key = KEY_E Or Key = KEY_ENTER Or Key = KEY_ESCAPE Then
+            Value.Speaking = -1
+        End If
+
+        Return True
+
+    End If
+
+    If Key = KEY_E And Value.Nearest >= 0 Then
+        Value.Speaking = Value.Nearest
+        Return True
+    End If
+
+    Return False
+
+End Function
+
+Public Sub Update(ByRef Value As State, TownName As Text, Paused As Boolean,
+    Leader As P.Vector3, Elapsed As Number)
+
+    Dim Index As Number
+    Dim Distance As Double
+    Dim Best As Double
+    Dim Pausing As Boolean
+    Dim Clip As Text
+    Dim Position As P.Vector3
+    Dim Ok As Boolean
+
+    If TownName <> "Neris Town" Then
+        Call Destroy(Value)
+
+        Return
+    End If
+
+    If Not Value.Enabled Then
+
+        Value.Enabled = True
+        Value.Speaking = -1
+        Value.Nearest = -1
+
+    End If
+
+    If Paused Then
+        Value.Speaking = -1
+        Return
+    End If
+
+    If Value.Loaded < 9 And Not Value.Failed Then
+        Call LoadNext(Value)
+    End If
+
+    Best = 55.0
+    Value.Nearest = -1
+
+    For Index = 0 To Value.Loaded - 1
+
+        If Value.People[Index].Ready Then
+
+            If Value.Version <> Navigation.Version() Then
+
+                If Navigation.NearestRoad(Value.People[Index].Motion.Position, Position) Then
+                    Call Movement.Start(Value.People[Index].Motion, Position, Index)
+                End If
+
+            End If
+
+            Distance = M.Distance(Leader, Value.People[Index].Motion.Position)
+            Pausing = Distance < 42.0 Or Value.Speaking = Index
+
+            If Distance < Best And Movement.ClearRoad(Leader, Value.People[Index].Motion.Position, False) Then
+                Value.Nearest = Index
+                Best = Distance
+            End If
+
+            Call Movement.Update(Value.People[Index].Motion, Pausing, Elapsed)
+
+            Clip = "Idle"
+
+            If Value.People[Index].Motion.Moving And Not Pausing Then
+
+                Clip = "Walk"
+
+                If Value.People[Index].Motion.Running Then
+                    Clip = "Run"
+                End If
+
+            End If
+
+            Ok = True
+
+            If Clip <> Value.People[Index].Clip Then
+                Ok = Character.CrossFade(Value.People[Index].Actor, Clip, 180, G.ANIMATION_LOOP)
+                Value.People[Index].Clip = Clip
+            End If
+
+            Position = Value.People[Index].Motion.Position
+
+            If Value.Speaking = Index Then
+                Value.People[Index].Motion.Heading = Atan2(Leader.X - Position.X, Leader.Z - Position.Z) * 180.0 / 3.141592653589793
+            End If
+
+            Ok = Character.Update(Value.People[Index].Actor, Elapsed) And Ok
+            Ok = Character.PlacePrecise(Value.People[Index].Actor, Position.X, Position.Y, Position.Z) And Ok
+            Ok = Character.RotatePrecise(Value.People[Index].Actor, 0.0, Value.People[Index].Motion.Heading, 0.0) And Ok
+            Value.People[Index].Ready = Ok
+            Value.Failed = Value.Failed Or Not Ok
+
+        End If
+
+    End For
+
+    Value.Version = Navigation.Version()
+
+End Sub
+
+Public Function Draw(ByRef Value As State, TownName As Text) As Boolean
+
+    Dim Index As Number
+    Dim Ok As Boolean
+
+    Ok = True
+
+    If TownName = "Neris Town" Then
+
+        For Index = 0 To Value.Loaded - 1
+
+            If Value.People[Index].Ready Then
+                Ok = Character.Draw(Value.People[Index].Actor) And Ok
+            End If
+
+        End For
+
+    End If
+
+    Return Ok
+
+End Function
+
+Public Sub Overlay(ByRef Value As State)
+
+    If Value.Enabled Then
+        Call Dialogue.Draw(Value.Nearest, Value.Speaking, Value.Loaded, Value.Failed)
+    End If
+
+End Sub
+
+End Module

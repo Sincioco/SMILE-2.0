@@ -42,6 +42,9 @@
     <SmileSource Include="TownDocument.smile" />
     <SmileSource Include="TownMapLoads.smile" />
     <SmileSource Include="TownGatewayJourney.smile" />
+    <SmileSource Include="TownResidents.smile" />
+    <SmileSource Include="TownResidentMovement.smile" />
+    <SmileSource Include="TownResidentDialogue.smile" />
     <SmileSource Include="TownDemo.smile" />
     <SmileSource Include="TownStartingCamera.smile" />
     <SmileSource Include="TownSurfaceTools.smile" />
@@ -68,6 +71,7 @@
     <SmileSource Include="TownFileDialog.smile" />
     <SmileSource Include="TownMapLoadTools.smile" />
     <SmileSource Include="TownTabs.smile" />
+    <SmileSource Include="TownMapPicker.smile" />
     <SmileSource Include="TownSelection.smile" />
     <SmileSource Include="TownGuides.smile" />
     <SmileSource Include="TownGuideFiles.smile" />
@@ -528,5 +532,14 @@
     <Model3DAsset Include="BuildAssets\Neris\Horizon\Royal.glb" Descriptor="BuildAssets\Neris\Horizon\Horizon.sm3d.json" LogicalPath="Assets/Neris/Horizon/Royal.sm3d" Profile="Static" Identity="sin-star-i.neris-horizon-v1.royal" ProductionState="Prototype" />
     <Model3DAsset Include="BuildAssets\Neris\Horizon\Cargo.glb" Descriptor="BuildAssets\Neris\Horizon\Horizon.sm3d.json" LogicalPath="Assets/Neris/Horizon/Cargo.sm3d" Profile="Static" Identity="sin-star-i.neris-horizon-v1.cargo" ProductionState="Prototype" />
     <Model3DAsset Include="BuildAssets\Neris\Horizon\Door.glb" Descriptor="BuildAssets\Neris\Horizon\Horizon.sm3d.json" LogicalPath="Assets/Neris/Horizon/Door.sm3d" Profile="Static" Identity="sin-star-i.neris-horizon-v1.door" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Residents\Tessa.glb" Descriptor="BuildAssets\Neris\Residents\residents.sm3d.json" LogicalPath="Assets\Neris\Residents\Tessa.sm3d" TextureOutputDirectory="Assets\Neris\Residents\Textures" Profile="Character" Identity="sin-star-i.resident.tessa-v1" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Residents\Maren.glb" Descriptor="BuildAssets\Neris\Residents\residents.sm3d.json" LogicalPath="Assets\Neris\Residents\Maren.sm3d" TextureOutputDirectory="Assets\Neris\Residents\Textures" Profile="Character" Identity="sin-star-i.resident.maren-v1" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Residents\Ilan.glb" Descriptor="BuildAssets\Neris\Residents\residents.sm3d.json" LogicalPath="Assets\Neris\Residents\Ilan.sm3d" TextureOutputDirectory="Assets\Neris\Residents\Textures" Profile="Character" Identity="sin-star-i.resident.ilan-v1" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Residents\Bram.glb" Descriptor="BuildAssets\Neris\Residents\residents.sm3d.json" LogicalPath="Assets\Neris\Residents\Bram.sm3d" TextureOutputDirectory="Assets\Neris\Residents\Textures" Profile="Character" Identity="sin-star-i.resident.bram-v1" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Residents\Sera.glb" Descriptor="BuildAssets\Neris\Residents\residents.sm3d.json" LogicalPath="Assets\Neris\Residents\Sera.sm3d" TextureOutputDirectory="Assets\Neris\Residents\Textures" Profile="Character" Identity="sin-star-i.resident.sera-v1" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Residents\Pip.glb" Descriptor="BuildAssets\Neris\Residents\residents.sm3d.json" LogicalPath="Assets\Neris\Residents\Pip.sm3d" TextureOutputDirectory="Assets\Neris\Residents\Textures" Profile="Character" Identity="sin-star-i.resident.pip-v1" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Residents\Nia.glb" Descriptor="BuildAssets\Neris\Residents\residents.sm3d.json" LogicalPath="Assets\Neris\Residents\Nia.sm3d" TextureOutputDirectory="Assets\Neris\Residents\Textures" Profile="Character" Identity="sin-star-i.resident.nia-v1" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Residents\Tobin.glb" Descriptor="BuildAssets\Neris\Residents\residents.sm3d.json" LogicalPath="Assets\Neris\Residents\Tobin.sm3d" TextureOutputDirectory="Assets\Neris\Residents\Textures" Profile="Character" Identity="sin-star-i.resident.tobin-v1" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Residents\Mochi.glb" Descriptor="BuildAssets\Neris\Residents\residents.sm3d.json" LogicalPath="Assets\Neris\Residents\Mochi.sm3d" TextureOutputDirectory="Assets\Neris\Residents\Textures" Profile="Character" Identity="sin-star-i.resident.mochi-v1" ProductionState="Prototype" />
   </ItemGroup>
 </SmileProject>

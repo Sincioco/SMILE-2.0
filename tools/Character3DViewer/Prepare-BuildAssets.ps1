@@ -162,6 +162,22 @@ $copies = @(
     }
 )
 
+$residentRoot = Join-Path $repositoryRoot 'games\SinStarI\SourceAssets\Characters\Civilians\NerisResidentsV1'
+foreach ($residentName in @('Tessa', 'Maren', 'Ilan', 'Bram', 'Sera', 'Pip', 'Nia', 'Tobin', 'Mochi')) {
+    $copies += @{
+        Source = Join-Path $residentRoot "Models\$residentName.glb"
+        Destination = Join-Path $buildAssets "Neris\Residents\$residentName.glb"
+    }
+    $copies += @{
+        Source = Join-Path $residentRoot "Models\$residentName-palette.png"
+        Destination = Join-Path $buildAssets "Neris\Residents\$residentName-palette.png"
+    }
+}
+$copies += @{
+    Source = Join-Path $residentRoot 'residents.sm3d.json'
+    Destination = Join-Path $buildAssets 'Neris\Residents\residents.sm3d.json'
+}
+
 foreach ($copy in $copies) {
     if (-not (Test-Path -LiteralPath $copy.Source -PathType Leaf)) {
         throw "Character Viewer build asset is missing: $($copy.Source)"

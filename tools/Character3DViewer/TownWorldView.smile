@@ -30,7 +30,7 @@ Public Function HalfWidth(ByRef Value As State) As Number
 
     Dim Result As Number
 
-    Result = 120 * Scale(Value) / 100
+    Result = Max(72, 120 * Scale(Value) / 100)
 
     Return Result
 
@@ -40,7 +40,7 @@ Public Function HalfHeight(ByRef Value As State) As Number
 
     Dim Result As Number
 
-    Result = 106 * Scale(Value) / 100
+    Result = Max(62, 106 * Scale(Value) / 100)
 
     Return Result
 
@@ -116,20 +116,10 @@ Public Sub Label(Name As Text, X As Number, Y As Number, Width As Number, Size A
     Dim Finish As Number
     Dim Split As Number
     Dim LineText As Text
-    Dim Lines As Number
 
-    Do
-        Lines = (Text_Width(Name, Size) + Max(1, Width) - 1) / Max(1, Width)
+    Size = Max(12, Size)
 
-        If Lines * (Size + 3) <= Height Or Size <= 5 Then
-            Exit Do
-        End If
-
-        Size = Size - 1
-
-    Loop
-
-    Clip Rectangle X - Width / 2, Y, Width, Height
+    Clip Rectangle X - Width / 2, Y, Max(1, Width), Max(1, Height)
 
     Do
         Finish = Start
