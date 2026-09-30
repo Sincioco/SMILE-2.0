@@ -139,7 +139,7 @@ Public Function Command(ByRef Value As State, ByRef Town As Document.State, Acti
         Return 0
     End If
 
-    If Action >= 600 And Action < 608 Then
+    If Action >= 600 And Action < 616 Then
         Return Action
     End If
 
@@ -304,6 +304,13 @@ Public Function Command(ByRef Value As State, ByRef Town As Document.State, Acti
 
         Value.Ui.Tool = Action
         Value.Ui.Message = "Click the center, then the circle edge."
+
+    Else If Action = 49 Then
+
+        Town.TerrainStyle = (Town.TerrainStyle + 1) Mod 4
+        Town.Surface.Revision = Town.Surface.Revision + 1
+        Town.Revision = Town.Revision + 1
+        Value.Ui.Message = "Terrain appearance changed. Ctrl+Z to undo."
 
     Else If Action = 45 Then
 

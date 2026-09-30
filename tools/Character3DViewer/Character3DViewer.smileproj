@@ -88,6 +88,7 @@
     <SmileSource Include="TownDocumentNavigation.smile" />
     <SmileSource Include="TownCatalogRenderer.smile" />
     <SmileSource Include="TownSurfaceRenderer.smile" />
+    <SmileSource Include="TownTerrainStyles.smile" />
     <SmileSource Include="TownLighting.smile" />
     <SmileSource Include="NerisHorizonLighting.smile" />
     <SmileSource Include="TownAttachments.smile" />
@@ -493,6 +494,7 @@
     <Model3DAsset Include="BuildAssets\Neris\Catalog\Catalog-33.glb" Descriptor="BuildAssets\Neris\Catalog\Catalog.sm3d.json" LogicalPath="Assets\Neris\Catalog\Catalog-33.sm3d" TextureOutputDirectory="Assets\Neris\Catalog\Textures" Profile="Static" Identity="sin-star-i.town.catalog-v1" ProductionState="Prototype" />
     <Model3DAsset Include="BuildAssets\Neris\Catalog\Catalog-34.glb" Descriptor="BuildAssets\Neris\Catalog\Catalog.sm3d.json" LogicalPath="Assets\Neris\Catalog\Catalog-34.sm3d" TextureOutputDirectory="Assets\Neris\Catalog\Textures" Profile="Static" Identity="sin-star-i.town.catalog-v1" ProductionState="Prototype" />
     <Model3DAsset Include="BuildAssets\Neris\Catalog\Catalog-35.glb" Descriptor="BuildAssets\Neris\Catalog\Catalog.sm3d.json" LogicalPath="Assets\Neris\Catalog\Catalog-35.sm3d" TextureOutputDirectory="Assets\Neris\Catalog\Textures" Profile="Static" Identity="sin-star-i.town.catalog-v1" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Catalog\Catalog-36.glb" Descriptor="BuildAssets\Neris\Catalog\Catalog.sm3d.json" LogicalPath="Assets\Neris\Catalog\Catalog-36.sm3d" TextureOutputDirectory="Assets\Neris\Catalog\Textures" Profile="Static" Identity="sin-star-i.town.catalog-v1" ProductionState="Prototype" />
     <Asset Include="Assets\Neris\Neris-Grass-Color.png" />
     <Asset Include="Assets\Neris\Neris-Paving.png" />
     <Asset Include="Assets\Neris\Town-Palette.png" />

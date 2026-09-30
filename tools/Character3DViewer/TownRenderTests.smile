@@ -402,6 +402,27 @@ Call Terrain.Destroy(Ground)
 Call Check(G.LiveMeshCount3D() = 0 And G.LiveObjectCount3D() = 0 And
     G.LiveMaterialCount3D() = 0 And G.LiveModelCount3D() = 0,
     "Catalog Resources Release Cleanly")
+
+Controls.Ui.Section = 6
+Controls.Ui.MapCount = 16
+
+For Index = 0 To 15
+    Controls.Ui.MapNames[Index] = "Destination " + Panel.NumberLabel(Index)
+End For
+
+Call Panel.Draw(Controls.Ui, Town, Controls.Guide, 0)
+
+Ok = False
+
+For Index = 0 To Controls.Ui.ControlCount - 1
+
+    If Controls.Ui.Controls[Index].Action = 615 Then
+        Ok = True
+    End If
+
+End For
+
+Call Check(Ok, "The Sixteenth Destination Has A Visible Control Without Overflow")
 Call Panel.Release(Controls.Ui)
 Call Scene.Shutdown()
 

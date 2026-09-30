@@ -28,6 +28,8 @@ class Town:
         self.items, self.tiles, self.notes = [], [], []
         self.smooth, self.curves = smooth, []
         self.center = (0, 0)
+        self.terrain_style = 0
+        self.night = True
         self.symmetric = True
         self.destinations = ('Neris Spaceport', 'Horizon Airport')
 
@@ -106,7 +108,8 @@ class Town:
         edges = [(-self.size/2+i*self.step)*10 for i in range(self.n+1)]
         doc = dict(name=self.name, columns=self.n, rows=self.n, cell_size=self.step*10,
             xs=edges, zs=edges, cells=self.cells, items=self.items, map_tiles=self.tiles,
-            sun=NIGHT.copy(), presets=dict(night_active=True, day=DAY.copy(), night=NIGHT.copy()),
+            sun=(NIGHT if self.night else DAY).copy(), terrain_style=self.terrain_style,
+            presets=dict(night_active=self.night, day=DAY.copy(), night=NIGHT.copy()),
             court_offset=[0,0], court_placed=False)
         if self.smooth:
             doc.update(curves=self.curves, base_cells=[WATER]*len(self.cells))

@@ -7,6 +7,7 @@ Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownCatalogData As Catalog
 Import Smile.Tools.TownGuides As Guides
 Import Smile.Tools.TownSunControls As Sun
+Import Smile.Tools.TownTerrainStyles As Styles
 
 Public Type Control
     X As Number
@@ -26,6 +27,7 @@ Public Type State
     Tool As Number
     Template As Number
     Page As Number
+    TerrainStyle As Number
     Surface As Number
     Width As Number
     Message As Text
@@ -40,7 +42,7 @@ Public Type State
     Orthographic As Boolean
     GuideListOpen As Boolean
     HideGuides As Boolean
-    MapNames[8] As Text
+    MapNames[16] As Text
     MapCount As Number
 End Type
 
@@ -268,7 +270,9 @@ Private Sub Library(ByRef Value As State, X As Number)
             Call Button(Value, 48, X + 144, 403, 139, "Filled Circle", Value.Tool = 48)
 
             Draw Text "Circle: click center, then edge." At X, 441 Size 13 Color WHITE
-            Draw Text "Esc cancels. Erase restores grass." At X, 463 Size 12 Color WHITE
+            Draw Text "Esc cancels. Erase restores ground." At X, 463 Size 12 Color WHITE
+
+            Call Button(Value, 49, X, 494, 283, "Terrain: " + Styles.Label(Value.TerrainStyle))
 
         End If
 
@@ -301,7 +305,12 @@ Private Sub Library(ByRef Value As State, X As Number)
                     Call Button(Value, 100 + Index, TileX, TileY, 139,
                         "", Value.Template = Index, True, 89)
 
-                    Draw Image Value.Atlas From (Index Mod 5) * 128, (Index / 5) * 96 Size 128 By 96 At TileX + 20, TileY + 2 Size 96 By 72 Filter Smooth
+                    If Index < 35 Then
+                        Draw Image Value.Atlas From (Index Mod 5) * 128, (Index / 5) * 96 Size 128 By 96 At TileX + 20, TileY + 2 Size 96 By 72 Filter Smooth
+                    Else
+                        Draw Text "Rock / Landform" At TileX + 8, TileY + 30 Size 12 Color RGB(212, 184, 140)
+                    End If
+
                     Draw Text Text_Slice(Shape.Label, 0, 19) At TileX + 5, TileY + 72 Size 11 Color WHITE
 
                     Row = Row + 1
@@ -428,6 +437,7 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State,
     End If
 
     Value.ControlCount = 0
+    Value.TerrainStyle = Town.TerrainStyle
     Fill Rectangle X - 10, 128, 306, Max(0, Window_Height() - 298), RGB(12, 23, 36)
     Draw Text "Town Editor" At X, 138 Size 21 Color WHITE
 
@@ -475,11 +485,11 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State,
         Draw Text "The yellow area will load this map:" At X, 236 Size 12 Color WHITE
 
         For Index = 0 To Value.MapCount - 1
-            Call Button(Value, 600 + Index, X, 264 + Index * 32, 283,
-                Text_Slice(Value.MapNames[Index], 0, 34))
+            Call Button(Value, 600 + Index, X + (Index Mod 2) * 144,
+                264 + (Index / 2) * 32, 139, Text_Slice(Value.MapNames[Index], 0, 18))
         End For
 
-        Call Button(Value, 50, X, 264 + Value.MapCount * 32, 283, "Cancel")
+        Call Button(Value, 50, X, 264 + ((Value.MapCount + 1) / 2) * 32, 283, "Cancel")
 
     Else If Value.Section = 5 Then
 

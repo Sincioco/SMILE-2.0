@@ -57,6 +57,44 @@ Public Function Y(ByRef Value As State, ByRef Map As Document.State, Index As Nu
 
 End Function
 
+''' Frame every card without changing the saved graph coordinates.
+Public Sub Fit(ByRef Value As State, ByRef Map As Document.State, RightEdge As Number, Height As Number)
+
+    Dim Index As Number
+    Dim MinX As Number
+    Dim MaxX As Number
+    Dim MinY As Number
+    Dim MaxY As Number
+    Dim Zoom As Number
+
+    Value.Camera.Zoom = 100
+    Value.Camera.PanX = 0
+    Value.Camera.PanY = 0
+
+    If Map.NodeCount = 0 Then
+        Return
+    End If
+
+    MinX = X(Value, Map, 0, RightEdge, 0)
+    MaxX = X(Value, Map, 0, RightEdge, 2)
+    MinY = Y(Value, Map, 0, Height, 1)
+    MaxY = Y(Value, Map, 0, Height, 3)
+
+    For Index = 1 To Map.NodeCount - 1
+        MinX = Min(MinX, X(Value, Map, Index, RightEdge, 0))
+        MaxX = Max(MaxX, X(Value, Map, Index, RightEdge, 2))
+        MinY = Min(MinY, Y(Value, Map, Index, Height, 1))
+        MaxY = Max(MaxY, Y(Value, Map, Index, Height, 3))
+    End For
+
+    Zoom = Min((RightEdge - 40) * 100 / Max(1, MaxX - MinX),
+        (Height - 280) * 100 / Max(1, MaxY - MinY))
+    Value.Camera.Zoom = Max(25, Min(100, Zoom))
+    Value.Camera.PanX = (RightEdge / 2 - (MinX + MaxX) / 2) * Value.Camera.Zoom / 100
+    Value.Camera.PanY = 60 + (Height / 2 - (MinY + MaxY) / 2) * Value.Camera.Zoom / 100
+
+End Sub
+
 Private Function PickPort(ByRef Value As State, ByRef Map As Document.State, Px As Number, Py As Number,
     RightEdge As Number, Height As Number) As Number
 
@@ -155,9 +193,9 @@ Public Function Gesture(ByRef Value As State, ByRef Map As Document.State,
 
         If Held And Available Then
 
-            Map.Nodes[Value.Selected].X = Max(0, Min(1000,
+            Map.Nodes[Value.Selected].X = Max(0, Min(Document.MAX_COORDINATE,
                 (View.World(Value.Camera, Px - Value.OffsetX, RightEdge / 2, False) - 100) * 1000 / Max(100, RightEdge - 200)))
-            Map.Nodes[Value.Selected].Y = Max(0, Min(1000,
+            Map.Nodes[Value.Selected].Y = Max(0, Min(Document.MAX_COORDINATE,
                 (View.World(Value.Camera, Py - Value.OffsetY, Height / 2, True) - 200) * 1000 / Max(100, Height - 400)))
             Changed = True
 

@@ -318,7 +318,7 @@ Private Sub Encode(ByRef Value As Document.State, MarkSaved As Boolean)
     Call WriteByte(84)
     Call WriteByte(87)
     Call WriteByte(78)
-    Call WriteByte(6)
+    Call WriteByte(7)
     Call WriteName(Catalog.FINGERPRINT)
     Call WriteName(Value.Name)
 
@@ -424,6 +424,10 @@ Private Sub Encode(ByRef Value As Document.State, MarkSaved As Boolean)
 
     End If
 
+    Valid = Valid And Value.TerrainStyle >= 0 And Value.TerrainStyle <= 3
+
+    Call WriteByte(Value.TerrainStyle)
+
     ByteCount = Offset
 
 End Sub
@@ -449,7 +453,7 @@ Private Function Decode() As Boolean
 
     Version = ReadByte()
 
-    If Version < 1 Or Version > 6 Then
+    If Version < 1 Or Version > 7 Then
         Return False
     End If
 
@@ -645,6 +649,13 @@ Private Function Decode() As Boolean
 
         End If
 
+    End If
+
+    Candidate.TerrainStyle = 0
+
+    If Version >= 7 Then
+        Candidate.TerrainStyle = ReadByte()
+        Valid = Valid And Candidate.TerrainStyle <= 3
     End If
 
     If Offset <> ByteCount Then

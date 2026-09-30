@@ -88,6 +88,8 @@ Public Function Run() As Number
         Grid.ReadPoint(Town.Surface, 60.0, 0.0) = Grid.SURFACE_BRIDGE,
         "Rectangle And Line Retain Ordered Curved Painting", Failures)
 
+    Town.TerrainStyle = 3
+
     Ok = Storage.SaveDocument(Town, "TownEditor.CurveRegression")
     Ok = Storage.LoadDocument(Loaded, "TownEditor.CurveRegression") And Ok
 
@@ -116,6 +118,8 @@ Public Function Run() As Number
 
     Call Check(Ok And Slice.FaceCount = 1 And Slice.Faces[0].PointC.X = 20.0,
         "Legacy Tile Owns Its Edge Without Artificial Curve Slivers", Failures)
+
+    Call Check(Loaded.TerrainStyle = 3, "Terrain Style Survives Save And Reopen", Failures)
 
     Return Failures
 

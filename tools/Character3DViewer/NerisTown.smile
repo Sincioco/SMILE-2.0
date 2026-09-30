@@ -1328,15 +1328,15 @@ Public Sub Overlay(ByRef Value As State)
         End If
 
         If Value.Keys.FlyInspect Then
-            Draw Text "Fly Inspect" At 180, 18 Size 16 Color RGB(70, 210, 205)
+            Draw Text "Fly Inspect" At 180, 42 Size 14 Color RGB(70, 210, 205)
         Else If Value.Cinematic And Value.Follow Then
-            Draw Text "Party Orbit" At 180, 18 Size 16 Color RGB(70, 210, 205)
+            Draw Text "Party Orbit" At 180, 42 Size 14 Color RGB(70, 210, 205)
         Else If Value.Cinematic Then
-            Draw Text "Map Orbit" At 180, 18 Size 16 Color RGB(70, 210, 205)
+            Draw Text "Map Orbit" At 180, 42 Size 14 Color RGB(70, 210, 205)
         Else If Value.PartyCamera Then
-            Draw Text "Follow Party" At 180, 18 Size 16 Color RGB(70, 210, 205)
+            Draw Text "Follow Party" At 180, 42 Size 14 Color RGB(70, 210, 205)
         Else
-            Draw Text "Free Camera" At 180, 18 Size 16 Color RGB(70, 210, 205)
+            Draw Text "Free Camera" At 180, 42 Size 14 Color RGB(70, 210, 205)
         End If
 
     End If

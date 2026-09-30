@@ -7,8 +7,8 @@ Import Smile.Simple3D.Precision3D As P
 Import Smile.Tools.TownDocument As Document
 
 Public Const FINGERPRINT = "a0be1e73b6bd14876474e016d063eb257fd031c2de7ad2a332cbac25d8541d9d"
-Public Const CHUNK_COUNT = 36
-Public Const TEMPLATE_COUNT = 35
+Public Const CHUNK_COUNT = 37
+Public Const TEMPLATE_COUNT = 39
 Public Const INITIAL_ITEMS = 358
 
 Public Type Template
@@ -217,34 +217,34 @@ Public Function TemplateAt(Index As Number) As Template
             Result.FloorCount = 0
             Result.DoorCount = 0
             Result.WaterCount = 0
-            Result.Parts[0] = 576
-            Result.Parts[1] = 577
-            Result.Parts[2] = 592
-            Result.Parts[3] = 593
-            Result.Parts[4] = 608
-            Result.Parts[5] = 609
-            Result.Parts[6] = 624
-            Result.Parts[7] = 625
-            Result.Parts[8] = 640
-            Result.Parts[9] = 641
-            Result.Parts[10] = 656
-            Result.Parts[11] = 657
-            Result.Parts[12] = 672
-            Result.Parts[13] = 673
-            Result.Parts[14] = 688
-            Result.Parts[15] = 689
-            Result.Parts[16] = 704
-            Result.Parts[17] = 705
-            Result.Parts[18] = 720
-            Result.Parts[19] = 721
-            Result.Parts[20] = 736
-            Result.Parts[21] = 737
-            Result.Parts[22] = 752
-            Result.Parts[23] = 753
-            Result.Parts[24] = 768
-            Result.Parts[25] = 769
-            Result.Parts[26] = 784
-            Result.Parts[27] = 785
+            Result.Parts[0] = 592
+            Result.Parts[1] = 593
+            Result.Parts[2] = 608
+            Result.Parts[3] = 609
+            Result.Parts[4] = 624
+            Result.Parts[5] = 625
+            Result.Parts[6] = 640
+            Result.Parts[7] = 641
+            Result.Parts[8] = 656
+            Result.Parts[9] = 657
+            Result.Parts[10] = 672
+            Result.Parts[11] = 673
+            Result.Parts[12] = 688
+            Result.Parts[13] = 689
+            Result.Parts[14] = 704
+            Result.Parts[15] = 705
+            Result.Parts[16] = 720
+            Result.Parts[17] = 721
+            Result.Parts[18] = 736
+            Result.Parts[19] = 737
+            Result.Parts[20] = 752
+            Result.Parts[21] = 753
+            Result.Parts[22] = 768
+            Result.Parts[23] = 769
+            Result.Parts[24] = 784
+            Result.Parts[25] = 785
+            Result.Parts[26] = 800
+            Result.Parts[27] = 801
 
         Case 7
             Result.Label = "Military HQ"
@@ -898,6 +898,74 @@ Public Function TemplateAt(Index As Number) As Template
             Result.Parts[0] = 271
             Result.Parts[1] = 383
             Result.Parts[2] = 6
+
+        Case 35
+            Result.Label = "Highland Peak"
+            Result.Category = 3
+            Result.PaletteVisible = True
+            Result.Low = P.Vector(-305.000000, 0.000000, -305.000000)
+            Result.High = P.Vector(305.000000, 490.000000, 305.000000)
+            Result.PartCount = 3
+            Result.SolidCount = 1
+            Result.CameraCount = 1
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 576
+            Result.Parts[1] = 577
+            Result.Parts[2] = 578
+
+        Case 36
+            Result.Label = "Sandstone Mesa"
+            Result.Category = 3
+            Result.PaletteVisible = True
+            Result.Low = P.Vector(-292.800000, 0.000000, -292.800000)
+            Result.High = P.Vector(292.800000, 330.000000, 292.800000)
+            Result.PartCount = 3
+            Result.SolidCount = 1
+            Result.CameraCount = 1
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 579
+            Result.Parts[1] = 580
+            Result.Parts[2] = 581
+
+        Case 37
+            Result.Label = "Wind Dune"
+            Result.Category = 3
+            Result.PaletteVisible = True
+            Result.Low = P.Vector(-640.500000, 0.000000, -298.900000)
+            Result.High = P.Vector(640.500000, 130.000000, 298.900000)
+            Result.PartCount = 3
+            Result.SolidCount = 1
+            Result.CameraCount = 1
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 582
+            Result.Parts[1] = 583
+            Result.Parts[2] = 584
+
+        Case 38
+            Result.Label = "Ancient Rock Spire"
+            Result.Category = 3
+            Result.PaletteVisible = True
+            Result.Low = P.Vector(-122.000000, 0.000000, -122.000000)
+            Result.High = P.Vector(122.000000, 660.000000, 122.000000)
+            Result.PartCount = 3
+            Result.SolidCount = 1
+            Result.CameraCount = 1
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 585
+            Result.Parts[1] = 586
+            Result.Parts[2] = 587
 
     End Select
 

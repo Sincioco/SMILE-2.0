@@ -12,13 +12,19 @@ catalog and terminal assemblies; no downloaded assets or new dependencies.
 | Orin's Village | Small castle-free home village, City Hall, twin lakes and repair stalls |
 | Neris Spaceport | Circular arrival landscape, eight approach bridges, embassy gardens and water pavilions |
 | Horizon Airport | Scalloped lagoons, twin arrival villages, perimeter drive and pavilion piers |
+| Verdant Reach | Forest trail, two ponds and three sheltered encounter clearings |
+| Greyglass Pass | Winding level path between layered mountain ridges |
+| Sunglass Expanse | Dunes, sandstone mesas and an oasis loop |
+| Neris Waterworks | Six reservoir basins, pump platforms and maintenance bridges |
+| Ancient Relay | Weathered rock spires around concentric service paths |
+| Neris Relief Quarter | Clinic courtyard, modest homes and provision stalls |
 
 The first five maps each have west/east pedestrian map tiles leading to Neris
 Spaceport and Horizon Airport. Airport return travel remembers the town of origin.
 The new airport landscapes retain the native terminal, doors, traffic and runway.
 The original Neris Town is not replaced by these alternatives.
 
-`Luma - Story Atlas.world` is a separate eight-map graph including original Neris.
+`Luma - Story Atlas.world` is a separate fourteen-map graph including original Neris.
 It does not overwrite Sin's `Luma.world`. Graph connections visualize the network;
 actual scene transitions use the destination tiles in each town document.
 Open the atlas through **Edit Town → Files → Open World**. Missing images are
@@ -35,13 +41,21 @@ proper name. The three additional Neris designs are alternatives, not a claim
 that the script establishes three more capital cities. Luma is Sin's current name
 for the opening planet. Veyra is a different world and is not placed on this map.
 
-Forest, mountain and desert journey maps, additional required story locations,
-encounters and NPC inhabitants are still outstanding. The current atlas is not a
-claim that every Sin Star I location or combat encounter has been implemented.
+The Waterworks, relief/clinic area and ancient relay interpret chapter 1. The relay
+is not chapter 5's off-world observatory. Verdant Reach, Greyglass Pass, Sunglass
+Expanse and the district labels are working design names, not new script canon.
+The journey maps reserve clearings for future encounters; monsters, combat and
+leveling in these maps are not implemented. NPC inhabitants remain outstanding.
+The atlas is not a claim that every Sin Star I location has been implemented.
+
+The six journey maps contain west/east destination markers and collision-validated
+routes between them. Not every atlas edge has a reciprocal physical marker in the
+older settlements yet; use Enter Selected Town to inspect any atlas node. Completing
+those physical transitions is tracked alongside the remaining NPC work.
 
 ## Reproduce and install
 
-Run `Source/build_towns.py`, then `Source/build_world.py` with the existing Python
+Run `Source/build_towns.py`, `Source/build_journeys.py`, then `Source/build_world.py` with the existing Python
 runtime. The generator validates document round trips, authoring/resource bounds,
 road connectivity, destination tiles and intended mirror symmetry. `manifest.json`
 records counts and design notes. `world-layout.json` records graph positions/links.
@@ -64,3 +78,22 @@ curve metadata on round trip; its terrain display still uses raster cells.
 Bulk section transfer of curved terrain is explicitly unavailable; individual
 buildings remain movable. Very narrow subcell features are a remaining tessellation
 limitation; the generated maps use roads wider than their terrain cells.
+
+## Journey terrain and landforms
+
+TWN7 adds a document terrain style: Meadow, Forest, Highland or Desert. Studio's
+Items → Surfaces → Terrain button cycles the style, with Undo. Versions 1–6 remain
+readable as Meadow. Walking terrain remains level; the mountains, mesas, dunes and
+spires are movable collision-bearing scenery, not climbable heightfields.
+
+The four appended catalog templates (35–38) are generated with the standard-library
+`../NerisTownV1/Source/journey_landforms.py`. Existing template IDs and catalog
+fingerprint stay intact. After generating that chunk, run the existing catalog
+native-data generators and Prepare-TownEditorAssets before compiling. The Blender
+export reproduces the same geometry and retains whole-assembly move/scale/rotation.
+
+Validation includes six native collision/path queries between entrance markers,
+terrain-style persistence, the standard native rendering fixture, a desert/landform
+Blender export/reopen, and expanded World coordinates save/reopen. New maps are
+visually checked in Studio before release; screenshots are progress evidence, not
+evidence that combat or encounters exist.

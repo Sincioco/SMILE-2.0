@@ -1,5 +1,26 @@
 # Character Viewer Architecture
 
+## Current: Luma journey terrain and expanded atlas (September 30)
+
+TownTerrainStyles maps the document's four appearances to the existing renderer's
+material slots. TownSurfaceRenderer still owns incremental terrain uploads and
+material cleanup. TWN7 appends the style byte; versions 1–6 retain Meadow. The
+document, native storage and Python/Blender codec agree on this field. No compiler
+or runtime capability is added. Four catalog landforms append to stable template
+IDs; navigation shape arrays use Catalog.TEMPLATE_COUNT instead of the former 35.
+They are solid scenery around level roads, not a heightfield navigation system.
+
+World node coordinates can extend beyond the first screen up to 10,000 units.
+TownWorldCanvas owns framing all cards on open/reset; TownWorldDocument owns the
+coordinate bound, and pointer dragging uses that bound. Existing worlds keep their
+coordinates and format. The destination picker handles all sixteen town slots in
+two columns. These are focused corrections for the expanded fourteen-map atlas.
+
+New geometry/data generation lives in StoryTownsV1 and the immutable catalog
+package. Blender landform construction is separated from town assembly handling;
+saved child matrices are explicitly local identity matrices. NativeProgram and
+ViewerWorkflow do not grow. No architectural baseline or exclusion was raised.
+
 ## Current: curved terrain, Luma maps and scene photographs (September 30)
 
 SurfacePaint3D owns a bounded list of 256 ordered analytic brushes. SurfaceGrid3D

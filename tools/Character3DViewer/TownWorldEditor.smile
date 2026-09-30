@@ -138,8 +138,12 @@ Public Sub Update()
     End If
 
     If Loaded Then
+
         Graph.Selected = -1
         Dirty = True
+
+        Call Canvas.Fit(Graph, Map, Panel.LeftEdge(), Window_Height())
+
     End If
 
     If (WasRunning And
@@ -234,31 +238,19 @@ Public Function Input(Key As Number, ByRef OpenTabs As Tabs.State) As Text
     Else If Action >= 30 And Action <= 36 Then
 
         If Action = 30 Or Action = 31 Then
-
             Call View.ZoomAt(Graph.Camera, (Action * 2 - 61) * 25,
                 Panel.LeftEdge() / 2, Window_Height() / 2, Panel.LeftEdge(), Window_Height())
-
         Else If Action = 32 Then
-
             Graph.Camera.PanX = Graph.Camera.PanX + 80
-
         Else If Action = 33 Then
-
             Graph.Camera.PanX = Graph.Camera.PanX - 80
-
         Else If Action = 34 Then
-
             Graph.Camera.PanY = Graph.Camera.PanY + 80
-
         Else If Action = 35 Then
-
             Graph.Camera.PanY = Graph.Camera.PanY - 80
-
         Else
-            Graph.Camera.Zoom = 100
-            Graph.Camera.PanX = 0
-            Graph.Camera.PanY = 0
 
+            Call Canvas.Fit(Graph, Map, Panel.LeftEdge(), Window_Height())
         End If
 
     Else If Action = 3 Or Key = KEY_DELETE Then

@@ -17,13 +17,18 @@ def build(folder):
         ('Neris Spaceport', 80, 150), ('Neris Town', 500, 150),
         ('Horizon Airport', 920, 150), ('Neris Canals', 80, 520),
         ('Neris Star Lake', 500, 520), ('Neris Crown Isles', 920, 520),
-        ('East Valley', 250, 920), ("Orin's Village", 750, 920)]
+        ('East Valley', 1480, 1290), ("Orin's Village", 1900, 1290),
+        ('Neris Waterworks', 500, 920), ('Verdant Reach', 990, 920),
+        ('Greyglass Pass', 1480, 920), ('Sunglass Expanse', 1480, 150),
+        ('Ancient Relay', 1900, 150), ('Neris Relief Quarter', 80, 920)]
     links = set()
-    for i in range(1, len(nodes)):
+    for i in range(1, 8):
         if i != 2:
             links.add(tuple(sorted((0, i))))
             links.add(tuple(sorted((2, i))))
     links.add((0, 2))
+    links.update(((1,8),(8,9),(9,10),(6,10),(6,7),(2,11),(11,12),(8,12),
+                  (1,13),(8,13),(4,9),(5,11)))
     payload = integer(2) + text('Luma - Story Atlas') + integer(len(nodes))
     for name, x, y in nodes:
         payload += text(name) + integer(x) + integer(y)

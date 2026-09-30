@@ -1,0 +1,89 @@
+''' Terrain appearance is document data; navigation keeps the same surface meanings.
+Module Smile.Tools.TownTerrainStyles
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As G
+
+Public Function Label(Style As Number) As Text
+
+    Select Case Style
+        Case 1
+            Return "Forest"
+        Case 2
+            Return "Highland"
+        Case 3
+            Return "Desert"
+    End Select
+
+    Return "Meadow"
+
+End Function
+
+Public Function Slot(Kind As Number, Style As Number) As Number
+
+    Dim Result As Number
+
+    Result = Kind
+
+    If Style > 0 And Style <= 3 And (Kind = 1 Or Kind = 3) Then
+        Result = 7 + (Style - 1) * 2 + (Kind - 1) / 2
+    End If
+
+    Return Result
+
+End Function
+
+Public Function Material(Style As Number, Road As Boolean) As Core.Material3D
+
+    Dim Result As Core.Material3D
+    Dim EmptyTexture As Core.Texture3D
+    Dim RedValue As Number
+    Dim GreenValue As Number
+    Dim BlueValue As Number
+    Dim Ok As Boolean
+
+    RedValue = 9
+    GreenValue = 26
+    BlueValue = 6
+
+    If Style = 2 Then
+
+        RedValue = 45
+        GreenValue = 52
+        BlueValue = 41
+
+    Else If Style = 3 Then
+
+        RedValue = 127
+        GreenValue = 83
+        BlueValue = 34
+
+    End If
+
+    If Road Then
+
+        RedValue = RedValue * 72 / 100
+        GreenValue = GreenValue * 64 / 100
+        BlueValue = BlueValue * 57 / 100
+
+        If Style = 1 Then
+
+            RedValue = 33
+            GreenValue = 22
+            BlueValue = 10
+
+        End If
+
+    End If
+
+    Result = G.CreatePbrMaterial3D(EmptyTexture, EmptyTexture, EmptyTexture,
+        EmptyTexture, G.MATERIAL_ALPHA_OPAQUE, True)
+    Ok = G.SetPbrMaterialFactors3D(Result, RedValue, GreenValue, BlueValue, 100, 0, 100, 0, 100)
+
+    Return Result
+
+End Function
+
+End Module

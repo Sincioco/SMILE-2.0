@@ -15,7 +15,7 @@ Import Smile.Simple3D.CameraClearance3D As Clearance
 
 Private Dim Surface As Grid.State
 Private Dim Items[1024] As Document.Item
-Private Dim Shapes[35] As Catalog.Template
+Private Dim Shapes[Catalog.TEMPLATE_COUNT] As Catalog.Template
 Private Dim ItemCount As Number
 Private Dim Enabled As Boolean
 Private Dim SnapshotVersion As Number

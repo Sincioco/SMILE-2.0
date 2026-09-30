@@ -1,4 +1,4 @@
-"""Bounded TWN1–TWN6 codec shared by the existing Blender document worker."""
+"""Bounded TWN1–TWN7 codec shared by the existing Blender document worker."""
 import hashlib
 import json
 import struct
@@ -102,7 +102,7 @@ def decode(payload, catalog, request=False):
     if bytes(r.byte() for _ in range(3)) != b'TWN':
         raise ValueError('Unsupported town format')
     version = r.byte()
-    if version not in (1, 2, 3, 4, 5, 6):
+    if version not in (1, 2, 3, 4, 5, 6, 7):
         raise ValueError('Unsupported town format')
     fingerprint = catalog.get('document_fingerprint') or hashlib.sha256(json.dumps(catalog, sort_keys=True).encode()).hexdigest()
     if r.name() != fingerprint:
@@ -179,6 +179,10 @@ def decode(payload, catalog, request=False):
                 brushes.append(brush)
             result['curves'] = brushes
             result['cells'] = raster_curves(result)
+    if version >= 7:
+        result['terrain_style'] = r.byte()
+        if result['terrain_style'] > 3:
+            raise ValueError('Invalid terrain style')
     result['payload'] = payload[:r.offset]
     if request:
         result['mode'], result['request_id'] = r.integer(), r.integer()
@@ -225,7 +229,7 @@ def raster_curves(document):
 def encode(document, catalog):
     fingerprint = catalog.get('document_fingerprint') or hashlib.sha256(json.dumps(catalog, sort_keys=True).encode()).hexdigest()
     # Eight-value legacy snapshots must retain their checksum when opened.
-    version = (6 if document.get('curves') else 5 if 'court_placed' in document else 4 if 'presets' in document else 3 if 'map_tiles' in document
+    version = (7 if 'terrain_style' in document else 6 if document.get('curves') else 5 if 'court_placed' in document else 4 if 'presets' in document else 3 if 'map_tiles' in document
                else 2 if len(document['sun']) == 9 else 1)
     result = bytearray(b'TWN') + bytes([version]) + name(fingerprint) + name(document['name']) + b'\0'
     precise = lambda value: integer(round(value * 1000000))
@@ -263,10 +267,12 @@ def encode(document, catalog):
         result += b''.join(precise(value) for value in document['court_offset'])
         result += bytes([int(document['court_placed'])])
     if version >= 6:
-        result += integer(len(document['curves']))
-        for brush in document['curves']:
+        result += integer(len(document.get('curves', [])))
+        for brush in document.get('curves', []):
             result += integer(brush[0]) + integer(brush[1])
             result += b''.join(precise(value) for value in brush[2:])
+    if version >= 7:
+        result += bytes([document['terrain_style']])
     decode(result, catalog)  # Same format/range checks apply in both directions.
     return bytes(result)
 

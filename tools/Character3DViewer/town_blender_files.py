@@ -42,7 +42,11 @@ def import_document(path, catalog):
             members = [o for o in anchor.children_recursive if 'town_member' in o]
             if not members:
                 continue  # Deleting a complete assembly removes it from the town.
-            sample = samples[original['template']]
+            if 35 <= original['template'] <= 38:
+                from town_blender_landforms import member_names
+                sample = {'members': member_names(original['template'])}
+            else:
+                sample = samples[original['template']]
             actual_members = sorted(o['town_member'] for o in members)
             expected_members = sorted(sample['members'])
             previous_members = sorted(sample['members'] + sample.get('compatible_retired_members', []))

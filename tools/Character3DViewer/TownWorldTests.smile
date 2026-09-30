@@ -146,6 +146,18 @@ Public Function Run() As Number
 
     Call Check(Not Gesture.DragNode, "Releasing A Town Ends The Move")
 
+    Ok = World.Add(Map, "Far Journey", 1900, 1290)
+    Ok = World.SaveWorld(Map, "TownEditor.World.LargeFixture") And Ok
+    Ok = World.LoadWorld(Loaded, "", "TownEditor.World.LargeFixture") And Ok
+
+    Call Check(Ok And Loaded.Nodes[2].X = 1900 And Loaded.Nodes[2].Y = 1290,
+        "Expanded Atlas Coordinates Survive Save And Reopen")
+    Call Canvas.Fit(Gesture, Loaded, 1132, 994)
+
+    Call Check(Canvas.X(Gesture, Loaded, 2, 1132, 2) <= 1132 And
+        Canvas.Y(Gesture, Loaded, 2, 994, 3) < 930,
+        "Reset View Frames The Distant Journey Card")
+
     Return Failures
 
 End Function

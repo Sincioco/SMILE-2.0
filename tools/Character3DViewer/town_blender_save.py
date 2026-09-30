@@ -46,6 +46,10 @@ def populate_items(document, catalog):
     output = bpy.data.collections.new('Town Editor Instances')
     bpy.context.scene.collection.children.link(output)
     for item in document['items']:
+        if 35 <= item['template'] <= 38:
+            from town_blender_landforms import populate
+            populate(item, item_matrix(item), output)
+            continue
         source = samples[item['template']]
         delta = item_matrix(item) @ source_matrix(source).inverted()
         anchor = bpy.data.objects.new('Town Assembly %d' % item['identity'], None)
@@ -201,6 +205,8 @@ def terrain(document, catalog=None):
     for link in list(shader.inputs['Normal'].links):
         paving.node_tree.links.remove(link)
     obj = bpy.data.objects.new('Town Editable Surface', mesh)
+    from town_blender_landforms import terrain_style
+    terrain_style(document, mesh)
     bpy.context.scene.collection.objects.link(obj)
 
 

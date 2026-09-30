@@ -4,6 +4,7 @@ Module Smile.Tools.TownWorldDocument
 Option Explicit
 
 Public Const MAX_NODES = 16
+Public Const MAX_COORDINATE = 10000
 
 Public Type Node
     Town As Text
@@ -112,8 +113,8 @@ Public Function Add(ByRef Value As State, Name As Text, X As Number, Y As Number
     End For
 
     Value.Nodes[Value.NodeCount].Town = Name
-    Value.Nodes[Value.NodeCount].X = Max(0, Min(1000, X))
-    Value.Nodes[Value.NodeCount].Y = Max(0, Min(1000, Y))
+    Value.Nodes[Value.NodeCount].X = Max(0, Min(MAX_COORDINATE, X))
+    Value.Nodes[Value.NodeCount].Y = Max(0, Min(MAX_COORDINATE, Y))
     Value.NodeCount = Value.NodeCount + 1
 
     Return True
@@ -265,7 +266,7 @@ Public Function LoadWorld(ByRef Value As State, Name As Text, Optional Key As Te
         Candidate.Nodes[Index].X = ReadInteger()
         Candidate.Nodes[Index].Y = ReadInteger()
 
-        If Candidate.Nodes[Index].X > 1000 Or Candidate.Nodes[Index].Y > 1000 Then
+        If Candidate.Nodes[Index].X > MAX_COORDINATE Or Candidate.Nodes[Index].Y > MAX_COORDINATE Then
             Return False
         End If
 

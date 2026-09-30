@@ -131,5 +131,113 @@
       "Twin circular arrival villages and tree-lined perimeter drive",
       "Operating terminal, runway, aircraft and navigation beacons retained"
     ]
+  },
+  {
+    "name": "Verdant Reach",
+    "file": "Verdant Reach.town",
+    "size_m": 720,
+    "items": 440,
+    "trees": 424,
+    "lamps": 12,
+    "houses": 1,
+    "castles": 0,
+    "city_halls": 0,
+    "draw_cost": 1759,
+    "local_lights": 16,
+    "water_percent": 1.9,
+    "story_spaces": [
+      "A wooded journey from the waterworks toward the eastern settlements.",
+      "Three clearings reserved for encounters; monster spawning is separate gameplay."
+    ]
+  },
+  {
+    "name": "Greyglass Pass",
+    "file": "Greyglass Pass.town",
+    "size_m": 800,
+    "items": 76,
+    "trees": 20,
+    "lamps": 13,
+    "houses": 1,
+    "castles": 0,
+    "city_halls": 0,
+    "draw_cost": 263,
+    "local_lights": 17,
+    "water_percent": 0.0,
+    "story_spaces": [
+      "Rocky switchback route linking the forest to East Valley.",
+      "Mountains are solid scenery; walking paths remain level and collision tested."
+    ]
+  },
+  {
+    "name": "Sunglass Expanse",
+    "file": "Sunglass Expanse.town",
+    "size_m": 720,
+    "items": 31,
+    "trees": 5,
+    "lamps": 12,
+    "houses": 1,
+    "castles": 0,
+    "city_halls": 0,
+    "draw_cost": 121,
+    "local_lights": 16,
+    "water_percent": 1.0,
+    "story_spaces": [
+      "An exposed desert route with a sheltered oasis and ruined waymarks.",
+      "Working geography for Luma; space reserved for travel encounters."
+    ]
+  },
+  {
+    "name": "Neris Waterworks",
+    "file": "Neris Waterworks.town",
+    "size_m": 560,
+    "items": 48,
+    "trees": 24,
+    "lamps": 16,
+    "houses": 0,
+    "castles": 0,
+    "city_halls": 1,
+    "draw_cost": 232,
+    "local_lights": 24,
+    "water_percent": 17.8,
+    "story_spaces": [
+      "Chapter One waterworks: paired settling basins, pump platforms and service lanes.",
+      "Industrial machinery and scripted disaster sequence remain separate story work."
+    ]
+  },
+  {
+    "name": "Ancient Relay",
+    "file": "Ancient Relay.town",
+    "size_m": 560,
+    "items": 29,
+    "trees": 0,
+    "lamps": 12,
+    "houses": 0,
+    "castles": 0,
+    "city_halls": 0,
+    "draw_cost": 119,
+    "local_lights": 18,
+    "water_percent": 0.0,
+    "story_spaces": [
+      "Chapter One ancient relay exterior; radial maintenance paths and weathered spires.",
+      "Not the separate Chapter Five off-world observatory."
+    ]
+  },
+  {
+    "name": "Neris Relief Quarter",
+    "file": "Neris Relief Quarter.town",
+    "size_m": 400,
+    "items": 41,
+    "trees": 10,
+    "lamps": 16,
+    "houses": 10,
+    "castles": 0,
+    "city_halls": 1,
+    "draw_cost": 339,
+    "local_lights": 22,
+    "water_percent": 0.3,
+    "story_spaces": [
+      "Chapter One clinic and relief staging: medical hall, supply stalls and modest homes.",
+      "Architecture is draft staging; does not replace accepted character or story canon."
+    ]
   }
 ]

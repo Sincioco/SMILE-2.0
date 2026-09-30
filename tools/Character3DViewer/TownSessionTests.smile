@@ -934,7 +934,7 @@ End Sub
 
 Sub CheckDecorPalette()
 
-    Dim Seen[35] As Number
+    Dim Seen[Catalog.TEMPLATE_COUNT] As Number
     Dim Page As Number
     Dim Slot As Number
     Dim VisibleCount As Number

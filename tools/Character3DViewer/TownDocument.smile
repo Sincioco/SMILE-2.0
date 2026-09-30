@@ -50,6 +50,7 @@ Public Type SunPresets
 End Type
 
 Public Type State
+    TerrainStyle As Number
     CourtOffsetX As Double
     CourtOffsetZ As Double
     CourtPlaced As Boolean
@@ -186,6 +187,7 @@ Public Function Blank(ByRef Value As State, Name As Text, Columns As Number,
     Value.CourtOffsetX = 0.0
     Value.CourtOffsetZ = 0.0
     Value.CourtPlaced = False
+    Value.TerrainStyle = 0
     Value.Name = Name
     Value.ItemCount = 0
     Value.NextIdentity = 1

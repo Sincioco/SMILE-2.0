@@ -3737,6 +3737,34 @@ Public Function SolidAt(TemplateIndex As Number, Index As Number) As Box
             Result.X1 = 1.000000
             Result.Z1 = 1.000060
 
+        Case 8960
+            Result.X0 = -305.000000
+            Result.Z0 = -305.000000
+            Result.X1 = 305.000000
+            Result.Z1 = 305.000000
+            Result.Height = 480.000000
+
+        Case 9216
+            Result.X0 = -292.800000
+            Result.Z0 = -292.800000
+            Result.X1 = 292.800000
+            Result.Z1 = 292.800000
+            Result.Height = 320.000000
+
+        Case 9472
+            Result.X0 = -640.500000
+            Result.Z0 = -298.900000
+            Result.X1 = 640.500000
+            Result.Z1 = 298.900000
+            Result.Height = 120.000000
+
+        Case 9728
+            Result.X0 = -122.000000
+            Result.Z0 = -122.000000
+            Result.X1 = 122.000000
+            Result.Z1 = 122.000000
+            Result.Height = 650.000000
+
     End Select
 
     Return Result
@@ -5792,6 +5820,18 @@ Public Function CameraAt(TemplateIndex As Number, Index As Number) As Clearance.
 
         Case 8704
             Result = Clearance.Box(-1.000000, 0.000000, -1.000060, 1.000000, 30.000000, 1.000060)
+
+        Case 8960
+            Result = Clearance.Box(-305.000000, 0.000000, -305.000000, 305.000000, 480.000000, 305.000000)
+
+        Case 9216
+            Result = Clearance.Box(-292.800000, 0.000000, -292.800000, 292.800000, 320.000000, 292.800000)
+
+        Case 9472
+            Result = Clearance.Box(-640.500000, 0.000000, -298.900000, 640.500000, 120.000000, 298.900000)
+
+        Case 9728
+            Result = Clearance.Box(-122.000000, 0.000000, -122.000000, 122.000000, 650.000000, 122.000000)
 
     End Select
 

@@ -4,6 +4,7 @@ Module Smile.Tools.TownSurfaceRenderer
 Option Explicit
 
 Import Smile.Tools.TownSurfaceLayers As Layers
+Import Smile.Tools.TownTerrainStyles As Styles
 Import Smile.Tools.TownDecks As Decks
 Import Smile.Tools.TownDocument As Document
 Import Smile.Simple3D.Core As Core
@@ -35,7 +36,8 @@ Public Type State
     NextObjects[64] As Core.Object3D
     Water[4] As Core.RibbonBatch3D
     NextWater[4] As Core.RibbonBatch3D
-    Materials[7] As Core.Material3D
+    Materials[13] As Core.Material3D
+    PendingStyle As Number
     Textures[2] As Core.Texture3D
     LiveRevision As Number
     PendingRevision As Number
@@ -53,6 +55,7 @@ End Type
 
 Public Function Create(ByRef Value As State) As Boolean
 
+    Dim Index As Number
     Dim EmptyTexture As Core.Texture3D
     Dim Ok As Boolean
 
@@ -75,6 +78,13 @@ Public Function Create(ByRef Value As State) As Boolean
     Ok = G.SetEffectMaterialWater3D(Value.Materials[2], True, 45, 0, 0, 2) And Ok
     Ok = (Value.Materials[1].Handle <> 0 And Value.Materials[3].Handle <> 0 And
         Value.Materials[4].Handle <> 0 And Ok)
+
+    For Index = 1 To 3
+        Value.Materials[Styles.Slot(1, Index)] = Styles.Material(Index, False)
+        Value.Materials[Styles.Slot(3, Index)] = Styles.Material(Index, True)
+        Ok = Ok And Value.Materials[Styles.Slot(1, Index)].Handle <> 0 And Value.Materials[Styles.Slot(3, Index)].Handle <> 0
+    End For
+
     Value.LiveRevision = -1
     Value.Failed = Not Ok
 
@@ -97,6 +107,7 @@ Public Sub BeginBuild(ByRef Value As State, ByRef Town As Document.State)
     Call Decks.Capture(Value.Openings, Town)
 
     Pending = Town.Surface
+    Value.PendingStyle = Town.TerrainStyle
     PatchCount = 0
     Value.PendingRevision = Town.Surface.Revision
     Value.Row = 0
@@ -581,7 +592,7 @@ Private Sub UploadNext(ByRef Value As State)
         Else
             Ok = G.CommitMesh3D(Mesh) And Ok
             Value.NextObjects[Value.NextCount] = G.CreateObjectFromMesh3D(Mesh)
-            Ok = G.SetObjectMaterial3D(Value.NextObjects[Value.NextCount], Value.Materials[Value.Kind]) And Ok
+            Ok = G.SetObjectMaterial3D(Value.NextObjects[Value.NextCount], Value.Materials[Styles.Slot(Value.Kind, Value.PendingStyle)]) And Ok
             Ok = G.SetObjectCullMode3D(Value.NextObjects[Value.NextCount], G.OBJECT_CULL_NONE) And Ok
 
             ' Flat terrain receives scenery shadows. Casting onto itself creates
@@ -705,7 +716,7 @@ Public Sub Destroy(ByRef Value As State)
         Call G.DestroyRibbonBatch3D(Value.NextWater[Index])
     End For
 
-    For Index = 1 To 6
+    For Index = 1 To 12
         Call G.DestroyMaterial3D(Value.Materials[Index])
     End For
 

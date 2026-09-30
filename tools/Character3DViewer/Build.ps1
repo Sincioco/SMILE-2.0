@@ -117,6 +117,7 @@ $nativeBattleSources = @(
     'TownDocumentNavigation.smile',
     'TownCatalogRenderer.smile',
     'TownSurfaceRenderer.smile',
+    'TownTerrainStyles.smile',
     'TownLighting.smile',
     'TownAttachments.smile',
     'NerisTownCamera.smile',
