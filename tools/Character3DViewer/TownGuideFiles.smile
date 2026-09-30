@@ -13,7 +13,7 @@ Public Type State
     Path As Text
 End Type
 
-Private Dim Bytes[8192] As Number
+Private Dim Bytes[65536] As Number
 Private Dim Offset As Number
 Private Dim ByteCount As Number
 Private Dim Valid As Boolean
@@ -108,6 +108,7 @@ Public Function SaveSnapshot(ByRef Value As Guides.State, Key As Text) As Boolea
     Dim Status As Number
     Dim Result As Boolean
     Dim Marker As Guides.Marker
+    Dim Character As Number
 
     If (Value.Spacing < 0.001 Or
         Value.Spacing > 10000.0 Or
@@ -122,7 +123,7 @@ Public Function SaveSnapshot(ByRef Value As Guides.State, Key As Text) As Boolea
 
     Offset = 0
 
-    Call Put(1196771633)
+    Call Put(1196771634)
     Call Put(ToNumber(Round(Value.Spacing * 1000000.0)))
     Call Put(Value.SnapMode)
     Call Put(Value.TileTarget)
@@ -143,6 +144,21 @@ Public Function SaveSnapshot(ByRef Value As Guides.State, Key As Text) As Boolea
             Abs(Marker.Last.Z) > 1000000000.0) Then
             Return False
         End If
+
+        If Text_Length(Marker.Name) > 64 Then
+            Return False
+        End If
+
+        Call Put(Text_Length(Marker.Name))
+
+        For Character = 0 To Text_Length(Marker.Name) - 1
+
+            If Text_Code_At(Marker.Name, Character) < 32 Then
+                Return False
+            End If
+
+            Call Put(Text_Code_At(Marker.Name, Character))
+        End For
 
         Call PutFlag(Marker.IsRectangle)
         Call Put(ToNumber(Round(Marker.First.X * 1000000.0)))
@@ -166,6 +182,10 @@ Public Function LoadSnapshot(ByRef Value As Guides.State, Key As Text) As Boolea
     Dim Index As Number
     Dim Status As Number
     Dim Empty As Guides.State
+    Dim Version As Number
+    Dim Length As Number
+    Dim Character As Number
+    Dim Code As Number
 
     Load Data Key Into Bytes Count ByteCount Status Status
 
@@ -176,7 +196,8 @@ Public Function LoadSnapshot(ByRef Value As Guides.State, Key As Text) As Boolea
     Candidate = Empty
     Offset = 0
     Valid = True
-    Valid = Read() = 1196771633 And Valid
+    Version = Read()
+    Valid = (Version = 1196771633 Or Version = 1196771634) And Valid
     Candidate.Spacing = Coordinate()
     Candidate.SnapMode = Read()
     Candidate.TileTarget = Read()
@@ -198,6 +219,27 @@ Public Function LoadSnapshot(ByRef Value As Guides.State, Key As Text) As Boolea
     End If
 
     For Index = 0 To Candidate.Ink.EntryCount - 1
+
+        If Version = 1196771634 Then
+
+            Length = Read()
+
+            If Length < 0 Or Length > 64 Then
+                Return False
+            End If
+
+            For Character = 0 To Length - 1
+
+                Code = Read()
+
+                If Code < 32 Or Code > 1114111 Then
+                    Return False
+                End If
+
+                Candidate.Ink.Markers[Index].Name = Candidate.Ink.Markers[Index].Name + Text_From_Code(Code)
+            End For
+
+        End If
 
         Candidate.Ink.Markers[Index].IsRectangle = ReadFlag()
         Candidate.Ink.Markers[Index].First.X = Coordinate()

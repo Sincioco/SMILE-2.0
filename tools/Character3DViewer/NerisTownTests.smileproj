@@ -5,8 +5,10 @@
   </PropertyGroup>
   <ItemGroup>
     <SmileSource Include="NerisTownTests.smile" StartupOnly="true" />
+    <SmileSource Include="TownPartyInset.smile" />
     <SmileSource Include="NerisTownNavigation.smile" />
     <SmileSource Include="NerisHorizonRoute.smile" />
+    <SmileSource Include="TownSurfaceLayers.smile" />
     <SmileSource Include="NerisCastleRoute.smile" />
     <SmileSource Include="NerisSpaceportRoute.smile" />
     <SmileSource Include="NerisSpaceportTraffic.smile" />
@@ -17,6 +19,7 @@
     <SmileSource Include="TownCatalogData.smile" />
     <SmileSource Include="TownCatalogFeatures.smile" />
     <SmileSource Include="TownGeometry.smile" />
+    <SmileSource Include="TownDecks.smile" />
     <SmileSource Include="NerisTownDistricts.smile" />
     <SmileSource Include="NerisTownLayout.smile" />
     <SmileSource Include="NerisTownSite.smile" />

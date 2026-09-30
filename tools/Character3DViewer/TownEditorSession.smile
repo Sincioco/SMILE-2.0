@@ -8,12 +8,14 @@ Import Smile.Simple3D.Graphics3D As G
 Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownCatalogData As Catalog
 Import Smile.Tools.TownInitialSurface As Initial
+Import Smile.Tools.TownGuideList As GuideList
 Import Smile.Tools.TownEditor As Editor
 Import Smile.Tools.TownSectionTools As SectionTools
 Import Smile.Tools.TownHistory As History
 Import Smile.Tools.TownEditorPanel As Panel
 Import Smile.Tools.TownCatalogRenderer As Renderer
 Import Smile.Tools.TownSurfaceRenderer As Terrain
+Import Smile.Tools.TownDecks As Decks
 Import Smile.Tools.TownAttachments As Attachments
 Import Smile.Tools.TownLighting As Lighting
 Import Smile.Tools.TownDocumentNavigation As Navigation
@@ -180,12 +182,34 @@ Public Function GestureActive() As Boolean
 
 End Function
 
+Public Function ViewRightEdge() As Number
+
+    Dim Result As Number
+
+    Result = Panel.LeftEdge() - Controls.GuideBrowser.Width
+
+    Return Result
+
+End Function
+
+Public Function TakeViewRequest(ByRef Point As P.Vector3) As Number
+
+    Dim Result As Number
+
+    Result = Controls.ViewRequest
+    Point = Controls.FocusPoint
+    Controls.ViewRequest = 0
+
+    Return Result
+
+End Function
+
 Public Function CameraBlocked(Optional CameraControl As Boolean = False) As Boolean
 
     Dim Result As Boolean
 
     Result = (Files.BlocksEditing(Transfers) Or World.Active() Or Controls.Ui.SunSlider.DragOwner > 0 Or
-        (Controls.Enabled And (Panel.Hovered() Or Pointer_Y() < 126 Or
+        (Controls.Enabled And (Panel.Hovered() Or GuideList.Hovered(Controls.GuideBrowser) Or (Pointer_Y() < 126 And Not CameraControl) Or
         (Not CameraControl And ((Editor.CapturesMap(Controls) And Not Key_Held(KEY_SHIFT) And
         Pointer_Held(POINTER_PRIMARY)) Or GestureActive())))))
 
@@ -216,14 +240,14 @@ Public Function LoadNext() As Boolean
         Assets.Failed = Assets.Failed Or Not Ok
         Prepared = True
 
-        Call Terrain.BeginBuild(Ground, Town.Surface)
+        Call Terrain.BeginBuild(Ground, Town)
 
     End If
 
     If Ground.PendingRevision <> Town.Surface.Revision Then
         Ready = False
 
-        Call Terrain.BeginBuild(Ground, Town.Surface)
+        Call Terrain.BeginBuild(Ground, Town)
     End If
 
     Call Terrain.Update(Ground, 16)
@@ -468,19 +492,7 @@ Private Sub FileCommand(Action As Number)
             Return
         End If
 
-        Ok = Tabs.UpdatePermanent(OpenTabs, Town, Name)
-        Controls.Ui.Message = OpenTabs.Message
-        OpenTabs.Message = ""
-
-        If Ok Then
-
-            Call Editor.ResetHistory(Controls, Town)
-
-            TeleportPending = True
-            TabOverviewPending = True
-            Controls.Ui.Section = 2
-
-        End If
+        Ok = UpdatePermanent(Name)
 
         Return
 
@@ -729,6 +741,26 @@ Public Sub Input(View As P.Camera3D, Key As Number, Blocked As Boolean)
 
 End Sub
 
+''' Persistence adopts the document without requesting a spawn or overview camera.
+''' The Files UI obtains cross-name confirmation before calling this operation.
+Public Function UpdatePermanent(Name As Text) As Boolean
+
+    Dim Ok As Boolean
+
+    Ok = Tabs.UpdatePermanent(OpenTabs, Town, Name)
+    Controls.Ui.Message = OpenTabs.Message
+    OpenTabs.Message = ""
+
+    If Ok Then
+        Call Editor.ResetHistory(Controls, Town)
+
+        Controls.Ui.Section = 2
+    End If
+
+    Return Ok
+
+End Function
+
 Public Sub Update(Leader As P.Vector3, Elapsed As Number)
 
     Dim Ok As Boolean
@@ -745,7 +777,7 @@ Public Sub Update(Leader As P.Vector3, Elapsed As Number)
     If Controls.SectionGesture.Pending Then
 
         If Ground.PendingRevision <> Town.Surface.Revision Then
-            Call Terrain.BeginBuild(Ground, Town.Surface)
+            Call Terrain.BeginBuild(Ground, Town)
         End If
 
         Call Terrain.Update(Ground, Elapsed)
@@ -757,7 +789,7 @@ Public Sub Update(Leader As P.Vector3, Elapsed As Number)
 
             Call SectionTools.Finish(Controls.SectionGesture, Town, False)
             Call Editor.ResetHistory(Controls, Town)
-            Call Terrain.BeginBuild(Ground, Town.Surface)
+            Call Terrain.BeginBuild(Ground, Town)
 
         Else If Ground.LiveRevision = Town.Surface.Revision Then
 
@@ -775,6 +807,10 @@ Public Sub Update(Leader As P.Vector3, Elapsed As Number)
 
     If AppliedRevision <> Town.Revision Then
 
+        If Not Decks.Matches(Ground.Openings, Town) Then
+            Town.Surface.Revision = Town.Surface.Revision + 1
+        End If
+
         Call Renderer.SyncDocument(Assets, Town)
 
         Ok = Lighting.Apply(Town.Light)
@@ -789,7 +825,7 @@ Public Sub Update(Leader As P.Vector3, Elapsed As Number)
     End If
 
     If Ground.PendingRevision <> Town.Surface.Revision Then
-        Call Terrain.BeginBuild(Ground, Town.Surface)
+        Call Terrain.BeginBuild(Ground, Town)
     End If
 
     Call Terrain.Update(Ground, Elapsed)
@@ -817,7 +853,7 @@ Public Sub Update(Leader As P.Vector3, Elapsed As Number)
 
         Call Editor.ResetHistory(Controls, Town)
 
-        Call Terrain.BeginBuild(Ground, Town.Surface)
+        Call Terrain.BeginBuild(Ground, Town)
 
     Else If (Ground.LiveRevision = Town.Surface.Revision And
         LiveSurface.Revision <> Town.Surface.Revision) Then
@@ -828,6 +864,7 @@ Public Sub Update(Leader As P.Vector3, Elapsed As Number)
 
     End If
 
+    Call Renderer.Update(Assets, Elapsed)
     Call Attachments.Update(Details, Town, Leader, Elapsed)
     Call Editor.UpdateGuideFiles(Controls, Town)
 
@@ -1120,13 +1157,14 @@ End Function
 
 Public Sub DrawMap(Position As P.Vector3, Opacity As Number, LeaderName As Text,
     LandmarkName As Text, LandmarkPosition As P.Vector3, AirportName As Text,
-    AirportPosition As P.Vector3, Headlight As Image, Yaw As Double)
+    AirportPosition As P.Vector3, Headlight As Image, Yaw As Double,
+    Optional StatusY As Number = 533)
 
     Call Map.Draw(Town, Position, Opacity, LeaderName, LandmarkName, LandmarkPosition,
         AirportName, AirportPosition, Headlight, Yaw)
 
     If Opacity > 0 Then
-        Call Map.DrawDestination(Town, RoadTravel.Target(), RoadTravel.Active(), RoadTravel.Message())
+        Call Map.DrawDestination(Town, RoadTravel.Target(), RoadTravel.Active(), RoadTravel.Message(), StatusY)
     End If
 
 End Sub

@@ -1,5 +1,47 @@
 # Native World and Town Authoring
 
+Current September 30 controls and ownership are documented in the Character Viewer
+README and ARCHITECTURE. These supersede the historical milestone descriptions below.
+Guide files now support names, list operations and resize handles; exact orthographic
+editing shares projection/picking with the renderer. World cards use generated plan
+thumbnails, with independent pan/zoom. No change to the `.town` or `.world` format is
+required for these presentation changes.
+
+## Surface layering policy (September 30)
+
+`tools/Character3DViewer/TownSurfaceLayers.json` is the shared numeric authority.
+Asset preparation projects it into `TownSurfaceLayers.smile`; Blender reads the
+same profile. Tests reject a stale projection. Do not add independent surface
+height literals to render, navigation, picking, or export owners.
+
+| Layer | Native elevation | Rule |
+| --- | ---: | --- |
+| Submerged bed and skirts | 20.70 | Below every visible surface |
+| Ground | 20.90 | Below authored building foundations |
+| Water | 21.85 | One surface per painted cell; submerged bed receives shadows |
+| Road and painted bridge paving | 23.12 | Shared physical and walking elevation |
+| Movable structural deck | Road + 2.00 | Its lowest exposed recessed top must clear the road by at least 0.60 |
+| Guides and Map Load borders | Projected from road level | Draw once as 2D overlays after the scene; no competing coplanar mesh |
+
+Ten native units equal one metre. The legacy ground walking baseline remains
+22.50 to preserve the accepted actor grounding; rendered structural deck changes
+must also change their navigation height. Skirt tops stop at their owning surface.
+Painted surface kinds replace one another in the grid instead of stacking full
+duplicate planes. Existing civic bridge supports remain below their paving.
+
+New imported decks must be measured against this profile, including recesses,
+trim and authored scale. Shift the coherent assembly and its walking surface,
+or omit hidden substrate; never alter the user's road layout to hide overlap.
+Do not solve solid-surface conflicts by draw order or transparent materials.
+Retain the camera's scene-relative depth range. Decorative overlays may use a
+controlled overlay pass; they must not change collision or walking heights.
+
+This policy prevents the demonstrated terrain/deck conflicts. It cannot make
+arbitrary intersecting imported meshes valid automatically; those still need
+an explicit support/overlap rule when added. Geometry regressions verify native
+and Blender elevations, all drawbridge planks and recessed support, and unchanged
+navigation across the bridge and gatehouse.
+
 ## Current September 29 update
 
 The active native application is **SMILE 2.0 - Sin Star I - Game Engine and Studio**,

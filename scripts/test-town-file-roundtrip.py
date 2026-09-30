@@ -17,6 +17,7 @@ document = decode(unwrap(source.read_bytes()), catalog)
 folder = Path(tempfile.mkdtemp(prefix='town-files-', dir=ROOT / 'artifacts/tests'))
 target = folder / 'Round Trip Town.blend'
 export_document(document, catalog, target, 1, lambda *args: None)
+assert any(o.get('town_member', '').startswith('Royal Broad Masonry Joint') for o in bpy.data.objects), 'Saved Blender castle is missing current detailed geometry'
 opened = decode(import_document(target, catalog), catalog)
 assert opened['name'] == 'Round Trip Town'
 assert opened['cells'] == document['cells']

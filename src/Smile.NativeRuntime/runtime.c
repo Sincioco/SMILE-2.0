@@ -1976,7 +1976,11 @@ static int smile_file_dialog(WCHAR* path, int capacity, int exporting)
 extern void* smile_file_pick_window(HWND, long long, void*, void*, void*);
 void* smile_file_pick(long long saving, void* title, void* extension, void* suggested)
 {
-    return smile_file_pick_window(smile_window, saving, title, extension, suggested);
+    void* result = smile_file_pick_window(smile_window, saving, title, extension, suggested);
+    // Dialog pointer motion is not a drag in the scene resumed beneath it.
+    smile_pointer_reset();
+    if (GetCapture() == smile_window) ReleaseCapture();
+    return result;
 }
 
 extern void* smile_text_prompt_window(HWND, void*, void*, void*);

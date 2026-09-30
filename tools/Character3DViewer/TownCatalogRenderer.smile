@@ -12,8 +12,9 @@ Import Smile.Tools.TownCatalogData As Catalog
 Public Type State
     Lawn As Core.Material3D
     Grass As Core.Texture3D
-    Models[48] As Core.Model3D
-    Objects[768] As Core.Object3D
+    Models[64] As Core.Model3D
+    Wind[64] As Core.Animator3D
+    Objects[1024] As Core.Object3D
     Loaded As Number
     Required As Number
     ObjectCount As Number
@@ -51,6 +52,7 @@ Public Sub SyncDocument(ByRef Value As State, ByRef Town As Document.State)
                 Value.ObjectCount = Value.ObjectCount - 1
             End For
 
+            Call G.DestroyAnimator3D(Value.Wind[Index])
             Call G.DestroyModel3D(Value.Models[Index])
         End For
 
@@ -101,6 +103,11 @@ Public Sub LoadNext(ByRef Value As State)
         Ok = G.PrepareModelPbr3D(Value.Models[Value.Loaded], G.TEXTURE_FILTER_ANISOTROPIC, 1, 16)
     End If
 
+    If Ok And Value.Models[Value.Loaded].ClipCount > 0 Then
+        Value.Wind[Value.Loaded] = G.CreateModelAnimator3D(Value.Models[Value.Loaded])
+        Ok = G.PlayModelAnimatorNamed3D(Value.Wind[Value.Loaded], "Gentle Wind", G.ANIMATION_LOOP, 100)
+    End If
+
     If Ok Then
 
         For Part = 0 To Value.Models[Value.Loaded].PartCount - 1
@@ -113,6 +120,10 @@ Public Sub LoadNext(ByRef Value As State)
                 Ok = G.SetObjectShadowsChecked3D(Value.Objects[Value.Loaded * 16 + Part], False, True) And Ok
             End If
 
+            If Value.Wind[Value.Loaded].Handle <> 0 Then
+                Ok = G.SetObjectAnimator3D(Value.Objects[Value.Loaded * 16 + Part], Value.Wind[Value.Loaded]) And Ok
+            End If
+
             Value.ObjectCount = Value.ObjectCount + 1
         End For
 
@@ -121,6 +132,21 @@ Public Sub LoadNext(ByRef Value As State)
     Value.ErrorCode = G.LastError()
     Value.Failed = Not Ok
     Value.Loaded = Value.Loaded + 1
+
+End Sub
+
+Public Sub Update(ByRef Value As State, Elapsed As Number)
+
+    Dim Index As Number
+    Dim Ok As Boolean
+
+    For Index = 0 To Value.Loaded - 1
+
+        If Value.Wind[Index].Handle <> 0 Then
+            Ok = G.UpdateAnimator3D(Value.Wind[Index], Elapsed)
+        End If
+
+    End For
 
 End Sub
 
@@ -164,11 +190,12 @@ Public Sub Destroy(ByRef Value As State)
 
     Dim Index As Number
 
-    For Index = 0 To 767
+    For Index = 0 To 1023
         Call G.DestroyObjectInstance3D(Value.Objects[Index])
     End For
 
-    For Index = 0 To 47
+    For Index = 0 To 63
+        Call G.DestroyAnimator3D(Value.Wind[Index])
         Call G.DestroyModel3D(Value.Models[Index])
     End For
 

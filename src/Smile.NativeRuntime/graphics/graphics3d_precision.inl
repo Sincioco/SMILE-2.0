@@ -13,7 +13,7 @@ static double smile_3d_precision_object_component(const SmileObject3D* object, i
 // Borrow the last opaque depth snapshot; transient staging is released before return.
 static double smile_3d_cursor_depth(long long unit_x, long long unit_y)
 {
-    if (smile_frame_active3d || unit_x < 0 || unit_x >= 1000000 ||
+    if (smile_depth_from_preserved_viewport3d || smile_frame_active3d || unit_x < 0 || unit_x >= 1000000 ||
         unit_y < 0 || unit_y >= 1000000 || smile_linear_depth_texture3d == 0 ||
         smile_soft_depth_effective3d == SMILE_3D_SOFT_DEPTH_OFF ||
         smile_soft_depth_copy_draw_count3d == 0) return 0;
@@ -54,7 +54,7 @@ extern "C" long long smile_renderer3d_double(long long command, long long resour
     smile_last_error3d = 0;
     for (int index = 0; index < 12; ++index)
         if (!_finite(values[index])) { smile_last_error3d = 5; return 0; }
-    if (command == 1)
+    if (command == 1 || command == 9)
     {
         if (smile_frame_active3d)
         { smile_last_error3d = SMILE_3D_CAMERA_ERROR_FRAME_ACTIVE; return 0; }
@@ -63,7 +63,8 @@ extern "C" long long smile_renderer3d_double(long long command, long long resour
         for (int index = 0; index < 9; ++index)
             if (fabs(values[index]) > SMILE_3D_CAMERA_WORLD_BOUND)
             { smile_last_error3d = SMILE_3D_CAMERA_ERROR_INVALID_POSITION_TARGET; return 0; }
-        if (j < 10.0 || j > 160.0 || k <= 0.0 || l <= k || l > 2000000.0 ||
+        if ((command == 1 ? (j < 10.0 || j > 160.0) : (j < 0.001 || j > 2000000.0)) ||
+            k <= 0.0 || l <= k || l > 2000000.0 ||
             (float)k <= 0.0f || (float)l <= (float)k)
         { smile_last_error3d = SMILE_3D_CAMERA_ERROR_INVALID_PROJECTION; return 0; }
         // Deliberate binary64 -> renderer float32 boundary, before acceptance.
@@ -74,7 +75,8 @@ extern "C" long long smile_renderer3d_double(long long command, long long resour
             smile_pending_camera_target3d[index] = (float)values[index + 3];
             smile_pending_camera_up3d[index] = (float)values[index + 6];
         }
-        smile_pending_camera_fov3d = (float)j;
+        smile_pending_camera_fov3d = command == 1 ? (float)j : 32.0f;
+        smile_pending_camera_orthographic_height3d = command == 9 ? (float)j : 0.0f;
         smile_pending_camera_near3d = (float)k;
         smile_pending_camera_far3d = (float)l;
         smile_pending_camera_has_projection3d = smile_pending_camera_has_up3d = 1;
@@ -189,11 +191,12 @@ extern "C" double smile_renderer3d_double_value(long long command, long long res
         if (depth <= 0) smile_last_error3d = 5;
         return depth;
     }
-    if (command == 1 && resource == 0 && index == 0 && component >= 0 && component < 12)
+    if (command == 1 && resource == 0 && index == 0 && component >= 0 && component < 13)
     {
         if (component < 3) return smile_camera_position3d[component];
         if (component < 6) return smile_camera_target3d[component - 3];
         if (component < 9) return smile_camera_up3d[component - 6];
+        if (component == 12) return smile_camera_orthographic_height3d;
         return component == 9 ? smile_camera_fov3d : component == 10 ? smile_camera_near3d : smile_camera_far3d;
     }
     if (command == 2 && index == 0 && component >= 0 && component < 9)

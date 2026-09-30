@@ -17,6 +17,7 @@ Import Smile.Tools.TownAttachments As Attachments
 Import Smile.Tools.TownDocumentNavigation As Navigation
 Import Smile.Tools.TownEditor As Editor
 Import Smile.Tools.TownGuides As Guides
+Import Smile.Tools.TownGuideList As GuideList
 Import Smile.Tools.TownSelection As Selection
 Import Smile.Tools.TownHistory As History
 Import Smile.Tools.TownEditorPanel As Panel
@@ -26,6 +27,8 @@ Dim Assets As Renderer.State
 Dim Ground As Terrain.State
 Dim Doors As Attachments.State
 Dim Camera As P.Camera3D
+Dim ParallelView As P.Camera3D
+Dim Accepted As P.Camera3D
 Dim Index As Number
 Dim Ok As Boolean
 Dim Failures As Number
@@ -99,7 +102,7 @@ Call Check(G.LightValue3D(G.LIGHT_QUERY_DIRECTIONAL, 0, 3) > 0,
 
 Call Check(Ok, "Surface, Light And Door Resources")
 Call CheckLocalLighting()
-Call Terrain.BeginBuild(Ground, Town.Surface)
+Call Terrain.BeginBuild(Ground, Town)
 
 Do
 
@@ -142,6 +145,33 @@ Ok = Attachments.Draw(Doors, Town) And Ok
 Ok = Scene.EndScene() And Ok
 
 Call Check(Ok, "Complete Catalog, Water And Hinged Leaves Draw")
+
+ParallelView = Camera
+ParallelView.Position = P.Vector(-1100.0, 7000.0, 0.0)
+ParallelView.UpDirection = P.Vector(0.0, 0.0, 1.0)
+ParallelView.OrthographicHeight = 6500.0
+Ok = Scene.BeginPrecise(ParallelView, 12, 20, 32)
+Ok = Renderer.Draw(Assets, Town) And Ok
+Ok = Terrain.Draw(Ground) And Ok
+Ok = Scene.EndScene() And Ok
+Accepted = P.AcceptedCamera()
+
+Call Check(Ok And Abs(Accepted.OrthographicHeight - 6500.0) < 0.001,
+    "Native Orthographic Camera Accepts And Draws The True 2D Projection")
+
+Ok = G.SetViewport3D(800, 500, 256, 170, True)
+Ok = Scene.BeginPrecise(Camera, 12, 20, 32) And Ok
+Ok = Renderer.Draw(Assets, Town) And Ok
+Ok = Scene.EndScene() And Ok
+
+Call G.ResetViewport3D()
+Call Check(Ok, "Native Inset Draw Preserves The Surrounding Main View")
+Call Check(G.ReplayViewport3D(800, 500, 256, 170),
+    "Cached POV Replays Without Starting Or Drawing A Second Scene")
+Call Check(Not G.ReplayViewport3D(800, 500, 257, 170),
+    "Changed POV Size Requires A Fresh Render")
+Call Check(Not G.ReplayViewport3D(-1, 500, 256, 170),
+    "Cached POV Rejects An Out Of Bounds Destination")
 
 Print "Meshes"
 Print G.LiveMeshCount3D()
@@ -197,6 +227,21 @@ Action = Editor.Command(Controls, Town, 32)
 Call Check(Controls.Guide.Ink.EntryCount = 2 And Controls.Guide.ShowGrid And
     Controls.Guide.SnapMode = 1, "Undo Restores Guides Without Changing Grid Preferences")
 
+' These narrow widths occur during both opening and closing, including at high FPS.
+
+For Before = 1 To 32
+    Controls.GuideBrowser.Width = Before
+
+    Call GuideList.Draw(Controls.GuideBrowser, Controls.Guide)
+End For
+
+Controls.GuideBrowser.Width = 290
+
+Call GuideList.Draw(Controls.GuideBrowser, Controls.Guide)
+Call Check(True, "Guide List Opening And Closing Never Pass Nonpositive Clip Dimensions")
+
+Controls.GuideBrowser.Width = 0
+
 UntilTime = Timer() + 1000
 
 Do
@@ -216,7 +261,7 @@ Loop Until Timer() >= UntilTime Or Game_Closed()
 Before = Ground.LiveRevision
 
 Call Grid.PaintRectangle(Town.Surface, 2, 2, 8, 8, Grid.SURFACE_ROAD)
-Call Terrain.BeginBuild(Ground, Town.Surface)
+Call Terrain.BeginBuild(Ground, Town)
 Call Terrain.Update(Ground, 16)
 Call Check(Ground.LiveRevision = Before, "Old Terrain Remains Until Replacement Is Ready")
 
@@ -300,7 +345,7 @@ Call Grid.PaintRectangle(Town.Surface, 2, 0, 2, 0, Grid.SURFACE_ROAD)
 
 Ok = Terrain.Create(Ground) And Ok
 
-Call Terrain.BeginBuild(Ground, Town.Surface)
+Call Terrain.BeginBuild(Ground, Town)
 
 Frames = 0
 

@@ -102,6 +102,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="graphics\graphics_backend.h" />
+    <ClInclude Include="graphics\graphics3d_viewport.h" />
     <ClInclude Include="startup\startup.h" />
     <ClInclude Include="graphics\graphics_common.h" />
     <ClInclude Include="graphics\graphics_diagnostics.h" />

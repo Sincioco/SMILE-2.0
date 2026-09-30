@@ -227,26 +227,26 @@ Public Sub Draw(Light As Document.Sun, X As Number)
 End Sub
 
 ''' Header icon uses native drawing, so no font glyph or external image is required.
-Public Sub DrawDayNight(Night As Boolean)
+Public Sub DrawDayNight(Night As Boolean, X As Number, Y As Number)
 
-    Fill Rectangle 616, 10, 38, 29, RGB(20, 90, 108)
+    Fill Rectangle X, Y, 38, 29, RGB(20, 90, 108)
 
     If Night Then
 
-        Fill Circle 634, 24, 10, RGB(235, 240, 255)
-        Fill Circle 639, 20, 9, RGB(20, 90, 108)
+        Fill Circle X + 18, Y + 14, 10, RGB(235, 240, 255)
+        Fill Circle X + 23, Y + 10, 9, RGB(20, 90, 108)
 
     Else
 
-        Fill Circle 635, 24, 6, RGB(255, 220, 105)
-        Draw Line 635, 12, 635, 15, RGB(255, 220, 105)
-        Draw Line 635, 33, 635, 36, RGB(255, 220, 105)
-        Draw Line 623, 24, 626, 24, RGB(255, 220, 105)
-        Draw Line 644, 24, 647, 24, RGB(255, 220, 105)
-        Draw Line 627, 16, 629, 18, RGB(255, 220, 105)
-        Draw Line 641, 30, 643, 32, RGB(255, 220, 105)
-        Draw Line 627, 32, 629, 30, RGB(255, 220, 105)
-        Draw Line 641, 18, 643, 16, RGB(255, 220, 105)
+        Fill Circle X + 19, Y + 14, 6, RGB(255, 220, 105)
+        Draw Line X + 19, Y + 2, X + 19, Y + 5, RGB(255, 220, 105)
+        Draw Line X + 19, Y + 23, X + 19, Y + 26, RGB(255, 220, 105)
+        Draw Line X + 7, Y + 14, X + 10, Y + 14, RGB(255, 220, 105)
+        Draw Line X + 28, Y + 14, X + 31, Y + 14, RGB(255, 220, 105)
+        Draw Line X + 11, Y + 6, X + 13, Y + 8, RGB(255, 220, 105)
+        Draw Line X + 25, Y + 20, X + 27, Y + 22, RGB(255, 220, 105)
+        Draw Line X + 11, Y + 22, X + 13, Y + 20, RGB(255, 220, 105)
+        Draw Line X + 25, Y + 8, X + 27, Y + 6, RGB(255, 220, 105)
 
     End If
 

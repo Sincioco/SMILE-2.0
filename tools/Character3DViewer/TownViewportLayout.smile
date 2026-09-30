@@ -1,0 +1,90 @@
+''' Shared draw/hit layout for the centered town viewport toolbar.
+Module Smile.Tools.TownViewportLayout
+
+Option Explicit
+
+Import Smile.UI.Controls As UI
+
+Public Function Label(Index As Number) As Text
+
+    Select Case Index
+        Case 0
+            Return "?"
+        Case 2
+            Return "Edit Town"
+        Case 3
+            Return "Orbit"
+        Case 4
+            Return "Fit"
+        Case 5
+            Return "Fly Inspect"
+    End Select
+
+    Return ""
+
+End Function
+
+Public Function Width(Index As Number) As Number
+
+    Dim Result As Number
+
+    Result = Max(30, Text_Width(Label(Index), 11) + 20)
+
+    If Index = 1 Then
+        Result = 38
+    End If
+
+    Return Result
+
+End Function
+
+Public Function ButtonLeft(Index As Number) As Number
+
+    Dim Total As Number
+    Dim Offset As Number
+    Dim Item As Number
+    Dim Result As Number
+
+    For Item = 0 To 5
+
+        Total = Total + Width(Item)
+
+        If Item < Index Then
+            Offset = Offset + Width(Item) + 8
+        End If
+
+    End For
+
+    Result = (Window_Width() - Total - 40) / 2 + Offset
+
+    Return Result
+
+End Function
+
+Public Function Hovered(Index As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = UI.Contains(ButtonLeft(Index), Window_Height() - 38, Width(Index), 26)
+
+    Return Result
+
+End Function
+
+Public Function Clicked(Index As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Hovered(Index) And Pointer_Pressed(POINTER_PRIMARY)
+
+    Return Result
+
+End Function
+
+Public Sub DrawButton(Index As Number, Selected As Boolean)
+
+    Call UI.DrawButton(ButtonLeft(Index), Window_Height() - 38, Width(Index), 26, Label(Index), Selected)
+
+End Sub
+
+End Module

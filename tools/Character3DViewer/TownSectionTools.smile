@@ -3,6 +3,7 @@ Module Smile.Tools.TownSectionTools
 
 Option Explicit
 
+Import Smile.Tools.TownSurfaceLayers As Layers
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.SurfaceSections3D As Regions
 Import Smile.Tools.TownDocument As Document
@@ -37,8 +38,8 @@ Private Function Marker(Area As Regions.Region) As Guides.Marker
 
     Dim Result As Guides.Marker
 
-    Result.First = P.Vector(Area.MinX, 23.12, Area.MinZ)
-    Result.Last = P.Vector(Area.MaxX, 23.12, Area.MaxZ)
+    Result.First = P.Vector(Area.MinX, Layers.ROAD_Y, Area.MinZ)
+    Result.Last = P.Vector(Area.MaxX, Layers.ROAD_Y, Area.MaxZ)
     Result.IsRectangle = True
 
     Return Result
@@ -83,7 +84,7 @@ Public Sub Gesture(ByRef Value As State, ByRef Town As Document.State,
         If Available Then
 
             Desired = P.Vector(Value.Area.MinX + Point.X - Value.First.X,
-                23.12, Value.Area.MinZ + Point.Z - Value.First.Z)
+                Layers.ROAD_Y, Value.Area.MinZ + Point.Z - Value.First.Z)
             Desired = Guides.Snap(Guide, Desired, 0.0)
 
             If Guide.SnapTiles Then

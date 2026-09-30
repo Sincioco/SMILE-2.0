@@ -16,6 +16,8 @@ Import Smile.Tools.TownGuides As Guides
 Import Smile.Tools.TownGuideFiles As GuideFiles
 Import Smile.Tools.TownTileGuides As TileGuides
 Import Smile.Tools.TownMarkerTools As MarkerTools
+Import Smile.Tools.TownMarkerResize As MarkerResize
+Import Smile.Tools.TownGuideList As GuideList
 Import Smile.Tools.TownHistory As History
 Import Smile.Tools.TownMapLoadTools As MapLoadTools
 Import Smile.Tools.TownSunControls As Sun
@@ -23,11 +25,14 @@ Import Smile.Tools.TownSectionTools As SectionTools
 Import Smile.Tools.TownCourtTools As CourtTools
 
 Public Type State
+    ViewRequest As Number
+    FocusPoint As P.Vector3
     Ui As Panel.State
     Selected As Selection.State
     Guide As Guides.State
     GuideTransfer As GuideFiles.State
     MarkerGesture As MarkerTools.State
+    GuideBrowser As GuideList.State
     SectionGesture As SectionTools.State
     CourtGesture As CourtTools.State
     MapGesture As MapLoadTools.State
@@ -301,6 +306,14 @@ Public Function Command(ByRef Value As State, ByRef Town As Document.State, Acti
         Value.Ui.HideGuides = False
         Value.Ui.Message = "Drag empty space to select markers; drag an edge to move."
 
+    Else If Action = 98 Or Action = 99 Then
+
+        Value.ViewRequest = Action - 97
+
+    Else If Action = 97 Then
+
+        Value.Ui.GuideListOpen = Not Value.Ui.GuideListOpen
+
     Else If Action = 96 Then
 
         Value.Ui.HideGuides = Not Value.Ui.HideGuides
@@ -497,7 +510,30 @@ Public Function Input(ByRef Value As State, ByRef Town As Document.State,
         Return 0
     End If
 
+    Value.Ui.Orthographic = View.OrthographicHeight > 0.0
+
     Call History.Ensure(Value.HistoryState, Town, Value.Guide.Ink)
+
+    Call GuideList.Advance(Value.GuideBrowser, Value.Ui.Section = 3 And Value.Ui.GuideListOpen)
+
+    If GuideList.Hovered(Value.GuideBrowser) Or Value.GuideBrowser.DragScroll Then
+
+        Call GuideList.Input(Value.GuideBrowser, Value.Guide)
+        Call History.Record(Value.HistoryState, Town, Value.Guide.Ink)
+
+        If Value.GuideBrowser.FocusPending Then
+
+            Value.GuideBrowser.FocusPending = False
+            Value.ViewRequest = 4
+            Value.FocusPoint = Value.GuideBrowser.FocusPoint
+            Value.Ui.Tool = 70
+            Value.Ui.HideGuides = False
+
+        End If
+
+        Return 0
+
+    End If
 
     If Value.Ui.Section = 1 Or Value.Ui.SunSlider.DragOwner > 0 Then
 
@@ -572,8 +608,14 @@ Public Function Input(ByRef Value As State, ByRef Town As Document.State,
     Point = Camera.ProjectViewerPoint(RawPoint, View, Window_Width(), Window_Height())
     Radius = Camera.WorldSizeForPixels(14, Max(View.NearPlane, Point.Depth), View.FovDegrees, Window_Height())
 
-    If (Value.Ui.Category = 2 And Value.Ui.Surface = 5 And
-        Value.Ui.Tool >= 17 And Value.Ui.Tool <= 19) Then
+    If View.OrthographicHeight > 0.0 Then
+        Radius = View.OrthographicHeight * 14.0 / ToDouble(Window_Height())
+    End If
+
+    If (Value.Ui.Category = 2 And
+        Value.Ui.Surface = 5 And
+        Value.Ui.Tool >= 17 And
+        Value.Ui.Tool <= 19) Then
 
         Call MapLoadTools.Gesture(Value.MapGesture, Town, RawPoint,
             OnGround And Not Blocked And Not Panel.Hovered() And Not Key_Held(KEY_SHIFT),
@@ -800,6 +842,16 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State, View As P.Ca
         Call TileGuides.Draw(Value.Guide, Town, View, Panel.LeftEdge())
         Call MarkerTools.Draw(Value.MarkerGesture, View)
 
+        If Value.Ui.Tool = 70 Then
+
+            Clip Rectangle 0, 128, Panel.LeftEdge() - Value.GuideBrowser.Width, Window_Height() - 178
+
+            Call MarkerResize.Draw(Value.Guide, View)
+
+            End Clip
+
+        End If
+
     End If
 
     Call MapLoadTools.Draw(Town, View, Panel.LeftEdge())
@@ -843,6 +895,7 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State, View As P.Ca
     Value.Ui.CanRedo = History.RedoCount(Value.HistoryState) > 0
 
     Call Panel.Draw(Value.Ui, Town, Value.Guide, Value.Selected.SelectedCount)
+    Call GuideList.Draw(Value.GuideBrowser, Value.Guide)
 
 End Sub
 

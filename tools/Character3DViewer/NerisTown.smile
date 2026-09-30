@@ -34,10 +34,13 @@ Import Smile.Tools.NerisHorizonRoute As HorizonRoute
 Import Smile.Tools.NerisTownLandmarks As Landmarks
 Import Smile.Tools.NerisTownConnections As Connections
 Import Smile.Tools.TownSunControls As SunControls
+Import Smile.Tools.TownViewportLayout As Layout
+Import Smile.Tools.TownPartyInset As Inset
 Import Smile.Tools.TownDocumentNavigation As DocumentNavigation
 Import Smile.Tools.TownRoadTravel As RoadTravel
 
 Public Type State
+    PointOfView As Inset.State
     Town As Assets.State
     Comparison As Castle.State
     Harbor As Spaceport.State
@@ -72,6 +75,8 @@ Public Sub Start(ByRef Value As State)
     Dim Empty As State
 
     Value = Empty
+    Value.Panel.LoadStarted = Timer()
+    Value.Panel.Loading = True
     Value.Follow = True
     Value.PartyCamera = True
     Value.Edited = Authoring.Available()
@@ -98,6 +103,11 @@ Public Sub LoadNext(ByRef Value As State)
 
     If Value.Ready Or Value.Failed Then
         Return
+    End If
+
+    If Not Value.Panel.Loading Then
+        Value.Panel.LoadStarted = Timer()
+        Value.Panel.Loading = True
     End If
 
     If Value.Edited Then
@@ -184,6 +194,11 @@ Public Sub LoadNext(ByRef Value As State)
     Value.Ready = Value.View.Ready And Value.View.Floor.Ready And Value.People.Ready And Ok
     Value.Failed = Not Value.Ready
 
+    If Value.Ready Then
+        Value.Panel.LoadMilliseconds = Max(0, Timer() - Value.Panel.LoadStarted)
+        Value.Panel.Loading = False
+    End If
+
     Call Party.Update(Value.People, Value.People.Path.Positions[0], 0)
 
     Call Arena.ComposeCamera(Value.View, Value.BaseCamera)
@@ -201,6 +216,7 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
     Dim PanelAction As Number
     Dim MovingGesture As Boolean
     Dim OrbitPoint As P.Vector3
+    Dim RequestedView As Number
 
     If Not Value.Ready Then
         Return
@@ -218,7 +234,7 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
     ' Header hover blocks pointer gestures, not independent keyboard framing.
 
     If (Key = KEY_R And
-        Authoring.Editing() And
+        (Authoring.Editing() Or Value.View.MaximumPitch > 1.56) And
         Not Blocked And
         Not Authoring.GestureActive()) Then
 
@@ -239,14 +255,23 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
     If (Key = KEY_1 And
         Not Blocked And
         Not Authoring.GestureActive()) Then
-        Call TopDown(Value)
+        Call TopDown(Value, Authoring.Editing())
+
+        Return
+    End If
+
+    If (Key = KEY_2 And
+        Not Blocked And
+        Not Authoring.GestureActive()) Then
+        Call SetEditingView(Value, 3)
 
         Return
     End If
 
     If (Key = KEY_SPACE And
         Not Blocked And
-        Value.Cinematic And Not Value.Keys.FlyInspect) Then
+        Value.Cinematic And
+        Not Value.Keys.FlyInspect) Then
 
         Value.OrbitPaused = Not Value.OrbitPaused
         Value.IdleOrbit = False
@@ -256,22 +281,21 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
 
     End If
 
-    If (Value.Edited And
-        Pointer_Pressed(POINTER_PRIMARY) And
-        Pointer_X() >= 616 And
-        Pointer_X() < 654 And
-        Pointer_Y() >= 10 And
-        Pointer_Y() < 39) Then
+    If Value.Edited And Layout.Clicked(1) Then
         Call Authoring.ToggleDayNight()
 
         Return
     End If
 
-    Blocked = Blocked Or HeaderHovered
+    Blocked = Blocked Or (HeaderHovered And Not CameraPanel.Hovered(Value.Panel.HelpOpen))
 
-    If (Value.Edited And Not Blocked And Not Authoring.Editing() And
-        Not Authoring.CameraBlocked() And Not Value.Cinematic And
-        Value.Map.Opacity > 0.0 And Authoring.MapHovered()) Then
+    If (Value.Edited And
+        Not Blocked And
+        Not Authoring.Editing() And
+        Not Authoring.CameraBlocked() And
+        Not Value.Cinematic And
+        Value.Map.Opacity > 0.0 And
+        Authoring.MapHovered()) Then
 
         If Authoring.ZoomMinimap() Then
             Return
@@ -326,11 +350,7 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
 
     End If
 
-    If (Pointer_Pressed(POINTER_PRIMARY) And
-        Pointer_X() >= 665 And
-        Pointer_X() < 755 And
-        Pointer_Y() >= 10 And
-        Pointer_Y() < 39) Then
+    If Layout.Clicked(2) Then
 
         Call Authoring.BeginEditing()
 
@@ -358,10 +378,33 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
     End If
 
     If Value.Edited Then
+
         Call Authoring.Input(Value.View.LiveCamera, Key,
             Blocked Or CameraPanel.Hovered(Value.Panel.HelpOpen) Or Value.Panel.DragRow > 0)
 
+        RequestedView = Authoring.TakeViewRequest(OrbitPoint)
+
+        If RequestedView = 1 Or RequestedView = 2 Then
+
+            Call SetEditingView(Value, RequestedView)
+
+        Else If RequestedView = 4 Then
+
+            Value.BaseCamera = Value.View.LiveCamera
+            Value.BaseCamera.Position = M.Add(Value.BaseCamera.Position, M.Subtract(OrbitPoint, Value.BaseCamera.Target))
+            Value.BaseCamera.Target = OrbitPoint
+            Value.BaseCamera = Camera.KeepCursorAnchor(Value.BaseCamera, OrbitPoint,
+                Authoring.ViewRightEdge() / 2, (Window_Height() + 76) / 2,
+                M.Distance(Value.BaseCamera.Position, Value.BaseCamera.Target), Window_Width(), Window_Height())
+
+            Call Motion.Reset(Value.View.Controls, Value.View.Zoom)
+            Call Arena.BeginTransition(Value.View, 0)
+            Call Arena.ComposeCamera(Value.View, Value.BaseCamera)
+
+        End If
+
         Blocked = Blocked Or Authoring.CameraBlocked(CameraPanel.Hovered(Value.Panel.HelpOpen) Or Value.Panel.DragRow > 0)
+
     End If
 
     PanelAction = CameraPanel.Input(Value.Panel, Value.View, Value.BaseCamera, Blocked,
@@ -395,10 +438,15 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
 
     Pointer = Motion.ReadPointer(Blocked)
 
-    If (Not Value.Follow And
+    If (Not Blocked And
         Pointer.Wheel <> 0 And
         Not Value.Flight.CursorOrbit) Then
-        Call Limits.BeginZoom(Value.View, Value.BaseCamera)
+        Call BeginPointerZoom(Value)
+    Else If (Pointer.OrbitPressed Or
+        Pointer.PanPressed Or
+        Pointer_Pressed(POINTER_PRIMARY) Or
+        Key <> 0) Then
+        Value.Flight.CursorZoom = False
     End If
 
     Call Motion.ResolveGesture(Value.View.Controls, Pointer)
@@ -416,12 +464,16 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
     End If
 
     If Key = KEY_F And Key_Event_Held(KEY_CONTROL) Then
-        ArenaKey = 0
 
-        Call ToggleDrone(Value)
+        ArenaKey = 0
+        Value.PointOfView.Hidden = Not Value.PointOfView.Hidden
+        Value.PointOfView.UpdatedAt = 0
+
     End If
 
-    If Key = KEY_M Then
+    If Key = KEY_M And Key_Event_Held(KEY_CONTROL) Then
+        Value.Panel.StatisticsHidden = Not Value.Panel.StatisticsHidden
+    Else If Key = KEY_M Then
         Call TownMap.Toggle(Value.Map)
     End If
 
@@ -495,6 +547,26 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
     End If
 
     Call Arena.Update(Value.View, ArenaKey, Blocked)
+
+End Sub
+
+''' All town tabs resolve wheel zoom against the visible surface under the cursor.
+Private Sub BeginPointerZoom(ByRef Value As State)
+
+    Dim Point As P.Vector3
+
+    If Picking.OrbitPoint(Value.View.LiveCamera, Pointer_X(), Pointer_Y(),
+        Window_Width(), Window_Height(), Point) Then
+
+        Call Drone.BeginCursorZoom(Value.Flight, Value.View, Value.BaseCamera, Point, Pointer_X(), Pointer_Y())
+
+        Value.Follow = False
+        Value.PartyCamera = False
+        Value.Cinematic = False
+        Value.IdleOrbit = False
+        Value.IdleTime = 0
+
+    End If
 
 End Sub
 
@@ -701,7 +773,7 @@ Public Sub ResetOverview(ByRef Value As State, Optional Harbor As Boolean = Fals
     If Value.Horizon.Ready Then
         Call Tour.Frame(Value.BaseCamera, Authoring.MapCenter(0.0), 14682.0, -98.0)
     Else If Value.Harbor.Ready Then
-        Call Tour.Frame(Value.BaseCamera, Authoring.MapCenter(0.0), 16983.0, -20.0, 25.0)
+        Call Tour.Frame(Value.BaseCamera, Authoring.MapCenter(1044.0), 11438.0, -21.0, 17.0)
     Else If Value.Edited Then
         Call Authoring.FrameDocument(Value.BaseCamera, Not Value.Harbor.Ready)
     End If
@@ -717,7 +789,7 @@ Public Sub ResetOverview(ByRef Value As State, Optional Harbor As Boolean = Fals
 End Sub
 
 ''' North stays at the top; the tiny pole offset keeps the world-up camera basis stable.
-Public Sub TopDown(ByRef Value As State)
+Public Sub TopDown(ByRef Value As State, Optional Orthographic As Boolean = False)
 
     Dim Distance As Double
 
@@ -728,6 +800,14 @@ Public Sub TopDown(ByRef Value As State)
     Distance = Max(200.0, M.Distance(Value.View.LiveCamera.Position, Value.View.LiveCamera.Target))
     Value.BaseCamera = Value.View.LiveCamera
     Value.BaseCamera.Position = M.Add(Value.BaseCamera.Target, P.Vector(0.0, Distance, -Distance * 0.0002))
+
+    If Orthographic Then
+        Value.BaseCamera = Drone.EditingView(Value.View.LiveCamera, 1)
+    Else
+        Value.BaseCamera.OrthographicHeight = 0.0
+        Value.BaseCamera.UpDirection = P.Vector(0.0, 1.0, 0.0)
+    End If
+
     Value.View.MaximumPitch = 1.57062
     Value.PartyCamera = False
     Value.Follow = False
@@ -742,6 +822,20 @@ Public Sub TopDown(ByRef Value As State)
     Call Motion.Reset(Value.View.Controls, Value.View.Zoom)
     Call Arena.BeginTransition(Value.View, 0)
     Call Drone.Compose(Value.Flight, Value.View, Value.BaseCamera, False, 0)
+
+End Sub
+
+Private Sub SetEditingView(ByRef Value As State, Mode As Number)
+
+    Dim Requested As P.Camera3D
+
+    Requested = Drone.EditingView(Value.View.LiveCamera, Mode)
+
+    Call TopDown(Value, Mode = 1)
+
+    Value.BaseCamera = Requested
+
+    Call Arena.ComposeCamera(Value.View, Value.BaseCamera)
 
 End Sub
 
@@ -993,7 +1087,9 @@ End Function
 
 Public Sub UpdateIdle(ByRef Value As State, Active As Boolean, Elapsed As Number)
 
-    If Active Or Authoring.Editing() Or Value.Keys.FlyInspect Then
+    If (Active Or
+        Authoring.Editing() Or
+        Value.Keys.FlyInspect) Then
 
         Value.IdleTime = 0
 
@@ -1085,22 +1181,7 @@ Public Sub Draw(ByRef Value As State)
     If Ok Then
 
         Ok = Arena.Draw(Value.View) And Ok
-        Ok = Party.Draw(Value.People) And Ok
-
-        If Value.Edited Then
-
-            Ok = Authoring.Draw() And Ok
-
-        Else
-            Ok = Assets.Draw(Value.Town) And Ok
-            Ok = Appearance.Draw(Value.Look) And Ok
-            Ok = Entrances.Draw(Value.Doors) And Ok
-
-        End If
-
-        Ok = Castle.Draw(Value.Comparison) And Ok
-        Ok = Spaceport.Draw(Value.Harbor) And Ok
-        Ok = Horizon.Draw(Value.Horizon) And Ok
+        Ok = DrawContents(Value) And Ok
 
         Call CameraPanel.CaptureGeometry(Value.Panel)
 
@@ -1108,20 +1189,65 @@ Public Sub Draw(ByRef Value As State)
 
     End If
 
+    If Inset.Visible(Party.IsMoving(Value.People), Authoring.Editing(), Value.PointOfView.Hidden) Then
+
+        If Inset.Begin(Value.PointOfView, Value.People.Path.Positions[0], Value.People.Members[0].Yaw) Then
+            Ok = DrawContents(Value) And Ok
+
+            Call Inset.Finish(Value.PointOfView)
+        End If
+
+    Else
+        Value.PointOfView.UpdatedAt = 0
+
+    End If
+
     Value.Failed = Value.Failed Or Not Ok Or Not Value.People.Ready
 
 End Sub
 
+Private Function DrawContents(ByRef Value As State) As Boolean
+
+    Dim Ok As Boolean
+
+    Ok = Party.Draw(Value.People)
+
+    If Value.Edited Then
+
+        Ok = Authoring.Draw() And Ok
+
+    Else
+
+        Ok = Assets.Draw(Value.Town) And Ok
+        Ok = Appearance.Draw(Value.Look) And Ok
+        Ok = Entrances.Draw(Value.Doors) And Ok
+
+    End If
+
+    Ok = Castle.Draw(Value.Comparison) And Ok
+    Ok = Spaceport.Draw(Value.Harbor) And Ok
+    Ok = Horizon.Draw(Value.Horizon) And Ok
+
+    Return Ok
+
+End Function
+
 Public Sub Overlay(ByRef Value As State)
 
-    Fill Rectangle 0, 0, Window_Width(), 94, RGB(12, 20, 32)
+    Dim MapStatusY As Number
+
+    MapStatusY = 533
+
+    If Inset.Visible(Party.IsMoving(Value.People), Authoring.Editing(), Value.PointOfView.Hidden) Then
+        MapStatusY = Inset.Bottom()
+    End If
+
+    Fill Rectangle 0, 0, Window_Width(), 94, RGB(12, 20, 32) Opacity 80
     Draw Text Text_Slice(Authoring.TownName(), 0, 20) At 18, 12 Size 18 Color WHITE
     Draw Text "Speed: " + Numbers.NumberText(Value.People.SpeedPercent) + "%  (+ / -)" At 405, 18 Size 16 Color WHITE
 
-    Call SunControls.DrawDayNight(Authoring.IsNight())
-
-    Fill Rectangle 665, 10, 90, 29, RGB(20, 90, 108)
-    Draw Text "Edit Town" At 675, 17 Size 15 Color WHITE
+    Call SunControls.DrawDayNight(Authoring.IsNight(), Layout.ButtonLeft(1), Window_Height() - 38)
+    Call Layout.DrawButton(2, Authoring.Editing())
 
     If Not Value.Ready Then
         Call Authoring.Overlay(Value.View.LiveCamera, True)
@@ -1129,21 +1255,17 @@ Public Sub Overlay(ByRef Value As State)
         Return
     End If
 
-    Call CameraPanel.Draw(Value.Panel, Value.View, Value.Cinematic,
-        Value.PartyCamera, Value.Flight.Enabled And Not Value.Flight.Suspended,
-        Drone.GroundShot(Value.Flight, Value.PartyCamera), Value.Keys.FlyInspect, Authoring.Editing())
-
     If Value.Ready Then
 
         If Not Authoring.Editing() Then
 
             If Value.Edited Then
 
-                If Not Value.Cinematic Then
+                If Not Value.Cinematic Or Party.IsMoving(Value.People) Then
                     Call Authoring.DrawMap(Value.People.Path.Positions[0], ToNumber(Value.Map.Opacity), Party.LeaderName(Value.People),
                         CastleRoute.MapLabel(), P.Vector(CastleRoute.CenterX(), CastleRoute.DECK_Y, CastleRoute.CenterZ()),
                         Landmarks.AirportMapLabel(), Landmarks.AirportMapPosition(),
-                        Value.Map.Headlight, Value.People.Members[0].Yaw)
+                        Value.Map.Headlight, Value.People.Members[0].Yaw, MapStatusY)
                 End If
 
             Else
@@ -1177,6 +1299,14 @@ Public Sub Overlay(ByRef Value As State)
 
     If Value.Edited And Value.Ready Then
         Call Authoring.Overlay(Value.View.LiveCamera)
+    End If
+
+    Call CameraPanel.Draw(Value.Panel, Value.View, Value.Cinematic,
+        Value.PartyCamera, Value.Flight.Enabled And Not Value.Flight.Suspended,
+        Drone.GroundShot(Value.Flight, Value.PartyCamera), Value.Keys.FlyInspect, Authoring.Editing())
+
+    If Inset.Visible(Party.IsMoving(Value.People), Authoring.Editing(), Value.PointOfView.Hidden) Then
+        Call Inset.Label(Party.LeaderName(Value.People))
     End If
 
     Call CameraPanel.MapStatistics(Value.Panel, Value.View)

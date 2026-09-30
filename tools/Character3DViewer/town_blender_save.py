@@ -11,6 +11,8 @@ from mathutils import Matrix, Vector
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from town_document_codec import decode, unwrap, respond, key_path, atomic_write
+from town_surface_layers import elevation
+from town_surface_decks import footprints, rail_parts
 
 ROOT = Path(__file__).resolve().parents[2]
 TOWN = ROOT / 'games/SinStarI/SourceAssets/Towns/Neris/NerisTownV1'
@@ -32,6 +34,10 @@ def source_matrix(source):
 
 
 def populate_items(document, catalog):
+    if catalog.get('royal_detail_revision'):
+        sys.path.insert(0, str(TOWN / 'Source'))
+        from royal_castle_detail import apply
+        apply(catalog)
     originals = {name: bpy.data.objects[name] for source in catalog['instances']
                  for name in source['members']}
     samples = {}
@@ -64,7 +70,8 @@ def populate_items(document, catalog):
     bpy.data.batch_remove(ids=list(originals.values()))
 
 
-def terrain(document):
+def terrain(document, catalog=None):
+    decks = footprints(document, catalog) if catalog else []
     for obj in list(bpy.context.scene.objects):
         root = obj
         while root.parent:
@@ -88,10 +95,10 @@ def terrain(document):
         faces.append((base, base+1, base+2, base+3))
         materials.append(material)
 
-    def rail(a, b, c, d):
+    def rail_box(a, b, c, d):
         # Closed boxes match native bridge-side walls and leave approaches open.
         base = len(vertices)
-        vertices.extend((x/10, y/10, h) for h in (.22, 1.23)
+        vertices.extend((x/10, y/10, h) for h in (elevation('RAIL_BASE_Y'), elevation('RAIL_TOP_Y'))
                         for x, y in ((a, b), (c, b), (c, d), (a, d)))
         for indices in ((0, 1, 5, 4), (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7)):
             faces.append(tuple(base+i for i in indices))
@@ -99,14 +106,24 @@ def terrain(document):
         faces.append((base+4, base+5, base+6, base+7))
         materials.append(4)
 
+    def rail(a, b, c, d):
+        vertical = abs(c-a) < abs(d-b)
+        start = ((a+c)/2, b) if vertical else (a, (b+d)/2)
+        finish = ((a+c)/2, d) if vertical else (c, (b+d)/2)
+        for first, last in rail_parts(start, finish, decks):
+            if vertical:
+                rail_box(a, b+(d-b)*first, c, b+(d-b)*last)
+            else:
+                rail_box(a+(c-a)*first, b, a+(c-a)*last, d)
+
     def skirt(kind, neighbor, a, b, c, d):
         kind, neighbor = min(kind, 3), min(neighbor, 3)
         if kind == 0 or kind <= neighbor:
             return
-        height = -.01 if kind == 1 else .085 if kind == 2 else .212
+        height = elevation('GROUND_Y' if kind == 1 else 'WATER_Y' if kind == 2 else 'ROAD_Y')
         base = len(vertices)
-        vertices.extend(((a/10, b/10, -.03), (a/10, b/10, height),
-                         (c/10, d/10, height), (c/10, d/10, -.03)))
+        vertices.extend(((a/10, b/10, elevation('BED_Y')), (a/10, b/10, height),
+                         (c/10, d/10, height), (c/10, d/10, elevation('BED_Y'))))
         faces.append((base, base+1, base+2, base+3))
         materials.append(0 if kind == 1 else 5 if kind == 2 else 2)
 
@@ -120,10 +137,10 @@ def terrain(document):
             if kind:
                 material = 0 if kind == 1 else 1 if kind == 2 else 2
                 # Keep the authored lawn below the castle/HQ floors, not coplanar.
-                height = -.01 if kind == 1 else .085 if kind == 2 else .212
+                height = elevation('GROUND_Y' if kind == 1 else 'WATER_Y' if kind == 2 else 'ROAD_Y')
                 quad(xs[start], zs[z], xs[x], zs[z+1], height, material)
                 if kind == 2:
-                    quad(xs[start]-1, zs[z]-1, xs[x]+1, zs[z+1]+1, -.03, 5)
+                    quad(xs[start]-1, zs[z]-1, xs[x]+1, zs[z+1]+1, elevation('BED_Y'), 5)
         for x in range(cols):
             kind = cell(x, z)
             skirt(kind, cell(x-1, z), xs[x], zs[z], xs[x], zs[z+1])
@@ -236,7 +253,7 @@ def main():
         bpy.ops.wm.open_mainfile(filepath=str(source))
         populate_items(document, catalog)
         respond(data_folder, rid, 0, 35, 'Rebuilding surfaces and water banks...')
-        terrain(document)
+        terrain(document, catalog)
         lighting(document)
         from town_blender_landmarks import populate
         populate(document)

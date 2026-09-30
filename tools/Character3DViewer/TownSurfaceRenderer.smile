@@ -3,6 +3,9 @@ Module Smile.Tools.TownSurfaceRenderer
 
 Option Explicit
 
+Import Smile.Tools.TownSurfaceLayers As Layers
+Import Smile.Tools.TownDecks As Decks
+Import Smile.Tools.TownDocument As Document
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As G
 Import Smile.Simple3D.Precision3D As P
@@ -24,6 +27,7 @@ Private Dim Patches[32768] As Patch
 Private Dim PatchCount As Number
 
 Public Type State
+    Openings As Decks.State
     Objects[32] As Core.Object3D
     NextObjects[32] As Core.Object3D
     Water[4] As Core.RibbonBatch3D
@@ -75,7 +79,7 @@ Public Function Create(ByRef Value As State) As Boolean
 
 End Function
 
-Public Sub BeginBuild(ByRef Value As State, ByRef Surface As Grid.State)
+Public Sub BeginBuild(ByRef Value As State, ByRef Town As Document.State)
 
     Dim Index As Number
 
@@ -87,9 +91,11 @@ Public Sub BeginBuild(ByRef Value As State, ByRef Surface As Grid.State)
         Call G.DestroyRibbonBatch3D(Value.NextWater[Index])
     End For
 
-    Pending = Surface
+    Call Decks.Capture(Value.Openings, Town)
+
+    Pending = Town.Surface
     PatchCount = 0
-    Value.PendingRevision = Surface.Revision
+    Value.PendingRevision = Town.Surface.Revision
     Value.Row = 0
     Value.Kind = 1
     Value.Cursor = 0
@@ -122,7 +128,7 @@ Private Sub AddPatch(ByRef Value As State, X0 As Double, Z0 As Double,
 End Sub
 
 ''' Rails follow only the bridge/water edge; dry road approaches stay completely open.
-Private Sub Rail(ByRef Value As State, X0 As Double, Z0 As Double,
+Private Sub RailPiece(ByRef Value As State, X0 As Double, Z0 As Double,
     X1 As Double, Z1 As Double, Plane As Number)
 
     Dim Width As Double
@@ -131,17 +137,37 @@ Private Sub Rail(ByRef Value As State, X0 As Double, Z0 As Double,
 
     If Plane = 1 Then
 
-        Call AddPatch(Value, X0, Z0 - Width * 0.5, X1, Z0 + Width * 0.5, 5, 34.0)
-        Call AddPatch(Value, X0, Z0 - Width * 0.5, X1, Z0 - Width * 0.5, 4, 23.2, 33.3, 1)
-        Call AddPatch(Value, X0, Z0 + Width * 0.5, X1, Z0 + Width * 0.5, 4, 23.2, 33.3, 1)
+        Call AddPatch(Value, X0, Z0 - Width * 0.5, X1, Z0 + Width * 0.5, 5, Layers.RAIL_CAP_Y)
+        Call AddPatch(Value, X0, Z0 - Width * 0.5, X1, Z0 - Width * 0.5, 4, Layers.RAIL_BASE_Y, Layers.RAIL_TOP_Y, 1)
+        Call AddPatch(Value, X0, Z0 + Width * 0.5, X1, Z0 + Width * 0.5, 4, Layers.RAIL_BASE_Y, Layers.RAIL_TOP_Y, 1)
 
     Else
 
-        Call AddPatch(Value, X0 - Width * 0.5, Z0, X0 + Width * 0.5, Z1, 5, 34.0)
-        Call AddPatch(Value, X0 - Width * 0.5, Z0, X0 - Width * 0.5, Z1, 4, 23.2, 33.3, 2)
-        Call AddPatch(Value, X0 + Width * 0.5, Z0, X0 + Width * 0.5, Z1, 4, 23.2, 33.3, 2)
+        Call AddPatch(Value, X0 - Width * 0.5, Z0, X0 + Width * 0.5, Z1, 5, Layers.RAIL_CAP_Y)
+        Call AddPatch(Value, X0 - Width * 0.5, Z0, X0 - Width * 0.5, Z1, 4, Layers.RAIL_BASE_Y, Layers.RAIL_TOP_Y, 2)
+        Call AddPatch(Value, X0 + Width * 0.5, Z0, X0 + Width * 0.5, Z1, 4, Layers.RAIL_BASE_Y, Layers.RAIL_TOP_Y, 2)
 
     End If
+
+End Sub
+
+Private Sub Rail(ByRef Value As State, X0 As Double, Z0 As Double,
+    X1 As Double, Z1 As Double, Plane As Number)
+
+    Dim Cursor As Double
+    Dim First As Double
+    Dim Last As Double
+
+    Do
+
+        If Not Decks.NextRail(Value.Openings, P.Vector(X0, 0.0, Z0), P.Vector(X1, 0.0, Z1), Cursor, First, Last) Then
+            Exit Do
+        End If
+
+        Call RailPiece(Value, X0 + (X1 - X0) * First, Z0 + (Z1 - Z0) * First,
+            X0 + (X1 - X0) * Last, Z0 + (Z1 - Z0) * Last, Plane)
+
+    Loop
 
 End Sub
 
@@ -158,16 +184,16 @@ Private Sub Skirt(ByRef Value As State, Surface As Number, Neighbor As Number,
         Return
     End If
 
-    Height = 20.9
+    Height = Layers.GROUND_Y
 
     If Kind = Grid.SURFACE_ROAD Then
-        Height = 23.12
+        Height = Layers.ROAD_Y
     Else If Kind = Grid.SURFACE_WATER Then
-        Height = 21.85
+        Height = Layers.WATER_Y
         Kind = 6
     End If
 
-    Call AddPatch(Value, X0, Z0, X1, Z1, Kind, 20.7, Height, Plane)
+    Call AddPatch(Value, X0, Z0, X1, Z1, Kind, Layers.BED_Y, Height, Plane)
 
 End Sub
 
@@ -205,7 +231,7 @@ Private Sub ScanRow(ByRef Value As State)
             ' A submerged opaque bed seals the height gap and receives building shadows.
 
             Call AddPatch(Value, Pending.XEdges[StartX] - 1.0, Z0 - 1.0,
-                Pending.XEdges[X] + 1.0, Z1 + 1.0, 6, 20.7)
+                Pending.XEdges[X] + 1.0, Z1 + 1.0, 6, Layers.BED_Y)
         End If
 
         If Kind > 0 Then
@@ -302,10 +328,10 @@ Private Sub UploadNext(ByRef Value As State)
 
     Ok = True
     ' Match the authored lawn (-0.01 m), below castle/HQ floors at 0.13-0.152 m.
-    Height = 20.9
+    Height = Layers.GROUND_Y
 
     If Value.Kind = 3 Then
-        Height = 23.12
+        Height = Layers.ROAD_Y
     End If
 
     If Total > 0 Then
@@ -341,13 +367,13 @@ Private Sub UploadNext(ByRef Value As State)
                 If Value.Kind = 2 Then
 
                     Ok = P.SetRibbonPoint(Value.NextWater[Value.NextWaterCount], Point,
-                        P.Vector(Part.X0, 21.85, Part.Z0), P.Vector(Part.X0, 21.85, Part.Z0), 0.0) And Ok
+                        P.Vector(Part.X0, Layers.WATER_Y, Part.Z0), P.Vector(Part.X0, Layers.WATER_Y, Part.Z0), 0.0) And Ok
                     Ok = P.SetRibbonPoint(Value.NextWater[Value.NextWaterCount], Point + 1,
-                        P.Vector(Part.X0, 21.85, Part.Z0), P.Vector(Part.X1, 21.85, Part.Z0), 0.0) And Ok
+                        P.Vector(Part.X0, Layers.WATER_Y, Part.Z0), P.Vector(Part.X1, Layers.WATER_Y, Part.Z0), 0.0) And Ok
                     Ok = P.SetRibbonPoint(Value.NextWater[Value.NextWaterCount], Point + 2,
-                        P.Vector(Part.X0, 21.85, Part.Z1), P.Vector(Part.X1, 21.85, Part.Z1), 1.0) And Ok
+                        P.Vector(Part.X0, Layers.WATER_Y, Part.Z1), P.Vector(Part.X1, Layers.WATER_Y, Part.Z1), 1.0) And Ok
                     Ok = P.SetRibbonPoint(Value.NextWater[Value.NextWaterCount], Point + 3,
-                        P.Vector(Part.X1, 21.85, Part.Z1), P.Vector(Part.X1, 21.85, Part.Z1), 1.0) And Ok
+                        P.Vector(Part.X1, Layers.WATER_Y, Part.Z1), P.Vector(Part.X1, Layers.WATER_Y, Part.Z1), 1.0) And Ok
                     Ok = G.SetRibbonPointColor3D(Value.NextWater[Value.NextWaterCount], Point, 255, 255, 255, 100) And Ok
                     Ok = G.SetRibbonPointColor3D(Value.NextWater[Value.NextWaterCount], Point + 1, 255, 255, 255, 100) And Ok
                     Ok = G.SetRibbonPointColor3D(Value.NextWater[Value.NextWaterCount], Point + 2, 255, 255, 255, 100) And Ok

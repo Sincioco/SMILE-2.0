@@ -10,7 +10,9 @@
     <SmileSource Include="TownDocument.smile" />
     <SmileSource Include="TownMapLoads.smile" />
     <SmileSource Include="TownGeometry.smile" />
+    <SmileSource Include="TownDecks.smile" />
     <SmileSource Include="TownSections.smile" />
+    <SmileSource Include="TownSurfaceLayers.smile" />
     <SmileSource Include="NerisCastleRoute.smile" />
     <SmileSource Include="ProximityDrawbridge.smile" />
     <SmileSource Include="TownRoadTravel.smile" />
@@ -23,15 +25,24 @@
     <SmileSource Include="TownSectionTools.smile" />
     <SmileSource Include="TownCourtTools.smile" />
     <SmileSource Include="TownMarkerTools.smile" />
+    <SmileSource Include="TownMarkerResize.smile" />
+    <SmileSource Include="TownGuideList.smile" />
     <SmileSource Include="TownPicking.smile" />
     <SmileSource Include="TownHistory.smile" />
     <SmileSource Include="TownCatalogData.smile" />
     <SmileSource Include="TownInitialSurface.smile" />
     <SmileSource Include="TownDocumentStore.smile" />
     <SmileSource Include="TownWorldDocument.smile" />
+    <SmileSource Include="TownWorldView.smile" />
+    <SmileSource Include="TownWorldPreviews.smile" />
+    <SmileSource Include="TownWorldImport.smile" />
+    <SmileSource Include="TownTabs.smile" />
+    <SmileSource Include="TownLibrary.smile" />
     <SmileSource Include="TownWorldCanvas.smile" />
     <SmileSource Include="TownWorldTests.smile" />
+    <SmileSource Include="TownGuideEditingTests.smile" />
     <SmileSource Include="TownWorldFiles.smile" />
+    <SmileProjectReference Include="..\..\libraries\Smile.UI\Smile.UI.smilelibproj" />
     <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
   </ItemGroup>
 </SmileProject>

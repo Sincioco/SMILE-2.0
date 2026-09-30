@@ -320,7 +320,7 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State)
     End If
 
     Width = Min(180, Max(1, Window_Width() - 358) / Value.TabCount)
-    Fill Rectangle 0, 94, Window_Width(), 32, RGB(12, 23, 36)
+    Fill Rectangle 0, 94, Window_Width(), 32, RGB(12, 23, 36) Opacity 80
 
     For Index = 0 To Value.TabCount - 1
 

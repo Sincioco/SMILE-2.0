@@ -1,0 +1,282 @@
+''' Sliding guide browser; authored names remain in Drawing and camera focus is a request.
+Module Smile.Tools.TownGuideList
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Tools.TownGuides As Guides
+Import Smile.Tools.TownMarkerTools As Markers
+Import Smile.UI.Controls As UI
+
+Public Type State
+    Width As Number
+    Scroll As Number
+    DragScroll As Boolean
+    ScrollGrab As Number
+    PreviousTime As Number
+    FocusPending As Boolean
+    FocusPoint As P.Vector3
+End Type
+
+Public Function Label(Mark As Guides.Marker, Index As Number) As Text
+
+    Dim Result As Text
+
+    Result = Mark.Name
+
+    If Result = "" Then
+
+        Result = "Line "
+
+        If Mark.IsRectangle Then
+            Result = "Rectangle "
+        End If
+
+        Result = Result + Guides.SpacingLabel(ToDouble(Index + 1))
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Function Selected(ByRef Guide As Guides.State) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Index As Number
+
+    For Index = 0 To Guide.Ink.EntryCount - 1
+
+        If Guide.Selected[Index] Then
+            Return Index
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+Public Function Hovered(ByRef Value As State) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Value.Width > 0 And UI.Contains(Window_Width() - 306 - Value.Width, 128,
+        Value.Width, Max(0, Window_Height() - 298))
+
+    Return Result
+
+End Function
+
+Public Sub Advance(ByRef Value As State, Open As Boolean)
+
+    Dim Elapsed As Number
+
+    Elapsed = Min(40, Max(0, Timer() - Value.PreviousTime))
+    Value.PreviousTime = Timer()
+
+    If Open Then
+        Value.Width = Min(290, Value.Width + Elapsed * 2)
+    Else
+        Value.Width = Max(0, Value.Width - Elapsed * 2)
+        Value.DragScroll = False
+    End If
+
+End Sub
+
+Public Sub Input(ByRef Value As State, ByRef Guide As Guides.State)
+
+    Dim X As Number
+    Dim BodyHeight As Number
+    Dim Maximum As Number
+    Dim ThumbHeight As Number
+    Dim ThumbY As Number
+    Dim Index As Number
+    Dim SelectedIndex As Number
+    Dim Name As Text
+    Dim Mark As Guides.Marker
+
+    If Value.Width < 32 Then
+        Return
+    End If
+
+    X = Window_Width() - 306 - Value.Width
+    BodyHeight = Max(80, Window_Height() - 390)
+    Maximum = Max(0, Guide.Ink.EntryCount * 82 - BodyHeight)
+    Value.Scroll = Max(0, Min(Maximum, Value.Scroll))
+    ThumbHeight = Max(24, BodyHeight * BodyHeight / Max(BodyHeight, Guide.Ink.EntryCount * 82))
+    ThumbY = 176 + (BodyHeight - ThumbHeight) * Value.Scroll / Max(1, Maximum)
+
+    If Not Pointer_Held(POINTER_PRIMARY) Then
+        Value.DragScroll = False
+    End If
+
+    If Value.DragScroll Then
+        Value.Scroll = Max(0, Min(Maximum,
+            (Pointer_Y() - 176 - Value.ScrollGrab) * Maximum / Max(1, BodyHeight - ThumbHeight)))
+        Return
+    End If
+
+    If Not Hovered(Value) Then
+        Return
+    End If
+
+    Value.Scroll = Max(0, Min(Maximum, Value.Scroll - Pointer_Wheel_Delta() * 50))
+
+    If Not Pointer_Pressed(POINTER_PRIMARY) Then
+        Return
+    End If
+
+    If Maximum > 0 And UI.Contains(X + Value.Width - 18, 176, 14, BodyHeight) Then
+
+        Value.DragScroll = True
+        Value.ScrollGrab = ThumbHeight / 2
+
+        If Pointer_Y() >= ThumbY And Pointer_Y() < ThumbY + ThumbHeight Then
+            Value.ScrollGrab = Pointer_Y() - ThumbY
+        End If
+
+    Else If UI.Contains(X + 8, 176, Value.Width - 30, BodyHeight) Then
+
+        Index = (Pointer_Y() - 176 + Value.Scroll) / 82
+
+        If Index < Guide.Ink.EntryCount Then
+
+            Call Markers.ClearSelection(Guide)
+
+            Guide.Selected[Index] = True
+            Mark = Guide.Ink.Markers[Index]
+            Value.FocusPoint = P.Vector((Mark.First.X + Mark.Last.X) * 0.5, Mark.First.Y,
+                (Mark.First.Z + Mark.Last.Z) * 0.5)
+            Value.FocusPending = True
+
+        End If
+
+    Else
+
+        SelectedIndex = Selected(Guide)
+
+        If SelectedIndex < 0 Then
+            Return
+        End If
+
+        If UI.Contains(X + 8, Window_Height() - 205, 128, 26) Then
+
+            Name = Text_Prompt("Rename Guide", "Guide / marker name (up to 64 characters)",
+                Label(Guide.Ink.Markers[SelectedIndex], SelectedIndex))
+
+            If Text_Length(Name) > 0 And Text_Length(Name) <= 64 Then
+                Guide.Ink.Markers[SelectedIndex].Name = Name
+                Guide.Ink.Revision = Guide.Ink.Revision + 1
+            End If
+
+        Else If UI.Contains(X + 144, Window_Height() - 205, 128, 26) Then
+
+            Call Markers.RemoveSelected(Guide)
+
+        End If
+
+    End If
+
+End Sub
+
+Private Sub Preview(Mark As Guides.Marker, X As Number, Y As Number)
+
+    Dim Width As Number
+    Dim Height As Number
+    Dim Scale As Double
+
+    Scale = Max(0.001, Max(Abs(Mark.Last.X - Mark.First.X) / 70.0,
+        Abs(Mark.Last.Z - Mark.First.Z) / 32.0))
+    Width = Max(1, ToNumber(Abs(Mark.Last.X - Mark.First.X) / Scale))
+    Height = Max(1, ToNumber(Abs(Mark.Last.Z - Mark.First.Z) / Scale))
+    X = X + (74 - Width) / 2
+    Y = Y + (36 - Height) / 2
+
+    If Mark.IsRectangle Then
+        Draw Rectangle X, Y, Width, Height, RGB(255, 209, 94)
+    Else If (Mark.Last.X - Mark.First.X) * (Mark.Last.Z - Mark.First.Z) < 0.0 Then
+        Draw Line X, Y, X + Width, Y + Height, RGB(255, 209, 94)
+    Else
+        Draw Line X, Y + Height, X + Width, Y, RGB(255, 209, 94)
+    End If
+
+End Sub
+
+Public Sub Draw(ByRef Value As State, ByRef Guide As Guides.State)
+
+    Dim X As Number
+    Dim Y As Number
+    Dim Index As Number
+    Dim BodyHeight As Number
+    Dim Maximum As Number
+    Dim ThumbHeight As Number
+    Dim ThumbY As Number
+    Dim Mark As Guides.Marker
+    Dim Dimensions As Text
+
+    If Value.Width <= 0 Or Window_Height() <= 298 Then
+        Return
+    End If
+
+    X = Window_Width() - 306 - Value.Width
+    BodyHeight = Max(80, Window_Height() - 390)
+    Fill Rectangle X, 128, Value.Width, Window_Height() - 298, RGB(15, 30, 43)
+    Clip Rectangle X, 128, Value.Width, Window_Height() - 298
+    Draw Text "Guides / Markers" At X + 10, 139 Size 18 Color WHITE
+    Clip Rectangle X + 4, 176, Max(1, Value.Width - 26), BodyHeight
+
+    For Index = 0 To Guide.Ink.EntryCount - 1
+
+        Y = 176 + Index * 82 - Value.Scroll
+
+        If Y + 80 > 176 And Y < 176 + BodyHeight Then
+
+            Mark = Guide.Ink.Markers[Index]
+            Fill Rectangle X + 6, Y + 1, Max(1, Value.Width - 30), 78, RGB(27, 45, 60)
+
+            If Guide.Selected[Index] Then
+                Fill Rectangle X + 6, Y + 1, 3, 78, RGB(70, 230, 215)
+            End If
+
+            Draw Text Text_Slice(Label(Mark, Index), 0, 31) At X + 14, Y + 5 Size 13 Color WHITE
+
+            Call Preview(Mark, X + 12, Y + 29)
+
+            Dimensions = Guides.SpacingLabel(Abs(Mark.Last.X - Mark.First.X) / 10.0) + " m wide"
+            Draw Text Text_Slice(Dimensions, 0, 22) At X + 98, Y + 31 Size 11 Color RGB(70, 230, 215)
+            Dimensions = Guides.SpacingLabel(Abs(Mark.Last.Z - Mark.First.Z) / 10.0) + " m long"
+            Draw Text Text_Slice(Dimensions, 0, 22) At X + 98, Y + 48 Size 11 Color RGB(70, 230, 215)
+
+        End If
+
+    End For
+
+    End Clip
+
+    If Guide.Ink.EntryCount = 0 Then
+        Draw Text "No guides yet." At X + 12, 186 Size 13 Color WHITE
+    End If
+
+    Maximum = Max(0, Guide.Ink.EntryCount * 82 - BodyHeight)
+
+    If Maximum > 0 Then
+
+        ThumbHeight = Max(24, BodyHeight * BodyHeight / (Guide.Ink.EntryCount * 82))
+        ThumbY = 176 + (BodyHeight - ThumbHeight) * Value.Scroll / Maximum
+        Fill Rectangle X + Value.Width - 18, 176, 12, BodyHeight, RGB(8, 17, 27)
+        Fill Rectangle X + Value.Width - 17, ThumbY, 10, ThumbHeight, RGB(70, 150, 160)
+
+    End If
+
+    Call UI.DrawButton(X + 8, Window_Height() - 205, 128, 26, "Rename", Selected(Guide) >= 0)
+    Call UI.DrawButton(X + 144, Window_Height() - 205, 128, 26, "Delete", Selected(Guide) >= 0)
+
+    End Clip
+
+End Sub
+
+End Module

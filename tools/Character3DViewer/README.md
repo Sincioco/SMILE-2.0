@@ -1,5 +1,57 @@
 # SMILE 2.0 - Sin Star I - Game Engine and Studio
 
+## September 30 precision editing and presentation
+
+Items and Guides offer **True 2D / 3D View**. True 2D uses an orthographic camera,
+including matching picking, pan, zoom and guide handles. `1` selects top view on
+every town (orthographic while editing); `R` snaps clockwise to the next cardinal
+boundary while editing or already in top view: 0°, 90°, 180°, 270°, then 0°.
+An off-angle view advances to that boundary instead of adding 90° to its angle.
+`2` levels the current bearing into a perspective front view,
+preserving its center and distance, with minimum clearance above the ground.
+Normal overview and party cameras restore perspective explicitly. Mouse-wheel zoom
+picks the scene surface beneath the pointer and retains that point beneath the
+pointer throughout the eased zoom, in perspective and True 2D. Beginning this manual
+inspection preserves the displayed camera pose and releases party following.
+
+**Guide List** slides beside the editor. Each row shows its name, miniature shape
+and dimensions; click to select and center, rename or delete, and scroll long lists.
+Selected markers have four proportional corner handles and four independent side
+handles. Resize participates in Undo. `.guide` version 2 adds names and still reads
+version 1. Native file dialogs reset pointer capture so loading a guide cannot turn
+the dialog's mouse motion into a map pan.
+
+The header is an 80% opaque overlay over the full scene. The centered bottom row
+contains Help, Day/Night, Edit Town, Orbit, Fit and Fly Inspect, sized to their labels.
+Orbit/zoom and camera diagnostics sit at the upper right; geometry, dimensions and
+measured map loading milliseconds sit at the lower right. `Ctrl+M` hides or shows
+that statistics panel; `M` alone toggles the minimap. A second live camera
+attached below the minimap looks ahead from Arin's eye position while the party moves,
+independent of the main view. Route status appears below that inset.
+The inset is labeled **Arin's POV** (or the active leader's name). `Ctrl+F` toggles
+it. Hidden or stationary POV submits no second scene. Visible POV refreshes at most
+about 12 times per second and reuses its cached image between updates; it still has
+some rendering cost on refresh frames, rather than a second render on every frame.
+
+World Editor has large top-down **plan thumbnails** (terrain and building footprints),
+centered wrapped labels, pointer-anchored wheel zoom, zoom/pan buttons and middle-drag
+panning. **Open Town File...** adds a checked `.town` document through a native picker.
+These are generated map previews rather than captured photographic screenshots.
+
+Royal Castle has a gilded operable entrance, leafy evergreens and sculpted flower
+urns. Larger stone blocks with broad, lower-contrast mortar joints replace the fine
+raised strips that shimmered into a moving mosaic. The Military HQ flag has a
+subtle looping wind deformation. Native and Blender exports share the detail sources.
+The latest Spaceport overview uses heading -21°, elevation 17°, distance 11,438,
+anchored at its map center at Y=1,044. Existing saved placements remain authoritative.
+
+The Royal Castle's own bridge and courtyard floors support the party over water.
+Their footprints and walking heights follow placement, scale and rotation. Automatic
+road railings stop at those footprints instead of forming barriers across the bridge.
+Walls, side railings and fountains remain obstacles; surrounding water stays blocked.
+Native rendering and Blender export use the same catalog floor metadata. Moving or
+removing the castle rebuilds the terrain openings without changing painted cells.
+
 ## Safe native builds and launch
 
 Use the complete `Character3DViewer.smileproj` and `Build.ps1 -Target Native`.
@@ -36,6 +88,8 @@ remains available; the chosen permanent tab becomes active. The previous destina
 is available through Open Recovery... as `<map name> Before Permanent Update`.
 Only successful native persistence switches the live tab. Ordinary editing and
 Save For Viewer continue to preserve each permanent map independently.
+Updating a permanent map retains the current camera and party position; it does
+not request the overview/spawn behavior used when entering another map tab.
 If the current document name differs from the chosen permanent destination, the
 confirmation requires typing `Yes` exactly; cancel or any other response leaves
 both maps unchanged.
@@ -55,14 +109,14 @@ actual boundaries; the regular Guide Grid provides a uniform alignment lattice.
 Hide Guides / Show Guides toggles all guide overlays without deleting them.
 With Select/Move active, drag empty space to rubber-select markers, then drag a
 selected marker to move the group. Ctrl adds to the selection. Markers support
-duplication and undo. `R` turns the editor
-view clockwise 90 degrees. Surfaces starts with Rectangle. Automatic idle orbit
+duplication and undo. `R` snaps the editor
+view clockwise to the next 90-degree boundary. Surfaces starts with Rectangle. Automatic idle orbit
 is suspended while editing; explicit Orbit remains available.
 
 **Sun:** Save As Day and Save As Night preserve custom presets in the town document.
 Map statistics use U.S. grouping and include area, length and width in metres.
-They appear in the empty upper-right header, above the viewport. H Orbit, V Orbit
-and Zoom sit beside the lower-right camera diagnostics. The bottom-left `?` button
+They appear at the lower right. H Orbit, V Orbit
+and Zoom sit beside the upper-right camera diagnostics. The centered bottom `?` button
 opens the control reference. In Fly Inspect, Space ascends and Shift+Space descends;
 outside Fly Inspect, Space still pauses/resumes automatic orbit.
 
@@ -111,12 +165,12 @@ Orbit Airport and Visit Horizon Airport shortcuts. The terminal's gold-framed
 glass doors open on approach, with a one-shot entry event reserved for a future
 cutscene. No cutscene is played yet.
 
-Spaceport starts from the approved front view (−20° bearing, 25° elevation,
-16,983 distance); Horizon starts at −98° bearing, 33° elevation and 14,682 distance.
+Spaceport starts from the approved front view (−21° bearing, 17° elevation,
+11,438 distance); Horizon starts at −98° bearing, 33° elevation and 14,682 distance.
 Both use the map floor center and retain the 32° lens. Right-click restores these
 same starting views and resumes orbit.
 
-The sun/moon icon in the header switches day/night in each selected map. Horizon
+The sun/moon icon in the bottom toolbar switches day/night in each selected map. Horizon
 has 27 concealed night lights and stronger runway guide lights. Its two banners
 hang on clear facade windows. The fine floor grid is removed; gold inlays, compass
 medallions and floor fixtures remain. The connecting road ends at the apron edge,
@@ -132,7 +186,7 @@ or existing viewing distance supplies the pivot. Follow Party middle/arrow orbit
 keeps Arin as its pivot without moving him to the middle of the screen. Tab switches
 show only the retained static background and loading status until the whole map
 and its initial camera are ready. Ctrl+click outside the editor relocates
-the whole party to the nearest walkable road. Upper-right header statistics show map triangles
+the whole party to the nearest walkable road. Lower-right statistics show map triangles
 and render vertices per submitted mesh instance, including offscreen geometry and
 actors, excluding particles and repeated shadow/reflection passes.
 

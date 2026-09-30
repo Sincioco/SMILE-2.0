@@ -1,0 +1,15 @@
+{
+  "UNITS_PER_METER": 10.0,
+  "BLENDER_ORIGIN_Y": 21.0,
+  "BED_Y": 20.7,
+  "GROUND_Y": 20.9,
+  "WATER_Y": 21.85,
+  "GROUND_WALK_Y": 22.5,
+  "ROAD_Y": 23.12,
+  "STRUCTURE_CLEARANCE": 2.0,
+  "MIN_DECK_GAP": 0.6,
+  "OVERLAY_Y": 23.4,
+  "RAIL_BASE_Y": 23.2,
+  "RAIL_TOP_Y": 33.3,
+  "RAIL_CAP_Y": 34.0
+}

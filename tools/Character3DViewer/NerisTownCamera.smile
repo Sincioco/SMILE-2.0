@@ -36,19 +36,159 @@ Public Type State
     CursorX As Number
     CursorY As Number
     CursorDepth As Double
+    CursorZoom As Boolean
+    CursorZoomLast As Double
 End Type
 
-''' Clockwise map-view turn; world placements and camera lens remain unchanged.
-Public Sub TurnClockwise(ByRef Value As State, ByRef View As Arena.State, ByRef Base As P.Camera3D)
+''' Keep the displayed pose while moving the zoom plane to the picked surface.
+Public Sub BeginCursorZoom(ByRef Value As State, ByRef View As Arena.State,
+    ByRef Base As P.Camera3D, Point As P.Vector3, X As Number, Y As Number)
+
+    Dim Projected As Camera.ProjectedPoint
+    Dim Forward As P.Vector3
+    Dim RightValue As P.Vector3
+    Dim UpValue As P.Vector3
+
+    Projected = Camera.ProjectViewerPoint(Point, View.LiveCamera, Window_Width(), Window_Height())
+
+    If Not Projected.Visible Or Not Camera.Basis(View.LiveCamera, Forward, RightValue, UpValue) Then
+        Return
+    End If
 
     Base = View.LiveCamera
-    Base.Position = M.Add(Base.Target, M.Rotate(M.Subtract(Base.Position, Base.Target), P.Vector(0.0, -90.0, 0.0)))
-    Base.UpDirection = M.Rotate(Base.UpDirection, P.Vector(0.0, -90.0, 0.0))
+    Base.Target = M.Add(Base.Position, M.Scale(Forward, Projected.Depth))
+    View.MinimumDistance = Min(View.MinimumDistance, 0.25)
+    View.MaximumDistance = Max(View.MaximumDistance, Projected.Depth)
+    Value.Suspended = True
+    Value.Focusing = False
+    Value.Arrival = False
+    Value.Peeking = False
+    Value.OrbitAtParty = False
+    Value.CursorOrbit = False
+    Value.CursorZoom = True
+    Value.CursorZoomLast = ToDouble(Motion.DEFAULT_ZOOM)
+    Value.CursorAnchor = Point
+    Value.CursorX = X
+    Value.CursorY = Y
+
+    Call Motion.Reset(View.Controls, View.Zoom)
+    Call Arena.BeginTransition(View, 0)
+
+End Sub
+
+Private Sub KeepZoomPoint(ByRef Value As State, ByRef View As Arena.State)
+
+    Dim Projected As Camera.ProjectedPoint
+    Dim Shot As P.Camera3D
+    Dim Delta As P.Vector3
+    Dim Forward As P.Vector3
+    Dim RightValue As P.Vector3
+    Dim UpValue As P.Vector3
+
+    If Not Value.CursorZoom Or Value.CursorZoomLast = View.Controls.Zoom Then
+        Return
+    End If
+
+    Projected = Camera.ProjectViewerPoint(Value.CursorAnchor, View.LiveCamera, Window_Width(), Window_Height())
+
+    If Not Projected.Visible Or Not Camera.Basis(View.LiveCamera, Forward, RightValue, UpValue) Then
+        Value.CursorZoom = False
+        Return
+    End If
+
+    Shot = Camera.KeepCursorAnchor(View.LiveCamera, Value.CursorAnchor,
+        Value.CursorX, Value.CursorY, Projected.Depth, Window_Width(), Window_Height())
+    Delta = M.Subtract(Shot.Position, View.LiveCamera.Position)
+    View.Controls.PanX = View.Controls.PanX + M.Dot(Delta, RightValue)
+    View.Controls.PanY = View.Controls.PanY + M.Dot(Delta, UpValue)
+    View.LiveCamera = Shot
+    Value.CursorZoomLast = View.Controls.Zoom
+
+End Sub
+
+' Exact overhead and level-front framing share the editor's projection and picking contract.
+Public Function EditingView(View As P.Camera3D, Mode As Number) As P.Camera3D
+
+    Dim Result As P.Camera3D
+    Dim Offset As P.Vector3
+    Dim Distance As Double
+    Dim Horizontal As Double
+
+    Result = View
+    Offset = M.Subtract(View.Position, View.Target)
+    Distance = Max(200.0, M.Length(Offset))
+    Result.OrthographicHeight = 0.0
+    Result.UpDirection = P.Vector(0.0, 1.0, 0.0)
+
+    If Mode = 1 Then
+
+        Result.Position = M.Add(View.Target, P.Vector(0.0, Distance, 0.0))
+        Result.UpDirection = P.Vector(0.0, 0.0, 1.0)
+        Result.OrthographicHeight = Distance / Camera.FocalRatio(View.FovDegrees)
+
+        If View.OrthographicHeight > 0.0 Then
+            Result.OrthographicHeight = View.OrthographicHeight
+            Result.UpDirection = View.UpDirection
+        End If
+
+    Else
+
+        Horizontal = Sqrt(Offset.X * Offset.X + Offset.Z * Offset.Z)
+
+        If Horizontal < 0.001 Then
+            Offset = M.Scale(View.UpDirection, -1.0)
+            Horizontal = Max(0.001, M.Length(Offset))
+        End If
+
+        Offset = P.Vector(Offset.X / Horizontal, 0.0, Offset.Z / Horizontal)
+
+        If Mode = 2 Then
+            Offset = M.Add(M.Scale(Offset, Cos(M.Radians(35.0))), P.Vector(0.0, Sin(M.Radians(35.0)), 0.0))
+        End If
+
+        If Mode = 3 Then
+            Result.Target.Y = Max(Result.Target.Y, Navigation.GroundHeight(Result.Target.X, Result.Target.Z) + 26.0)
+        End If
+
+        Result.Position = M.Add(Result.Target, M.Scale(Offset, Distance))
+
+    End If
+
+    Return Result
+
+End Function
+
+''' Advance clockwise to the next cardinal bearing, discarding any off-angle remainder.
+Public Sub TurnClockwise(ByRef Value As State, ByRef View As Arena.State, ByRef Base As P.Camera3D)
+
+    Dim Bearing As P.Vector3
+    Dim Angle As Double
+    Dim Snapped As Double
+    Dim Turn As Double
+
+    Base = View.LiveCamera
+    Bearing = M.Subtract(Base.Position, Base.Target)
+
+    If Base.OrthographicHeight > 0.0 Then
+        Bearing = Base.UpDirection
+    End If
+
+    Angle = M.Degrees(Atan2(Bearing.X, Bearing.Z))
+    Snapped = Floor((Angle + 0.00001) / 90.0) * 90.0
+    Turn = Snapped - Angle
+
+    If Abs(Turn) < 0.01 Then
+        Turn = -90.0
+    End If
+
+    Base.Position = M.Add(Base.Target, M.Rotate(M.Subtract(Base.Position, Base.Target), P.Vector(0.0, Turn, 0.0)))
+    Base.UpDirection = M.Rotate(Base.UpDirection, P.Vector(0.0, Turn, 0.0))
     Value.Suspended = True
     Value.Focusing = False
     Value.Arrival = False
     Value.Peeking = False
     Value.CursorOrbit = False
+    Value.CursorZoom = False
     Value.OrbitAtParty = False
 
     Call Motion.Reset(View.Controls, View.Zoom)
@@ -63,6 +203,7 @@ Public Sub BeginCursorOrbit(ByRef Value As State, View As P.Camera3D,
     Dim Projected As Camera.ProjectedPoint
 
     Projected = Camera.ProjectViewerPoint(Point, View, Window_Width(), Window_Height())
+    Value.CursorZoom = False
     Value.CursorOrbit = Projected.Visible
     Value.CursorAnchor = Point
     Value.CursorX = X
@@ -100,6 +241,7 @@ Public Sub AnchorPoint(ByRef Value As State, ByRef View As Arena.State,
     Value.Arrival = False
     Value.Peeking = False
     Value.CursorOrbit = False
+    Value.CursorZoom = False
 
     Call Motion.Reset(View.Controls, View.Zoom)
     Call Arena.BeginTransition(View, 0)
@@ -142,6 +284,7 @@ Public Sub Focus(ByRef Value As State, Yaw As Double, Displayed As P.Camera3D)
     Value.OrbitAtParty = False
     Value.Peeking = False
     Value.CursorOrbit = False
+    Value.CursorZoom = False
 
     Call Follow.Reset(Value.Flight, Displayed.Position)
 
@@ -337,6 +480,8 @@ Public Function Frame(ByRef Value As State, Base As P.Camera3D, Leader As P.Vect
     LookAhead = M.Add(Leader, P.Vector(-Sin(Angle) * Ahead, 0.0, -Cos(Angle) * Ahead))
     StepHeight = Clamp(Navigation.GroundHeight(LookAhead.X, LookAhead.Z) - Leader.Y, 0.0, 38.0)
     Result = Base
+    Result.OrthographicHeight = 0.0
+    Result.UpDirection = P.Vector(0.0, 1.0, 0.0)
     Result.Target = M.Add(LookAhead, P.Vector(0.0, 42.0 + (StepHeight - 16.0) * Value.CloseAmount, 0.0))
     Result.Position = M.Add(Leader, P.Vector(Sin(Angle) * Distance, Height, Cos(Angle) * Distance))
 
@@ -359,6 +504,8 @@ Public Sub ArrivalFrame(ByRef Value As State, ByRef View As Arena.State,
     Dim Forward As P.Vector3
 
     Forward = P.Vector(Sin(M.Radians(Heading - 180.0)), 0.0, Cos(M.Radians(Heading - 180.0)))
+    Base.OrthographicHeight = 0.0
+    Base.UpDirection = P.Vector(0.0, 1.0, 0.0)
     Base.Target = M.Add(Leader, M.Add(M.Scale(Forward, 55.0), P.Vector(0.0, 42.0, 0.0)))
     Base.Position = M.Add(Leader, M.Add(M.Scale(Forward, -300.0), P.Vector(0.0, 26.0, 0.0)))
 
@@ -403,6 +550,7 @@ Public Sub Compose(ByRef Value As State, ByRef View As Arena.State,
     View.FloorVisible = False
 
     Call Arena.ComposeCamera(View, Resolved)
+    Call KeepZoomPoint(Value, View)
 
     If Following And Value.OrbitAtParty Then
         View.LiveCamera = Camera.KeepOrbitAnchor(Resolved, View.LiveCamera,

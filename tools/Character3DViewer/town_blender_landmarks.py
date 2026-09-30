@@ -2,6 +2,7 @@
 from pathlib import Path
 import bpy
 import math
+from town_surface_layers import distance
 
 ROOT = Path(__file__).resolve().parents[2] / 'games/SinStarI/SourceAssets/Towns/Neris'
 
@@ -18,10 +19,23 @@ def append_collection(source, name, offset=(0, 0)):
     from mathutils import Matrix, Vector
     displacement = Matrix.Translation(Vector((offset[0] / 10, offset[1] / 10, 0)))
     members = set(collection.all_objects)
+    # Appended objects need evaluated world matrices before applying saved offsets.
+    bpy.context.view_layer.update()
     for obj in members:
         if obj.parent not in members:
             obj.matrix_world = displacement @ obj.matrix_world
     return len(collection.all_objects)
+
+
+def append_court(offset):
+    source = ROOT / 'NerisSpaceport01V1/Town/Neris-Town-Spaceport-SW-r003.blend'
+    name = 'Royal Court \u2014 M06-r006'
+    count = append_collection(source, name, offset)
+    members = set(bpy.data.collections[name].all_objects)
+    for obj in members:
+        if obj.parent not in members:
+            obj.location.z += distance('STRUCTURE_CLEARANCE')
+    return count
 
 
 def append_airport():
@@ -84,8 +98,7 @@ def populate(document):
     elif document['name'] == 'Horizon Airport':
         counts['Horizon'] = append_airport()
     if document.get('court_placed', document['name'].startswith('Neris Town')):
-        counts['RoyalCourt'] = append_collection(original, 'Royal Court — M06-r006',
-                                                  document.get('court_offset', (0, 0)))
+        counts['RoyalCourt'] = append_court(document.get('court_offset', (0, 0)))
     for name, count in counts.items():
         bpy.context.scene['town_landmark_' + name] = count
     return counts

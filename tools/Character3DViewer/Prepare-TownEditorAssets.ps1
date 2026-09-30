@@ -11,6 +11,10 @@ Copy-Item -LiteralPath (Join-Path $townRoot 'Authoring\Catalog.sm3d.json') -Dest
 foreach ($chunk in $catalog.chunks) {
     Copy-Item -LiteralPath (Join-Path $townRoot ('Authoring\' + $chunk.file)) -Destination $destination -Force
 }
+# Wind derivatives preserve the exact catalog part slots and static bind geometry.
+foreach ($wind in Get-ChildItem -LiteralPath (Join-Path $townRoot 'Authoring\Wind') -Filter 'Catalog-*.glb') {
+    Copy-Item -LiteralPath $wind.FullName -Destination $destination -Force
+}
 $textureRoot = Join-Path $PSScriptRoot 'Assets\Neris'
 $null = New-Item -ItemType Directory -Force -Path $textureRoot
 Copy-Item -LiteralPath (Join-Path $townRoot 'Textures\Neris-Grass-Color.png') -Destination $textureRoot -Force

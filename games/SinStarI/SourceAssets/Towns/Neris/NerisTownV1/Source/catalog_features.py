@@ -22,6 +22,9 @@ def collect(instance, owner, result):
         result['water'].append([(low[0]+high[0])/2, (low[1]+high[1])/2,
                                 high[2], (high[0]-low[0])/2, (high[1]-low[1])/2])
         return
+    if obj.name.startswith(('Castle Island', 'Royal Bridge Deck')):
+        result.setdefault('floors', []).append(low[:2] + high[:2] + [high[2]])
+        return
     if obj.name.startswith(('Entrance Step', 'Front Door Step', 'Royal Entrance Stair',
                             'Sweeping Royal Garden Stair', 'Entrance Threshold')):
         # These templates have horizontal quarter-turn stair runs. Retain local

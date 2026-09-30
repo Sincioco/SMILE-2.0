@@ -3,6 +3,7 @@ Module Smile.Tools.TownMapLoadTools
 
 Option Explicit
 
+Import Smile.Tools.TownSurfaceLayers As Layers
 Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownMapLoads As Links
 Import Smile.Tools.TownGuides As Guides
@@ -167,8 +168,8 @@ Public Sub Draw(ByRef Town As Document.State, View As P.Camera3D, RightEdge As N
 
             If Borders.Edge[Index, Side] Then
 
-                Mark.First = P.Vector(Town.Surface.XEdges[X], 23.4, Town.Surface.ZEdges[Z])
-                Mark.Last = P.Vector(Town.Surface.XEdges[X + 1], 23.4, Town.Surface.ZEdges[Z + 1])
+                Mark.First = P.Vector(Town.Surface.XEdges[X], Layers.OVERLAY_Y, Town.Surface.ZEdges[Z])
+                Mark.Last = P.Vector(Town.Surface.XEdges[X + 1], Layers.OVERLAY_Y, Town.Surface.ZEdges[Z + 1])
 
                 If Side = 0 Then
                     Mark.Last.X = Mark.First.X

@@ -15,6 +15,8 @@ Import Smile.Tools.TownGeometry As Geometry
 Public Type State
     Model As Core.Model3D
     Leaves[4] As Core.Object3D
+    RoyalModel As Core.Model3D
+    RoyalLeaves[4] As Core.Object3D
     Angles[4096] As Double
     Hold[4096] As Number
     Identities[1024] As Number
@@ -43,6 +45,15 @@ Public Function Create(ByRef Value As State) As Boolean
     For Part = 0 To 3
         Value.Leaves[Part] = G.CreateModelPart3D(Value.Model, Part)
         Ok = Value.Leaves[Part].Handle <> 0 And Ok
+    End For
+
+    Value.RoyalModel = G.LoadModelGeometry3D("Assets/Neris/Royal-Door-Leaves.sm3d")
+    Ok = Value.RoyalModel.GeometryReady And Value.RoyalModel.PartCount = 4 And Ok
+    Ok = G.PrepareModelPbr3D(Value.RoyalModel, 1, 1, 4) And Ok
+
+    For Part = 0 To 3
+        Value.RoyalLeaves[Part] = G.CreateModelPart3D(Value.RoyalModel, Part)
+        Ok = Value.RoyalLeaves[Part].Handle <> 0 And Ok
     End For
 
     Value.Material = G.CreateEffectMaterial3D(EmptyTexture, G.MATERIAL_ALPHA_BLEND, 100)
@@ -135,7 +146,8 @@ Public Sub Update(ByRef Value As State, ByRef Town As Document.State,
                 Relative = M.Rotate(M.Subtract(Relative, Door.Position), P.Vector(0.0, -Door.Yaw, 0.0))
 
                 If (Abs(Relative.X) < Door.Width / 2.0 + 7000.0 / Item.Scale.X And
-                    Relative.Z > -24000.0 / Item.Scale.Z And Relative.Z < 14000.0 / Item.Scale.Z And
+                    Relative.Z > -24000.0 / Item.Scale.Z And
+                    Relative.Z < 14000.0 / Item.Scale.Z And
                     Abs(Relative.Y) < 15000.0 / Item.Scale.Y) Then
 
                     Value.Hold[Slot] = 700
@@ -181,6 +193,7 @@ Public Function Draw(ByRef Value As State, ByRef Town As Document.State) As Bool
     Dim Width As Double
     Dim Yaw As Double
     Dim Side As Double
+    Dim Leaf As Core.Object3D
     Dim Ok As Boolean
 
     Ok = Value.Ready
@@ -210,12 +223,18 @@ Public Function Draw(ByRef Value As State, ByRef Town As Document.State) As Bool
                     End If
 
                     Pivot = M.Add(Position, M.Scale(RightValue, Side * Width / 2.0))
-                    Ok = P.SetPosition(Value.Leaves[Part], Position.X, Position.Y, Position.Z) And Ok
-                    Ok = P.SetScale(Value.Leaves[Part], Width * 100.0, Door.Height * Item.Scale.Y / 10.0, 700.0) And Ok
-                    Ok = P.SetRotation(Value.Leaves[Part], 0.0, Yaw, 0.0) And Ok
-                    Ok = P.SetPivotRotation(Value.Leaves[Part], Pivot,
+                    Leaf = Value.Leaves[Part]
+
+                    If Item.Template = 13 Then
+                        Leaf = Value.RoyalLeaves[Part]
+                    End If
+
+                    Ok = P.SetPosition(Leaf, Position.X, Position.Y, Position.Z) And Ok
+                    Ok = P.SetScale(Leaf, Width * 100.0, Door.Height * Item.Scale.Y / 10.0, 700.0) And Ok
+                    Ok = P.SetRotation(Leaf, 0.0, Yaw, 0.0) And Ok
+                    Ok = P.SetPivotRotation(Leaf, Pivot,
                         P.Vector(0.0, Side * Value.Angles[Index * 4 + DoorIndex], 0.0)) And Ok
-                    Ok = G.DrawObject3D(Value.Leaves[Part]) And Ok
+                    Ok = G.DrawObject3D(Leaf) And Ok
                 End For
             End For
 
@@ -237,9 +256,11 @@ Public Sub Destroy(ByRef Value As State)
 
     For Index = 0 To 3
         Call G.DestroyObjectInstance3D(Value.Leaves[Index])
+        Call G.DestroyObjectInstance3D(Value.RoyalLeaves[Index])
     End For
 
     Call G.DestroyModel3D(Value.Model)
+    Call G.DestroyModel3D(Value.RoyalModel)
     Call G.DestroyRibbonBatch3D(Value.Water)
     Call G.DestroyMaterial3D(Value.Material)
 

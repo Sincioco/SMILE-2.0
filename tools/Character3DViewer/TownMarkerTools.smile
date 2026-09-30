@@ -3,11 +3,14 @@ Module Smile.Tools.TownMarkerTools
 
 Option Explicit
 
+Import Smile.Tools.TownSurfaceLayers As Layers
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PrecisionMath3D As M
 Import Smile.Tools.TownGuides As Guides
+Import Smile.Tools.TownMarkerResize As Resize
 
 Public Type State
+    Resizing As Resize.State
     Dragging As Boolean
     Changed As Boolean
     Anchor As P.Vector3
@@ -119,7 +122,7 @@ Public Function Hit(ByRef Guide As Guides.State, Point As P.Vector3, Radius As D
 
     Found = -1
     Best = Radius
-    Point.Y = 23.12
+    Point.Y = Layers.ROAD_Y
 
     For Index = 0 To Guide.Ink.EntryCount - 1
 
@@ -158,6 +161,8 @@ Public Sub Cancel(ByRef Value As State, ByRef Guide As Guides.State)
 
     Value.Selecting = False
 
+    Call Resize.Finish(Value.Resizing, Guide, True)
+
     If Value.Dragging Then
         Guide.Ink = Value.Before
         Value.Dragging = False
@@ -181,6 +186,36 @@ Public Sub Gesture(ByRef Value As State, ByRef Guide As Guides.State,
     Dim Found As Number
     Dim Offset As P.Vector3
     Dim Desired As P.Vector3
+
+    If Value.Resizing.Active Then
+
+        If Held And Available Then
+            Call Resize.Drag(Value.Resizing, Guide, Point)
+        Else If Not Held Then
+            Call Resize.Finish(Value.Resizing, Guide, False)
+
+            Value.Dragging = False
+        End If
+
+        Return
+
+    End If
+
+    If (Available And
+        Pressed And
+        Not Additive And
+        Not Value.Dragging) Then
+
+        If Resize.Begin(Value.Resizing, Guide, Point, Radius * 0.55) Then
+
+            Value.Before = Guide.Ink
+            Value.Dragging = True
+
+            Return
+
+        End If
+
+    End If
 
     If Value.Selecting Then
 

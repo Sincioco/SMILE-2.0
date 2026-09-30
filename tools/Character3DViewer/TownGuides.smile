@@ -3,6 +3,7 @@ Module Smile.Tools.TownGuides
 
 Option Explicit
 
+Import Smile.Tools.TownSurfaceLayers As Layers
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PrecisionMath3D As M
 Import Smile.Simple3D.PrecisionCamera3D As Camera
@@ -12,6 +13,7 @@ Import Smile.Tools.TownPicking As Picking
 Public Const MAX_MARKERS = 128
 
 Public Type Marker
+    Name As Text
     First As P.Vector3
     Last As P.Vector3
     IsRectangle As Boolean
@@ -181,8 +183,9 @@ Public Function Add(ByRef Value As Drawing, First As P.Vector3,
         Return False
     End If
 
-    First.Y = 23.12
+    First.Y = Layers.ROAD_Y
     Last.Y = First.Y
+    Value.Markers[Value.EntryCount].Name = ""
     Value.Markers[Value.EntryCount].First = First
     Value.Markers[Value.EntryCount].Last = Last
     Value.Markers[Value.EntryCount].IsRectangle = IsRectangle
@@ -405,8 +408,13 @@ Public Sub Draw(ByRef Value As State, ByRef Surface As Grid.State, View As P.Cam
         StepSize = Max(0.001, Value.Spacing) * 10.0
         Point = Camera.ProjectViewerPoint(View.Target, View, Window_Width(), Window_Height())
         PixelStep = Camera.WorldSizeForPixels(3, Max(View.NearPlane, Point.Depth), View.FovDegrees, Window_Height())
-        Low = P.Vector(Surface.XEdges[0], 23.12, Surface.ZEdges[0])
-        High = P.Vector(Surface.XEdges[Surface.Columns], 23.12, Surface.ZEdges[Surface.Rows])
+
+        If View.OrthographicHeight > 0.0 Then
+            PixelStep = View.OrthographicHeight * 3.0 / ToDouble(Window_Height())
+        End If
+
+        Low = P.Vector(Surface.XEdges[0], Layers.ROAD_Y, Surface.ZEdges[0])
+        High = P.Vector(Surface.XEdges[Surface.Columns], Layers.ROAD_Y, Surface.ZEdges[Surface.Rows])
 
         If Picking.GroundBounds(View, Window_Width(), Window_Height(), RightEdge, 128, ViewLow, ViewHigh) Then
 
@@ -425,15 +433,15 @@ Public Sub Draw(ByRef Value As State, ByRef Surface As Grid.State, View As P.Cam
         For Index = ToNumber(Ceiling(Low.X / StepSize)) To ToNumber(Floor(High.X / StepSize))
             AtValue = ToDouble(Index) * StepSize
 
-            Call Segment(P.Vector(AtValue, 23.12, Low.Z),
-                P.Vector(AtValue, 23.12, High.Z), View, RGB(73, 120, 138))
+            Call Segment(P.Vector(AtValue, Layers.ROAD_Y, Low.Z),
+                P.Vector(AtValue, Layers.ROAD_Y, High.Z), View, RGB(73, 120, 138))
         End For
 
         For Index = ToNumber(Ceiling(Low.Z / StepSize)) To ToNumber(Floor(High.Z / StepSize))
             AtValue = ToDouble(Index) * StepSize
 
-            Call Segment(P.Vector(Low.X, 23.12, AtValue),
-                P.Vector(High.X, 23.12, AtValue), View, RGB(73, 120, 138))
+            Call Segment(P.Vector(Low.X, Layers.ROAD_Y, AtValue),
+                P.Vector(High.X, Layers.ROAD_Y, AtValue), View, RGB(73, 120, 138))
         End For
 
     End If

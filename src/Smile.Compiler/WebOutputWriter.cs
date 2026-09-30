@@ -3162,7 +3162,8 @@ internal static class WebOutputWriter
                     case 133:return renderer3DReflectionConfigure(a,b,c,d,e,f,g);
                     case 134:object=renderer3DObjects.get(a);if(renderer3DFrameActive||!object||b<0||b>2){renderer3DLastError=50;return 0;}object.reflectionMode=b;return 1;
                     case 135:return renderer3DReflectionValue(a);
-                    case 136:return renderer3DSetViewport(a,b,c,d,e,f);
+                    case 136:if(g!==0){renderer3DLastError=4;return 0;}return renderer3DSetViewport(a,b,c,d,e,f);
+                    case 137:renderer3DLastError=4;return 0;
                     default:renderer3DLastError=1;return 0;
                 }
             }

@@ -14,6 +14,7 @@ Private Const COMMAND_SCALE = 5
 Private Const COMMAND_PIVOT = 6
 Private Const COMMAND_POINT_LIGHT = 7
 Private Const COMMAND_MESH_VERTEX = 8
+Private Const COMMAND_ORTHOGRAPHIC_CAMERA = 9
 Private Const COMMAND_RIBBON_POINT_BASE = 10000
 Private Const COMMAND_PARTICLE_BASE = 20000
 Private Const COMMAND_GPU_SPAWN_BASE = 2000000
@@ -131,6 +132,7 @@ Public Type Camera3D
     FovDegrees As Double
     NearPlane As Double
     FarPlane As Double
+    OrthographicHeight As Double
 End Type
 
 ''' Non-owning transform applied to an existing Core.Object3D.
@@ -335,12 +337,22 @@ End Function
 Public Function SetCamera(Value As Camera3D) As Boolean
 
     Dim Result As Boolean
+    Dim Command As Number
+    Dim Projection As Double
 
-    Result = Renderer3DDouble(COMMAND_CAMERA, 0,
+    Command = COMMAND_CAMERA
+    Projection = Value.FovDegrees
+
+    If Value.OrthographicHeight > 0.0 Then
+        Command = COMMAND_ORTHOGRAPHIC_CAMERA
+        Projection = Value.OrthographicHeight
+    End If
+
+    Result = Renderer3DDouble(Command, 0,
         Value.Position.X, Value.Position.Y, Value.Position.Z,
         Value.Target.X, Value.Target.Y, Value.Target.Z,
         Value.UpDirection.X, Value.UpDirection.Y, Value.UpDirection.Z,
-        Value.FovDegrees, Value.NearPlane, Value.FarPlane) <> 0
+        Projection, Value.NearPlane, Value.FarPlane) <> 0
 
     Return Result
 
@@ -433,6 +445,7 @@ Public Function AcceptedCamera() As Camera3D
     Result.FovDegrees = Renderer3DDoubleValue(QUERY_CAMERA, 0, 0, 9)
     Result.NearPlane = Renderer3DDoubleValue(QUERY_CAMERA, 0, 0, 10)
     Result.FarPlane = Renderer3DDoubleValue(QUERY_CAMERA, 0, 0, 11)
+    Result.OrthographicHeight = Renderer3DDoubleValue(QUERY_CAMERA, 0, 0, 12)
 
     Return Result
 
@@ -547,7 +560,12 @@ Public Function TryCursorDepth(X As Number, Y As Number, Width As Number, Height
 
     Dim Candidate As Double
 
-    If Width <= 0 Or Height <= 0 Or X < 0 Or Y < 0 Or X >= Width Or Y >= Height Then
+    If (Width <= 0 Or
+        Height <= 0 Or
+        X < 0 Or
+        Y < 0 Or
+        X >= Width Or
+        Y >= Height) Then
         Return False
     End If
 

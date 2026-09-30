@@ -66,7 +66,7 @@ def generate(catalog):
               '    Low As P.Vector3', '    High As P.Vector3',
               '    PartCount As Number', '    Parts[32] As Number',
               '    SolidCount As Number', '    CameraCount As Number', '    StepCount As Number',
-              '    DoorCount As Number', '    WaterCount As Number', 'End Type', '',
+              '    FloorCount As Number', '    DoorCount As Number', '    WaterCount As Number', 'End Type', '',
               'Public Function TemplateAt(Index As Number) As Template', '',
               '    Dim Result As Template', '', '    Select Case Index']
     for template in catalog['templates']:
@@ -87,6 +87,7 @@ def generate(catalog):
                   f'            Result.SolidCount = {len(template["solids"])}',
                   f'            Result.CameraCount = {len(template["camera"])}',
                   f'            Result.StepCount = {len(template["steps"])}',
+                  f'            Result.FloorCount = {len(template.get("floors", []))}',
                   f'            Result.DoorCount = {len(template["doors"])}',
                   f'            Result.WaterCount = {len(template["water"])}']
         lines.extend(f'            Result.Parts[{i}] = {p}' for i, p in enumerate(parts))

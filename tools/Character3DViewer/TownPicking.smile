@@ -3,6 +3,7 @@ Module Smile.Tools.TownPicking
 
 Option Explicit
 
+Import Smile.Tools.TownSurfaceLayers As Layers
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PrecisionMath3D As M
 Import Smile.Simple3D.PrecisionCamera3D As Camera
@@ -70,7 +71,7 @@ Public Function OrbitCenter(View As P.Camera3D, Width As Number, Height As Numbe
 
         If Forward.Y < -0.00001 Then
 
-            GroundDepth = (23.12 - View.Position.Y) / Forward.Y
+            GroundDepth = (Layers.ROAD_Y - View.Position.Y) / Forward.Y
 
             If GroundDepth > View.NearPlane And GroundDepth <= View.FarPlane Then
                 Depth = GroundDepth
@@ -109,22 +110,24 @@ Public Function Ground(View As P.Camera3D, X As Number, Y As Number,
     Width As Number, Height As Number, ByRef Point As P.Vector3) As Boolean
 
     Dim Ray As P.Vector3
+    Dim RayOrigin As P.Vector3
     Dim Distance As Double
 
+    RayOrigin = Camera.CursorPointAtDepth(View, X, Y, View.NearPlane, Width, Height)
     Ray = M.Subtract(Camera.CursorPointAtDepth(View, X, Y,
-        Max(1000.0, View.NearPlane + 1.0), Width, Height), View.Position)
+        Max(1000.0, View.NearPlane + 1.0), Width, Height), RayOrigin)
 
     If Abs(Ray.Y) < 0.00001 Then
         Return False
     End If
 
-    Distance = (23.12 - View.Position.Y) / Ray.Y
+    Distance = (Layers.ROAD_Y - RayOrigin.Y) / Ray.Y
 
     If Distance <= 0.0 Or Distance > 100.0 Then
         Return False
     End If
 
-    Point = M.Add(View.Position, M.Scale(Ray, Distance))
+    Point = M.Add(RayOrigin, M.Scale(Ray, Distance))
 
     Return True
 
@@ -176,7 +179,7 @@ Public Function ItemAt(ByRef Town As Document.State, Category As Number, View As
         If Town.Items[Index].Active And Town.Items[Index].Category = Category Then
 
             Shape = Catalog.TemplateAt(Town.Items[Index].Template)
-            Origin = Geometry.ToLocal(Town.Items[Index], View.Position)
+            Origin = Geometry.ToLocal(Town.Items[Index], Camera.CursorPointAtDepth(View, X, Y, View.NearPlane, Width, Height))
             Ray = M.Subtract(Geometry.ToLocal(Town.Items[Index], Point), Origin)
             NearValue = 0.0
             FarValue = Nearest

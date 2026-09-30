@@ -56,6 +56,8 @@ Dim SecondTown As Document.State
 Dim AirportMapPoint As P.Vector3
 Dim DustFlights As Traffic.State
 Dim MapGesture As MapLoadTools.State
+Dim BeforeSaveCamera As P.Camera3D
+Dim BeforeSaveLeader As P.Vector3
 
 Game Window "Town Editor Session Check" Size 1100 By 720
 
@@ -176,6 +178,18 @@ If Value.Ready Then
         "Map Geometry Statistics Include The Loaded Town")
     Call CheckGeometryStatistics()
     Call CheckCourtPlacement()
+
+    BeforeSaveCamera = Value.View.LiveCamera
+    BeforeSaveLeader = Value.People.Path.Positions[0]
+    Ok = Editor.UpdatePermanent("Neris Town")
+
+    Call Town.Update(Value, 0)
+    Call Check(Ok And M.Distance(BeforeSaveCamera.Position, Value.View.LiveCamera.Position) < 0.001 And
+        M.Distance(BeforeSaveCamera.Target, Value.View.LiveCamera.Target) < 0.001 And
+        BeforeSaveCamera.FovDegrees = Value.View.LiveCamera.FovDegrees And
+        M.Distance(BeforeSaveLeader, Value.People.Path.Positions[0]) < 0.001,
+        "Updating Permanent Map Preserves Camera Pose Zoom And Party Position")
+
     Call CheckRoadArrival(Value)
 
     Show Screen
@@ -1101,6 +1115,14 @@ Sub CheckCourtPlacement()
         Abs(WaterAfter.X - WaterBefore.X - 375.25) < 0.001 And
         Value.Comparison.Water.CenterX = Castle.CenterX(),
         "Royal Court Meshes Halos Fountain And Basins Move Together")
+
+    Ok = P.TryTransform(Value.Comparison.Objects[Value.Comparison.Leaf], After)
+
+    Call Check(Ok And Abs(After.Position.Y + 0.25 * Castle.SCALE - 25.12) < 0.001 And
+        Abs(Castle.GroundHeight(Castle.CenterX(), Castle.CenterZ() - 74.0 * Castle.SCALE) - 25.12) < 0.001,
+        "Relocated Drawbridge Deck And Walking Height Clear Overlapping Road At 23.12")
+    Call Check(Abs(Castle.GroundHeight(Castle.CenterX(), Castle.CenterZ() - 60.0 * Castle.SCALE) - 25.12) < 0.001,
+        "Drawbridge Clearance Leaves The Gatehouse Floor Unchanged")
     Call CourtPreview.Synchronize(Value.Comparison, False, OriginalOffset)
     Call Check(Not Castle.Active() And Not Value.Comparison.Visible And G.LiveModelCount3D() = Models,
         "Deleting The Court Disables Collision And Draws Without Destroying Shared Resources")

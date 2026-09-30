@@ -1,5 +1,109 @@
 # Character Viewer Architecture
 
+## Current: precision views, guide editing and map presentation (September 30)
+
+Precision3D.Camera3D owns explicit orthographic height; PrecisionCamera3D owns its
+projection, basis and cursor unprojection. ArenaCamera3D composes orthographic pan,
+zoom and rotation. Native precise camera command 9 carries that projection; existing
+perspective command 1 is unchanged. NerisTownCamera owns view presets and NerisTown
+only routes actions. Normal follow/overview framing explicitly restores perspective.
+NerisTownCamera also owns cursor-anchored zoom: the displayed pose is rebased to the
+picked depth, then pan compensation keeps the surface beneath the pointer during
+easing. It uses PrecisionCamera3D's existing unprojection and basis, with no new
+runtime camera command. Clockwise rotation snaps to the next cardinal boundary.
+
+TownGuideList owns disclosure, scroll and row operations. TownMarkerResize owns a
+single reversible resize gesture; TownGuides retains authored marker/name state and
+TownHistory records completed operations. TownGuideFiles v2 serializes names, reads
+v1 and commits validated guides only. Native File_Pick resets pointer capture/deltas
+after a modal picker so its cursor relocation cannot pan the scene.
+
+TownWorldView owns graph pan/zoom and card text layout; TownWorldPreviews caches
+96-square plan previews by document revision. TownWorldImport validates a native
+file transfer before adding the named document/tab/node. Existing WorldDocument,
+WorldFiles and WorldCanvas retain graph persistence and connections. No scene
+renderer or editor-state reference is added to the graph document.
+
+TownViewportLayout shares toolbar drawing/hit geometry. TownPartyInset owns its
+forward-facing eye camera/rectangle attached to the minimap; NerisTown reuses
+DrawContents for both passes and places route status below the inset. The native viewport
+owner preserves surrounding color while rendering an inset, restores the full
+viewport afterward, and rejects depth queries from the inset as main-view picks.
+The same viewport owner caches the last preserved subviewport color image and
+replays it without a new scene submission. TownPartyInset schedules at most one
+refresh per 83 ms after the previous render, and its hidden state skips rendering
+and replay. Resize mismatch requests a fresh render; reset/device loss releases
+the cache. Ctrl+F controls POV visibility and Ctrl+M controls map statistics.
+Web explicitly rejects preservation/replay; Web adoption remains paused.
+The native model pool is 96 (formerly 64): the combined legacy town/party fixture
+needs 71. This is a runtime resource capacity change, not an architecture guardrail
+exception. Catalog renderer destruction covers all 64 owned catalog slots.
+
+TownSurfaceLayers.json owns terrain/deck elevations for native and Blender. The
+whole movable Royal Court assembly, including its base and bridge, clears roads;
+navigation follows the same height. The earlier leaf-only clearance below is
+superseded. Royal Castle detail generation appends six catalog chunks without
+changing template IDs, source placements, footprint or document fingerprint.
+The Blender worker applies the same decorative changes to its fresh immutable
+catalog copy. Thin bright mortar strips are replaced by larger blocks with broader,
+lower-contrast joints to suppress moving subpixel mosaic patterns while retaining
+visible masonry. Flag wind derivatives retain original part
+slots and bind geometry, skin only the flag details, and keep other parts on a
+stationary root. TownCatalogRenderer owns those animators and their lifecycle.
+
+Catalog floor metadata is extracted from the Royal Castle island and bridge deck.
+TownDocumentNavigation treats those floors as support above underlying water while
+retaining per-item solids and stair/door clearance. TownDecks owns a terrain-build
+snapshot of only assemblies with floors and subtracts their transformed footprints
+from generated rail segments. TownSurfaceRenderer owns that snapshot; the session
+invalidates terrain when the relevant placements change. The Blender terrain worker
+uses the same catalog metadata. Town documents and catalog fingerprint remain stable.
+
+No third-party dependency, entry-point feature logic, architecture limit, exclusion,
+or baseline change. The explicit native source inventory includes each new owner.
+Validation: native town foundations/routes/rendering/full party session pass, including
+relocated/rotated castle floors over water, preserved wall/fountain collision, rail
+clipping, Guide List narrow animation widths, cursor anchoring and permanent-save
+camera/party retention. Blender terrain geometry and save/reopen/import round trip
+pass with the current detailed castle. Shared native graphics checks pass (59); the
+compiler/native runtime build and native hardening checks pass. The isolated POV
+work-count check records 90 forced second renders versus 9 cached refreshes in 90
+frames, and zero while hidden; frame limiting means this is not an FPS benchmark.
+
+Ownership review: no bootstrap feature growth. NerisTown gains 130 net lines of
+input/draw coordination; NerisTownCamera gains 148 lines of camera behavior;
+TownEditorSession gains 38 lines of owner coordination; TownDocumentNavigation gains
+15 and TownSurfaceRenderer 26. New focused owners hold guide list/resize, world
+view/previews/import, toolbar, POV and deck clipping. The native viewport owner is
+extracted from existing rendering code. No architecture checks/limits were disabled,
+raised or reset. The deployed native build was relaunched after preserving the town.
+Live checks confirm Guide List opens, saved guides load without moving the camera,
+True 2D displays eight resize handles, all three town tabs load, Spaceport and Airport
+accept top/cardinal rotation, front view levels the camera, Ctrl+M toggles statistics,
+and Arin's forward POV attaches below the minimap and stays hidden during travel
+when disabled. Both minimap road trips reached their destinations. The bridge-over-
+water cases use isolated regression documents, leaving Sin's painted ground intact.
+
+Guide List animation guards its narrow opening/closing widths before clipping or
+row drawing. The native rendering regression draws widths 1–32 and the fully open
+panel, covering the reported fatal nonpositive clip rectangle.
+
+## Current: relocated Royal Court drawbridge clearance (September 30)
+
+NerisCastleRoute owns the lowered leaf's two-native-unit (20 cm) clearance above
+painted roads. NerisCastlePreview applies it to the complete hinged assembly;
+GroundHeight uses the same offset only over the leaf. This clears both the planks
+and their recessed support when the user relocates the court over painted terrain.
+Gatehouse floors, saved court X/Z placement and the user's road tiles stay intact.
+Town Blender landmark export applies the same clearance in authored local units.
+It also evaluates appended collections before reading world matrices, preserving
+their original placement and scale when adding the saved document offset.
+
+Regression coverage includes a translated native leaf and matching walking height,
+the existing raise/lower/crossing checks, and actual Blender support/plank geometry
+at a relocated court. The fix stays in the existing landmark/render/navigation
+owners; no entry-point growth, runtime extension, format change or dependency.
+
 ## Current: world connections and viewport controls (September 30)
 
 TownWorldDocument owns the sixteen-node graph and each endpoint's edge index.

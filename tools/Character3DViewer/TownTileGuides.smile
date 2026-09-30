@@ -3,6 +3,7 @@ Module Smile.Tools.TownTileGuides
 
 Option Explicit
 
+Import Smile.Tools.TownSurfaceLayers As Layers
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.SurfaceGrid3D As Grid
 Import Smile.Tools.TownDocument As Document
@@ -38,8 +39,8 @@ Public Function CellRectangle(ByRef Surface As Grid.State, First As P.Vector3,
     X1 = Max(0, Min(Surface.Columns - 1, Grid.CellX(Surface, Max(First.X, Last.X))))
     Z0 = Max(0, Min(Surface.Rows - 1, Grid.CellZ(Surface, Min(First.Z, Last.Z))))
     Z1 = Max(0, Min(Surface.Rows - 1, Grid.CellZ(Surface, Max(First.Z, Last.Z))))
-    Mark.First = P.Vector(Surface.XEdges[X0], 23.12, Surface.ZEdges[Z0])
-    Mark.Last = P.Vector(Surface.XEdges[X1 + 1], 23.12, Surface.ZEdges[Z1 + 1])
+    Mark.First = P.Vector(Surface.XEdges[X0], Layers.ROAD_Y, Surface.ZEdges[Z0])
+    Mark.Last = P.Vector(Surface.XEdges[X1 + 1], Layers.ROAD_Y, Surface.ZEdges[Z1 + 1])
     Mark.IsRectangle = True
 
     Return Mark
@@ -59,7 +60,7 @@ Private Sub Footprint(Item As Document.Item, View As P.Camera3D)
     Points[3] = Geometry.ToWorld(Item, P.Vector(Shape.Low.X, 0.0, Shape.High.Z))
 
     For Index = 0 To 3
-        Points[Index].Y = 23.12
+        Points[Index].Y = Layers.ROAD_Y
     End For
 
     For Index = 0 To 3
@@ -117,13 +118,13 @@ Public Sub Draw(ByRef Guide As Guides.State, ByRef Town As Document.State,
     If Guide.TileTarget = 0 Or Guide.TileTarget >= 4 Then
 
         For X = X0 To X1 + 1
-            Call Guides.Segment(P.Vector(Town.Surface.XEdges[X], 23.12, Town.Surface.ZEdges[Z0]),
-                P.Vector(Town.Surface.XEdges[X], 23.12, Town.Surface.ZEdges[Z1 + 1]), View, RGB(150, 198, 208))
+            Call Guides.Segment(P.Vector(Town.Surface.XEdges[X], Layers.ROAD_Y, Town.Surface.ZEdges[Z0]),
+                P.Vector(Town.Surface.XEdges[X], Layers.ROAD_Y, Town.Surface.ZEdges[Z1 + 1]), View, RGB(150, 198, 208))
         End For
 
         For Z = Z0 To Z1 + 1
-            Call Guides.Segment(P.Vector(Town.Surface.XEdges[X0], 23.12, Town.Surface.ZEdges[Z]),
-                P.Vector(Town.Surface.XEdges[X1 + 1], 23.12, Town.Surface.ZEdges[Z]), View, RGB(150, 198, 208))
+            Call Guides.Segment(P.Vector(Town.Surface.XEdges[X0], Layers.ROAD_Y, Town.Surface.ZEdges[Z]),
+                P.Vector(Town.Surface.XEdges[X1 + 1], Layers.ROAD_Y, Town.Surface.ZEdges[Z]), View, RGB(150, 198, 208))
         End For
 
     Else
@@ -144,8 +145,8 @@ Public Sub Draw(ByRef Guide As Guides.State, ByRef Town As Document.State,
                 If Included And RunStart < 0 Then
                     RunStart = Z
                 Else If Not Included And RunStart >= 0 Then
-                    Call Guides.Segment(P.Vector(Town.Surface.XEdges[X], 23.12, Town.Surface.ZEdges[RunStart]),
-                        P.Vector(Town.Surface.XEdges[X], 23.12, Town.Surface.ZEdges[Z]), View, RGB(150, 198, 208))
+                    Call Guides.Segment(P.Vector(Town.Surface.XEdges[X], Layers.ROAD_Y, Town.Surface.ZEdges[RunStart]),
+                        P.Vector(Town.Surface.XEdges[X], Layers.ROAD_Y, Town.Surface.ZEdges[Z]), View, RGB(150, 198, 208))
 
                     RunStart = -1
                 End If
@@ -169,8 +170,8 @@ Public Sub Draw(ByRef Guide As Guides.State, ByRef Town As Document.State,
                 If Included And RunStart < 0 Then
                     RunStart = X
                 Else If Not Included And RunStart >= 0 Then
-                    Call Guides.Segment(P.Vector(Town.Surface.XEdges[RunStart], 23.12, Town.Surface.ZEdges[Z]),
-                        P.Vector(Town.Surface.XEdges[X], 23.12, Town.Surface.ZEdges[Z]), View, RGB(150, 198, 208))
+                    Call Guides.Segment(P.Vector(Town.Surface.XEdges[RunStart], Layers.ROAD_Y, Town.Surface.ZEdges[Z]),
+                        P.Vector(Town.Surface.XEdges[X], Layers.ROAD_Y, Town.Surface.ZEdges[Z]), View, RGB(150, 198, 208))
 
                     RunStart = -1
                 End If

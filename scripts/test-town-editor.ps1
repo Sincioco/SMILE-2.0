@@ -1,12 +1,20 @@
 [CmdletBinding()]
-param([switch]$SkipRendering, [string]$SavedTown, [string]$LinkedTown, [string]$AirportTown)
+param([switch]$SkipRendering, [string]$SavedTown, [string]$LinkedTown, [string]$AirportTown,
+    [string]$PublicationDirectory)
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 $viewer = Join-Path $root 'tools\Character3DViewer'
+& (Join-Path $viewer 'Prepare-SurfaceLayers.ps1') -Check
 $compiler = Join-Path $root 'artifacts\compiler\smilec.exe'
 $output = Join-Path $root 'artifacts\tests\town-editor'
 $null = New-Item -ItemType Directory -Path $output -Force
+# Camera/door/travel assertions target the accepted three-map layout, not the
+# historical pre-split factory catalog with overlapping comparison landmarks.
+$acceptedMaps = Join-Path $root 'games/SinStarI/SourceAssets/Towns/Neris/NerisHorizonV1/Town/r009'
+if (-not $SavedTown) { $SavedTown = Join-Path $acceptedMaps 'Neris-Town-r009.town' }
+if (-not $LinkedTown) { $LinkedTown = Join-Path $acceptedMaps 'Neris-Spaceport-r002.town' }
+if (-not $AirportTown) { $AirportTown = Join-Path $acceptedMaps 'Horizon-Airport-r009.town' }
 
 function Invoke-Check([string]$Project, [string]$Executable, [string]$Expected) {
     & $compiler --project $Project --target windows-x64 -o $Executable *> "$Executable.compile.log"
@@ -107,6 +115,7 @@ if (-not $SkipRendering) {
     $sessionOutput = Join-Path $output 'session'
     $null = New-Item -ItemType Directory -Path $sessionOutput -Force
     $publication = Join-Path $viewer 'bin/Release'
+    if ($PublicationDirectory) { $publication = [IO.Path]::GetFullPath($PublicationDirectory) }
     & (Join-Path $viewer 'Check-Publication.ps1') -Directory $publication
     [xml]$assetProject = Get-Content (Join-Path $viewer 'Character3DViewer.smileproj') -Raw
     $manifestPath = Join-Path $publication ($assetProject.SmileProject.PropertyGroup.ApplicationId + '.smile-assets.json')

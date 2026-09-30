@@ -3,6 +3,7 @@ Module Smile.Tools.NerisCastleRoute
 
 Option Explicit
 
+Import Smile.Tools.TownSurfaceLayers As Layers
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PartyTrail3D As Trail
 Import Smile.Tools.ProximityDrawbridge As Bridge
@@ -10,7 +11,7 @@ Import Smile.Tools.ProximityDrawbridge As Bridge
 Public Const ORIGIN_X = -3660.0
 Public Const ORIGIN_Z = 2440.0
 Public Const SCALE = 17.0
-Public Const DECK_Y = 23.12
+Public Const DECK_Y = Layers.ROAD_Y + Layers.STRUCTURE_CLEARANCE
 Public Const DISPLAY_NAME = "Royal Court"
 
 Private Dim Enabled As Boolean
@@ -236,7 +237,11 @@ Public Function GroundHeight(X As Double, Z As Double) As Double
     Result = DECK_Y
     Point = LocalPoint(X, Z)
 
-    If (Point.Z >= 2.0 And
+    ' The movable leaf must clear painted roads after the court is relocated.
+
+    If Point.Z >= -84.0 And Point.Z < -64.0 Then
+        Result = DECK_Y
+    Else If (Point.Z >= 2.0 And
         Point.Z < 14.0 And
         Abs(Point.X) <= 7.0) Then
         Result = DECK_Y + Min(20.0, Floor((Point.Z - 2.0) / 0.6) + 1.0) * 0.15 * SCALE

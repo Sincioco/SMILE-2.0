@@ -5,6 +5,9 @@ Option Explicit
 
 Import Smile.Tools.TownWorldDocument As Document
 Import Smile.Tools.TownWorldCanvas As Canvas
+Import Smile.Tools.TownWorldView As View
+Import Smile.Tools.TownWorldPreviews As Previews
+Import Smile.Tools.TownWorldImport As ImportTown
 Import Smile.Tools.TownWorldFiles As Files
 Import Smile.Tools.TownDocumentStore As Storage
 Import Smile.Tools.TownLibrary As Library
@@ -15,6 +18,8 @@ Private Dim Map As Document.State
 Private Dim Ui As Panel.State
 Private Dim Graph As Canvas.State
 Private Dim Transfer As Files.State
+Private Dim Incoming As ImportTown.State
+Private Dim Images As Previews.State
 Private Dim Enabled As Boolean
 Private Dim Dirty As Boolean
 Private Dim Choosing As Boolean
@@ -36,7 +41,7 @@ Public Sub Open(CreateNew As Boolean, Town As Text)
 
     Call Update()
 
-    If Transfer.Job > 0 Then
+    If Transfer.Job > 0 Or Incoming.Job > 0 Then
         Return
     End If
 
@@ -123,7 +128,9 @@ Public Sub Update()
         Dirty = True
     End If
 
-    If WasRunning And Transfer.Job = 0 And Map.Name = "" Then
+    If (WasRunning And
+        Transfer.Job = 0 And
+        Map.Name = "") Then
         Enabled = False
     End If
 
@@ -135,10 +142,21 @@ Public Function Input(Key As Number, ByRef OpenTabs As Tabs.State) As Text
     Dim Index As Number
     Dim Ok As Boolean
     Dim Result As Text
+    Dim ImportRunning As Boolean
 
     If Not Enabled Then
         Return ""
     End If
+
+    ImportRunning = Incoming.Job > 0
+    Ok = ImportTown.Update(Incoming, OpenTabs, Map)
+    Dirty = Dirty Or Ok
+
+    If ImportRunning Then
+        Ui.Message = Incoming.Message
+    End If
+
+    Call Previews.Update(Images, Map, OpenTabs)
 
     TownCount = OpenTabs.TabCount
 
@@ -156,7 +174,9 @@ Public Function Input(Key As Number, ByRef OpenTabs As Tabs.State) As Text
 
     If Graph.PendingDelete Then
 
-        If Action = 20 Or Action = 21 Or Key = KEY_ESCAPE Then
+        If (Action = 20 Or
+            Action = 21 Or
+            Key = KEY_ESCAPE) Then
             Ok = Canvas.ConfirmDelete(Graph, Map, Action = 20)
             Dirty = Dirty Or Ok
         End If
@@ -191,6 +211,42 @@ Public Function Input(Key As Number, ByRef OpenTabs As Tabs.State) As Text
 
         Choosing = True
 
+    Else If Action = 8 Then
+
+        Call ImportTown.Choose(Incoming, OpenTabs, Map)
+
+        Ui.Message = Incoming.Message
+
+    Else If Action >= 30 And Action <= 36 Then
+
+        If Action = 30 Or Action = 31 Then
+
+            Call View.ZoomAt(Graph.Camera, (Action * 2 - 61) * 25,
+                Panel.LeftEdge() / 2, Window_Height() / 2, Panel.LeftEdge(), Window_Height())
+
+        Else If Action = 32 Then
+
+            Graph.Camera.PanX = Graph.Camera.PanX + 80
+
+        Else If Action = 33 Then
+
+            Graph.Camera.PanX = Graph.Camera.PanX - 80
+
+        Else If Action = 34 Then
+
+            Graph.Camera.PanY = Graph.Camera.PanY + 80
+
+        Else If Action = 35 Then
+
+            Graph.Camera.PanY = Graph.Camera.PanY - 80
+
+        Else
+            Graph.Camera.Zoom = 100
+            Graph.Camera.PanX = 0
+            Graph.Camera.PanY = 0
+
+        End If
+
     Else If Action = 3 Or Key = KEY_DELETE Then
 
         If Graph.Selected >= 0 And Graph.Selected < Map.NodeCount Then
@@ -213,9 +269,11 @@ Public Function Input(Key As Number, ByRef OpenTabs As Tabs.State) As Text
 
         Call Open(False, "")
 
-    Else If Action = 5 Or Action = 6 Or Key = KEY_ESCAPE Then
+    Else If (Action = 5 Or
+        Action = 6 Or
+        Key = KEY_ESCAPE) Then
 
-        If Transfer.Job > 0 Then
+        If Transfer.Job > 0 Or Incoming.Job > 0 Then
             Ui.Message = "Wait for the file transfer to finish."
             Return ""
         End If
@@ -227,7 +285,9 @@ Public Function Input(Key As Number, ByRef OpenTabs As Tabs.State) As Text
             Dirty = False
             Enabled = False
 
-            If Action = 5 And Graph.Selected >= 0 And Graph.Selected < Map.NodeCount Then
+            If (Action = 5 And
+                Graph.Selected >= 0 And
+                Graph.Selected < Map.NodeCount) Then
                 Result = Map.Nodes[Graph.Selected].Town
             End If
 
@@ -239,14 +299,32 @@ Public Function Input(Key As Number, ByRef OpenTabs As Tabs.State) As Text
 
     Else
 
+        If Pointer_X() < Panel.LeftEdge() And Pointer_Y() >= 180 Then
+
+            If Pointer_Wheel_Delta() <> 0 Then
+                Call View.ZoomAt(Graph.Camera, (Pointer_Wheel_Delta() / Abs(Pointer_Wheel_Delta())) * 25,
+                    Pointer_X(), Pointer_Y(), Panel.LeftEdge(), Window_Height())
+            End If
+
+            Call View.Pan(Graph.Camera, Pointer_X(), Pointer_Y(), Pointer_Held(POINTER_MIDDLE) Or
+                (Key_Held(KEY_SPACE) And Pointer_Held(POINTER_PRIMARY)))
+
+        Else
+            Graph.Camera.Dragging = False
+
+        End If
+
         Ok = Canvas.Gesture(Graph, Map, Pointer_X(), Pointer_Y(), Pointer_Pressed(POINTER_PRIMARY),
-            Pointer_Held(POINTER_PRIMARY), Pointer_X() < Panel.LeftEdge() And Pointer_Y() >= 180,
+            Pointer_Held(POINTER_PRIMARY), Not Graph.Camera.Dragging And
+            Pointer_X() < Panel.LeftEdge() And Pointer_Y() >= 180,
             Panel.LeftEdge(), Window_Height())
         Dirty = Dirty Or Ok
 
     End If
 
-    If Dirty And Not Graph.DragNode And Not Graph.DragPort Then
+    If (Dirty And
+        Not Graph.DragNode And
+        Not Graph.DragPort) Then
 
         Ok = Document.SaveWorld(Map)
         Dirty = Not Ok
@@ -273,7 +351,11 @@ Public Sub Draw()
     Fill Rectangle 0, 125, Window_Width(), Window_Height() - 125, RGB(12, 23, 36)
     Draw Text Map.Name At 30, 142 Size 24 Color WHITE
 
-    Call Canvas.Draw(Graph, Map, Panel.LeftEdge(), Window_Height())
+    Clip Rectangle 0, 180, Panel.LeftEdge(), Max(1, Window_Height() - 260)
+
+    Call Canvas.Draw(Graph, Map, Images, Panel.LeftEdge(), Window_Height())
+
+    End Clip
 
     X = Panel.LeftEdge() + 10
     Ui.ControlCount = 0
@@ -301,11 +383,24 @@ Public Sub Draw()
     Else
 
         Call Panel.Button(Ui, 1, X, 180, 283, "Add Open Town...")
-        Call Panel.Button(Ui, 3, X, 218, 283, "Remove Selected Town")
-        Call Panel.Button(Ui, 4, X, 256, 139, "Save World...", False, Transfer.Job = 0)
-        Call Panel.Button(Ui, 7, X + 144, 256, 139, "Open World...", False, Transfer.Job = 0)
-        Call Panel.Button(Ui, 5, X, 294, 283, "Enter Selected Town", False, Transfer.Job = 0)
-        Call Panel.Button(Ui, 6, X, 332, 283, "Back To Town Editor", False, Transfer.Job = 0)
+        Call Panel.Button(Ui, 8, X, 218, 283, "Open .town File...", False, Transfer.Job = 0 And Incoming.Job = 0)
+        Call Panel.Button(Ui, 3, X, 256, 283, "Remove Selected Town")
+        Call Panel.Button(Ui, 4, X, 294, 139, "Save World...", False, Transfer.Job = 0 And Incoming.Job = 0)
+        Call Panel.Button(Ui, 7, X + 144, 294, 139, "Open World...", False, Transfer.Job = 0 And Incoming.Job = 0)
+        Call Panel.Button(Ui, 5, X, 332, 283, "Enter Selected Town", False, Transfer.Job = 0 And Incoming.Job = 0)
+        Call Panel.Button(Ui, 6, X, 370, 283, "Back To Town Editor", False, Transfer.Job = 0 And Incoming.Job = 0)
+
+    End If
+
+    If Not Choosing And Not Graph.PendingDelete Then
+
+        Call Panel.Button(Ui, 30, X, 430, 66, "-")
+        Call Panel.Button(Ui, 31, X + 72, 430, 66, "+")
+        Call Panel.Button(Ui, 36, X + 144, 430, 139, "Reset View")
+        Call Panel.Button(Ui, 32, X, 466, 66, "Left")
+        Call Panel.Button(Ui, 34, X + 72, 466, 66, "Up")
+        Call Panel.Button(Ui, 35, X + 144, 466, 66, "Down")
+        Call Panel.Button(Ui, 33, X + 216, 466, 67, "Right")
 
     End If
 
@@ -314,7 +409,7 @@ Public Sub Draw()
         Fill Rectangle X, Window_Height() - 108, 283 * Transfer.Progress / 100, 12, RGB(40, 200, 195)
     End If
 
-    Draw Text "Drag towns to arrange. Drag yellow points to connect. Click a line to delete." At 30, Window_Height() - 65 Size 14 Color WHITE
+    Draw Text "Wheel: Zoom   Middle / Space+Drag: Pan   Yellow Points: Connect" At 30, Window_Height() - 65 Size 14 Color WHITE
     Draw Text Ui.Message At 30, Window_Height() - 40 Size 14 Color RGB(240, 205, 140)
 
 End Sub

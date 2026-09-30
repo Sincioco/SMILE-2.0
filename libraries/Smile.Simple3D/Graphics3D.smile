@@ -141,6 +141,7 @@ Private Const COMMAND_CONFIGURE_REFLECTIONS = 133
 Private Const COMMAND_SET_OBJECT_REFLECTION_MODE = 134
 Private Const COMMAND_REFLECTION_VALUE = 135
 Private Const COMMAND_SET_VIEWPORT = 136
+Private Const COMMAND_REPLAY_VIEWPORT = 137
 
 Public Const MATERIAL_INSPECTION_LIT = 0
 Public Const MATERIAL_INSPECTION_BASE_COLOR = 1
@@ -4189,12 +4190,18 @@ Public Function M5Value3D(Property As Number, Index As Number) As Number
 End Function
 
 ''' Selects the one active 3D viewport in logical window coordinates, between frames.
-Public Function SetViewport3D(X As Number, Y As Number, Width As Number, Height As Number) As Boolean
+Public Function SetViewport3D(X As Number, Y As Number, Width As Number, Height As Number,
+    Optional PreserveOutside As Boolean = False) As Boolean
 
     Dim Result As Boolean
+    Dim PreserveValue As Number
+
+    If PreserveOutside Then
+        PreserveValue = 1
+    End If
 
     Result = Dispatch(COMMAND_SET_VIEWPORT, X, Y, Width, Height,
-        Window_Width(), Window_Height(), 0, 0, 0, 0) <> 0
+        Window_Width(), Window_Height(), PreserveValue, 0, 0, 0) <> 0
 
     Return Result
 
@@ -4205,6 +4212,19 @@ Public Sub ResetViewport3D()
     Call Execute(COMMAND_SET_VIEWPORT, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 
 End Sub
+
+''' Reuse the last preserved native subviewport without drawing the scene again.
+''' Returns False when no matching image exists, including after resize/device loss.
+Public Function ReplayViewport3D(X As Number, Y As Number, Width As Number, Height As Number) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_REPLAY_VIEWPORT, X, Y, Width, Height,
+        Window_Width(), Window_Height(), 0, 0, 0, 0) <> 0
+
+    Return Result
+
+End Function
 
 Public Sub ResetRenderer3D()
 

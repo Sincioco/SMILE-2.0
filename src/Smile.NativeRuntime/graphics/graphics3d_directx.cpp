@@ -19,34 +19,13 @@
 
 static SmileWaterScene3D smile_water_scene3d;
 
-// One logical subviewport; reset is the existing full-window behavior.
-static double smile_viewport_region3d[4];
-static double smile_3d_viewport_x(void) {
-    return smile_graphics_directx_viewport_x() + floor(
-        smile_viewport_region3d[0] * smile_graphics_directx_viewport_width() + .5);
-}
-static double smile_3d_viewport_y(void) {
-    return smile_graphics_directx_viewport_y() + floor(
-        smile_viewport_region3d[1] * smile_graphics_directx_viewport_height() + .5);
-}
-static double smile_3d_viewport_width(void) {
-    if (smile_viewport_region3d[2] == 0) return smile_graphics_directx_viewport_width();
-    double right = smile_graphics_directx_viewport_x() + floor(
-        smile_viewport_region3d[2] * smile_graphics_directx_viewport_width() + .5);
-    return right > smile_3d_viewport_x() ? right - smile_3d_viewport_x() : 1;
-}
-static double smile_3d_viewport_height(void) {
-    if (smile_viewport_region3d[3] == 0) return smile_graphics_directx_viewport_height();
-    double bottom = smile_graphics_directx_viewport_y() + floor(
-        smile_viewport_region3d[3] * smile_graphics_directx_viewport_height() + .5);
-    return bottom > smile_3d_viewport_y() ? bottom - smile_3d_viewport_y() : 1;
-}
+#include "graphics3d_viewport.h"
 
 #define SMILE_3D_MAX_MESHES 1024
 #define SMILE_3D_MAX_OBJECTS 1024
 #define SMILE_3D_MAX_TEXTURES 128
 #define SMILE_3D_MAX_MATERIALS 512
-#define SMILE_3D_MAX_MODELS 64
+#define SMILE_3D_MAX_MODELS 96
 #define SMILE_3D_MAX_MODEL_PARTS 16
 #define SMILE_3D_MAX_MODEL_VERTICES 131072
 #define SMILE_3D_MAX_MODEL_INDICES 393216
@@ -780,12 +759,14 @@ static float smile_camera_position3d[3] = { 0.0f, 300.0f, -800.0f };
 static float smile_camera_target3d[3] = { 0.0f, 0.0f, 0.0f };
 static float smile_camera_up3d[3] = { 0.0f, 1.0f, 0.0f };
 static float smile_camera_fov3d = 55.0f;
+static float smile_camera_orthographic_height3d;
 static float smile_camera_near3d = 1.0f;
 static float smile_camera_far3d = 10000.0f;
 static float smile_pending_camera_position3d[3];
 static float smile_pending_camera_target3d[3];
 static float smile_pending_camera_up3d[3];
 static float smile_pending_camera_fov3d;
+static float smile_pending_camera_orthographic_height3d;
 static float smile_pending_camera_near3d;
 static float smile_pending_camera_far3d;
 static int smile_pending_camera_has_projection3d;
@@ -4800,6 +4781,7 @@ static void smile_3d_promote_pending_camera(void)
         sizeof(smile_camera_target3d));
     memcpy(smile_camera_up3d, smile_pending_camera_up3d, sizeof(smile_camera_up3d));
     smile_camera_fov3d = smile_pending_camera_fov3d;
+    smile_camera_orthographic_height3d = smile_pending_camera_orthographic_height3d;
     smile_camera_near3d = smile_pending_camera_near3d;
     smile_camera_far3d = smile_pending_camera_far3d;
     smile_3d_clear_pending_camera();
@@ -4839,6 +4821,15 @@ static SmileMatrix3D smile_3d_view(void)
 static SmileMatrix3D smile_3d_projection(float aspect)
 {
     SmileMatrix3D result = {};
+    if (smile_camera_orthographic_height3d > 0.0f)
+    {
+        result.m[0] = 2.0f / (smile_camera_orthographic_height3d * aspect);
+        result.m[5] = 2.0f / smile_camera_orthographic_height3d;
+        result.m[10] = 1.0f / (smile_camera_far3d - smile_camera_near3d);
+        result.m[14] = -smile_camera_near3d * result.m[10];
+        result.m[15] = 1.0f;
+        return result;
+    }
     float y_scale = 1.0f / tanf(smile_camera_fov3d * SMILE_3D_PI / 360.0f);
     float x_scale = y_scale / aspect;
     result.m[0] = x_scale; result.m[5] = y_scale;
@@ -5174,11 +5165,11 @@ static int smile_3d_create_pipeline(void)
         "struct O{float4 p:SV_POSITION;};O main(uint id:SV_VertexID){O o;float2 p=id==0?float2(-1,-1):(id==1?float2(-1,3):float2(3,-1));o.p=float4(p,0,1);return o;}";
     static const char* depth_copy_pixel_source =
         "cbuffer D:register(b0){float4 projection;}Texture2D<float> sourceDepth:register(t0);"
-        "float Linear(float z){float n=projection.x,f=projection.y;return n*f/max(f-z*(f-n),.000001);}"
+        "float Linear(float z){float n=projection.x,f=projection.y;if(projection.w>.5)return n+z*(f-n);return n*f/max(f-z*(f-n),.000001);}"
         "float main(float4 p:SV_POSITION):SV_TARGET{return Linear(sourceDepth.Load(int3(int2(p.xy),0)));}";
     static const char* depth_copy_msaa_pixel_source =
         "cbuffer D:register(b0){float4 projection;}Texture2DMS<float> sourceDepth:register(t0);"
-        "float Linear(float z){float n=projection.x,f=projection.y;return n*f/max(f-z*(f-n),.000001);}"
+        "float Linear(float z){float n=projection.x,f=projection.y;if(projection.w>.5)return n+z*(f-n);return n*f/max(f-z*(f-n),.000001);}"
         "float main(float4 p:SV_POSITION):SV_TARGET{int2 q=int2(p.xy);float z=sourceDepth.Load(q,0);"
         "if(projection.z>1.5)z=min(z,sourceDepth.Load(q,1));if(projection.z>2.5)z=min(z,sourceDepth.Load(q,2));if(projection.z>3.5)z=min(z,sourceDepth.Load(q,3));"
         "if(projection.z>4.5)z=min(z,sourceDepth.Load(q,4));if(projection.z>5.5)z=min(z,sourceDepth.Load(q,5));if(projection.z>6.5)z=min(z,sourceDepth.Load(q,6));if(projection.z>7.5)z=min(z,sourceDepth.Load(q,7));return Linear(z);}";
@@ -7804,6 +7795,11 @@ static int smile_3d_begin(long long red, long long green, long long blue)
     }
     if (use_pending_camera) smile_3d_promote_pending_camera();
     context = (ID3D11DeviceContext*)smile_graphics_directx_context();
+    if (!smile_3d_preserve_viewport(context)) {
+        smile_graphics_directx_resume_2d();
+        smile_last_error3d = 13;
+        return 0;
+    }
     target = smile_color_view3d != 0
         ? smile_color_view3d
         : (ID3D11RenderTargetView*)smile_graphics_directx_render_target();
@@ -8754,6 +8750,7 @@ static int smile_3d_snapshot_linear_depth(void)
     constants.projection[0] = smile_camera_near3d;
     constants.projection[1] = smile_camera_far3d;
     constants.projection[2] = (float)smile_sample_count3d;
+    constants.projection[3] = smile_camera_orthographic_height3d > 0.0f ? 1.0f : 0.0f;
     context->UpdateSubresource(smile_depth_copy_constant_buffer3d, 0, 0, &constants, 0, 0);
     context->VSSetConstantBuffers(0, 1, &smile_depth_copy_constant_buffer3d);
     context->PSSetConstantBuffers(0, 1, &smile_depth_copy_constant_buffer3d);
@@ -9224,6 +9221,7 @@ static int smile_3d_end(void)
         context->OMSetDepthStencilState(0, 0);
         context->RSSetState(0);
     }
+    smile_3d_restore_viewport(context);
     smile_frame_active3d = 0;
     smile_3d_release_submissions(0, smile_frame_submission_count3d);
     smile_3d_release_gpu_particle_frame_systems();
@@ -9242,6 +9240,7 @@ extern "C" void smile_graphics3d_on_device_lost(void)
 {
     int index;
     SmileM5TargetState3D targets;
+    smile_3d_viewport_release();
     smile_reflections_on_device_lost();
     smile_3d_release_submissions(0, smile_frame_submission_count3d);
     smile_3d_release_gpu_particle_frame_systems();
@@ -9823,6 +9822,9 @@ static void smile_3d_reset(void)
 {
     int index;
     smile_3d_end();
+    smile_3d_viewport_release();
+    smile_viewport_preserve3d = false;
+    smile_depth_from_preserved_viewport3d = false;
     memset(smile_viewport_region3d, 0, sizeof(smile_viewport_region3d));
     smile_material_inspection3d = 0;
     smile_backdrop_texture_handle3d = 0;
@@ -9930,6 +9932,7 @@ static void smile_3d_reset(void)
     smile_camera_up3d[1] = 1.0f;
     smile_camera_up3d[2] = 0.0f;
     smile_camera_fov3d = 55.0f;
+    smile_camera_orthographic_height3d = 0.0f;
     smile_camera_near3d = 1.0f;
     smile_camera_far3d = 10000.0f;
     smile_3d_clear_pending_camera();
@@ -10052,6 +10055,7 @@ extern "C" long long smile_renderer3d_command(long long command,
             smile_pending_camera_target3d[1] = (float)e;
             smile_pending_camera_target3d[2] = (float)f;
             smile_pending_camera_fov3d = (float)g;
+            smile_pending_camera_orthographic_height3d = 0.0f;
             smile_pending_camera_near3d = (float)h;
             smile_pending_camera_far3d = (float)i;
             smile_pending_camera_has_projection3d = 1;
@@ -10572,19 +10576,12 @@ extern "C" long long smile_renderer3d_command(long long command,
             object->reflection_mode = (unsigned char)b;
             return 1;
         case SMILE_3D_SET_VIEWPORT:
-            if (smile_frame_active3d) { smile_last_error3d = 50; return 0; }
-            if (a == 0 && b == 0 && c == 0 && d == 0 && e == 0 && f == 0) {
-                memset(smile_viewport_region3d, 0, sizeof(smile_viewport_region3d));
-                return 1;
-            }
-            if (e < 1 || f < 1 || e > 1000000 || f > 1000000 ||
-                a < 0 || b < 0 || c < 1 || d < 1 || a > e || b > f ||
-                c > e - a || d > f - b) { smile_last_error3d = 50; return 0; }
-            smile_viewport_region3d[0] = (double)a / e;
-            smile_viewport_region3d[1] = (double)b / f;
-            smile_viewport_region3d[2] = (double)(a + c) / e;
-            smile_viewport_region3d[3] = (double)(b + d) / f;
+            if (smile_frame_active3d || !smile_3d_set_viewport(a,b,c,d,e,f,g))
+            { smile_last_error3d = 50; return 0; }
             return 1;
+        case SMILE_3D_REPLAY_VIEWPORT:
+            if (smile_frame_active3d) { smile_last_error3d = 50; return 0; }
+            return smile_3d_replay_viewport(a,b,c,d,e,f) ? 1 : 0;
         case SMILE_3D_REFLECTION_VALUE:
             if (a < 1 || a > 21)
             { smile_last_error3d = 50; return 0; }

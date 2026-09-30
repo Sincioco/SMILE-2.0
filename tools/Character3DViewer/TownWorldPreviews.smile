@@ -1,0 +1,297 @@
+''' Cached top-down thumbnails of authored terrain and placed building footprints.
+Module Smile.Tools.TownWorldPreviews
+
+Option Explicit
+
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Tools.TownDocument As Town
+Import Smile.Tools.TownGeometry As Geometry
+Import Smile.Tools.TownCatalogData As Catalog
+Import Smile.Tools.TownWorldDocument As World
+Import Smile.Tools.TownLibrary As Library
+Import Smile.Tools.TownTabs As Tabs
+
+Public Type State
+    Names[16] As Text
+    Revisions[16] As Number
+    Cells[16, 9216] As Number
+    Aspect[16] As Double
+    Ready[16] As Boolean
+End Type
+
+Private Function Coordinate(Value As Double, Low As Double, High As Double) As Number
+
+    Dim Result As Number
+
+    Result = ToNumber(Clamp((Value - Low) * 96.0 / Max(1.0, High - Low), 0.0, 95.0))
+
+    Return Result
+
+End Function
+
+Private Function LandmarkKind(ByRef Map As Town.State, Point As P.Vector3, Kind As Number) As Number
+
+    Dim X As Double
+    Dim Z As Double
+
+    If Map.CourtPlaced Then
+
+        X = (Point.X + 3660.0 - Map.CourtOffsetX) / 17.0
+        Z = (Point.Z - 2440.0 - Map.CourtOffsetZ) / 17.0
+
+        If (Abs(X) <= 64.0 And
+            Z >= -80.0 And
+            Z <= 24.0) Then
+
+            Kind = 3
+
+            If (Abs(X) > 53.0 Or
+                Z < -61.0 Or
+                Z > 15.0) Then
+                Kind = 7
+            End If
+
+        End If
+
+    End If
+
+    If Map.Name = "Horizon Airport" Then
+
+        X = (1250.0 - Point.Z) / 10.0
+        Z = (Point.X - 7400.0) / 10.0
+
+        If (Abs(X) < 480.0 And
+            Z > -200.0 And
+            Z < 385.0) Then
+
+            Kind = 3
+
+            If ((Abs(X) < 250.0 And Z > 0.0 And Z < 100.0) Or
+                (Abs(X) > 310.0 And Abs(X) < 440.0 And Z > 0.0 And Z < 100.0)) Then
+                Kind = 7
+            Else If Z > 185.0 And Z < 340.0 Then
+                Kind = 8
+            End If
+
+        End If
+
+    Else If Map.Name = "Neris Spaceport" Then
+
+        X = (-5500.0 - Point.X) / 10.0
+        Z = (-7600.0 - Point.Z) / 10.0
+
+        If Abs(X) < 110.0 And Abs(Z) < 120.0 Then
+            Kind = 7
+        Else If (Abs(X) < 235.0 And
+            Z > -145.0 And
+            Z < 15.0) Then
+            Kind = 6
+        Else If (Abs(X) < 22.0 And
+            Z > -390.0 And
+            Z < 0.0) Then
+            Kind = 3
+        Else If ((Abs(X) < 280.0 And Abs(Abs(Z) - 135.0) < 9.0) Or
+            ((Abs(X) - 280.0) * (Abs(X) - 280.0) + (Abs(Z) - 135.0) * (Abs(Z) - 135.0) < 2304.0)) Then
+            Kind = 3
+        End If
+
+    End If
+
+    Return Kind
+
+End Function
+
+Public Sub Build(ByRef Value As State, Slot As Number, ByRef Map As Town.State)
+
+    Dim X As Number
+    Dim Z As Number
+    Dim Index As Number
+    Dim CellX As Number
+    Dim CellZ As Number
+    Dim LowX As Double
+    Dim LowZ As Double
+    Dim HighX As Double
+    Dim HighZ As Double
+    Dim Point As P.Vector3
+    Dim First As P.Vector3
+    Dim Last As P.Vector3
+    Dim Shape As Catalog.Template
+    Dim Corner As Number
+
+    LowX = Map.Surface.OriginX
+    LowZ = Map.Surface.OriginZ
+    HighX = Map.Surface.XEdges[Map.Surface.Columns]
+    HighZ = Map.Surface.ZEdges[Map.Surface.Rows]
+    Value.Aspect[Slot] = (HighX - LowX) / Max(1.0, HighZ - LowZ)
+
+    For Z = 0 To 95
+
+        For X = 0 To 95
+
+            Point = P.Vector(LowX + (ToDouble(X) + 0.5) / 96.0 * (HighX - LowX), 0.0,
+                LowZ + (ToDouble(Z) + 0.5) / 96.0 * (HighZ - LowZ))
+            CellX = Grid.CellX(Map.Surface, Point.X)
+            CellZ = Grid.CellZ(Map.Surface, Point.Z)
+            Value.Cells[Slot, Z * 96 + X] = LandmarkKind(Map, Point, Grid.ReadCell(Map.Surface, CellX, CellZ))
+        End For
+    End For
+
+    For Index = 0 To Map.ItemCount - 1
+
+        If Map.Items[Index].Active And Map.Items[Index].Category = Town.CATEGORY_BUILDINGS Then
+
+            Shape = Catalog.TemplateAt(Map.Items[Index].Template)
+            First = Geometry.ToWorld(Map.Items[Index], Shape.Low)
+            Last = First
+
+            For Corner = 1 To 3
+
+                Point = Shape.Low
+
+                If Corner Mod 2 = 1 Then
+                    Point.X = Shape.High.X
+                End If
+
+                If Corner >= 2 Then
+                    Point.Z = Shape.High.Z
+                End If
+
+                Point = Geometry.ToWorld(Map.Items[Index], Point)
+                First.X = Min(First.X, Point.X)
+                First.Z = Min(First.Z, Point.Z)
+                Last.X = Max(Last.X, Point.X)
+                Last.Z = Max(Last.Z, Point.Z)
+            End For
+
+            For Z = Coordinate(Min(First.Z, Last.Z), LowZ, HighZ) To Coordinate(Max(First.Z, Last.Z), LowZ, HighZ)
+
+                For X = Coordinate(Min(First.X, Last.X), LowX, HighX) To Coordinate(Max(First.X, Last.X), LowX, HighX)
+
+                    Point = P.Vector(LowX + (ToDouble(X) + 0.5) / 96.0 * (HighX - LowX), 0.0,
+                        LowZ + (ToDouble(Z) + 0.5) / 96.0 * (HighZ - LowZ))
+
+                    If Geometry.Contains(Map.Items[Index], Point.X, Point.Z) Then
+                        Value.Cells[Slot, Z * 96 + X] = 6
+                    End If
+
+                End For
+            End For
+
+        End If
+
+    End For
+
+    Value.Names[Slot] = Map.Name
+    Value.Revisions[Slot] = Map.Revision
+    Value.Ready[Slot] = True
+
+End Sub
+
+''' At most one stale preview is rebuilt per frame. Open documents are authoritative.
+Public Sub Update(ByRef Value As State, ByRef Map As World.State, ByRef OpenTabs As Tabs.State)
+
+    Dim Slot As Number
+    Dim Index As Number
+    Dim Found As Number
+    Dim Incoming As Town.State
+    Dim Ok As Boolean
+
+    For Slot = 0 To Map.NodeCount - 1
+
+        Found = -1
+
+        For Index = 0 To OpenTabs.TabCount - 1
+
+            If OpenTabs.Documents[Index].Name = Map.Nodes[Slot].Town Then
+                Found = Index
+            End If
+
+        End For
+
+        If Found >= 0 Then
+
+            If (Value.Names[Slot] <> Map.Nodes[Slot].Town Or
+                Value.Revisions[Slot] <> OpenTabs.Documents[Found].Revision) Then
+                Call Build(Value, Slot, OpenTabs.Documents[Found])
+
+                Return
+            End If
+
+        Else If Value.Names[Slot] <> Map.Nodes[Slot].Town Then
+
+            Ok = Library.RecoverNamed(Incoming, Map.Nodes[Slot].Town)
+            Value.Names[Slot] = Map.Nodes[Slot].Town
+            Value.Ready[Slot] = False
+
+            If Ok Then
+                Call Build(Value, Slot, Incoming)
+            End If
+
+            Return
+
+        End If
+
+    End For
+
+End Sub
+
+Public Sub Draw(ByRef Value As State, Slot As Number, Left As Number, Top As Number,
+    Width As Number, Height As Number)
+
+    Dim X As Number
+    Dim Z As Number
+    Dim First As Number
+    Dim Kind As Number
+    Dim ColorValue As Number
+    Dim ActualWidth As Number
+    Dim ActualHeight As Number
+
+    Fill Rectangle Left, Top, Width, Height, RGB(8, 17, 25)
+
+    If Not Value.Ready[Slot] Then
+        Draw Text "Preview Unavailable" At Left + Width / 2, Top + Height / 2 Size 11 Color LIGHT_GRAY Centered
+        Return
+    End If
+
+    ActualWidth = Min(Width, ToNumber(ToDouble(Height) * Value.Aspect[Slot]))
+    ActualHeight = Min(Height, ToNumber(ToDouble(Width) / Max(0.01, Value.Aspect[Slot])))
+    Left = Left + (Width - ActualWidth) / 2
+    Top = Top + (Height - ActualHeight) / 2
+
+    For Z = 0 To 95
+
+        X = 0
+
+        Do
+            First = X
+            Kind = Value.Cells[Slot, Z * 96 + X]
+
+            Do
+                X = X + 1
+
+            Loop Until X >= 96 Or Value.Cells[Slot, Z * 96 + X] <> Kind
+
+            ColorValue = RGB(48, 96, 36)
+
+            If Kind = 2 Then
+                ColorValue = RGB(28, 79, 178)
+            Else If Kind = 6 Then
+                ColorValue = RGB(222, 211, 177)
+            Else If Kind = 7 Then
+                ColorValue = RGB(28, 103, 123)
+            Else If Kind = 8 Then
+                ColorValue = RGB(67, 79, 87)
+            Else If Kind >= 3 Then
+                ColorValue = RGB(166, 183, 188)
+            End If
+
+            Fill Rectangle Left + First * ActualWidth / 96, Top + (95 - Z) * ActualHeight / 96, Max(1, X * ActualWidth / 96 - First * ActualWidth / 96), Max(1, (96 - Z) * ActualHeight / 96 - (95 - Z) * ActualHeight / 96), ColorValue
+
+        Loop Until X >= 96
+
+    End For
+
+End Sub
+
+End Module

@@ -288,7 +288,7 @@ Public Function ApplyScreenSpaceCameraControls(BaseCamera As Precision3D.Camera3
 
 End Function
 
-Private Function FocalRatio(FovDegrees As Double) As Double
+Public Function FocalRatio(FovDegrees As Double) As Double
 
     Dim HalfFov As Double
     Dim Result As Double
@@ -387,7 +387,7 @@ Public Function AdvanceZoom(ByRef Value As ZoomState, ElapsedMilliseconds As Num
 
 End Function
 
-Private Function Basis(Camera As Precision3D.Camera3D, ByRef Forward As Precision3D.Vector3,
+Public Function Basis(Camera As Precision3D.Camera3D, ByRef Forward As Precision3D.Vector3,
     ByRef RightValue As Precision3D.Vector3, ByRef UpValue As Precision3D.Vector3) As Boolean
 
     Dim Valid As Boolean
@@ -429,8 +429,14 @@ Public Function ProjectViewerPoint(Point As Precision3D.Vector3, Camera As Preci
     End If
 
     FocalLength = ToDouble(ViewHeight) * FocalRatio(Camera.FovDegrees)
-    Result.X = ToDouble(ViewWidth) * 0.5 + Math3D.Dot(Relative, RightValue) * FocalLength / Result.Depth
-    Result.Y = ToDouble(ViewHeight) * 0.5 - Math3D.Dot(Relative, UpValue) * FocalLength / Result.Depth
+    FocalLength = FocalLength / Result.Depth
+
+    If Camera.OrthographicHeight > 0.0 Then
+        FocalLength = ToDouble(ViewHeight) / Camera.OrthographicHeight
+    End If
+
+    Result.X = ToDouble(ViewWidth) * 0.5 + Math3D.Dot(Relative, RightValue) * FocalLength
+    Result.Y = ToDouble(ViewHeight) * 0.5 - Math3D.Dot(Relative, UpValue) * FocalLength
     Result.Visible = True
 
     Return Result
@@ -464,8 +470,14 @@ Public Function CursorPointAtDepth(Camera As Precision3D.Camera3D,
     End If
 
     FocalLength = ToDouble(ViewHeight) * FocalRatio(Camera.FovDegrees)
-    Horizontal = (ToDouble(CursorX) - ToDouble(ViewWidth) * 0.5) * Depth / FocalLength
-    Vertical = (ToDouble(ViewHeight) * 0.5 - ToDouble(CursorY)) * Depth / FocalLength
+    FocalLength = Depth / FocalLength
+
+    If Camera.OrthographicHeight > 0.0 Then
+        FocalLength = Camera.OrthographicHeight / ToDouble(ViewHeight)
+    End If
+
+    Horizontal = (ToDouble(CursorX) - ToDouble(ViewWidth) * 0.5) * FocalLength
+    Vertical = (ToDouble(ViewHeight) * 0.5 - ToDouble(CursorY)) * FocalLength
     Result = Math3D.Add(Camera.Position, Math3D.Add(Math3D.Scale(Forward, Depth),
         Math3D.Add(Math3D.Scale(RightValue, Horizontal), Math3D.Scale(UpValue, Vertical))))
 

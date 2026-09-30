@@ -4,8 +4,11 @@ Module Smile.Tools.TownWorldCanvas
 Option Explicit
 
 Import Smile.Tools.TownWorldDocument As Document
+Import Smile.Tools.TownWorldView As View
+Import Smile.Tools.TownWorldPreviews As Previews
 
 Public Type State
+    Camera As View.State
     Selected As Number
     DragNode As Boolean
     DragPort As Boolean
@@ -20,41 +23,41 @@ Public Type State
     DeleteSecond As Number
 End Type
 
-Public Function X(ByRef Map As Document.State, Index As Number, RightEdge As Number,
+Public Function X(ByRef Value As State, ByRef Map As Document.State, Index As Number, RightEdge As Number,
     Optional Side As Number = -1) As Number
 
     Dim Result As Number
 
-    Result = 100 + Map.Nodes[Index].X * Max(100, RightEdge - 200) / 1000
+    Result = View.ToScreen(Value.Camera, 100 + Map.Nodes[Index].X * Max(100, RightEdge - 200) / 1000, RightEdge / 2, False)
 
     If Side = 0 Then
-        Result = Result - 80
+        Result = Result - View.HalfWidth(Value.Camera)
     Else If Side = 2 Then
-        Result = Result + 80
+        Result = Result + View.HalfWidth(Value.Camera)
     End If
 
     Return Result
 
 End Function
 
-Public Function Y(ByRef Map As Document.State, Index As Number, Height As Number,
+Public Function Y(ByRef Value As State, ByRef Map As Document.State, Index As Number, Height As Number,
     Optional Side As Number = -1) As Number
 
     Dim Result As Number
 
-    Result = 200 + Map.Nodes[Index].Y * Max(100, Height - 400) / 1000
+    Result = View.ToScreen(Value.Camera, 200 + Map.Nodes[Index].Y * Max(100, Height - 400) / 1000, Height / 2, True)
 
     If Side = 1 Then
-        Result = Result - 22
+        Result = Result - View.HalfHeight(Value.Camera)
     Else If Side = 3 Then
-        Result = Result + 22
+        Result = Result + View.HalfHeight(Value.Camera)
     End If
 
     Return Result
 
 End Function
 
-Private Function PickPort(ByRef Map As Document.State, Px As Number, Py As Number,
+Private Function PickPort(ByRef Value As State, ByRef Map As Document.State, Px As Number, Py As Number,
     RightEdge As Number, Height As Number) As Number
 
     Dim ReturnValue As Number
@@ -67,7 +70,8 @@ Private Function PickPort(ByRef Map As Document.State, Px As Number, Py As Numbe
 
         For Side = 0 To 3
 
-            If Abs(Px - X(Map, Index, RightEdge, Side)) <= 10 And Abs(Py - Y(Map, Index, Height, Side)) <= 10 Then
+            If (Abs(Px - X(Value, Map, Index, RightEdge, Side)) <= 10 And
+                Abs(Py - Y(Value, Map, Index, Height, Side)) <= 10) Then
                 Result = Index * 4 + Side
                 Return Result
             End If
@@ -81,7 +85,7 @@ Private Function PickPort(ByRef Map As Document.State, Px As Number, Py As Numbe
 
 End Function
 
-Private Function OnLine(ByRef Map As Document.State, First As Number, Second As Number,
+Private Function OnLine(ByRef Value As State, ByRef Map As Document.State, First As Number, Second As Number,
     Px As Number, Py As Number, RightEdge As Number, Height As Number) As Boolean
 
     Dim Ax As Double
@@ -92,10 +96,10 @@ Private Function OnLine(ByRef Map As Document.State, First As Number, Second As 
     Dim Amount As Double
     Dim Result As Boolean
 
-    Ax = ToDouble(X(Map, First, RightEdge, Map.Ports[First, Second]))
-    Ay = ToDouble(Y(Map, First, Height, Map.Ports[First, Second]))
-    Dx = ToDouble(X(Map, Second, RightEdge, Map.Ports[Second, First])) - Ax
-    Dy = ToDouble(Y(Map, Second, Height, Map.Ports[Second, First])) - Ay
+    Ax = ToDouble(X(Value, Map, First, RightEdge, Map.Ports[First, Second]))
+    Ay = ToDouble(Y(Value, Map, First, Height, Map.Ports[First, Second]))
+    Dx = ToDouble(X(Value, Map, Second, RightEdge, Map.Ports[Second, First])) - Ax
+    Dy = ToDouble(Y(Value, Map, Second, Height, Map.Ports[Second, First])) - Ay
     LengthSquared = Dx * Dx + Dy * Dy
 
     If LengthSquared < 1.0 Then
@@ -135,7 +139,7 @@ Public Function Gesture(ByRef Value As State, ByRef Map As Document.State,
 
             If Available Then
 
-                Picked = PickPort(Map, Px, Py, RightEdge, Height)
+                Picked = PickPort(Value, Map, Px, Py, RightEdge, Height)
 
                 If Picked >= 0 Then
                     Changed = Document.Connect(Map, Value.SourceNode, Value.SourcePort, Picked / 4, Picked Mod 4)
@@ -152,16 +156,16 @@ Public Function Gesture(ByRef Value As State, ByRef Map As Document.State,
         If Held And Available Then
 
             Map.Nodes[Value.Selected].X = Max(0, Min(1000,
-                (Px - Value.OffsetX - 100) * 1000 / Max(100, RightEdge - 200)))
+                (View.World(Value.Camera, Px - Value.OffsetX, RightEdge / 2, False) - 100) * 1000 / Max(100, RightEdge - 200)))
             Map.Nodes[Value.Selected].Y = Max(0, Min(1000,
-                (Py - Value.OffsetY - 200) * 1000 / Max(100, Height - 400)))
+                (View.World(Value.Camera, Py - Value.OffsetY, Height / 2, True) - 200) * 1000 / Max(100, Height - 400)))
             Changed = True
 
         End If
 
     Else If Pressed And Available Then
 
-        Picked = PickPort(Map, Px, Py, RightEdge, Height)
+        Picked = PickPort(Value, Map, Px, Py, RightEdge, Height)
 
         If Picked >= 0 Then
 
@@ -175,12 +179,13 @@ Public Function Gesture(ByRef Value As State, ByRef Map As Document.State,
 
         For Index = 0 To Map.NodeCount - 1
 
-            If Abs(Px - X(Map, Index, RightEdge)) < 80 And Abs(Py - Y(Map, Index, Height)) < 22 Then
+            If (Abs(Px - X(Value, Map, Index, RightEdge)) < View.HalfWidth(Value.Camera) And
+                Abs(Py - Y(Value, Map, Index, Height)) < View.HalfHeight(Value.Camera)) Then
 
                 Value.Selected = Index
                 Value.DragNode = True
-                Value.OffsetX = Px - X(Map, Index, RightEdge)
-                Value.OffsetY = Py - Y(Map, Index, Height)
+                Value.OffsetX = Px - X(Value, Map, Index, RightEdge)
+                Value.OffsetY = Py - Y(Value, Map, Index, Height)
                 Return False
 
             End If
@@ -191,7 +196,8 @@ Public Function Gesture(ByRef Value As State, ByRef Map As Document.State,
 
             For Other = Index + 1 To Map.NodeCount - 1
 
-                If Map.Links[Index, Other] And OnLine(Map, Index, Other, Px, Py, RightEdge, Height) Then
+                If (Map.Links[Index, Other] And
+                    OnLine(Value, Map, Index, Other, Px, Py, RightEdge, Height)) Then
 
                     Value.PendingDelete = True
                     Value.DeleteFirst = Index
@@ -228,7 +234,7 @@ Public Function ConfirmDelete(ByRef Value As State, ByRef Map As Document.State,
 
 End Function
 
-Public Sub Draw(ByRef Value As State, ByRef Map As Document.State, RightEdge As Number, Height As Number)
+Public Sub Draw(ByRef Value As State, ByRef Map As Document.State, ByRef Images As Previews.State, RightEdge As Number, Height As Number)
 
     Dim Index As Number
     Dim Other As Number
@@ -245,10 +251,10 @@ Public Sub Draw(ByRef Value As State, ByRef Map As Document.State, RightEdge As 
 
             If Map.Links[Index, Other] Then
 
-                Ax = X(Map, Index, RightEdge, Map.Ports[Index, Other])
-                Ay = Y(Map, Index, Height, Map.Ports[Index, Other])
-                Bx = X(Map, Other, RightEdge, Map.Ports[Other, Index])
-                EndY = Y(Map, Other, Height, Map.Ports[Other, Index])
+                Ax = X(Value, Map, Index, RightEdge, Map.Ports[Index, Other])
+                Ay = Y(Value, Map, Index, Height, Map.Ports[Index, Other])
+                Bx = X(Value, Map, Other, RightEdge, Map.Ports[Other, Index])
+                EndY = Y(Value, Map, Other, Height, Map.Ports[Other, Index])
                 Draw Line Ax, Ay, Bx, EndY, RGB(60, 185, 184)
 
             End If
@@ -258,8 +264,8 @@ Public Sub Draw(ByRef Value As State, ByRef Map As Document.State, RightEdge As 
 
     If Value.DragPort Then
 
-        Ax = X(Map, Value.SourceNode, RightEdge, Value.SourcePort)
-        Ay = Y(Map, Value.SourceNode, Height, Value.SourcePort)
+        Ax = X(Value, Map, Value.SourceNode, RightEdge, Value.SourcePort)
+        Ay = Y(Value, Map, Value.SourceNode, Height, Value.SourcePort)
         Draw Line Ax, Ay, Value.PointerX, Value.PointerY, RGB(245, 210, 70)
 
     End If
@@ -272,13 +278,18 @@ Public Sub Draw(ByRef Value As State, ByRef Map As Document.State, RightEdge As 
             ColorValue = RGB(22, 110, 135)
         End If
 
-        Fill Rectangle X(Map, Index, RightEdge) - 80, Y(Map, Index, Height) - 22, 160, 44, ColorValue
-        Ax = X(Map, Index, RightEdge) - 74
-        Ay = Y(Map, Index, Height) - 7
-        Draw Text Text_Slice(Map.Nodes[Index].Town, 0, 20) At Ax, Ay Size 13 Color WHITE
+        Ax = X(Value, Map, Index, RightEdge)
+        Ay = Y(Value, Map, Index, Height)
+        Bx = View.HalfWidth(Value.Camera)
+        EndY = View.HalfHeight(Value.Camera)
+        Fill Rectangle Ax - Bx, Ay - EndY, Bx * 2, EndY * 2, ColorValue
+
+        Call Previews.Draw(Images, Index, Ax - Bx + 6, Ay - EndY + 6, Bx * 2 - 12, EndY * 3 / 2 - 12)
+        Call View.Label(Map.Nodes[Index].Town, Ax, Ay + EndY / 2, Bx * 2 - 12,
+            Max(6, 13 * View.Scale(Value.Camera) / 100), EndY / 2 - 3)
 
         For Side = 0 To 3
-            Fill Rectangle X(Map, Index, RightEdge, Side) - 4, Y(Map, Index, Height, Side) - 4, 8, 8, RGB(245, 210, 70)
+            Fill Rectangle X(Value, Map, Index, RightEdge, Side) - 4, Y(Value, Map, Index, Height, Side) - 4, 8, 8, RGB(245, 210, 70)
         End For
     End For
 

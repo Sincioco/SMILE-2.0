@@ -680,8 +680,8 @@ Sub CheckCastleRender(ByRef Value As Town.State)
 
         Call Check(Ok And Pose.Rotation.X = 90.0, "Native Bridge Mesh Starts Upright At Its Real Hinge")
         Call Check(Abs(Pose.Position.X - CastleRoute.ORIGIN_X) < 0.001 And
-            Abs(Pose.Position.Y - 18.87) < 0.001 And Abs(Pose.Position.Z - CastleRoute.ORIGIN_Z + 64.0 * CastleRoute.SCALE) < 0.001,
-            "Native Hinge Retains Measured Placement And Scale")
+            Abs(Pose.Position.Y - 20.87) < 0.001 And Abs(Pose.Position.Z - CastleRoute.ORIGIN_Z + 64.0 * CastleRoute.SCALE) < 0.001,
+            "Native Hinge Includes Twenty Centimetres Of Road Clearance")
     End For
 
     Call Party.Teleport(Value.People, P.Vector(CastleRoute.ORIGIN_X, CastleRoute.DECK_Y, CastleRoute.ORIGIN_Z - 1558.0))

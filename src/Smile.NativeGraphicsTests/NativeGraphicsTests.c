@@ -400,6 +400,13 @@ int main(void)
         pointer_state.pressed_buttons == 0 && pointer_state.released_buttons == 0 &&
         pointer_state.x == 20 && pointer_state.y == 22,
         "Frame rollover clears only transient pointer state");
+    smile_pointer_state_press(&pointer_state, 1);
+    smile_pointer_state_position(&pointer_state, 900, 700, 1);
+    smile_pointer_state_reset(&pointer_state);
+    smile_pointer_state_position(&pointer_state, 600, 500, 1);
+    check(pointer_state.delta_x == 0 && pointer_state.delta_y == 0 &&
+        pointer_state.held_buttons == 0 && pointer_state.pressed_buttons == 0,
+        "Returning from a modal file picker cannot resume a stale map pan");
     smile_pointer_state_wheel(&pointer_state, 30, 120);
     check(pointer_state.wheel_delta == 0 && pointer_state.wheel_remainder == 30,
         "Partial positive wheel input remains pending");
@@ -451,6 +458,6 @@ int main(void)
         fprintf(stderr, "%d native graphics selection test(s) failed.\n", failures);
         return 1;
     }
-    printf("58 native graphics, pointer-input, and audio-focus checks passed.\n");
+    printf("59 native graphics, pointer-input, and audio-focus checks passed.\n");
     return 0;
 }

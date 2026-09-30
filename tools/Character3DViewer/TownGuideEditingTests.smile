@@ -1,0 +1,136 @@
+''' Projection, named-guide persistence and whole-gesture resize regressions.
+Module Smile.Tools.TownGuideEditingTests
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Simple3D.PrecisionCamera3D As Camera
+Import Smile.Simple3D.ArenaCamera3D As Motion
+Import Smile.Tools.TownGuides As Guides
+Import Smile.Tools.TownGuideFiles As Files
+Import Smile.Tools.TownMarkerResize As Resize
+Import Smile.Tools.TownPicking As Picking
+Import Smile.Tools.TownHistory As History
+Import Smile.Tools.TownDocument As Document
+
+Private Dim Failures As Number
+Private Dim Guide As Guides.State
+Private Dim Loaded As Guides.State
+Private Dim Gesture As Resize.State
+Private Dim Journal As History.State
+Private Dim Town As Document.State
+Private Dim Bytes[65536] As Number
+
+Private Sub Check(Ok As Boolean, Label As Text)
+
+    If Not Ok Then
+        Failures = Failures + 1
+        Print "FAIL " + Label
+    End If
+
+End Sub
+
+Public Function Run() As Number
+
+    Dim View As P.Camera3D
+    Dim Shot As P.Camera3D
+    Dim Controls As Camera.Controls
+    Dim Point As P.Vector3
+    Dim GroundPixel As Camera.ProjectedPoint
+    Dim RoofPixel As Camera.ProjectedPoint
+    Dim Ok As Boolean
+    Dim ByteCount As Number
+    Dim Status As Number
+    Dim Index As Number
+
+    Failures = 0
+    View.Position = P.Vector(0.0, 1000.0, 0.0)
+    View.Target = P.Vector(0.0, 0.0, 0.0)
+    View.UpDirection = P.Vector(0.0, 0.0, 1.0)
+    View.FovDegrees = 32.0
+    View.NearPlane = 1.0
+    View.FarPlane = 2000.0
+    View.OrthographicHeight = 600.0
+    GroundPixel = Camera.ProjectViewerPoint(P.Vector(100.0, 0.0, 150.0), View, 800, 600)
+    RoofPixel = Camera.ProjectViewerPoint(P.Vector(100.0, 200.0, 150.0), View, 800, 600)
+
+    Call Check(GroundPixel.Visible And GroundPixel.X = RoofPixel.X And GroundPixel.Y = RoofPixel.Y,
+        "True 2D Keeps Roofs And Ground On Identical Screen Coordinates")
+
+    Ok = Picking.Ground(View, ToNumber(RoofPixel.X), ToNumber(RoofPixel.Y), 800, 600, Point)
+
+    Call Check(Ok And Abs(Point.X - 100.0) < 0.0001 And Abs(Point.Z - 150.0) < 0.0001,
+        "Orthographic Picking Matches Rendered Guide Positions")
+
+    Controls.Zoom = ToDouble(Motion.DEFAULT_ZOOM)
+    Controls.OrbitYaw = 90.0
+    Shot = Motion.ComposeDistance(View, Controls, 20.0, 2000.0, 1.57062)
+
+    Call Check(Shot.Position.X = Shot.Target.X And Shot.Position.Z = Shot.Target.Z And
+        Shot.OrthographicHeight = 600.0 And Abs(Shot.UpDirection.X) > 0.999,
+        "Orthographic Quarter Turn Stays Exactly Vertical And Preserves Scale")
+
+    Controls.Zoom = -80.0
+    Shot = Motion.ComposeDistance(View, Controls, 20.0, 2000.0, 1.57062)
+
+    Call Check(Shot.OrthographicHeight < 600.0 And Shot.OrthographicHeight > 0.0,
+        "Orthographic Zoom Changes Parallel View Scale")
+
+    Guide.Spacing = 2.0
+    Ok = Guides.Add(Guide.Ink, P.Vector(0.0, 0.0, 0.0), P.Vector(100.0, 0.0, 50.0), True)
+    Guide.Ink.Markers[0].Name = "Market Boundary"
+    Guide.Selected[0] = True
+
+    Call History.Reset(Journal, Town, Guide.Ink)
+
+    Ok = Resize.Begin(Gesture, Guide, P.Vector(100.0, 23.12, 50.0), 0.1) And Ok
+
+    Call Resize.Drag(Gesture, Guide, P.Vector(200.0, 23.12, 100.0))
+    Call Resize.Finish(Gesture, Guide, False)
+    Call History.Record(Journal, Town, Guide.Ink)
+    Call Check(Ok And Guide.Ink.Markers[0].Last.X = 200.0 And Guide.Ink.Markers[0].Last.Z = 100.0,
+        "Corner Resize Preserves Aspect And Fixes The Opposite Corner")
+
+    Ok = History.Restore(Journal, Town, Guide.Ink, False)
+
+    Call Check(Ok And Guide.Ink.Markers[0].Last.X = 100.0 And Guide.Ink.Markers[0].Name = "Market Boundary",
+        "Resize Is One Undo Step And Retains The Guide Name")
+
+    Ok = Resize.Begin(Gesture, Guide, P.Vector(100.0, 23.12, 25.0), 0.1)
+
+    Call Resize.Drag(Gesture, Guide, P.Vector(140.0, 23.12, 90.0))
+    Call Check(Ok And Guide.Ink.Markers[0].Last.X = 140.0 And Guide.Ink.Markers[0].Last.Z = 50.0,
+        "Side Resize Changes Only That Side")
+    Call Resize.Finish(Gesture, Guide, True)
+    Call Check(Guide.Ink.Markers[0].Last.X = 100.0, "Cancel Restores The Original Guide")
+
+    Ok = Files.SaveSnapshot(Guide, "TownEditor.NamedGuideFixture")
+    Ok = Files.LoadSnapshot(Loaded, "TownEditor.NamedGuideFixture") And Ok
+
+    Call Check(Ok And Loaded.Ink.Markers[0].Name = "Market Boundary" And
+        Loaded.Ink.Markers[0].Last.X = 100.0, "Guide Names And Dimensions Round Trip")
+
+    Guide.Ink.Markers[0].Name = ""
+    Ok = Files.SaveSnapshot(Guide, "TownEditor.NamedGuideFixture")
+
+    Load Data "TownEditor.NamedGuideFixture" Into Bytes Count ByteCount Status Status
+
+    Bytes[0] = Bytes[0] - 2
+
+    For Index = 56 To ByteCount - 8
+        Bytes[Index] = Bytes[Index + 7]
+    End For
+
+    Save Data Bytes Count ByteCount - 7 To "TownEditor.LegacyGuideFixture" Status Status
+
+    Ok = Files.LoadSnapshot(Loaded, "TownEditor.LegacyGuideFixture")
+
+    Call Check(Ok And Loaded.Ink.EntryCount = 1 And Loaded.Ink.Markers[0].Last.Z = 50.0,
+        "Existing Unnamed Guide Files Still Load")
+
+    Return Failures
+
+End Function
+
+End Module

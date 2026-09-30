@@ -1,0 +1,113 @@
+''' Native .town import for a world: validate and persist before adding a graph node.
+Module Smile.Tools.TownWorldImport
+
+Option Explicit
+
+Import Smile.Tools.TownDocument As Town
+Import Smile.Tools.TownDocumentStore As Storage
+Import Smile.Tools.TownLibrary As Library
+Import Smile.Tools.TownTabs As Tabs
+Import Smile.Tools.TownWorldDocument As World
+
+Public Type State
+    Job As Number
+    Progress As Number
+    Message As Text
+End Type
+
+Public Sub Choose(ByRef Value As State, ByRef OpenTabs As Tabs.State, ByRef Map As World.State)
+
+    Dim Path As Text
+
+    If Value.Job > 0 Then
+        Return
+    End If
+
+    If OpenTabs.TabCount >= Tabs.CAPACITY Or Map.NodeCount >= World.MAX_NODES Then
+        Value.Message = "Close a town tab or remove a world node first."
+        Return
+    End If
+
+    Path = File_Pick(False, "Open Town For World", "town", "")
+
+    If Path = "" Then
+        Return
+    End If
+
+    Value.Job = Data_FileStart(False, "TownEditor.World.TownImport", Path)
+    Value.Progress = 0
+    Value.Message = "Opening town..."
+
+    If Value.Job = 0 Then
+        Value.Message = "Another file transfer is running. Try again when it finishes."
+    End If
+
+End Sub
+
+Public Function Update(ByRef Value As State, ByRef OpenTabs As Tabs.State,
+    ByRef Map As World.State) As Boolean
+
+    Dim Status As Number
+    Dim Incoming As Town.State
+    Dim Current As Town.State
+    Dim PreviousCount As Number
+    Dim Active As Number
+    Dim Ok As Boolean
+
+    If Value.Job = 0 Then
+        Return False
+    End If
+
+    Status = Data_FileStatus(Value.Job)
+    Value.Progress = Min(99, Data_FileProgress(Value.Job))
+
+    If Status = 0 Then
+        Return False
+    End If
+
+    Value.Message = Data_FileMessage(Value.Job)
+    Value.Job = 0
+
+    If Status <> 1 Then
+        Return False
+    End If
+
+    Ok = Storage.LoadDocument(Incoming, "TownEditor.World.TownImport")
+    Value.Message = "Invalid town file; world and open towns retained."
+
+    If Not Ok Then
+        Return False
+    End If
+
+    PreviousCount = OpenTabs.TabCount
+    Active = OpenTabs.Active
+    Current = OpenTabs.Documents[Active]
+    Ok = Tabs.Add(OpenTabs, Current, Incoming)
+
+    If Ok Then
+        Ok = Library.Remember(Current)
+    End If
+
+    If Ok Then
+        Ok = World.Add(Map, Current.Name, 250 + (Map.NodeCount Mod 3) * 250,
+            250 + (Map.NodeCount Mod 2) * 500)
+    End If
+
+    OpenTabs.Active = Active
+
+    If Not Ok Then
+
+        OpenTabs.TabCount = PreviousCount
+        Value.Message = "Could not add this town; current world retained."
+        Return False
+
+    End If
+
+    Value.Progress = 100
+    Value.Message = "Town opened and added to the world."
+
+    Return True
+
+End Function
+
+End Module

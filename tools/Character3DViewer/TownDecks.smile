@@ -1,0 +1,174 @@
+''' Placed floor footprints used to leave openings in automatic terrain railings.
+Module Smile.Tools.TownDecks
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownCatalogData As Catalog
+Import Smile.Tools.TownCatalogFeatures As Features
+Import Smile.Tools.TownGeometry As Geometry
+
+Public Type State
+    Items[1024] As Document.Item
+    EntryCount As Number
+End Type
+
+Public Function Matches(ByRef Value As State, ByRef Town As Document.State) As Boolean
+
+    Dim Index As Number
+    Dim Seen As Number
+    Dim Shape As Catalog.Template
+    Dim Item As Document.Item
+
+    For Index = 0 To Town.ItemCount - 1
+
+        Item = Town.Items[Index]
+        Shape = Catalog.TemplateAt(Item.Template)
+
+        If Item.Active And Shape.FloorCount > 0 Then
+
+            If Seen >= Value.EntryCount Then
+                Return False
+            End If
+
+            If (Item.Template <> Value.Items[Seen].Template Or
+
+                Item.Yaw <> Value.Items[Seen].Yaw Or
+                M.Distance(Item.Position, Value.Items[Seen].Position) > 0.000001 Or
+                M.Distance(Item.Scale, Value.Items[Seen].Scale) > 0.000001) Then
+                Return False
+            End If
+
+            Seen = Seen + 1
+
+        End If
+
+    End For
+
+    Dim Result As Boolean
+
+    Result = Seen = Value.EntryCount
+
+    Return Result
+
+End Function
+
+Public Sub Capture(ByRef Value As State, ByRef Town As Document.State)
+
+    Dim Index As Number
+    Dim Shape As Catalog.Template
+
+    Value.EntryCount = 0
+
+    For Index = 0 To Town.ItemCount - 1
+
+        Shape = Catalog.TemplateAt(Town.Items[Index].Template)
+
+        If Town.Items[Index].Active And Shape.FloorCount > 0 Then
+            Value.Items[Value.EntryCount] = Town.Items[Index]
+            Value.EntryCount = Value.EntryCount + 1
+        End If
+
+    End For
+
+End Sub
+
+Private Function ClipAxis(Start As Double, Delta As Double, Low As Double, High As Double,
+    ByRef First As Double, ByRef Last As Double) As Boolean
+
+    Dim LocalStart As Double
+    Dim LocalEnd As Double
+    Dim Result As Boolean
+
+    If Abs(Delta) < 0.000001 Then
+        Result = Start >= Low And Start <= High
+
+        Return Result
+    End If
+
+    LocalStart = (Low - Start) / Delta
+    LocalEnd = (High - Start) / Delta
+    First = Max(First, Min(LocalStart, LocalEnd))
+    Last = Min(Last, Max(LocalStart, LocalEnd))
+    Result = Last > First
+
+    Return Result
+
+End Function
+
+''' Return successive visible pieces of a rail, subtracting every placed floor.
+Public Function NextRail(ByRef Value As State, Start As P.Vector3, Finish As P.Vector3,
+    ByRef Cursor As Double, ByRef First As Double, ByRef Last As Double) As Boolean
+
+    Dim Index As Number
+    Dim Part As Number
+    Dim Shape As Catalog.Template
+    Dim Box As Features.Box
+    Dim LocalStart As P.Vector3
+    Dim LocalEnd As P.Vector3
+    Dim Enter As Double
+    Dim Leave As Double
+    Dim Covered As Double
+    Dim Nearest As Double
+    Dim Margin As Double
+    Dim Hit As Boolean
+
+    Do
+
+        If Cursor >= 0.999999 Then
+            Exit Do
+        End If
+
+        Covered = Cursor
+        Nearest = 1.0
+
+        For Index = 0 To Value.EntryCount - 1
+
+            Shape = Catalog.TemplateAt(Value.Items[Index].Template)
+            LocalStart = Geometry.ToLocal(Value.Items[Index], Start)
+            LocalEnd = Geometry.ToLocal(Value.Items[Index], Finish)
+            ' Include the rail's half-width so no cap protrudes into a deck.
+            Margin = 2250.0 / Min(Value.Items[Index].Scale.X, Value.Items[Index].Scale.Z)
+
+            For Part = 0 To Shape.FloorCount - 1
+
+                Box = Features.FloorAt(Value.Items[Index].Template, Part)
+                Enter = 0.0
+                Leave = 1.0
+                Hit = ClipAxis(LocalStart.X, LocalEnd.X - LocalStart.X, Box.X0 - Margin, Box.X1 + Margin, Enter, Leave)
+                Hit = ClipAxis(LocalStart.Z, LocalEnd.Z - LocalStart.Z, Box.Z0 - Margin, Box.Z1 + Margin, Enter, Leave) And Hit
+
+                If Hit And Leave > Cursor + 0.000001 Then
+
+                    If Enter <= Cursor + 0.000001 Then
+                        Covered = Max(Covered, Leave)
+                    Else
+                        Nearest = Min(Nearest, Enter)
+                    End If
+
+                End If
+
+            End For
+        End For
+
+        If Covered > Cursor Then
+
+            Cursor = Covered
+
+        Else
+            First = Cursor
+            Last = Nearest
+            Cursor = Nearest
+            Return True
+
+        End If
+
+    Loop
+
+    Return False
+
+End Function
+
+End Module

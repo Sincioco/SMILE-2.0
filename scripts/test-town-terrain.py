@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 VIEWER = ROOT / 'tools/Character3DViewer'
 sys.path.insert(0, str(VIEWER))
 from town_blender_save import terrain
+from town_surface_layers import LAYERS
 
 assert bpy.app.background
 bpy.ops.wm.open_mainfile(filepath=str(ROOT / 'games/SinStarI/SourceAssets/Towns/Neris/'
@@ -66,8 +67,7 @@ assert 3 in heights and 4 in heights, 'Bridge rail walls/caps were removed'
 
 # Compare the native upload height with the actual Blender output (XZY, x10, +21).
 native = (VIEWER / 'TownSurfaceRenderer.smile').read_text(encoding='utf-8')
-upload = native.split('Private Sub UploadNext', 1)[1]
-native_grass = float(re.search(r'^    Height = (-?[\d.]+)$', upload, re.M)[1])
+native_grass = LAYERS['GROUND_Y']
 assert abs(native_grass - (grass*10+21)) < .00001, 'Native/Blender terrain height differs'
 assert 'Grid.Bank(' not in native, 'Native shoreline trim returned'
 
@@ -89,3 +89,23 @@ bed = [v.co for f in tops if f.material_index == 5 for v in (mesh.vertices[i] fo
 assert all(abs(p.z + .03) < .00001 for p in bed), 'Water bed must stay below the lawn'
 assert min(p.x for p in bed) < 0 and max(p.x for p in bed) > 2, 'Bed must overlap both banks'
 print('PASS clean shorelines, retained bridge rails and native/Blender height parity', flush=True)
+
+# Relocated castle floors cut openings in generated road/bridge railings.
+import json
+from town_surface_decks import footprints, rail_parts
+catalog = json.loads((ROOT/'games/SinStarI/SourceAssets/Towns/Neris/NerisTownV1/Authoring/catalog.json').read_text())
+item = dict(template=13, position=[0,22.52,1000], scale=[2000,2000,2000], yaw=0)
+document = dict(columns=3, rows=2, cells=[2,4,2,2,2,2],
+                xs=[-200,-120,120,200], zs=[0,100,200], items=[item])
+parts = list(rail_parts((-120,100),(120,100),footprints(document,catalog)))
+assert len(parts)==2 and parts[0][1]<.12 and parts[1][0]>.88, parts
+bpy.data.objects.remove(bpy.data.objects['Town Editable Surface'],do_unlink=True)
+terrain(document,catalog)
+mesh = bpy.data.objects['Town Editable Surface'].data
+caps = [f for f in mesh.polygons if f.material_index==4]
+assert caps, 'Rails outside the castle deck must remain'
+for face in caps:
+    points = [mesh.vertices[i].co for i in face.vertices]
+    if min(p.y for p in points)<10.01 and max(p.y for p in points)>9.99:
+        assert max(p.x for p in points)<-8.99 or min(p.x for p in points)>8.99, 'Railing crosses castle bridge'
+print('PASS moved castle bridge railing openings match native clipping',flush=True)

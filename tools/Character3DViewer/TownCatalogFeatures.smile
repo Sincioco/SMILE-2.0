@@ -4380,6 +4380,34 @@ Public Function StepAt(TemplateIndex As Number, Index As Number) As Box
 
 End Function
 
+Public Function FloorAt(TemplateIndex As Number, Index As Number) As Box
+
+    Dim Result As Box
+    Dim Key As Number
+
+    Key = TemplateIndex * 256 + Index
+
+    Select Case Key
+        Case 3328
+            Result.X0 = -385.000000
+            Result.Z0 = -320.000000
+            Result.X1 = 385.000000
+            Result.Z1 = 320.000000
+            Result.Height = 0.000000
+
+        Case 3329
+            Result.X0 = -45.000000
+            Result.Z0 = -540.000000
+            Result.X1 = 45.000000
+            Result.Z1 = -270.000000
+            Result.Height = -0.010000
+
+    End Select
+
+    Return Result
+
+End Function
+
 Public Function DoorAt(TemplateIndex As Number, Index As Number) As Door
 
     Dim Result As Door

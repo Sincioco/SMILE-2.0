@@ -82,7 +82,7 @@ def export_document(document, catalog, target, request_id, status):
     bpy.ops.wm.open_mainfile(filepath=str(source), use_scripts=False)
     populate_items(document, catalog)
     status(35, 'Rebuilding town surfaces and lighting...')
-    terrain(document)
+    terrain(document, catalog)
     lighting(document)
     from town_blender_landmarks import populate
     populate(document)

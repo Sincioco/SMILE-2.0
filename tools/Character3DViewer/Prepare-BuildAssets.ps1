@@ -6,6 +6,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $toolRoot = $PSScriptRoot
+& (Join-Path $toolRoot 'Prepare-SurfaceLayers.ps1') -Check:$ValidateOnly
 $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $toolRoot '..\..'))
 $arinRoot = Join-Path $repositoryRoot `
     'games\SinStarI\SourceAssets\Characters\Paladin\ArinV57'

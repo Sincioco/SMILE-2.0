@@ -3,6 +3,7 @@ Module Smile.Tools.TownDocumentMap
 
 Option Explicit
 
+Import Smile.Tools.TownSurfaceLayers As Layers
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.SurfaceGrid3D As Grid
 Import Smile.Tools.TownDocument As Document
@@ -123,7 +124,7 @@ Public Function Pick(ByRef Town As Document.State, X As Number, Y As Number) As 
     Dim Result As P.Vector3
 
     Result = P.Vector(LowX + ToDouble(X - Window_Width() + 276) / 256.0 *
-        (HighX - LowX), 23.12,
+        (HighX - LowX), Layers.ROAD_Y,
         LowZ + ToDouble(515 - Y) / 256.0 *
         (HighZ - LowZ))
 
@@ -132,7 +133,7 @@ Public Function Pick(ByRef Town As Document.State, X As Number, Y As Number) As 
 End Function
 
 Public Sub DrawDestination(ByRef Town As Document.State, Destination As P.Vector3,
-    Active As Boolean, Message As Text)
+    Active As Boolean, Message As Text, Optional StatusY As Number = 533)
 
     Dim X As Number
     Dim Y As Number
@@ -152,9 +153,9 @@ Public Sub DrawDestination(ByRef Town As Document.State, Destination As P.Vector
 
     If Message <> "" Then
 
-        Fill Rectangle Window_Width() - 282, 533, 268, 38, RGB(10, 22, 35)
-        Draw Text Text_Slice(Message, 0, 38) At Window_Width() - 276, 537 Size 11 Color YELLOW
-        Draw Text Text_Slice(Message, 38, 38) At Window_Width() - 276, 553 Size 11 Color YELLOW
+        Fill Rectangle Window_Width() - 282, StatusY, 268, 38, RGB(10, 22, 35)
+        Draw Text Text_Slice(Message, 0, 38) At Window_Width() - 276, StatusY + 4 Size 11 Color YELLOW
+        Draw Text Text_Slice(Message, 38, 38) At Window_Width() - 276, StatusY + 20 Size 11 Color YELLOW
 
     End If
 
@@ -290,7 +291,8 @@ Public Sub Draw(ByRef Town As Document.State, Position As P.Vector3,
     For Index = 0 To Town.ItemCount - 1
 
         If (Town.Items[Index].Active And
-            Town.Items[Index].Category = Document.CATEGORY_BUILDINGS And Inside(Town.Items[Index].Position)) Then
+            Town.Items[Index].Category = Document.CATEGORY_BUILDINGS And
+            Inside(Town.Items[Index].Position)) Then
 
             X = Coordinate(Town.Items[Index].Position.X, LowX, HighX)
             Z = Coordinate(Town.Items[Index].Position.Z, LowZ, HighZ)

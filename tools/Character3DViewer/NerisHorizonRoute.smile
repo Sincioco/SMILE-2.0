@@ -3,12 +3,13 @@ Module Smile.Tools.NerisHorizonRoute
 
 Option Explicit
 
+Import Smile.Tools.TownSurfaceLayers As Layers
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PartyTrail3D As Trail
 
 Public Const ORIGIN_X = 7400.0
 Public Const ORIGIN_Z = 1250.0
-Public Const DECK_Y = 23.12
+Public Const DECK_Y = Layers.ROAD_Y
 Public Const SCALE = 10.0
 Public Const YAW = 90.0
 

@@ -1,0 +1,113 @@
+''' Forward eye-level view joined to the minimap, independent of the main camera.
+Module Smile.Tools.TownPartyInset
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Scene3D As Scene
+
+Public Const PANEL_TOP = 531
+Public Const VIEW_TOP = PANEL_TOP + 22
+Public Const REFRESH_MILLISECONDS = 83
+
+Public Type State
+    Hidden As Boolean
+    UpdatedAt As Number
+End Type
+
+Public Function Visible(Moving As Boolean, Editing As Boolean, Optional Hidden As Boolean = False) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Moving And Not Editing And Not Hidden
+
+    Return Result
+
+End Function
+
+Private Function Height() As Number
+
+    Dim Result As Number
+
+    Result = Max(1, Min(170, Window_Height() - VIEW_TOP - 80))
+
+    Return Result
+
+End Function
+
+Public Function Bottom() As Number
+
+    Dim Result As Number
+
+    Result = VIEW_TOP + Height() + 2
+
+    Return Result
+
+End Function
+
+Public Function Frame(Leader As P.Vector3, Yaw As Double) As P.Camera3D
+
+    Dim Result As P.Camera3D
+    Dim Forward As P.Vector3
+
+    ' Party actors face -Z at zero yaw. Place the lens just ahead of the face.
+    Forward = M.Rotate(P.Vector(0.0, 0.0, -1.0), P.Vector(0.0, Yaw, 0.0))
+    Result.Position = M.Add(Leader, M.Add(M.Scale(Forward, 4.0), P.Vector(0.0, 24.0, 0.0)))
+    Result.Target = M.Add(Result.Position, M.Scale(Forward, 200.0))
+    Result.UpDirection = P.Vector(0.0, 1.0, 0.0)
+    Result.FovDegrees = 52.0
+    Result.NearPlane = 1.0
+    Result.FarPlane = 25000.0
+
+    Return Result
+
+End Function
+
+Public Function Begin(ByRef Value As State, Leader As P.Vector3, Yaw As Double) As Boolean
+
+    Dim Ok As Boolean
+
+    If Value.UpdatedAt > 0 And Timer() - Value.UpdatedAt < REFRESH_MILLISECONDS Then
+
+        If G.ReplayViewport3D(Window_Width() - 276, VIEW_TOP, 256, Height()) Then
+            Return False
+        End If
+
+    End If
+
+    Ok = G.SetViewport3D(Window_Width() - 276, VIEW_TOP, 256, Height(), True)
+
+    If Ok Then
+        Ok = Scene.BeginPrecise(Frame(Leader, Yaw), 12, 20, 32)
+    End If
+
+    If Not Ok Then
+        Call G.ResetViewport3D()
+    End If
+
+    Return Ok
+
+End Function
+
+Public Sub Finish(ByRef Value As State)
+
+    Dim Ok As Boolean
+
+    Ok = Scene.EndScene()
+    Value.UpdatedAt = Timer()
+
+    Call G.ResetViewport3D()
+
+End Sub
+
+Public Sub Label(Name As Text)
+
+    Fill Rectangle Window_Width() - 282, PANEL_TOP, 268, 22, RGB(10, 22, 35) Opacity 90
+    Draw Text Name + "'s POV" At Window_Width() - 276, PANEL_TOP + 3 Size 12 Color CYAN
+    Draw Rectangle Window_Width() - 282, PANEL_TOP, 268, Bottom() - PANEL_TOP, RGB(45, 180, 190)
+
+End Sub
+
+End Module

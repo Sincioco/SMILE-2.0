@@ -21,19 +21,19 @@ def generate():
         'Public Type WaterDisk', '    Position As P.Vector3', '    RadiusX As Double',
         '    RadiusZ As Double', 'End Type', '']
     for name, key, typename in [('SolidAt', 'solids', 'Box'), ('StepAt', 'steps', 'Box'),
-                                ('DoorAt', 'doors', 'Door'), ('WaterAt', 'water', 'WaterDisk'),
+                                ('FloorAt', 'floors', 'Box'), ('DoorAt', 'doors', 'Door'), ('WaterAt', 'water', 'WaterDisk'),
                                 ('CameraAt', 'camera', 'Clearance.Bounds')]:
         lines += [f'Public Function {name}(TemplateIndex As Number, Index As Number) As {typename}', '',
                   f'    Dim Result As {typename}', '    Dim Key As Number', '',
                   '    Key = TemplateIndex * 256 + Index', '', '    Select Case Key']
         for template in catalog['templates']:
-            assert len(template[key]) <= 256
-            for index, value in enumerate(template[key]):
+            assert len(template.get(key, [])) <= 256
+            for index, value in enumerate(template.get(key, [])):
                 lines += [f'        Case {template["id"]*256+index}']
                 if key == 'camera':
                     x0, z0, y0, x1, z1, y1 = [v*10 for v in value]
                     lines.append(f'            Result = Clearance.Box({f(x0)}, {f(y0)}, {f(z0)}, {f(x1)}, {f(y1)}, {f(z1)})')
-                elif key in ('solids', 'steps'):
+                elif key in ('solids', 'steps', 'floors'):
                     for field, number in zip(('X0', 'Z0', 'X1', 'Z1', 'Height'), value):
                         lines.append(f'            Result.{field} = {f(number*10)}')
                 else:

@@ -3,6 +3,7 @@
 Option Explicit
 
 Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Tools.TownSurfaceLayers As Layers
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownSectionTests As SectionTests
@@ -12,6 +13,7 @@ Import Smile.Tools.TownInitialSurface As Initial
 Import Smile.Tools.TownDocumentStore As Storage
 Import Smile.Tools.TownWorldDocument As World
 Import Smile.Tools.TownWorldTests As WorldTests
+Import Smile.Tools.TownGuideEditingTests As GuideEditingTests
 Import Smile.Tools.TownGuides As Guides
 Import Smile.Tools.TownTileGuides As TileGuides
 Import Smile.Tools.TownMarkerTools As MarkerTools
@@ -20,6 +22,8 @@ Import Smile.Tools.TownMapLoads As Links
 Import Smile.Tools.TownGuideFiles As GuideFiles
 Import Smile.Tools.TownRoadTravel As Roads
 Import Smile.Tools.TownDocumentNavigation As Navigation
+Import Smile.Tools.TownDecks As Decks
+Import Smile.Tools.TownGeometry As Geometry
 Import Smile.Simple3D.PrecisionMath3D As Math3D
 
 Dim Town As Document.State
@@ -43,6 +47,13 @@ Dim Identity As Number
 Dim BeforeSurface As Number
 Dim CellPreview As Guides.Marker
 Dim MarkerGesture As MarkerTools.State
+
+Call Check(Layers.BED_Y < Layers.GROUND_Y And Layers.GROUND_Y < Layers.WATER_Y And
+    Layers.WATER_Y < Layers.ROAD_Y, "Physical Terrain Layers Stay Strictly Ordered")
+Call Check(Layers.STRUCTURE_CLEARANCE - 0.07 * 17.0 >= Layers.MIN_DECK_GAP,
+    "Raised Deck Policy Clears Recessed Drawbridge Support Above Roads")
+Call Check(Layers.ROAD_Y - 22.5 >= Layers.MIN_DECK_GAP,
+    "Painted Bridge Paving Clears Existing Civic Bridge Support")
 
 Ok = Guides.SetSpacing(Guide, "0.25")
 Guide.SnapMode = 1
@@ -267,9 +278,11 @@ Call CheckEditing()
 Call CheckMapLoads()
 Call CheckPresetsAndGuideFiles()
 Call CheckRoadTrips()
+Call CheckCastleDecks()
 
 Failures = Failures + SectionTests.Run()
 Failures = Failures + WorldTests.Run()
+Failures = Failures + GuideEditingTests.Run()
 
 If Failures = 0 Then
     Print "PASS Town Editor Foundations"
@@ -696,11 +709,11 @@ Sub CheckEditing()
         True, False, False, False)
     Call Check(MarkerTools.SelectedCount(Guide) = 2,
         "Rubber Selection Selects Multiple Guide Markers")
-    Call MarkerTools.Gesture(MarkerGesture, Guide, P.Vector(50.0, 23.12, 0.0), 1.0,
+    Call MarkerTools.Gesture(MarkerGesture, Guide, P.Vector(40.0, 23.12, 0.0), 1.0,
         True, True, True, False)
-    Call MarkerTools.Gesture(MarkerGesture, Guide, P.Vector(70.0, 23.12, 10.0), 1.0,
+    Call MarkerTools.Gesture(MarkerGesture, Guide, P.Vector(60.0, 23.12, 10.0), 1.0,
         True, False, True, False)
-    Call MarkerTools.Gesture(MarkerGesture, Guide, P.Vector(70.0, 23.12, 10.0), 1.0,
+    Call MarkerTools.Gesture(MarkerGesture, Guide, P.Vector(60.0, 23.12, 10.0), 1.0,
         True, False, False, False)
     Call History.Record(Journal, Town, Guide.Ink)
     Call Check(Guide.Ink.Markers[0].First.X = 20.0 And Guide.Ink.Markers[1].First.X = 50.0,
@@ -746,5 +759,84 @@ Sub CheckEditing()
     Point = Guides.Snap(Guide, P.Vector(11.5, 0.0, 12.5), 5.0)
 
     Call Check(Point.X = 11.5 And Point.Z = 12.5, "Snap Off Preserves Free Placement")
+
+End Sub
+
+Sub CheckCastleDecks()
+
+    Dim Openings As Decks.State
+    Dim Angle As Number
+    Dim Point As P.Vector3
+    Dim First As Double
+    Dim Last As Double
+    Dim Cursor As Double
+    Dim Start As P.Vector3
+    Dim Finish As P.Vector3
+    Dim Ok As Boolean
+    Dim HasPiece As Boolean
+
+    Ok = Document.Blank(Town, "Castle Water Fixture", 200, 200, 20.0)
+
+    Call Grid.PaintRectangle(Town.Surface, 0, 0, 199, 199, Grid.SURFACE_WATER)
+
+    Town.ItemCount = 1
+    Town.Items[0] = Catalog.InitialItem(45)
+    Town.Items[0].Position = P.Vector(210.0, 22.52, 150.0)
+
+    For Angle = 0 To 3
+
+        Town.Items[0].Yaw = ToDouble(Angle) * 90.0 + 27.0
+
+        Call Navigation.Rebuild(Town)
+        Call Decks.Capture(Openings, Town)
+
+        For X = -540 To -210
+            Point = Geometry.ToWorld(Town.Items[0], P.Vector(0.0, 0.0, ToDouble(X)))
+
+            Call Check(Navigation.CanStand(Point.X, Point.Z), "Relocated Rotated Castle Bridge Crosses Water Into Courtyard")
+            Call Check(Abs(Navigation.GroundHeight(Point.X, Point.Z) - 22.52) < 0.05,
+                "Castle Floor Walking Height Follows The Assembly")
+        End For
+
+        Point = Geometry.ToWorld(Town.Items[0], P.Vector(100.0, 0.0, -160.0))
+
+        Call Check(Navigation.CanStand(Point.X, Point.Z), "Courtyard Supports Party Above Water")
+
+        Point = Geometry.ToWorld(Town.Items[0], P.Vector(0.0, 0.0, -160.0))
+
+        Call Check(Not Navigation.CanStand(Point.X, Point.Z), "Castle Fountain Remains Solid")
+
+        Point = Geometry.ToWorld(Town.Items[0], P.Vector(100.0, 0.0, -300.0))
+
+        Call Check(Not Navigation.CanStand(Point.X, Point.Z), "Castle Curtain Wall Remains Solid")
+
+        Point = Geometry.ToWorld(Town.Items[0], P.Vector(80.0, 0.0, -450.0))
+
+        Call Check(Not Navigation.CanStand(Point.X, Point.Z), "Water Beside The Bridge Stays Unwalkable")
+
+        Cursor = 0.0
+        Start = Geometry.ToWorld(Town.Items[0], P.Vector(-100.0, 0.0, -450.0))
+        Finish = Geometry.ToWorld(Town.Items[0], P.Vector(100.0, 0.0, -450.0))
+        HasPiece = Decks.NextRail(Openings, Start, Finish, Cursor, First, Last)
+
+        Call Check(HasPiece And First = 0.0 And Last > 0.26 And Last < 0.28,
+            "Automatic Rail Stops Before The Moved Bridge")
+
+        HasPiece = Decks.NextRail(Openings, Start, Finish, Cursor, First, Last)
+
+        Call Check(HasPiece And First > 0.72 And First < 0.74 And Last = 1.0,
+            "Automatic Rail Resumes After The Moved Bridge")
+        Call Check(Decks.Matches(Openings, Town), "Unchanged Decks Reuse Terrain")
+
+        Town.Items[0].Position.X = Town.Items[0].Position.X + 11.0
+
+        Call Check(Not Decks.Matches(Openings, Town), "Moving A Castle Invalidates Terrain Rail Openings")
+    End For
+
+    Point = Geometry.ToWorld(Town.Items[0], P.Vector(100.0, 0.0, -160.0))
+    Town.Items[0].Active = False
+
+    Call Navigation.Rebuild(Town)
+    Call Check(Not Navigation.CanStand(Point.X, Point.Z), "Removed Castle Cannot Leave A Walkable Water Footprint")
 
 End Sub

@@ -1,0 +1,226 @@
+''' Eight-handle resizing of the selected guide bounds; the gesture owns one undo snapshot.
+Module Smile.Tools.TownMarkerResize
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionCamera3D As Camera
+Import Smile.Tools.TownGuides As Guides
+
+Public Type State
+    Active As Boolean
+    Changed As Boolean
+    Handle As Number
+    Low As P.Vector3
+    High As P.Vector3
+    Before As Guides.Drawing
+End Type
+
+Public Function Bounds(ByRef Guide As Guides.State, ByRef Low As P.Vector3,
+    ByRef High As P.Vector3) As Boolean
+
+    Dim Index As Number
+    Dim Found As Boolean
+    Dim Mark As Guides.Marker
+
+    For Index = 0 To Guide.Ink.EntryCount - 1
+
+        If Guide.Selected[Index] Then
+
+            Mark = Guide.Ink.Markers[Index]
+
+            If Not Found Then
+
+                Low = Mark.First
+                High = Mark.First
+                Found = True
+
+            End If
+
+            Low.X = Min(Low.X, Min(Mark.First.X, Mark.Last.X))
+            Low.Z = Min(Low.Z, Min(Mark.First.Z, Mark.Last.Z))
+            High.X = Max(High.X, Max(Mark.First.X, Mark.Last.X))
+            High.Z = Max(High.Z, Max(Mark.First.Z, Mark.Last.Z))
+
+        End If
+
+    End For
+
+    Return Found
+
+End Function
+
+Public Function HandlePoint(Low As P.Vector3, High As P.Vector3, Index As Number) As P.Vector3
+
+    Dim Result As P.Vector3
+
+    Result = Low
+
+    If (Index = 1 Or
+        Index = 2 Or
+        Index = 5) Then
+        Result.X = High.X
+    Else If Index = 4 Or Index = 6 Then
+        Result.X = (Low.X + High.X) * 0.5
+    End If
+
+    If (Index = 2 Or
+        Index = 3 Or
+        Index = 6) Then
+        Result.Z = High.Z
+    Else If Index = 5 Or Index = 7 Then
+        Result.Z = (Low.Z + High.Z) * 0.5
+    End If
+
+    Return Result
+
+End Function
+
+Public Function Begin(ByRef Value As State, ByRef Guide As Guides.State,
+    Point As P.Vector3, Radius As Double) As Boolean
+
+    Dim Index As Number
+    Dim Handle As P.Vector3
+
+    If Not Bounds(Guide, Value.Low, Value.High) Then
+        Return False
+    End If
+
+    For Index = 0 To 7
+
+        Handle = HandlePoint(Value.Low, Value.High, Index)
+
+        If Abs(Point.X - Handle.X) <= Radius And Abs(Point.Z - Handle.Z) <= Radius Then
+
+            Value.Active = True
+            Value.Changed = False
+            Value.Handle = Index
+            Value.Before = Guide.Ink
+
+            Return True
+
+        End If
+
+    End For
+
+    Return False
+
+End Function
+
+Private Function MapPoint(Point As P.Vector3, Low As P.Vector3, High As P.Vector3,
+    NextLow As P.Vector3, NextHigh As P.Vector3) As P.Vector3
+
+    Dim Result As P.Vector3
+
+    Result = Point
+    Result.X = NextLow.X + (Point.X - Low.X) / Max(0.001, High.X - Low.X) * (NextHigh.X - NextLow.X)
+    Result.Z = NextLow.Z + (Point.Z - Low.Z) / Max(0.001, High.Z - Low.Z) * (NextHigh.Z - NextLow.Z)
+
+    Return Result
+
+End Function
+
+Public Sub Drag(ByRef Value As State, ByRef Guide As Guides.State, Point As P.Vector3)
+
+    Dim NextLow As P.Vector3
+    Dim NextHigh As P.Vector3
+    Dim Fixed As P.Vector3
+    Dim Moving As P.Vector3
+    Dim Width As Double
+    Dim Depth As Double
+    Dim Scale As Double
+    Dim Index As Number
+
+    NextLow = Value.Low
+    NextHigh = Value.High
+    Point = Guides.Snap(Guide, Point, 0.0)
+
+    If Value.Handle < 4 Then
+
+        Fixed = HandlePoint(Value.Low, Value.High, (Value.Handle + 2) Mod 4)
+        Moving = HandlePoint(Value.Low, Value.High, Value.Handle)
+        Width = Moving.X - Fixed.X
+        Depth = Moving.Z - Fixed.Z
+        Scale = Max(0.001, ((Point.X - Fixed.X) * Width + (Point.Z - Fixed.Z) * Depth) /
+            Max(0.000001, Width * Width + Depth * Depth))
+        Moving.X = Fixed.X + Width * Scale
+        Moving.Z = Fixed.Z + Depth * Scale
+        NextLow.X = Min(Fixed.X, Moving.X)
+        NextLow.Z = Min(Fixed.Z, Moving.Z)
+        NextHigh.X = Max(Fixed.X, Moving.X)
+        NextHigh.Z = Max(Fixed.Z, Moving.Z)
+
+    Else If Value.Handle = 4 Then
+
+        NextLow.Z = Min(Point.Z, Value.High.Z - 0.001)
+
+    Else If Value.Handle = 5 Then
+
+        NextHigh.X = Max(Point.X, Value.Low.X + 0.001)
+
+    Else If Value.Handle = 6 Then
+
+        NextHigh.Z = Max(Point.Z, Value.Low.Z + 0.001)
+
+    Else
+        NextLow.X = Min(Point.X, Value.High.X - 0.001)
+
+    End If
+
+    Value.Changed = (Abs(NextLow.X - Value.Low.X) + Abs(NextLow.Z - Value.Low.Z) +
+        Abs(NextHigh.X - Value.High.X) + Abs(NextHigh.Z - Value.High.Z)) > 0.0001
+
+    For Index = 0 To Guide.Ink.EntryCount - 1
+
+        If Guide.Selected[Index] Then
+            Guide.Ink.Markers[Index].First = MapPoint(Value.Before.Markers[Index].First,
+                Value.Low, Value.High, NextLow, NextHigh)
+            Guide.Ink.Markers[Index].Last = MapPoint(Value.Before.Markers[Index].Last,
+                Value.Low, Value.High, NextLow, NextHigh)
+        End If
+
+    End For
+
+End Sub
+
+Public Sub Finish(ByRef Value As State, ByRef Guide As Guides.State, Cancel As Boolean)
+
+    If Value.Active Then
+
+        If Cancel Then
+            Guide.Ink = Value.Before
+        Else If Value.Changed Then
+            Guide.Ink.Revision = Guide.Ink.Revision + 1
+        End If
+
+    End If
+
+    Value.Active = False
+
+End Sub
+
+Public Sub Draw(ByRef Guide As Guides.State, View As P.Camera3D)
+
+    Dim Low As P.Vector3
+    Dim High As P.Vector3
+    Dim Point As Camera.ProjectedPoint
+    Dim Index As Number
+
+    If Not Bounds(Guide, Low, High) Then
+        Return
+    End If
+
+    For Index = 0 To 7
+
+        Point = Camera.ProjectViewerPoint(HandlePoint(Low, High, Index), View, Window_Width(), Window_Height())
+
+        If Point.Visible Then
+            Fill Rectangle ToNumber(Point.X) - 5, ToNumber(Point.Y) - 5, 10, 10, RGB(10, 25, 36)
+            Fill Rectangle ToNumber(Point.X) - 3, ToNumber(Point.Y) - 3, 6, 6, RGB(70, 230, 215)
+        End If
+
+    End For
+
+End Sub
+
+End Module

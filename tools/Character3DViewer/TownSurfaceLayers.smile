@@ -1,0 +1,20 @@
+''' Generated from TownSurfaceLayers.json; change the shared profile, then prepare assets.
+Module Smile.Tools.TownSurfaceLayers
+
+Option Explicit
+
+Public Const UNITS_PER_METER = 10.0
+Public Const BLENDER_ORIGIN_Y = 21.0
+Public Const BED_Y = 20.7
+Public Const GROUND_Y = 20.9
+Public Const WATER_Y = 21.85
+Public Const GROUND_WALK_Y = 22.5
+Public Const ROAD_Y = 23.12
+Public Const STRUCTURE_CLEARANCE = 2.0
+Public Const MIN_DECK_GAP = 0.6
+Public Const OVERLAY_Y = 23.4
+Public Const RAIL_BASE_Y = 23.2
+Public Const RAIL_TOP_Y = 33.3
+Public Const RAIL_CAP_Y = 34.0
+
+End Module

@@ -3,6 +3,7 @@ Module Smile.Tools.TownDocumentNavigation
 
 Option Explicit
 
+Import Smile.Tools.TownSurfaceLayers As Layers
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PrecisionMath3D As M
 Import Smile.Simple3D.SurfaceGrid3D As Grid
@@ -117,7 +118,8 @@ Public Function NearestRoad(Point As P.Vector3, ByRef Result As P.Vector3) As Bo
     Z = Grid.CellZ(Surface, Point.Z)
 
     If ((Grid.ReadCell(Surface, X, Z) = Grid.SURFACE_ROAD Or
-        Grid.ReadCell(Surface, X, Z) = Grid.SURFACE_BRIDGE) And CanStand(Point.X, Point.Z)) Then
+        Grid.ReadCell(Surface, X, Z) = Grid.SURFACE_BRIDGE) And
+        CanStand(Point.X, Point.Z)) Then
 
         Result = Point
         Result.Y = GroundHeight(Point.X, Point.Z)
@@ -161,12 +163,12 @@ End Function
 
 Public Sub SurfaceBounds(ByRef Low As P.Vector3, ByRef High As P.Vector3)
 
-    Low = P.Vector(-4900.0, 23.12, -3550.0)
-    High = P.Vector(2750.0, 23.12, 3550.0)
+    Low = P.Vector(-4900.0, Layers.ROAD_Y, -3550.0)
+    High = P.Vector(2750.0, Layers.ROAD_Y, 3550.0)
 
     If Enabled Then
-        Low = P.Vector(Surface.OriginX, 23.12, Surface.OriginZ)
-        High = P.Vector(Surface.XEdges[Surface.Columns], 23.12, Surface.ZEdges[Surface.Rows])
+        Low = P.Vector(Surface.OriginX, Layers.ROAD_Y, Surface.OriginZ)
+        High = P.Vector(Surface.XEdges[Surface.Columns], Layers.ROAD_Y, Surface.ZEdges[Surface.Rows])
     End If
 
 End Sub
@@ -235,12 +237,12 @@ Public Function CanStand(X As Double, Z As Double) As Boolean
     Dim Point As P.Vector3
     Dim Shape As Catalog.Template
     Dim Blocked As Boolean
+    Dim Supported As Boolean
+    Dim Opening As Boolean
 
     Cell = Grid.ReadCell(Surface, Grid.CellX(Surface, X), Grid.CellZ(Surface, Z))
 
-    If Cell = Grid.SURFACE_EMPTY Or Cell = Grid.SURFACE_WATER Then
-        Return False
-    End If
+    Supported = Cell <> Grid.SURFACE_EMPTY And Cell <> Grid.SURFACE_WATER
 
     For Index = 0 To ItemCount - 1
 
@@ -252,22 +254,25 @@ Public Function CanStand(X As Double, Z As Double) As Boolean
 
                 Shape = Shapes[Items[Index].Template]
 
-                If Approach(Items[Index], Point) > -9000.0 Then
-                    Return True
-                End If
+                Opening = Approach(Items[Index], Point) > -9000.0
+
+                For Part = 0 To Shape.FloorCount - 1
+                    Supported = Supported Or InBox(Features.FloorAt(Items[Index].Template, Part), Point, 0.015)
+                End For
 
                 For Part = 0 To Shape.StepCount - 1
 
                     If InBox(Features.StepAt(Items[Index].Template, Part), Point, 0.015) Then
-                        Return True
+                        Supported = True
+                        Opening = True
                     End If
 
                 End For
 
                 For Part = 0 To Shape.SolidCount - 1
 
-                    If InBox(Features.SolidAt(Items[Index].Template, Part), Point,
-                        3000.0 / Max(Items[Index].Scale.X, Items[Index].Scale.Z)) Then
+                    If (Not Opening And InBox(Features.SolidAt(Items[Index].Template, Part), Point,
+                        3000.0 / Max(Items[Index].Scale.X, Items[Index].Scale.Z))) Then
                         Blocked = True
                     End If
 
@@ -279,7 +284,7 @@ Public Function CanStand(X As Double, Z As Double) As Boolean
 
     End For
 
-    Blocked = Not Blocked
+    Blocked = Supported And Not Blocked
 
     Return Blocked
 
@@ -297,10 +302,10 @@ Public Function GroundHeight(X As Double, Z As Double) As Double
     Dim LocalHeight As Double
 
     Cell = Grid.ReadCell(Surface, Grid.CellX(Surface, X), Grid.CellZ(Surface, Z))
-    Height = 22.5
+    Height = Layers.GROUND_WALK_Y
 
     If Cell = Grid.SURFACE_ROAD Or Cell = Grid.SURFACE_BRIDGE Then
-        Height = 23.12
+        Height = Layers.ROAD_Y
     End If
 
     For Index = 0 To ItemCount - 1
@@ -317,6 +322,16 @@ Public Function GroundHeight(X As Double, Z As Double) As Double
                 For Part = 0 To Shape.StepCount - 1
 
                     Box = Features.StepAt(Items[Index].Template, Part)
+
+                    If InBox(Box, Point, 0.015) Then
+                        LocalHeight = Max(LocalHeight, Box.Height)
+                    End If
+
+                End For
+
+                For Part = 0 To Shape.FloorCount - 1
+
+                    Box = Features.FloorAt(Items[Index].Template, Part)
 
                     If InBox(Box, Point, 0.015) Then
                         LocalHeight = Max(LocalHeight, Box.Height)

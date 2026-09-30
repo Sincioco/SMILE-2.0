@@ -3,6 +3,7 @@ Module Smile.Tools.TownCourtTools
 
 Option Explicit
 
+Import Smile.Tools.TownSurfaceLayers As Layers
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.SurfaceSections3D As Regions
 Import Smile.Tools.TownDocument As Document
@@ -77,7 +78,7 @@ Public Sub Gesture(ByRef Value As State, ByRef Town As Document.State,
         If Available Then
 
             Desired = P.Vector(Court.ORIGIN_X + Value.OriginalX + Point.X - Value.Anchor.X,
-                23.12, Court.ORIGIN_Z + Value.OriginalZ + Point.Z - Value.Anchor.Z)
+                Layers.ROAD_Y, Court.ORIGIN_Z + Value.OriginalZ + Point.Z - Value.Anchor.Z)
             Desired = Guides.Snap(Guide, Desired, 0.0)
 
             If Guide.SnapTiles Then
@@ -148,8 +149,8 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State, View As P.Ca
     End If
 
     Area = Sections.CourtArea(Town)
-    Mark.First = P.Vector(Area.MinX, 23.12, Area.MinZ)
-    Mark.Last = P.Vector(Area.MaxX, 23.12, Area.MaxZ)
+    Mark.First = P.Vector(Area.MinX, Layers.ROAD_Y, Area.MinZ)
+    Mark.Last = P.Vector(Area.MaxX, Layers.ROAD_Y, Area.MaxZ)
     Mark.IsRectangle = True
 
     Call Guides.DrawMarker(Mark, View, RGB(255, 210, 90))

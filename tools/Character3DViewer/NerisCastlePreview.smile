@@ -74,7 +74,8 @@ Public Function Create(ByRef Value As State) As Boolean
                 End If
 
                 Value.LeafCount = Value.LeafCount + 1
-                Ok = P.SetPosition(Object, Route.ORIGIN_X, Route.DECK_Y - 0.25 * Route.SCALE,
+                Ok = P.SetPosition(Object, Route.ORIGIN_X,
+                    Route.DECK_Y - 0.25 * Route.SCALE,
                     Route.ORIGIN_Z - 64.0 * Route.SCALE) And Ok
 
             Else If Index >= 13 Then

@@ -3,6 +3,7 @@ Module Smile.Tools.TownRoadTravel
 
 Option Explicit
 
+Import Smile.Tools.TownSurfaceLayers As Layers
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PrecisionMath3D As M
 Import Smile.Simple3D.SurfaceGrid3D As Grid
@@ -63,7 +64,7 @@ Private Function Center(Cell As Number) As P.Vector3
 
     X = Cell Mod Surface.Columns
     Z = Cell / Surface.Columns
-    Result = P.Vector((Surface.XEdges[X] + Surface.XEdges[X + 1]) * 0.5, 23.12,
+    Result = P.Vector((Surface.XEdges[X] + Surface.XEdges[X + 1]) * 0.5, Layers.ROAD_Y,
         (Surface.ZEdges[Z] + Surface.ZEdges[Z + 1]) * 0.5)
 
     Return Result

@@ -44,12 +44,107 @@ Public Sub Run(ByRef Value As Town.State, ByRef Failures As Number)
     Call RightClickOrbit(Value, Failures)
     Call MapOrbit(Value, Failures)
     Call QuarterTurn(Value, Failures)
+    Call FrontView(Value, Failures)
+    Call CursorZoom(Value, Failures)
 
     Call Party.Teleport(Value.People, SavedPosition)
     Call Party.Update(Value.People, SavedPosition, 0)
 
     Value.Map = SavedMap
     Value.Look.Time = 0
+
+End Sub
+
+Private Sub CursorZoom(ByRef Value As Town.State, ByRef Failures As Number)
+
+    Dim Point As P.Vector3
+    Dim Pixel As Camera.ProjectedPoint
+    Dim Before As P.Camera3D
+    Dim Mode As Number
+    Dim Step As Number
+
+    For Mode = 0 To 1
+
+        Call Town.ResetOverview(Value)
+
+        Value.Cinematic = False
+        Value.Follow = False
+        Value.PartyCamera = False
+
+        If Mode = 1 Then
+            Call Town.TopDown(Value, True)
+        End If
+
+        Before = Value.View.LiveCamera
+        Point = Camera.CursorPointAtDepth(Before, 350, 300,
+            M.Distance(Before.Position, Before.Target) * 0.7, Window_Width(), Window_Height())
+
+        Call Drone.BeginCursorZoom(Value.Flight, Value.View, Value.BaseCamera, Point, 350, 300)
+        Call Check(M.Distance(Before.Position, Value.View.LiveCamera.Position) < 0.0001,
+            "Beginning Cursor Zoom Does Not Jump The Camera", Failures)
+
+        For Step = 0 To 1
+
+            Value.View.Zoom.Current = -48.0 + ToDouble(Step) * 56.0
+            Value.View.Zoom.Target = Value.View.Zoom.Current
+            Value.View.Controls.Zoom = Value.View.Zoom.Current
+
+            Call Drone.Compose(Value.Flight, Value.View, Value.BaseCamera, False, 0)
+
+            Pixel = Camera.ProjectViewerPoint(Point, Value.View.LiveCamera, Window_Width(), Window_Height())
+
+            Call Check(Pixel.Visible And Abs(Pixel.X - 350.0) < 0.1 And Abs(Pixel.Y - 300.0) < 0.1,
+                "Cursor Zoom In And Out Retains The Picked Object In Perspective And True 2D", Failures)
+        End For
+
+        Value.Flight.CursorZoom = False
+    End For
+
+    Call Town.ResetOverview(Value)
+
+End Sub
+
+Private Sub FrontView(ByRef Value As Town.State, ByRef Failures As Number)
+
+    Dim Before As P.Camera3D
+    Dim After As P.Camera3D
+    Dim Offset As P.Vector3
+    Dim Index As Number
+
+    For Index = 0 To 1
+
+        Call Town.ResetOverview(Value)
+
+        If Index = 1 Then
+            Call Town.TopDown(Value, True)
+        End If
+
+        Before = Value.View.LiveCamera
+
+        Call Town.Input(Value, KEY_2, False)
+
+        After = Value.View.LiveCamera
+        Offset = M.Subtract(After.Position, After.Target)
+
+        Call Check(Abs(Offset.Y) < 0.001 And Before.Target.X = After.Target.X And Before.Target.Z = After.Target.Z And
+            After.Position.Y >= Navigation.GroundHeight(After.Target.X, After.Target.Z) + 26.0 And
+            Abs(M.Distance(Before.Position, Before.Target) - M.Length(Offset)) < 0.001 And
+            Before.FovDegrees = After.FovDegrees And After.OrthographicHeight = 0.0,
+            "Key 2 Levels The Current View And Preserves Its Center Distance And Lens", Failures)
+
+        If Index = 0 Then
+            Call Check(Abs(Offset.X * (Before.Position.Z - Before.Target.Z) -
+                Offset.Z * (Before.Position.X - Before.Target.X)) < 0.1,
+                "Front View Preserves The Current Horizontal Bearing", Failures)
+        Else
+
+            Call Check(M.Dot(Offset, Before.UpDirection) < 0.0,
+                "Front View From True 2D Uses The Current Screen Orientation", Failures)
+        End If
+
+    End For
+
+    Call Town.ResetOverview(Value)
 
 End Sub
 
@@ -85,6 +180,16 @@ Private Sub QuarterTurn(ByRef Value As Town.State, ByRef Failures As Number)
     Call Check(M.Distance(Before.Position, Value.View.LiveCamera.Position) < 0.01 And
         M.Distance(Before.Target, Value.View.LiveCamera.Target) < 0.01,
         "Four Quarter Turns Restore The Exact Camera", Failures)
+
+    Value.View.LiveCamera = Drone.EditingView(Before, 1)
+    Value.View.LiveCamera.UpDirection = M.Rotate(P.Vector(0.0, 0.0, 1.0), P.Vector(0.0, -18.0, 0.0))
+
+    Call Drone.TurnClockwise(Value.Flight, Value.View, Value.BaseCamera)
+    Call Check(M.Distance(Value.View.LiveCamera.UpDirection, P.Vector(-1.0, 0.0, 0.0)) < 0.001,
+        "Angled R Snaps Forward To The Next Cardinal Instead Of Adding Ninety", Failures)
+    Call Drone.TurnClockwise(Value.Flight, Value.View, Value.BaseCamera)
+    Call Check(M.Distance(Value.View.LiveCamera.UpDirection, P.Vector(0.0, 0.0, -1.0)) < 0.001,
+        "Aligned R Advances To The Clockwise Cardinal", Failures)
     Call Town.ResetOverview(Value)
 
 End Sub
@@ -391,9 +496,9 @@ Public Sub RightClickOrbit(ByRef Value As Town.State, ByRef Failures As Number)
             Abs(Bearing + 98.0) < 0.01 And Abs(Elevation - 33.0) < 0.01,
             "Horizon Overview Matches The Approved Front View Around Map Center", Failures)
     Else If Value.Harbor.Ready Then
-        Call Check(Abs(Radius - 16983.0) < 0.01 And
-            M.Distance(Point, Authoring.MapCenter(0.0)) < 0.01 And
-            Abs(Bearing + 20.0) < 0.01 And Abs(Elevation - 25.0) < 0.01,
+        Call Check(Abs(Radius - 11438.0) < 0.01 And
+            M.Distance(Point, Authoring.MapCenter(1044.0)) < 0.01 And
+            Abs(Bearing + 21.0) < 0.01 And Abs(Elevation - 17.0) < 0.01,
             "Spaceport Overview Starts At The Approved Front Angle Around Map Center", Failures)
     Else If Not Value.Harbor.Ready Then
         Call Check(M.Distance(Point, P.Vector(-1225.0, 150.0, 375.0)) < 0.01 And

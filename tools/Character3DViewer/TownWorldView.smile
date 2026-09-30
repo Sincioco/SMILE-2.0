@@ -1,0 +1,166 @@
+''' World canvas camera and card measurements; no document edits.
+Module Smile.Tools.TownWorldView
+
+Option Explicit
+
+Public Type State
+    Zoom As Number
+    PanX As Number
+    PanY As Number
+    Dragging As Boolean
+    LastX As Number
+    LastY As Number
+End Type
+
+Public Function Scale(ByRef Value As State) As Number
+
+    Dim Result As Number
+
+    Result = Max(25, Min(200, Value.Zoom))
+
+    If Value.Zoom = 0 Then
+        Result = 100
+    End If
+
+    Return Result
+
+End Function
+
+Public Function HalfWidth(ByRef Value As State) As Number
+
+    Dim Result As Number
+
+    Result = 120 * Scale(Value) / 100
+
+    Return Result
+
+End Function
+
+Public Function HalfHeight(ByRef Value As State) As Number
+
+    Dim Result As Number
+
+    Result = 106 * Scale(Value) / 100
+
+    Return Result
+
+End Function
+
+Public Function ToScreen(ByRef Value As State, Position As Number, Center As Number,
+    Vertical As Boolean) As Number
+
+    Dim Result As Number
+    Dim Pan As Number
+
+    Pan = Value.PanX
+
+    If Vertical Then
+        Pan = Value.PanY
+    End If
+
+    Result = Center + (Position - Center) * Scale(Value) / 100 + Pan
+
+    Return Result
+
+End Function
+
+Public Function World(ByRef Value As State, Position As Number, Center As Number,
+    Vertical As Boolean) As Number
+
+    Dim Result As Number
+    Dim Pan As Number
+
+    Pan = Value.PanX
+
+    If Vertical Then
+        Pan = Value.PanY
+    End If
+
+    Result = Center + (Position - Center - Pan) * 100 / Scale(Value)
+
+    Return Result
+
+End Function
+
+Public Sub ZoomAt(ByRef Value As State, Amount As Number, Px As Number, Py As Number,
+    RightEdge As Number, Height As Number)
+
+    Dim Previous As Number
+    Dim NextZoom As Number
+
+    Previous = Scale(Value)
+    NextZoom = Max(25, Min(200, Previous + Amount))
+    Value.PanX = Px - RightEdge / 2 - (Px - RightEdge / 2 - Value.PanX) * NextZoom / Previous
+    Value.PanY = Py - Height / 2 - (Py - Height / 2 - Value.PanY) * NextZoom / Previous
+    Value.Zoom = NextZoom
+
+End Sub
+
+Public Sub Pan(ByRef Value As State, Px As Number, Py As Number, Held As Boolean)
+
+    If Value.Dragging And Held Then
+        Value.PanX = Value.PanX + Px - Value.LastX
+        Value.PanY = Value.PanY + Py - Value.LastY
+    End If
+
+    Value.Dragging = Held
+    Value.LastX = Px
+    Value.LastY = Py
+
+End Sub
+
+''' Names remain centered and wrap at spaces, with a hard break for long single words.
+Public Sub Label(Name As Text, X As Number, Y As Number, Width As Number, Size As Number, Height As Number)
+
+    Dim Start As Number
+    Dim Finish As Number
+    Dim Split As Number
+    Dim LineText As Text
+    Dim Lines As Number
+
+    Do
+        Lines = (Text_Width(Name, Size) + Max(1, Width) - 1) / Max(1, Width)
+
+        If Lines * (Size + 3) <= Height Or Size <= 5 Then
+            Exit Do
+        End If
+
+        Size = Size - 1
+
+    Loop
+
+    Clip Rectangle X - Width / 2, Y, Width, Height
+
+    Do
+        Finish = Start
+        Split = -1
+
+        Do
+            Finish = Finish + 1
+
+            If Text_Slice(Name, Finish - 1, 1) = " " Then
+                Split = Finish - 1
+            End If
+
+        Loop Until Finish >= Text_Length(Name) Or Text_Width(Text_Slice(Name, Start, Finish - Start + 1), Size) > Width
+
+        If Finish < Text_Length(Name) And Split > Start Then
+            Finish = Split
+        End If
+
+        LineText = Text_Slice(Name, Start, Finish - Start)
+        Draw Text LineText At X, Y Size Size Color WHITE Centered
+        Y = Y + Size + 3
+        Start = Finish
+
+        If Text_Slice(Name, Start, 1) = " " Then
+            Start = Start + 1
+        End If
+
+    Loop Until Start >= Text_Length(Name)
+
+    End Clip
+
+End Sub
+
+End Module

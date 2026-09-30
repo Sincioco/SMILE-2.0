@@ -10,6 +10,7 @@ Import Smile.Tools.NerisCastleRoute As Castle
 Import Smile.Tools.NerisHorizonRoute As Spaceport
 Import Smile.Tools.NerisSpaceportTraffic As Traffic
 Import Smile.Tools.NerisRunwayTraffic As Runway
+Import Smile.Tools.TownPartyInset As Inset
 
 Dim Path As Trail.State
 Dim Leader As P.Vector3
@@ -19,6 +20,26 @@ Dim MemberIndex As Number
 Dim Failures As Number
 
 Dim Flights As Traffic.State
+Dim EyeView As P.Camera3D
+Dim Facing As P.Vector3
+
+For Index = 0 To 3
+
+    Facing = M.Rotate(P.Vector(0.0, 0.0, -1.0), P.Vector(0.0, ToDouble(Index) * 90.0, 0.0))
+    EyeView = Inset.Frame(P.Vector(15.0, 23.12, -40.0), ToDouble(Index) * 90.0)
+
+    Call Check(M.Dot(M.Subtract(EyeView.Target, EyeView.Position), Facing) > 199.99 And
+        Abs(EyeView.Target.Y - EyeView.Position.Y) < 0.001,
+        "Inset Looks Ahead Of Arin At Eye Level In Every Cardinal Direction")
+    Call Check(M.Dot(M.Subtract(EyeView.Position, P.Vector(15.0, 23.12, -40.0)), Facing) > 3.99,
+        "Inset Lens Sits Ahead Of Arin Rather Than Behind Him")
+End For
+
+Call Check(Inset.PANEL_TOP = 531 And Inset.VIEW_TOP = 553,
+    "Inset Joins The Minimap Bottom Without A Floating Gap")
+Call Check(Inset.Visible(True, False) And Not Inset.Visible(True, False, True) And
+    Not Inset.Visible(False, False) And Not Inset.Visible(True, True),
+    "POV Is Only Drawn While Moving Visible And Outside Editing")
 
 Call Spaceport.Enable(True)
 

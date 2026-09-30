@@ -189,6 +189,19 @@ Public Function ComposeOrbit(Base As P.Camera3D, Controls As Camera.Controls,
     Dim Pitch As Double
     Dim Valid As Boolean
 
+    If Base.OrthographicHeight > 0.0 Then
+
+        Result = Base
+        Result.UpDirection = M.Rotate(Base.UpDirection, P.Vector(0.0, -Controls.OrbitYaw, 0.0))
+        Valid = Camera.Basis(Result, Forward, RightValue, UpValue)
+        Pan = M.Add(M.Scale(RightValue, Controls.PanX), M.Scale(UpValue, Controls.PanY))
+        Result.Position = M.Add(Result.Position, Pan)
+        Result.Target = M.Add(Result.Target, Pan)
+
+        Return Result
+
+    End If
+
     Offset = M.Subtract(Base.Position, Base.Target)
     Distance = Max(0.01, M.Length(Offset))
     Horizontal = Sqrt(Offset.X * Offset.X + Offset.Z * Offset.Z)
@@ -245,6 +258,10 @@ Public Function ComposeDistance(Base As P.Camera3D, Controls As Camera.Controls,
 
     Result.Position = M.Add(Result.Target,
         M.Scale(M.Subtract(Result.Position, Result.Target), Distance / BaseDistance))
+
+    If Result.OrthographicHeight > 0.0 Then
+        Result.OrthographicHeight = Result.OrthographicHeight * Distance / BaseDistance
+    End If
 
     Return Result
 
