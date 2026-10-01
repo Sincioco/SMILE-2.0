@@ -9,13 +9,13 @@ catalog and terminal assemblies; no downloaded assets or new dependencies.
 | Neris Star Lake | Circular reservoir, eight bridge spokes, enlarged royal island and inward-facing homes |
 | Neris Crown Isles | Seven paired palm branches inside an open circular perimeter |
 | East Valley | Six-point star, circular perimeter, concentric promenades and six memorial gardens |
-| Orin's Village | Small castle-free home village, City Hall, twin lakes and repair stalls |
+| Orin's Village | Circular civic hub, four round residential neighborhoods and eight curved garden branches |
 | Neris Spaceport | Circular arrival landscape, eight approach bridges, embassy gardens and water pavilions |
 | Horizon Airport | Scalloped lagoons, twin arrival villages, perimeter drive and pavilion piers |
 | Verdant Reach | Forest trail, two ponds and three sheltered encounter clearings |
 | Greyglass Pass | Winding level path between layered mountain ridges |
 | Sunglass Expanse | Dunes, sandstone mesas and an oasis loop |
-| Neris Waterworks | Six reservoir basins, pump platforms and maintenance bridges |
+| Neris Waterworks | Five crescent basins and five round gardens around interlaced star service paths |
 | Ancient Relay | Weathered rock spires around concentric service paths |
 | Neris Relief Quarter | Clinic courtyard, modest homes and provision stalls |
 
@@ -72,7 +72,7 @@ explicit exceptions. Castles and airport terminals retain their authored approac
 
 Star Lake keeps its enlarged royal island and smooth rings, removes the six shops,
 and routes the cross-island avenue in front of the castle bridge. Orin's Village
-uses a clear perimeter street and two garden ponds. Crown Isles has building plots
+uses four round neighborhoods and eight satellite gardens connected by curved paths. Crown Isles has building plots
 off its through roads. Relay obelisks are offset from axial paths. Forest/mountain
 encounter clearings and the desert oasis loop are retained as requested.
 
@@ -107,8 +107,9 @@ Close Studio normally before using `Source/install_maps.py --data <Data folder>
 --backup <new backup folder>`. It validates each input and retains every replaced
 save. It installs named copies and replaces the two permanent airport keys;
 original Neris and the user's original Luma world stay intact. The runtime Data
-folder is `%LOCALAPPDATA%\SMILE 2.0\Games\<SHA256 of
-smile.tools.character3d-viewer>\Data`. Generated runtime `.bin` files are not source
+folder is `<Windows Saved Games>\SMILE 2.0\Games\<SHA256 of
+smile.tools.character3d-viewer>\Data`; resolve it with
+`scripts/get-smile-data-root.ps1`. Generated runtime `.bin` files are not source
 assets and are not committed.
 To install the original Neris marker additions too, pass `--original
 <staging-folder>/Neris Town.town`. The installer rejects a stale copy if any current
@@ -165,3 +166,28 @@ the trunk base connect the perimeter, preserving every leaf-shaped branch.
 The current map has 42 homes (previously 28), 96 trees (43), and 65 lamps (37).
 All 43 building entrances reach pavement, and the full travel network remains
 connected. Lamps follow the branches as well as the trunk and outer promenade.
+
+### Orin and Waterworks reference redesigns
+
+Orin's Village follows Sin's round hub reference: two central rings, four large
+residential circles, and eight small fountain gardens on quadratic Bezier branches.
+Sixteen homes face their neighborhood loops; 36 trees and 36 lamps follow the banks.
+The central City Hall retains a short front-door connection. It remains castle-free.
+
+Neris Waterworks follows the reference's five large circles, five small gardens
+and two interlaced five-point service stars. Sin's refinement fills each large
+reservoir with water up to its circular road, retaining the small central pump
+platform and access bridge. Trees stand on the outer banks; 28 lamps light the
+paths. These are level, editable landscape shapes; moving water and disaster
+gameplay are separate work.
+
+Both native prepared bundles freshly import without terrain/road rebuilding. All
+50 directed atlas routes pass the native arrival/search check, including inward
+walking clear of travel triggers. Eighteen building entrances and scenery clearance
+pass authoring checks. The selective installer retained existing lighting, backed
+up previous saves and changed only these two maps plus their prepared records.
+Native Studio screenshots were inspected on October 1: Orin's Village loaded in
+125 ms and the fully flooded Waterworks revision in 133 ms. The five filled basins,
+pump platforms and bridges were directly inspected in the native application.
+These are observed map switches, not cold-start benchmarks on other
+hardware. Other authored maps and both Neris castles are intact.

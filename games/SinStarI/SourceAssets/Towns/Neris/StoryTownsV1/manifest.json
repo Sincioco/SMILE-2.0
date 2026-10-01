@@ -79,19 +79,19 @@
     "name": "Orin's Village",
     "file": "Orin's Village.town",
     "size_m": 420,
-    "items": 99,
-    "trees": 48,
-    "lamps": 30,
-    "houses": 10,
+    "items": 97,
+    "trees": 36,
+    "lamps": 36,
+    "houses": 16,
     "castles": 0,
     "city_halls": 1,
-    "draw_cost": 625,
-    "local_lights": 36,
-    "water_percent": 42.9,
+    "draw_cost": 631,
+    "local_lights": 42,
+    "water_percent": 68.0,
     "story_spaces": [
       "Working label for Orin's unnamed home village; not a new canon proper name",
-      "Castle-free City Hall, family homes and armor-repair stalls",
-      "Sheltered garden ponds, clear village streets and lantern-lit home entrances"
+      "Central circular civic island and four round residential neighborhoods",
+      "Eight satellite fountain gardens with smooth curved banks and lantern-lit paths"
     ]
   },
   {
@@ -190,17 +190,17 @@
     "name": "Neris Waterworks",
     "file": "Neris Waterworks.town",
     "size_m": 560,
-    "items": 48,
-    "trees": 24,
-    "lamps": 16,
+    "items": 49,
+    "trees": 10,
+    "lamps": 28,
     "houses": 0,
     "castles": 0,
     "city_halls": 1,
-    "draw_cost": 232,
-    "local_lights": 24,
-    "water_percent": 17.8,
+    "draw_cost": 219,
+    "local_lights": 34,
+    "water_percent": 79.8,
     "story_spaces": [
-      "Chapter One waterworks: paired settling basins, pump platforms and service lanes.",
+      "Five circular reservoirs filled to their promenades and five round gardens around a star-web of service paths.",
       "Industrial machinery and scripted disaster sequence remain separate story work."
     ]
   },

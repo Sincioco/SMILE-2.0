@@ -100,30 +100,55 @@ def desert():
 
 
 def waterworks():
-    t=base('Neris Waterworks',560,0)
-    for z in (-160,0,160):
-        for x in (-140,140):
-            t.disk(x,z,57,WATER)
-            t.ring(x,z,68,10)
-    t.path([(-268,0),(268,0)],20)
-    for x in (-220,0,220):
-        t.path([(x,-240),(x,240)],16)
-    for z in (-160,160):
-        t.path([(-220,z),(220,z)],16)
-    t.place(10,0,-215,1.3,180)
-    t.place(9,0,215,1.2,0)
-    for x in (-140,140):
-        for z in (-160,0,160):
-            # Pump pavilion on a solid central platform.
-            t.disk(x,z,18)
-            t.path([(x,z),(x+68,z)],8)
-            t.place(27,x,z,1.6,0)
-    for x in (-240,240):
-        t.grove(x,90,2,3,10,2)
-        t.grove(x,-90,2,3,10,2)
-    t.lamps([(x,z) for x in (-28,28) for z in (-170,-80,80,170)],1.7)
+    t=Town('Neris Waterworks',560,4,True)
+    t.symmetric=False
+    def point(radius,angle):
+        a=math.radians(angle)
+        return radius*math.sin(a),radius*math.cos(a)
+    # Five full circular reservoirs alternate with smaller round gardens.
+    for angle in range(0,360,72):
+        x,z=point(190,angle)
+        t.disk(x,z,48)
+        t.disk(x,z,36.2,WATER)
+        t.disk(x,z,11)
+        gx,gz=point(175,angle+36)
+        t.disk(gx,gz,23)
+    # Two interlaced five-point stars carry service paths; land is authored first.
+    for index in range(10):
+        a,b=point(128,index*36),point(128,(index+4)*36)
+        t.curve([a,((a[0]+b[0])/2,(a[1]+b[1])/2),b],14)
+        a,b=point(128,index*36),point(175 if index%2 else 155,index*36)
+        t.curve([a,((a[0]+b[0])/2,(a[1]+b[1])/2),b],16)
+    t.disk(0,0,32)
+    for index in range(10):
+        t.path([point(128,index*36),point(128,(index+4)*36)],6)
+        t.path([point(128,index*36),point(158 if index%2 else 152,index*36)],7)
+    t.ring(0,0,25,7)
+    t.path([(0,25),(0,128)],7)
+    for angle in range(0,360,72):
+        x,z=point(190,angle)
+        t.ring(x,z,39,6)
+        t.path([(x,z),point(152,angle)],6)
+        t.place(27,x,z,1.05)
+        # Trees stay on the outer bank, leaving the reservoir interior filled.
+        for offset in (-20,20):
+            dx,dz=point(45,angle+offset)
+            t.place(19,x+dx,z+dz,.75)
+        for turn in (-90,90):
+            dx,dz=point(43,angle+turn)
+            t.place(15,x+dx,z+dz,1.5)
+        gx,gz=point(175,angle+36)
+        t.ring(gx,gz,16,6)
+        t.place(20,gx,gz,1.0)
+        for turn in (-60,60):
+            dx,dz=point(20,angle+36+turn)
+            t.place(15,gx+dx,gz+dz,1.4)
+    t.place(9,0,0,1.0)
+    # Short west/east links reach the star without slicing through its center.
+    for side in (-1,1):
+        t.path([(side*67,0),(side*248,0)],9)
     t.gates(destinations=('Neris Town','Verdant Reach'))
-    t.notes=['Chapter One waterworks: paired settling basins, pump platforms and service lanes.',
+    t.notes=['Five circular reservoirs filled to their promenades and five round gardens around a star-web of service paths.',
              'Industrial machinery and scripted disaster sequence remain separate story work.']
     return t
 

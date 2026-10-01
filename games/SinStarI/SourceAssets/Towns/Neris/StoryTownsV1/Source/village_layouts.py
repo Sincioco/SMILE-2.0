@@ -67,34 +67,54 @@ def east_valley():
 
 def home_village():
     t=Town("Orin's Village",420,smooth=True)
-    t.disk(0,0,177)
-    # Quiet ponds occupy gardens; the village streets and home plots stay on land.
-    t.rect(-149,-149,149,149)
-    for side in (-1,1):
-        for x,z,r in ((87,55,26),(99,67,20),(74,45,17)):
-            t.disk(side*x,z,r,WATER)
-    t.path([(-132,-132),(132,-132),(132,132),(-132,132),(-132,-132)],12)
-    t.path([(-190,0),(190,0)],14)
-    t.path([(0,-177),(0,95)],14)
-    for side in (-1,1):
-        for x,z,yaw in ((52,-108,0),(92,-108,0),(110,-66,-side*90),
-                        (110,-30,-side*90),(72,108,180)):
-            t.place(1 if x==52 else 0,side*x,z,1.25,yaw)
-        t.place(8,side*37,-56,1.1,side*90)
-        t.place(17,side*29,-18,1.5,side*90)
-        t.grove(side*48,51,2,3,8,1.8)
-        t.grove(side*30,36,2,4,9,1.9)
-        t.grove(side*79,-57,2,3,9,1.65)
-        t.grove(side*19,-90,1,4,9,1.75)
-        for x,z in ((17,-165),(17,-100),(17,-35),(17,70),(81,-144),
-                    (145,-45),(145,15),(145,57),(122,112),(64,144),(157,-17)):
-            t.place(15,side*x,z,1.65)
-        t.place(20,side*47,91,1.2)
-        t.place(14,side*43,78,1.4)
-        t.place(16,side*87,121,1.5)
-    t.place(9,0,119,1.25)
+    def turn(x,z,angle):
+        a=math.radians(angle)
+        return round(x*math.cos(a)+z*math.sin(a),6),round(z*math.cos(a)-x*math.sin(a),6)
+    # A central civic island and circular bank repeat the reference's round hub.
+    t.disk(0,0,84)
+    t.disk(0,0,56,WATER)
+    t.disk(0,0,42)
+    for angle in range(0,360,90):
+        x,z=turn(0,146,angle)
+        t.disk(x,z,40)
+        t.curve([turn(0,72,angle),turn(0,105,angle),turn(0,120,angle)],18)
+        for side in (-1,1):
+            x,z=turn(side*61,130,angle)
+            t.disk(x,z,19)
+            t.curve([turn(0,84,angle),turn(side*43,87,angle),turn(side*61,130,angle)],15)
+    t.ring(0,0,71,8)
+    t.ring(0,0,34,7)
+    for angle in range(0,360,90):
+        t.path([turn(0,34,angle),turn(0,119,angle)],8)
+        x,z=turn(0,146,angle)
+        t.ring(x,z,27,7)
+        # Four houses form each small neighborhood, with doors toward its loop.
+        for dx,dz in ((-11,-10),(11,-10),(-11,10),(11,10)):
+            px,pz=turn(dx,146+dz,angle)
+            t.place(0,px,pz,.85,(angle+(0 if dz<0 else 180))%360)
+        for side in (-1,1):
+            x,z=turn(side*61,130,angle)
+            t.curve([turn(0,84,angle),turn(side*43,87,angle),turn(side*56,119,angle)],6,ROAD)
+            t.ring(x,z,12,5)
+            t.place(20,x,z,.85)
+            for dx,dz in ((-9,10),(9,10)):
+                px,pz=turn(side*61+dx,130+dz,angle)
+                t.place(19,px,pz,.75)
+            px,pz=turn(side*8,104,angle)
+            t.place(15,px,pz,1.5)
+        for offset in (-16,16):
+            px,pz=turn(offset,179,angle)
+            t.place(19,px,pz,.9)
+            px,pz=turn(offset,164,angle)
+            t.place(15,px,pz,1.4)
+    for angle in range(15,360,30):
+        x,z=turn(0,81,angle)
+        t.place(19,x,z,.85)
+        x,z=turn(0,62,angle)
+        t.place(15,x,z,1.45)
+    t.place(9,0,0,1.05)
     t.gates()
     t.notes=["Working label for Orin's unnamed home village; not a new canon proper name",
-        'Castle-free City Hall, family homes and armor-repair stalls',
-        'Sheltered garden ponds, clear village streets and lantern-lit home entrances']
+        'Central circular civic island and four round residential neighborhoods',
+        'Eight satellite fountain gardens with smooth curved banks and lantern-lit paths']
     return t
