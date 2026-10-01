@@ -560,6 +560,10 @@ Public Sub Compose(ByRef Value As State, ByRef View As Arena.State,
     Call Arena.ComposeCamera(View, Resolved)
     Call KeepZoomPoint(Value, View)
 
+    If Following And Value.Focusing Then
+        Call ClearFocus(Value, View)
+    End If
+
     If Following And Value.OrbitAtParty Then
         View.LiveCamera = Camera.KeepOrbitAnchor(Resolved, View.LiveCamera,
             M.Subtract(Resolved.Target, Value.OrbitLookOffset))
@@ -590,6 +594,38 @@ Public Sub Compose(ByRef Value As State, ByRef View As Arena.State,
     End If
 
     Value.Focusing = Value.Focusing And View.TransitionDuration > 0
+
+End Sub
+
+''' Easing can cross a wall even when both endpoint shots are clear.
+Private Sub ClearFocus(ByRef Value As State, ByRef View As Arena.State)
+
+    Dim Amount As Double
+    Dim Forward As P.Vector3
+    Dim Direction As P.Vector3
+
+    Forward = M.Subtract(View.LiveCamera.Target, View.LiveCamera.Position)
+
+    If Edited.Active() Then
+        Call Edited.PopulateCamera(Value.World, View.LiveCamera.Target)
+    End If
+
+    Amount = Clearance.Fraction(Value.World, View.LiveCamera.Target,
+        View.LiveCamera.Position, 18.0, True)
+
+    If Amount < 1.0 Then
+        View.LiveCamera.Position = M.Lerp(View.LiveCamera.Target,
+            View.LiveCamera.Position, Amount * 0.98)
+    End If
+
+    ' Preserve a valid view direction when the focus is almost touching a wall.
+
+    If (M.Distance(View.LiveCamera.Target, View.LiveCamera.Position) < 1.0 And
+        M.TryNormalize(Forward, Direction)) Then
+        View.LiveCamera.Target = M.Add(View.LiveCamera.Position, Direction)
+    End If
+
+    Call Settle(Value, View.LiveCamera)
 
 End Sub
 

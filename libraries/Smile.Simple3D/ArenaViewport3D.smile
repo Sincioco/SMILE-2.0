@@ -154,8 +154,16 @@ Public Function BeginFrame(ByRef Value As State, BaseCamera As P.Camera3D,
     End If
 
     Result = Arena.ConfigureForFrame(Value.Floor, Value.FloorVisible, True)
-    Result = P.SetCamera(Value.LiveCamera) And Result
-    Result = Backdrop.BeginFrame(Value.Backgrounds, Value.BackgroundIndex, UseScene) And Result
+
+    If Not Result Then
+        Return False
+    End If
+
+    If Not P.SetCamera(Value.LiveCamera) Then
+        Return False
+    End If
+
+    Result = Backdrop.BeginFrame(Value.Backgrounds, Value.BackgroundIndex, UseScene)
 
     Return Result
 

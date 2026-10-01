@@ -288,6 +288,8 @@ End Function
 Public Function LoadNext() As Boolean
 
     Dim Ok As Boolean
+    Dim Deadline As Number
+    Dim Step As Number
 
     If (Ready And
         AppliedRevision = Town.Revision And
@@ -302,9 +304,23 @@ Public Function LoadNext() As Boolean
     Call Renderer.SyncDocument(Assets, Town)
 
     If Assets.Loaded < Assets.Required Then
-        Call Renderer.LoadNext(Assets)
+
+        Deadline = Timer() + 4
+
+        For Step = 1 To 8
+
+            Call Renderer.LoadNext(Assets)
+
+            If (Assets.Failed Or
+                Assets.Loaded >= Assets.Required Or
+                Timer() >= Deadline) Then
+                Exit For
+            End If
+
+        End For
 
         Return False
+
     End If
 
     If Not Prepared Then
@@ -325,7 +341,21 @@ Public Function LoadNext() As Boolean
         Call Terrain.BeginBuild(Ground, Town)
     End If
 
+    ' Fill spare loading-frame time without increasing a terrain upload's size.
+    Deadline = Timer() + 3
+
     Call Terrain.Update(Ground, 16)
+
+    For Step = 1 To 7
+
+        If (Ground.Stage = 0 Or
+            Ground.Failed Or
+            Timer() >= Deadline) Then
+            Exit For
+        End If
+
+        Call Terrain.Update(Ground, 0)
+    End For
 
     If (Ground.Stage = 0 And
         Not Ground.Failed And

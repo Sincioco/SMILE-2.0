@@ -238,6 +238,22 @@ Sub RunChecks()
     End For
 
     Call Check(View.BackgroundIndex = 0)
+
+    ' A rejected shot must not begin a frame with the previously accepted camera.
+    View.LiveCamera = Base
+    View.LiveCamera.Position = Base.Target
+    Ok = Viewport.BeginFrame(View, Base, True, False)
+
+    Call Check(Not Ok And Not G.FrameActive3D())
+
+    If G.FrameActive3D() Then
+        Ok = Scene.EndScene()
+    End If
+
+    Ok = Viewport.BeginFrame(View, Base)
+
+    Call Check(Ok And G.FrameActive3D())
+    Call Check(Scene.EndScene())
     Call Arena.Destroy(Custom)
     Call Viewport.Destroy(View)
     Call Check(Not View.Ready And Not View.Backgrounds.Ready And Not View.Floor.Ready)

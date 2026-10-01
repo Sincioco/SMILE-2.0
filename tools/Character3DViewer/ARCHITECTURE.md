@@ -1,5 +1,55 @@
 # Character Viewer Architecture
 
+## October 2 minimap and initial loading follow-through
+
+NerisTown's existing idle owner treats hovering the visible minimap as activity;
+hidden maps still allow the usual idle orbit. Its minimap and dialogue input branches advance
+ArenaViewport3D with pointer input blocked, so an active journey's camera transition
+does not freeze while the cursor stays over the map or a resident is speaking.
+Camera state remains arena-owned. Native regressions cover visible/hidden hover,
+blocked-input easing and elapsed progress through the actual speaking input branch.
+
+TownEditorSession batches existing catalog and terrain loading steps within four-
+and three-millisecond deadlines, respectively, capped at eight steps per call. It
+does not enlarge upload buffers, change geometry, or expose partial terrain. An
+isolated prepared Neris document improved from 100 loading frames / 2654 ms to
+37 frames / 2139 ms; this probe remains above the two-second target. The remaining
+initial-load cost includes about 737 ms in party asset loading. Warm native Studio
+reopening measured 150–164 ms. The next performance action is to profile initial
+party uploads, not increase the loading-frame deadline (a six-ms experiment still
+took 2092 ms and was reverted).
+
+Native party focus exposed a separate black-scene defect: a near-wall clearance
+could collapse eye and target, and ArenaViewport3D opened a scene after rejecting
+the camera. BeginFrame now returns before opening that scene. NerisTown balances
+every successful BeginFrame even if preceding lighting setup fails. ClearFocus
+keeps a valid view direction, clears the interpolated boom, and seeds follow recovery
+from that cleared shot. Ownership remains in the existing arena and town camera.
+
+Validation: the zero-length-camera arena regression failed before the fix (check
+73) and passes afterward; 76 shared arena checks, all four native town groups,
+13 formatter integration checks, and the 646-file style check pass. Normal native
+Debug and Release builds publish all 362 assets. VSIX 2.0.68 is installed with all
+36 payload hashes verified. Logs: artifacts/focus-recovery-*.log. Actual native
+Tab focus and minimap arrival keep rendering with the new camera; evidence:
+artifacts/focus-recovery-native.png and minimap-follow-arrival-native.png.
+
+Actual native acceptance also clicked Ilan after minimap arrival: Arin approached,
+the dialogue opened, both faced one another and the three companions were hidden.
+Manual coverage limits remain explicit: a controlled red-beacon on/off pair has not
+been captured, and the automation API cannot synthesize Shift+middle drag. Native
+fixtures cover resident picking/approach/dialogue/follower visibility, camera
+easing, beacon timing and modified-middle input. Endpoint screenshots are not a
+continuous path-fidelity recording. Recheck these gestures in focused acceptance.
+
+The town test runner now imports portable fixtures through Data_BundleStart in its
+unique test profile. Directly copying modern SMB1-appended files into plain Save
+Data records incorrectly rejected them; no production save format is changed.
+Production growth is local: NerisTown +16 lines, NerisTownCamera +36,
+TownEditorSession +30 and ArenaViewport3D +8; regression fixtures and the portable
+test importer account for the remaining code. No bootstrap, native runtime,
+compiler, dependency, capacity, or guardrail growth is introduced.
+
 ## October 1 formatting follow-through
 
 The sixteen previously recorded formatting failures below are resolved in a separate

@@ -276,6 +276,9 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
             End If
 
             Value.IdleTime = 0
+
+            Call Arena.Update(Value.View, KEY_NONE, True, 24)
+
             Return
 
         End If
@@ -287,7 +290,7 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
     Call UpdateIdle(Value, Value.InputActive, 0,
         Pointer_Wheel_Delta() <> 0 And Key = KEY_NONE And
         Not Pointer_Held(POINTER_PRIMARY) And Not Pointer_Held(POINTER_MIDDLE) And
-        Not Pointer_Held(POINTER_SECONDARY))
+        Not Pointer_Held(POINTER_SECONDARY), Authoring.MapHovered())
 
     ' Header hover blocks pointer gestures, not independent keyboard framing.
 
@@ -379,6 +382,10 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
             Value.People.Running = True
 
         End If
+
+        ' The minimap owns pointer input, but camera easing must continue.
+
+        Call Arena.Update(Value.View, KEY_NONE, True, 24)
 
         Return
 
@@ -1147,7 +1154,8 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
     Call Authoring.UpdateDemoIdle(Value.View.LiveCamera, Elapsed,
         Value.InputActive Or Keyboard.Active(Held) Or Residents.Talking(Value.Residents))
     Call UpdateIdle(Value, Value.InputActive Or Keyboard.Active(Held) Or RoadTravel.Active() Or
-        Authoring.GestureActive() Or Residents.Talking(Value.Residents), Elapsed)
+        Authoring.GestureActive() Or Residents.Talking(Value.Residents), Elapsed,
+        False, Authoring.MapHovered())
 
     If CastleRoute.Active() Then
         Call CastleRoute.Update(Value.People.Path, Value.People.MemberCount, Elapsed)
@@ -1249,7 +1257,13 @@ Private Function MovementHeld() As Boolean
 End Function
 
 Public Sub UpdateIdle(ByRef Value As State, Active As Boolean, Elapsed As Number,
-    Optional WheelOnly As Boolean = False)
+    Optional WheelOnly As Boolean = False, Optional HoveringMap As Boolean = False)
+
+    If (Not Value.Cinematic And
+        Value.Map.Opacity > 0.0 And
+        HoveringMap) Then
+        Active = True
+    End If
 
     If (Active Or
         Authoring.Editing() Or
@@ -1288,6 +1302,7 @@ End Sub
 Public Sub Draw(ByRef Value As State)
 
     Dim Ok As Boolean
+    Dim FrameStarted As Boolean
 
     If (Value.Edited And
         (Value.Landmarks.Town <> Authoring.TownName() Or
@@ -1360,9 +1375,10 @@ Public Sub Draw(ByRef Value As State)
         Return
     End If
 
-    Ok = Arena.BeginFrame(Value.View, Value.BaseCamera, True, False) And Ok
+    FrameStarted = Arena.BeginFrame(Value.View, Value.BaseCamera, True, False)
+    Ok = FrameStarted And Ok
 
-    If Ok Then
+    If FrameStarted Then
 
         Ok = Arena.Draw(Value.View) And Ok
         Ok = DrawContents(Value) And Ok

@@ -86,31 +86,51 @@ if (-not $SkipRendering) {
     [xml]$project = Get-Content (Join-Path $viewer 'Character3DViewer.smileproj') -Raw
     $project.SmileProject.PropertyGroup.StartupFile = 'TownSessionTests.smile'
     $project.SmileProject.PropertyGroup.ApplicationId = 'smile.tests.town-session.run-' + [Guid]::NewGuid().ToString('N')
-    if ($SavedTown) {
-        $applicationHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData(
-            [Text.Encoding]::UTF8.GetBytes($project.SmileProject.PropertyGroup.ApplicationId))).ToLowerInvariant()
-        $keyHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData(
-            [Text.Encoding]::UTF8.GetBytes('TownEditor.PermanentNeris'))).ToLowerInvariant()
-        $fixtureData = Join-Path (& (Join-Path $PSScriptRoot 'get-smile-data-root.ps1')) "$applicationHash\Data"
-        $null = New-Item -ItemType Directory -Path $fixtureData -Force
-        Copy-Item -LiteralPath $SavedTown -Destination (Join-Path $fixtureData "$keyHash.bin")
-        if ($AirportTown) {
-            $airportHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData(
-                [Text.Encoding]::UTF8.GetBytes('TownEditor.Town.Horizon Airport'))).ToLowerInvariant()
-            Copy-Item -LiteralPath $AirportTown -Destination (Join-Path $fixtureData "$airportHash.bin")
-        }
-        if ($LinkedTown) {
-            $linkedHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData(
-                [Text.Encoding]::UTF8.GetBytes('TownEditor.Town.Neris Spaceport'))).ToLowerInvariant()
-            Copy-Item -LiteralPath $LinkedTown -Destination (Join-Path $fixtureData "$linkedHash.bin")
+    # Use the native portable-file importer: modern towns contain appended prepared
+    # records, which cannot be copied directly into a plain Save Data .bin envelope.
+    $sessionSource = [IO.File]::ReadAllText((Join-Path $viewer 'TownSessionTests.smile'))
+    $imports = [Collections.Generic.List[string]]::new()
+    foreach ($fixture in @(
+        @{ Path = $SavedTown; Key = 'TownEditor.PermanentNeris' },
+        @{ Path = $AirportTown; Key = 'TownEditor.Town.Horizon Airport' },
+        @{ Path = $LinkedTown; Key = 'TownEditor.Town.Neris Spaceport' }
+    )) {
+        if ($fixture.Path) {
+            $path = (Resolve-Path -LiteralPath $fixture.Path).Path
+            $imports.Add('Call ImportFixture("' + $fixture.Key + '", "' + $path.Replace('"', '""') + '")')
         }
     }
+    $sessionSource = $sessionSource.Replace('Call Commands.Start(Controls)',
+        ($imports -join "`n") + "`n`nCall Commands.Start(Controls)")
+    $sessionSource += @'
+
+Sub ImportFixture(Key As Text, Path As Text)
+
+    Dim Job As Number
+    Dim Status As Number
+    Dim Deadline As Number
+
+    Job = Data_BundleStart(False, Key, Path, "")
+    Deadline = Timer() + 10000
+
+    Do
+        Status = Data_FileStatus(Job)
+        Show Screen
+    Loop Until Status <> 0 Or Timer() >= Deadline
+
+    Call Check(Job > 0 And Status = 1, "Native Portable Fixture Import")
+
+End Sub
+'@
+    $generatedSession = Join-Path $output 'TownSessionTests.smile'
+    [IO.File]::WriteAllText($generatedSession, $sessionSource)
+    $project.SmileProject.PropertyGroup.StartupFile = $generatedSession
     $project.SmileProject.PropertyGroup.RememberWindowPlacement = 'false'
     $workerNode = $project.SmileProject.PropertyGroup.NativeWorkerScript
     $workerElement = $project.SmileProject.PropertyGroup.SelectSingleNode('NativeWorkerScript')
     if ($null -ne $workerElement) { $null = $workerElement.ParentNode.RemoveChild($workerElement) }
     $entry = $project.SmileProject.ItemGroup.SmileSource | Where-Object StartupOnly -eq 'true'
-    $entry.SetAttribute('Include', 'TownSessionTests.smile')
+    $entry.SetAttribute('Include', $generatedSession)
     $inspection = $project.CreateElement('SmileSource')
     $inspection.SetAttribute('Include', 'NerisTownInspectionTests.smile')
     $null = $project.SmileProject.ItemGroup.AppendChild($inspection)

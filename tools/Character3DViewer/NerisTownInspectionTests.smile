@@ -18,6 +18,8 @@ Import Smile.Tools.TownPicking As Picking
 Import Smile.Tools.TownEditorSession As Authoring
 Import Smile.Tools.NerisTownNavigation As Navigation
 Import Smile.Tools.NerisTownInspectionLimits As Limits
+Import Smile.Tools.TownDocumentNavigation As Edited
+Import Smile.Simple3D.CameraClearance3D As Clearance
 
 Public Sub Run(ByRef Value As Town.State, ByRef Failures As Number)
 
@@ -47,12 +49,71 @@ Public Sub Run(ByRef Value As Town.State, ByRef Failures As Number)
     Call FrontView(Value, Failures)
     Call CursorZoom(Value, Failures)
     Call OrbitZoom(Value, Failures)
+    Call FocusWallClearance(Failures)
 
     Call Party.Teleport(Value.People, SavedPosition)
     Call Party.Update(Value.People, SavedPosition, 0)
 
     Value.Map = SavedMap
     Value.Look.Time = 0
+
+End Sub
+
+Private Sub FocusWallClearance(ByRef Failures As Number)
+
+    Dim Flight As Drone.State
+    Dim View As Arena.State
+    Dim Shot As P.Camera3D
+    Dim Wall As Clearance.Bounds
+    Dim Index As Number
+    Dim Forward As P.Vector3
+    Dim RightValue As P.Vector3
+    Dim UpValue As P.Vector3
+
+    Call Edited.PopulateCamera(Flight.World, P.Vector(-900.0, 60.0, -2460.0))
+
+    For Index = 0 To Flight.World.BoxCount - 1
+
+        Wall = Flight.World.Boxes[Index]
+
+        If Wall.High.Y - Wall.Low.Y > 60.0 Then
+            Exit For
+        End If
+
+    End For
+
+    Call Check(Index < Flight.World.BoxCount, "Focus Wall Fixture Has A Building", Failures)
+
+    Shot.Position = P.Vector(Wall.High.X + 100.0, (Wall.Low.Y + Wall.High.Y) * 0.5,
+        (Wall.Low.Z + Wall.High.Z) * 0.5)
+    Shot.Target = P.Vector(Wall.Low.X - 100.0, Shot.Position.Y, Shot.Position.Z)
+    Shot.FovDegrees = 32.0
+    Shot.FarPlane = 50000.0
+    View.LiveCamera = Shot
+    View.MaximumDistance = 50000.0
+    Flight.Focusing = True
+
+    Call Motion.Reset(View.Controls, View.Zoom)
+    Call Arena.BeginTransition(View, 1000)
+    Call Arena.AdvanceTransition(View, 500)
+    Call Drone.Compose(Flight, View, Shot, True, 16, True)
+    Call Check(Clearance.Fraction(Flight.World, View.LiveCamera.Target,
+        View.LiveCamera.Position, 18.0, True) > 0.999 And
+        M.Distance(View.LiveCamera.Position, Shot.Position) > 1.0,
+        "Eased Focus Does Not Put The Camera Behind A Building Wall", Failures)
+    Call Check(M.Distance(Flight.Flight.Position, View.LiveCamera.Position) < 0.01,
+        "Follow Recovery Starts From The Cleared Focus Shot", Failures)
+
+    Shot.Target.X = Wall.Low.X - 18.01
+    View.LiveCamera = Shot
+    Flight.Focusing = True
+
+    Call Arena.BeginTransition(View, 1000)
+    Call Arena.AdvanceTransition(View, 500)
+    Call Drone.Compose(Flight, View, Shot, True, 16, True)
+    Call Check(Camera.Basis(View.LiveCamera, Forward, RightValue, UpValue) And
+        M.Distance(View.LiveCamera.Position, View.LiveCamera.Target) >= 0.999,
+        "Focus Beside A Wall Retains A Nonzero Camera Direction", Failures)
 
 End Sub
 
@@ -1046,6 +1107,15 @@ Private Sub IdleOrbit(ByRef Value As Town.State, ByRef Failures As Number)
 
     Call Town.ResetOverview(Value)
 
+    Call Arena.BeginTransition(Value.View, 1000)
+
+    Value.View.PreviousTime = Timer() - 250
+
+    Call Arena.Update(Value.View, KEY_NONE, True, 24)
+    Call Check(Value.View.TransitionElapsed >= 250 And Value.View.TransitionDuration = 1000,
+        "Minimap Pointer Ownership Still Advances Camera Easing", Failures)
+    Call Arena.AdvanceTransition(Value.View, 1000)
+
     Value.Cinematic = False
     Value.IdleOrbit = False
     Value.IdleTime = 0
@@ -1057,6 +1127,19 @@ Private Sub IdleOrbit(ByRef Value As Town.State, ByRef Failures As Number)
         "Fly Inspect Remains Still Instead Of Starting Idle Orbit", Failures)
 
     Value.Keys.FlyInspect = False
+
+    Value.Map.Opacity = 80.0
+
+    Call Town.UpdateIdle(Value, False, 20000, False, True)
+    Call Check(Not Value.Cinematic And Value.IdleTime = 0,
+        "Hovering The Visible Minimap Prevents Idle Orbit From Hiding It", Failures)
+
+    Value.Map.Opacity = 0.0
+
+    Call Town.UpdateIdle(Value, False, 20000, False, True)
+    Call Check(Value.Cinematic And Value.IdleOrbit,
+        "Hovering A Hidden Minimap Does Not Block Idle Orbit", Failures)
+    Call Town.UpdateIdle(Value, True, 0)
 
     Call Town.UpdateIdle(Value, False, 19999)
     Call Check(Not Value.Cinematic, "Idle Orbit Waits The Full Twenty Seconds", Failures)

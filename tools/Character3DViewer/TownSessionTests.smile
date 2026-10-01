@@ -31,6 +31,7 @@ Import Smile.Tools.TownEditorPanel As Panel
 Import Smile.Tools.TownSunControls As Sun
 Import Smile.Tools.TownHistory As History
 Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Scene3D As Scene
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PrecisionMath3D As M
 Import Smile.Simple3D.PrecisionCamera3D As Camera
@@ -135,6 +136,7 @@ Call Town.ObserveDemoInput(Value, KEY_E)
 Call Check(Not Editor.DemoActive() And Not Value.Cinematic,
     "Input After Loading Ends Startup Demo")
 Call CheckDemoTransition()
+Call CheckFocusRendering()
 Call Editor.BeginEditing()
 
 If Value.Ready And Editor.TownName() = "Neris Town" Then
@@ -351,6 +353,47 @@ Sub Check(Condition As Boolean, Label As Text)
         Print "FAIL " + Label
         Failures = Failures + 1
     End If
+
+End Sub
+
+Sub CheckFocusRendering()
+
+    Dim FrameIndex As Number
+    Dim Closed As Boolean
+
+    Call Town.ResetOverview(Value, True)
+    Call Town.Update(Value, 16)
+    Call Town.Draw(Value)
+    Call Town.Input(Value, KEY_TAB, False)
+
+    For FrameIndex = 0 To 64
+
+        Value.View.PreviousTime = Timer() - 16
+
+        Call Town.Input(Value, KEY_NONE, False)
+        Call Town.Update(Value, 16)
+        Call Town.Draw(Value)
+
+        If Value.Failed Or G.FrameActive3D() Then
+
+            Print "Focus Frame " + Calibration.NumberText(FrameIndex)
+            Print "Camera Distance " + Calibration.NumberText(ToNumber(M.Distance(Value.View.LiveCamera.Position, Value.View.LiveCamera.Target)))
+            Print "Graphics Error " + Calibration.NumberText(G.LastError())
+
+            Call Check(False, "Every Party Focus Frame Renders And Closes Its Scene")
+
+            Closed = Scene.EndScene()
+            Value.Failed = False
+            Exit For
+
+        End If
+
+    End For
+
+    Call Town.ResetOverview(Value, True)
+    Call Town.Update(Value, 16)
+    Call Town.Draw(Value)
+    Call Check(Not Value.Failed And Not G.FrameActive3D(), "Overview Still Renders After Party Focus")
 
 End Sub
 
@@ -924,11 +967,12 @@ Sub CheckResidentConversation(ByRef Value As Town.State)
         "Conversation Uses The Same Eased Party Focus As Tab")
 
     Value.View.TransitionElapsed = 400
+    Value.View.PreviousTime = Timer() - 250
 
     Call Town.Input(Value, KEY_NONE, False)
     Call Town.AdvanceKeyboard(Value, Held, 16)
-    Call Check(Value.View.TransitionElapsed = 400 And Value.Flight.Focusing,
-        "Ongoing Conversation Does Not Restart The Camera Transition")
+    Call Check(Value.View.TransitionElapsed >= 650 And Value.Flight.Focusing,
+        "Ongoing Conversation Advances Camera Easing Without Restarting It")
     Call Check(Value.People.Members[0].Visible, "Conversation Keeps The Party Leader Visible")
 
     For MemberIndex = 1 To Value.People.MemberCount - 1
