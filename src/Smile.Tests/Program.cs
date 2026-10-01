@@ -8,6 +8,7 @@ var tests = new TestContext();
 DoubleTests.Register(tests);
 Renderer3DPrecisionTests.Register(tests);
 CompilerOutputTests.Register(tests);
+ContextualIdentifierTests.Register(tests);
 
 Run("Native path picker has a typed path-only contract", () =>
 {
@@ -168,7 +169,7 @@ Run("Existing key constants retain their values", () =>
     Equal(22L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.Key4Keyword));
     Equal(27L, SyntaxFacts.GetBuiltInConstantValue(SyntaxKind.KeyOKeyword));
 });
-Run("Left and Right prefer identifiers only in assignment-target context", () =>
+Run("Left and Right resolve declared variables in reads and assignment targets", () =>
 {
     const string source = "Option Explicit\nDim Left As Number\nDim Right As Number\nLeft = 10\nRight = 20\nPrint LEFT\nPrint RIGHT\n";
     var analysis = Analyze(source);
@@ -180,10 +181,10 @@ Run("Left and Right prefer identifiers only in assignment-target context", () =>
         ((NameExpressionSyntax)assignments[0].Target.Location).Identifier.Kind);
     Equal(SyntaxKind.RightKeyword,
         ((NameExpressionSyntax)assignments[1].Target.Location).Identifier.Kind);
-    var constants = analysis.SyntaxTree.Root.Statements.OfType<PrintStatementSyntax>()
+    var references = analysis.SyntaxTree.Root.Statements.OfType<PrintStatementSyntax>()
         .Select(statement => statement.Items.Single()).ToArray();
-    Equal(SyntaxKind.LeftKeyword, ((LiteralExpressionSyntax)constants[0]).LiteralToken.Kind);
-    Equal(SyntaxKind.RightKeyword, ((LiteralExpressionSyntax)constants[1]).LiteralToken.Kind);
+    Equal(SyntaxKind.LeftKeyword, ((NameExpressionSyntax)references[0]).Identifier.Kind);
+    Equal(SyntaxKind.RightKeyword, ((NameExpressionSyntax)references[1]).Identifier.Kind);
 });
 Run("KEY_4 is a shared named input constant", () =>
 {
@@ -5978,6 +5979,11 @@ Run("VSIX templates render localized identity metadata within the aligned header
     var wizard = File.ReadAllText("src/Smile.VisualStudio/SmileProjectTemplateWizard.cs");
     var project = File.ReadAllText("src/Smile.VisualStudio/Smile.VisualStudio.csproj");
     var vsixManifest = File.ReadAllText("src/Smile.VisualStudio/source.extension.vsixmanifest");
+    var productVersion = XDocument.Parse(vsixManifest).Descendants()
+        .Single(element => element.Name.LocalName == "Identity").Attribute("Version")!.Value;
+    var projectXml = XDocument.Parse(project);
+    var assemblyVersion = projectXml.Descendants().Single(element => element.Name.LocalName == "AssemblyVersion").Value;
+    Equal(productVersion + ".0", assemblyVersion);
     var gameDim = gameTemplate.IndexOf("Dim Caption As Text", StringComparison.Ordinal);
     var gameState = gameTemplate.IndexOf("Caption = \"Hello, SMILE 2.0!\"", StringComparison.Ordinal);
     var gameWindow = gameTemplate.IndexOf("Game Window \"My SMILE 2.0 Game\"", StringComparison.Ordinal);
@@ -6003,14 +6009,14 @@ Run("VSIX templates render localized identity metadata within the aligned header
     foreach (var manifest in new[] { gameManifest, consoleManifest })
     {
         Equal(true, manifest.Contains("SmileProjectTemplateWizard", StringComparison.Ordinal));
-        Equal(true, manifest.Contains("Version=2.0.65.0", StringComparison.Ordinal));
+        Equal(true, manifest.Contains("Version=" + assemblyVersion + ",", StringComparison.Ordinal));
     }
     foreach (var applicationProject in new[] { gameProject, consoleProject })
         Equal(true, applicationProject.Contains("<ApplicationId>$smileapplicationid$</ApplicationId>", StringComparison.Ordinal));
     Equal(false, libraryProject.Contains("ApplicationId", StringComparison.Ordinal));
     Equal(true, wizard.Contains("\"smile.app.a\" + Guid.NewGuid().ToString(\"N\")", StringComparison.Ordinal));
     Equal(true, wizard.Contains("ToString(\"D\", CultureInfo.CurrentCulture)", StringComparison.Ordinal));
-    Equal(true, project.Contains("<Version>2.0.65</Version>", StringComparison.Ordinal));
+    Equal(productVersion, projectXml.Descendants().Single(element => element.Name.LocalName == "Version").Value);
     Equal(true, vsixManifest.Contains("Type=\"Microsoft.VisualStudio.Assembly\"", StringComparison.Ordinal));
 });
 

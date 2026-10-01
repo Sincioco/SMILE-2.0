@@ -333,6 +333,7 @@ internal sealed class ModuleProcessor
     private readonly Dictionary<SourceText, ModuleSymbol> _moduleBySource = new();
     private readonly Dictionary<SourceText, Dictionary<string, ModuleSymbol>> _imports = new();
     private readonly Dictionary<SourceText, List<ImportStatementSyntax>> _importSyntax = new();
+    private HashSet<string> _programNames = new(StringComparer.OrdinalIgnoreCase);
 
     public ModuleProcessor(IReadOnlyList<SyntaxTree> trees, SmileCompilationKind kind,
         SmileCompilationDependencyContext dependencyContext)
@@ -348,6 +349,14 @@ internal sealed class ModuleProcessor
         InventoryModules();
         InventoryImports();
         DiagnoseCycles();
+
+        // Resolve contextual direction names in the same scope as ordinary variables.
+        // Module sources must never inherit names from their consuming program.
+        var programStatements = _trees.Where(tree => !_moduleBySource.ContainsKey(tree.Source))
+            .SelectMany(tree => tree.Root.Statements).ToArray();
+        _programNames = CollectStatementLocals(programStatements, null);
+        _programNames.UnionWith(programStatements.OfType<ConstStatementSyntax>()
+            .Select(constant => constant.Identifier.Text));
 
         var boundTrees = _trees.Select(LowerTree).ToList();
         if (_kind == SmileCompilationKind.Library)
@@ -921,6 +930,9 @@ internal sealed class ModuleProcessor
     private AssignmentTargetSyntax LowerTarget(AssignmentTargetSyntax target, SyntaxTree tree, ModuleSymbol? module,
         HashSet<string>? locals)
     {
+        if (target.Location is NameExpressionSyntax name)
+            return new AssignmentTargetSyntax(new NameExpressionSyntax(
+                ReferenceToken(name.Identifier, tree, module, locals)));
         return new AssignmentTargetSyntax(LowerExpression(target.Location, tree, module, locals));
     }
 
@@ -930,7 +942,10 @@ internal sealed class ModuleProcessor
         switch (expression)
         {
             case NameExpressionSyntax name:
-                return new NameExpressionSyntax(ReferenceToken(name.Identifier, tree, module, locals));
+                var reference = ReferenceToken(name.Identifier, tree, module, locals);
+                return reference.Kind is SyntaxKind.LeftKeyword or SyntaxKind.RightKeyword
+                    ? new LiteralExpressionSyntax(reference, SyntaxFacts.GetBuiltInConstantValue(reference.Kind))
+                    : new NameExpressionSyntax(reference);
             case ArrayAccessExpressionSyntax array:
                 return new ArrayAccessExpressionSyntax(ReferenceToken(array.Identifier, tree, module, locals),
                     array.Indices.Select(item => LowerExpression(item, tree, module, locals)).ToArray(), array.CloseBracket);
@@ -1176,6 +1191,13 @@ internal sealed class ModuleProcessor
     private SyntaxToken ReferenceToken(SyntaxToken token, SyntaxTree tree, ModuleSymbol? module,
         HashSet<string>? locals)
     {
+        if (token.Kind is SyntaxKind.LeftKeyword or SyntaxKind.RightKeyword)
+        {
+            if (locals?.Contains(token.Text) == true || (module == null && _programNames.Contains(token.Text)))
+                return SemanticToken(token, token.Text);
+            if (module != null && module.Members.TryGetValue(token.Text, out var directionMember))
+                return SemanticToken(token, directionMember.SemanticName);
+        }
         if (DoubleSemantics.IsIntrinsic(token.Kind) || Renderer3DPrecisionSemantics.IsIntrinsic(token.Kind))
         {
             if (locals != null && locals.Contains(token.Text))

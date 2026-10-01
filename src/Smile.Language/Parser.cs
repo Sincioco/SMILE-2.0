@@ -1574,7 +1574,8 @@ internal sealed class Parser
             var token = NextToken();
             return new LiteralExpressionSyntax(token, token.Kind == SyntaxKind.TrueKeyword);
         }
-        if (SyntaxFacts.IsBuiltInConstant(Current.Kind))
+        if (SyntaxFacts.IsBuiltInConstant(Current.Kind) &&
+            Current.Kind is not (SyntaxKind.LeftKeyword or SyntaxKind.RightKeyword))
         {
             var token = NextToken();
             return new LiteralExpressionSyntax(token, SyntaxFacts.GetBuiltInConstantValue(token.Kind));

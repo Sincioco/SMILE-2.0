@@ -330,7 +330,9 @@ Facing = Direction.Up
 History[0] = Facing
 ```
 
-Member names are case-insensitive and unique. Duplicate numeric values are legal aliases, as `Left` and `Right` demonstrate. Contextual names such as `None`, `Up`, `Down`, `Left`, and `Right` are accepted only where a member name is valid; their existing unqualified built-in-constant meanings do not change. A local value is written `Direction.Up`; an imported public enum member is written `Alias.Direction.Up`.
+Member names are case-insensitive and unique. Duplicate numeric values are legal aliases, as `Left` and `Right` demonstrate. Contextual names such as `None`, `Up`, `Down`, `Left`, and `Right` are accepted as member names. A local value is written `Direction.Up`; an imported public enum member is written `Alias.Direction.Up`.
+
+`Left` and `Right` can also name ordinary variables, arrays, constants, and parameters. A declaration in the current scope takes precedence in both reads and writes, regardless of capitalization. Without a visible declaration, their legacy built-in values remain 12 and 13. Module members resolve inside their own module; consuming-program declarations do not leak into imported modules. For explicit direction constants inside a scope that declares `Left` or `Right`, use `KEY_LEFT` or `KEY_RIGHT`. Shared language binding owns this rule for native compilation, editor services, and other emitters.
 
 Enum identity is exact and nominal. Two enum declarations are never interchangeable even when their member names and values match, and an enum does not implicitly convert to or from `Number`. The only enum operators are `=` and `<>` between values of the exact same enum type. Enums work as constants, scalars, fixed-array elements, record fields, `ByVal` or `ByRef` parameters, and function returns. `Select Case` accepts an enum selector and exact-type enum members; aliases with the same numeric value count as duplicate cases and receive `SML3019`. Whole enum values are not accepted by `Print` or numeric built-ins.
 

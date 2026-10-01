@@ -318,14 +318,18 @@ The original scene/calibration suite and launcher preservation fixtures pass too
 Inspection tests now tear down the editor directly even in the legacy factory scene,
 which intentionally does not route input through editable-town controls.
 
-Tracked diagnostic issue: `Dim Left As Number : Left = 94 : Print Left` compiles,
-but reads the direction constant 12. Evidence is the isolated PickerMath native
-probe and Syntax.cs's LeftKeyword mapping; the new button coordinate uses ButtonX.
-The remaining ViewerParty uses assign 12, so they currently render as intended.
-A compiler diagnostic or contextual-name resolution change is deferred from this
-layout milestone because it changes shared keyword compatibility. Next action:
-add a language regression for declared direction-name reads and select a consistent
-parser/semantic diagnostic policy before updating both native and Web generation.
+Resolved in VSIX 2.0.67: the isolated PickerMath probe originally showed a declared
+Left variable reading the direction constant 12 instead of its assigned 94.
+Shared parsing now leaves Left/Right as contextual names; ModuleProcessor resolves
+the existing routine, program or module scope before falling back to constants.
+Both emitters consume that shared bound tree without private resolution rules.
+ContextualIdentifierTests cover declaration reads, parameters, arrays, scalar types,
+constants, module isolation and hover/definition lookup. All 333 language checks,
+13 formatter integration checks and four native town groups pass. A native proof
+prints 94,94,95,12,13; the installed VSIX's 36 payload hashes match the build.
+Parser grows one net line and Modules grows 22 within existing ownership; no new
+production module, dependency, bootstrap behavior or guardrail exception is added.
+The earlier ButtonX workaround remains a clear coordinate name and needs no churn.
 
 
 ## October 1: minimap gestures, route fidelity and conversation presentation
