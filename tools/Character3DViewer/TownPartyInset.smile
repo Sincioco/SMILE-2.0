@@ -82,7 +82,8 @@ Public Function Begin(ByRef Value As State, Leader As P.Vector3, Yaw As Double) 
 
     Dim Ok As Boolean
 
-    If (Not Value.HighFps And Value.UpdatedAt > 0 And
+    If (Not Value.HighFps And
+        Value.UpdatedAt > 0 And
         Timer() - Value.UpdatedAt < REFRESH_MILLISECONDS) Then
 
         If G.ReplayViewport3D(Window_Width() - 276, VIEW_TOP, 256, Height()) Then
@@ -129,7 +130,8 @@ End Function
 
 Public Sub Input(ByRef Value As State)
 
-    If (Pointer_Pressed(POINTER_PRIMARY) And Pointer_X() >= Window_Width() - 132 And
+    If (Pointer_Pressed(POINTER_PRIMARY) And
+        Pointer_X() >= Window_Width() - 132 And
         Pointer_Y() < VIEW_TOP) Then
         Value.HighFps = Not Value.HighFps
         Value.UpdatedAt = 0

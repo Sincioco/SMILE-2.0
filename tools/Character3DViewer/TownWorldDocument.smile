@@ -84,7 +84,9 @@ Private Function GetName() As Text
 
         Code = ReadInteger()
 
-        If Code < 32 Or Code > 1114111 Or (Code >= 55296 And Code <= 57343) Then
+        If (Code < 32 Or
+            Code > 1114111 Or
+            (Code >= 55296 And Code <= 57343)) Then
             Valid = False
             Return ""
         End If
@@ -100,7 +102,9 @@ Public Function Add(ByRef Value As State, Name As Text, X As Number, Y As Number
 
     Dim Index As Number
 
-    If Value.NodeCount >= MAX_NODES Or Text_Length(Name) < 1 Or Text_Length(Name) > 80 Then
+    If (Value.NodeCount >= MAX_NODES Or
+        Text_Length(Name) < 1 Or
+        Text_Length(Name) > 80) Then
         Return False
     End If
 
@@ -124,8 +128,15 @@ End Function
 Public Function Connect(ByRef Value As State, First As Number, FirstPort As Number,
     Second As Number, SecondPort As Number) As Boolean
 
-    If (First < 0 Or First >= Value.NodeCount Or Second < 0 Or Second >= Value.NodeCount Or
-        First = Second Or FirstPort < 0 Or FirstPort > 3 Or SecondPort < 0 Or SecondPort > 3) Then
+    If (First < 0 Or
+        First >= Value.NodeCount Or
+        Second < 0 Or
+        Second >= Value.NodeCount Or
+        First = Second Or
+        FirstPort < 0 Or
+        FirstPort > 3 Or
+        SecondPort < 0 Or
+        SecondPort > 3) Then
         Return False
     End If
 
@@ -181,7 +192,9 @@ Public Function SaveWorld(ByRef Value As State, Optional Key As Text = "") As Bo
     Dim Status As Number
     Dim Result As Boolean
 
-    If Text_Length(Value.Name) < 1 Or Text_Length(Value.Name) > 80 Or Value.NodeCount > MAX_NODES Then
+    If (Text_Length(Value.Name) < 1 Or
+        Text_Length(Value.Name) > 80 Or
+        Value.NodeCount > MAX_NODES) Then
         Return False
     End If
 
@@ -256,7 +269,8 @@ Public Function LoadWorld(ByRef Value As State, Name As Text, Optional Key As Te
     Candidate.NodeCount = ReadInteger()
 
     If ((Name <> "" And Candidate.Name <> Name) Or
-        Candidate.NodeCount < 0 Or Candidate.NodeCount > MAX_NODES) Then
+        Candidate.NodeCount < 0 Or
+        Candidate.NodeCount > MAX_NODES) Then
         Return False
     End If
 
@@ -266,7 +280,8 @@ Public Function LoadWorld(ByRef Value As State, Name As Text, Optional Key As Te
         Candidate.Nodes[Index].X = ReadInteger()
         Candidate.Nodes[Index].Y = ReadInteger()
 
-        If Candidate.Nodes[Index].X > MAX_COORDINATE Or Candidate.Nodes[Index].Y > MAX_COORDINATE Then
+        If (Candidate.Nodes[Index].X > MAX_COORDINATE Or
+            Candidate.Nodes[Index].Y > MAX_COORDINATE) Then
             Return False
         End If
 

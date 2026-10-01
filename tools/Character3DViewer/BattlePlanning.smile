@@ -91,8 +91,11 @@ Public Function AdvanceInitialIdle(
     Available As Boolean
 ) As Boolean
 
-    If (Not Value.Planning Or Value.Combat.ActionSerial <> 0 Or
-        Value.Combat.Phase <> Rules.WAITING Or Active Or Not Available) Then
+    If (Not Value.Planning Or
+        Value.Combat.ActionSerial <> 0 Or
+        Value.Combat.Phase <> Rules.WAITING Or
+        Active Or
+        Not Available) Then
         Value.InitialIdleTime = 0
         Return False
     End If

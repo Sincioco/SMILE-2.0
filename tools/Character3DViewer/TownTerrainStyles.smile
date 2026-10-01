@@ -27,7 +27,9 @@ Public Function Slot(Kind As Number, Style As Number) As Number
 
     Result = Kind
 
-    If Style > 0 And Style <= 3 And (Kind = 1 Or Kind = 3) Then
+    If (Style > 0 And
+        Style <= 3 And
+        (Kind = 1 Or Kind = 3)) Then
         Result = 7 + (Style - 1) * 2 + (Kind - 1) / 2
     End If
 

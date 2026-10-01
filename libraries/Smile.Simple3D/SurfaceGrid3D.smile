@@ -34,8 +34,13 @@ Public Function Initialize(ByRef Value As State, Columns As Number, Rows As Numb
     Dim Index As Number
     Dim Packed As Number
 
-    If (Columns < 1 Or Columns > MAX_COLUMNS Or Rows < 1 Or Rows > MAX_ROWS Or
-        CellSize <= 0.0 Or InitialSurface < 0 Or InitialSurface > SURFACE_BRIDGE) Then
+    If (Columns < 1 Or
+        Columns > MAX_COLUMNS Or
+        Rows < 1 Or
+        Rows > MAX_ROWS Or
+        CellSize <= 0.0 Or
+        InitialSurface < 0 Or
+        InitialSurface > SURFACE_BRIDGE) Then
         Return False
     End If
 
@@ -143,7 +148,10 @@ Public Function ReadBase(ByRef Value As State, X As Number, Z As Number) As Numb
 
     Dim Result As Number
 
-    If X < 0 Or Z < 0 Or X >= Value.Columns Or Z >= Value.Rows Then
+    If (X < 0 Or
+        Z < 0 Or
+        X >= Value.Columns Or
+        Z >= Value.Rows) Then
         Return SURFACE_EMPTY
     End If
 
@@ -161,7 +169,11 @@ Public Function ReadCell(ByRef Value As State, X As Number, Z As Number) As Numb
 
     Result = ReadBase(Value, X, Z)
 
-    If Value.Curves.BrushCount > 0 And X >= 0 And Z >= 0 And X < Value.Columns And Z < Value.Rows Then
+    If (Value.Curves.BrushCount > 0 And
+        X >= 0 And
+        Z >= 0 And
+        X < Value.Columns And
+        Z < Value.Rows) Then
         Result = Paint.Resolve(Value.Curves, (Value.XEdges[X] + Value.XEdges[X + 1]) * 0.5,
             (Value.ZEdges[Z] + Value.ZEdges[Z + 1]) * 0.5, Result)
     End If
@@ -179,7 +191,10 @@ Public Function ReadPoint(ByRef Value As State, X As Double, Z As Double) As Num
     Column = CellX(Value, X)
     Row = CellZ(Value, Z)
 
-    If Column < 0 Or Row < 0 Or Column >= Value.Columns Or Row >= Value.Rows Then
+    If (Column < 0 Or
+        Row < 0 Or
+        Column >= Value.Columns Or
+        Row >= Value.Rows) Then
         Return SURFACE_EMPTY
     End If
 
@@ -235,7 +250,10 @@ Private Function PaintCell(ByRef Value As State, X As Number, Z As Number,
     Dim Previous As Number
     Dim NextSurface As Number
 
-    If X < 0 Or Z < 0 Or X >= Value.Columns Or Z >= Value.Rows Then
+    If (X < 0 Or
+        Z < 0 Or
+        X >= Value.Columns Or
+        Z >= Value.Rows) Then
         Return False
     End If
 
@@ -334,8 +352,10 @@ Public Sub PaintLine(ByRef Value As State, X1 As Number, Z1 As Number,
         Return
     End If
 
-    If (Max(X1, X2) < 0 Or Min(X1, X2) >= Value.Columns Or
-        Max(Z1, Z2) < 0 Or Min(Z1, Z2) >= Value.Rows) Then
+    If (Max(X1, X2) < 0 Or
+        Min(X1, X2) >= Value.Columns Or
+        Max(Z1, Z2) < 0 Or
+        Min(Z1, Z2) >= Value.Rows) Then
         Return
     End If
 
@@ -416,7 +436,9 @@ Public Sub PaintWorldLine(ByRef Value As State, X0 As Double, Z0 As Double,
 
     End If
 
-    If Width <= 0.0 Or Surface < 0 Or Surface > SURFACE_BRIDGE Then
+    If (Width <= 0.0 Or
+        Surface < 0 Or
+        Surface > SURFACE_BRIDGE) Then
         Return
     End If
 

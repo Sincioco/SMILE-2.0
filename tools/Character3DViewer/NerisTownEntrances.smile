@@ -106,7 +106,10 @@ Public Sub Update(ByRef Value As State, Leader As P.Vector3, Elapsed As Number)
 
         End If
 
-        If Near And Depth >= -5.0 And Width < Item.Width / 2.0 And Value.Angles[Index] >= 75.0 Then
+        If (Near And
+            Depth >= -5.0 And
+            Width < Item.Width / 2.0 And
+            Value.Angles[Index] >= 75.0) Then
 
             Value.ActiveEntry = Index
 

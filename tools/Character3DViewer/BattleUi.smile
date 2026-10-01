@@ -231,7 +231,9 @@ Public Sub Accept(ByRef Value As State, ByRef Encounter As Planning.State)
 
     End If
 
-    If Accepted Or Turn <> Encounter.Combat.Turn Or Not Encounter.Planning Then
+    If (Accepted Or
+        Turn <> Encounter.Combat.Turn Or
+        Not Encounter.Planning) Then
         Value.Page = 0
         Value.Selection = 0
     End If

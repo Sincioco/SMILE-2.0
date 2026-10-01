@@ -1957,448 +1957,626 @@ End Function
 
 Public Function PavingHeight(X As Double, Z As Double) As Double
 
-    If (X >= -4770.0 And X <= -4670.0 And
-        Z >= 1030.0 And Z <= 1170.0) Then
+    If (X >= -4770.0 And
+        X <= -4670.0 And
+        Z >= 1030.0 And
+        Z <= 1170.0) Then
         Return 23.12
     End If
 
-    If (X >= -2650.0 And X <= 2560.0 And
-        Z >= 1030.0 And Z <= 1170.0) Then
+    If (X >= -2650.0 And
+        X <= 2560.0 And
+        Z >= 1030.0 And
+        Z <= 1170.0) Then
         Return 23.12
     End If
 
-    If (X >= -4670.0 And X <= -2650.0 And
-        Z >= 1030.0 And Z <= 1150.0) Then
+    If (X >= -4670.0 And
+        X <= -2650.0 And
+        Z >= 1030.0 And
+        Z <= 1150.0) Then
         Return 23.12
     End If
 
-    If (X >= -4820.0 And X <= 2580.0 And
-        Z >= 3380.0 And Z <= 3500.0) Then
+    If (X >= -4820.0 And
+        X <= 2580.0 And
+        Z >= 3380.0 And
+        Z <= 3500.0) Then
         Return 23.12
     End If
 
-    If (X >= -4820.0 And X <= -4720.0 And
-        Z >= 1040.0 And Z <= 3440.0) Then
+    If (X >= -4820.0 And
+        X <= -4720.0 And
+        Z >= 1040.0 And
+        Z <= 3440.0) Then
         Return 23.12
     End If
 
-    If (X >= -2570.0 And X <= -2430.0 And
-        Z >= 1040.0 And Z <= 3460.0) Then
+    If (X >= -2570.0 And
+        X <= -2430.0 And
+        Z >= 1040.0 And
+        Z <= 3460.0) Then
         Return 23.12
     End If
 
-    If (X >= 50.0 And X <= 190.0 And
-        Z >= 1040.0 And Z <= 3460.0) Then
+    If (X >= 50.0 And
+        X <= 190.0 And
+        Z >= 1040.0 And
+        Z <= 3460.0) Then
         Return 23.12
     End If
 
-    If (X >= 2440.0 And X <= 2580.0 And
-        Z >= 1040.0 And Z <= 3460.0) Then
+    If (X >= 2440.0 And
+        X <= 2580.0 And
+        Z >= 1040.0 And
+        Z <= 3460.0) Then
         Return 23.12
     End If
 
-    If (X >= -2380.0 And X <= -660.0 And
-        Z >= -1170.0 And Z <= -1070.0) Then
+    If (X >= -2380.0 And
+        X <= -660.0 And
+        Z >= -1170.0 And
+        Z <= -1070.0) Then
         Return 23.12
     End If
 
-    If (X >= -500.0 And X <= 500.0 And
-        Z >= -1170.0 And Z <= -1070.0) Then
+    If (X >= -500.0 And
+        X <= 500.0 And
+        Z >= -1170.0 And
+        Z <= -1070.0) Then
         Return 23.12
     End If
 
-    If (X >= 660.0 And X <= 2580.0 And
-        Z >= -1170.0 And Z <= -1070.0) Then
+    If (X >= 660.0 And
+        X <= 2580.0 And
+        Z >= -1170.0 And
+        Z <= -1070.0) Then
         Return 23.12
     End If
 
-    If (X >= -900.0 And X <= -820.0 And
-        Z >= -3240.0 And Z <= 1080.0) Then
+    If (X >= -900.0 And
+        X <= -820.0 And
+        Z >= -3240.0 And
+        Z <= 1080.0) Then
         Return 23.12
     End If
 
-    If (X >= 820.0 And X <= 900.0 And
-        Z >= -3240.0 And Z <= 1080.0) Then
+    If (X >= 820.0 And
+        X <= 900.0 And
+        Z >= -3240.0 And
+        Z <= 1080.0) Then
         Return 23.12
     End If
 
-    If (X >= -2380.0 And X <= -2240.0 And
-        Z >= -3370.0 And Z <= 1170.0) Then
+    If (X >= -2380.0 And
+        X <= -2240.0 And
+        Z >= -3370.0 And
+        Z <= 1170.0) Then
         Return 23.12
     End If
 
-    If (X >= 2440.0 And X <= 2580.0 And
-        Z >= -3370.0 And Z <= 1170.0) Then
+    If (X >= 2440.0 And
+        X <= 2580.0 And
+        Z >= -3370.0 And
+        Z <= 1170.0) Then
         Return 23.12
     End If
 
-    If (X >= -2380.0 And X <= -820.0 And
-        Z >= -3380.0 And Z <= -3240.0) Then
+    If (X >= -2380.0 And
+        X <= -820.0 And
+        Z >= -3380.0 And
+        Z <= -3240.0) Then
         Return 23.12
     End If
 
-    If (X >= 820.0 And X <= 2580.0 And
-        Z >= -3380.0 And Z <= -3240.0) Then
+    If (X >= 820.0 And
+        X <= 2580.0 And
+        Z >= -3380.0 And
+        Z <= -3240.0) Then
         Return 23.12
     End If
 
-    If (X >= -70.0 And X <= 70.0 And
-        Z >= -500.0 And Z <= -440.0) Then
+    If (X >= -70.0 And
+        X <= 70.0 And
+        Z >= -500.0 And
+        Z <= -440.0) Then
         Return 23.12
     End If
 
-    If (X >= -70.0 And X <= 70.0 And
-        Z >= -280.0 And Z <= 1100.0) Then
+    If (X >= -70.0 And
+        X <= 70.0 And
+        Z >= -280.0 And
+        Z <= 1100.0) Then
         Return 23.12
     End If
 
-    If (X >= -1250.0 And X <= -1070.0 And
-        Z >= 1110.0 And Z <= 1330.0) Then
+    If (X >= -1250.0 And
+        X <= -1070.0 And
+        Z >= 1110.0 And
+        Z <= 1330.0) Then
         Return 23.12
     End If
 
-    If (X >= -1250.0 And X <= -1070.0 And
-        Z >= 1650.0 And Z <= 1790.0) Then
+    If (X >= -1250.0 And
+        X <= -1070.0 And
+        Z >= 1650.0 And
+        Z <= 1790.0) Then
         Return 23.12
     End If
 
-    If (X >= 1350.0 And X <= 1550.0 And
-        Z >= 1060.0 And Z <= 1510.0) Then
+    If (X >= 1350.0 And
+        X <= 1550.0 And
+        Z >= 1060.0 And
+        Z <= 1510.0) Then
         Return 23.12
     End If
 
-    If (X >= 1350.0 And X <= 1550.0 And
-        Z >= 1730.0 And Z <= 1960.0) Then
+    If (X >= 1350.0 And
+        X <= 1550.0 And
+        Z >= 1730.0 And
+        Z <= 1960.0) Then
         Return 23.12
     End If
 
-    If (X >= -1760.0 And X <= -1680.0 And
-        Z >= -3370.0 And Z <= 1170.0) Then
+    If (X >= -1760.0 And
+        X <= -1680.0 And
+        Z >= -3370.0 And
+        Z <= 1170.0) Then
         Return 23.12
     End If
 
-    If (X >= 1700.0 And X <= 1780.0 And
-        Z >= -3370.0 And Z <= 1170.0) Then
+    If (X >= 1700.0 And
+        X <= 1780.0 And
+        Z >= -3370.0 And
+        Z <= 1170.0) Then
         Return 23.12
     End If
 
-    If (X >= -2380.0 And X <= -860.0 And
-        Z >= 210.0 And Z <= 290.0) Then
+    If (X >= -2380.0 And
+        X <= -860.0 And
+        Z >= 210.0 And
+        Z <= 290.0) Then
         Return 23.12
     End If
 
-    If (X >= -2380.0 And X <= -860.0 And
-        Z >= -2090.0 And Z <= -2010.0) Then
+    If (X >= -2380.0 And
+        X <= -860.0 And
+        Z >= -2090.0 And
+        Z <= -2010.0) Then
         Return 23.12
     End If
 
-    If (X >= 860.0 And X <= 2580.0 And
-        Z >= -90.0 And Z <= -10.0) Then
+    If (X >= 860.0 And
+        X <= 2580.0 And
+        Z >= -90.0 And
+        Z <= -10.0) Then
         Return 23.12
     End If
 
-    If (X >= 860.0 And X <= 2580.0 And
-        Z >= -2380.0 And Z <= -2300.0) Then
+    If (X >= 860.0 And
+        X <= 2580.0 And
+        Z >= -2380.0 And
+        Z <= -2300.0) Then
         Return 23.12
     End If
 
-    If (X >= -500.0 And X <= 500.0 And
-        Z >= -1310.0 And Z <= -440.0) Then
+    If (X >= -500.0 And
+        X <= 500.0 And
+        Z >= -1310.0 And
+        Z <= -440.0) Then
         Return 23.12
     End If
 
-    If (X >= -70.0 And X <= 70.0 And
-        Z >= -3400.0 And Z <= -1180.0) Then
+    If (X >= -70.0 And
+        X <= 70.0 And
+        Z >= -3400.0 And
+        Z <= -1180.0) Then
         Return 23.12
     End If
 
-    If (X >= -880.0 And X <= -660.0 And
-        Z >= -1760.0 And Z <= -1640.0) Then
+    If (X >= -880.0 And
+        X <= -660.0 And
+        Z >= -1760.0 And
+        Z <= -1640.0) Then
         Return 23.12
     End If
 
-    If (X >= -500.0 And X <= 500.0 And
-        Z >= -1760.0 And Z <= -1640.0) Then
+    If (X >= -500.0 And
+        X <= 500.0 And
+        Z >= -1760.0 And
+        Z <= -1640.0) Then
         Return 23.12
     End If
 
-    If (X >= 660.0 And X <= 880.0 And
-        Z >= -1760.0 And Z <= -1640.0) Then
+    If (X >= 660.0 And
+        X <= 880.0 And
+        Z >= -1760.0 And
+        Z <= -1640.0) Then
         Return 23.12
     End If
 
-    If (X >= -880.0 And X <= -660.0 And
-        Z >= -2860.0 And Z <= -2740.0) Then
+    If (X >= -880.0 And
+        X <= -660.0 And
+        Z >= -2860.0 And
+        Z <= -2740.0) Then
         Return 23.12
     End If
 
-    If (X >= -500.0 And X <= 500.0 And
-        Z >= -2860.0 And Z <= -2740.0) Then
+    If (X >= -500.0 And
+        X <= 500.0 And
+        Z >= -2860.0 And
+        Z <= -2740.0) Then
         Return 23.12
     End If
 
-    If (X >= 660.0 And X <= 880.0 And
-        Z >= -2860.0 And Z <= -2740.0) Then
+    If (X >= 660.0 And
+        X <= 880.0 And
+        Z >= -2860.0 And
+        Z <= -2740.0) Then
         Return 23.12
     End If
 
-    If (X >= -360.0 And X <= 360.0 And
-        Z >= 20.0 And Z <= 730.0) Then
+    If (X >= -360.0 And
+        X <= 360.0 And
+        Z >= 20.0 And
+        Z <= 730.0) Then
         Return 23.12
     End If
 
-    If (X >= -2020.0 And X <= -1700.0 And
-        Z >= -400.0 And Z <= -360.0) Then
+    If (X >= -2020.0 And
+        X <= -1700.0 And
+        Z >= -400.0 And
+        Z <= -360.0) Then
         Return 23.12
     End If
 
-    If (X >= -2020.0 And X <= -1700.0 And
-        Z >= 20.0 And Z <= 60.0) Then
+    If (X >= -2020.0 And
+        X <= -1700.0 And
+        Z >= 20.0 And
+        Z <= 60.0) Then
         Return 23.12
     End If
 
-    If (X >= -2020.0 And X <= -1700.0 And
-        Z >= 440.0 And Z <= 480.0) Then
+    If (X >= -2020.0 And
+        X <= -1700.0 And
+        Z >= 440.0 And
+        Z <= 480.0) Then
         Return 23.12
     End If
 
-    If (X >= -2020.0 And X <= -1700.0 And
-        Z >= 860.0 And Z <= 900.0) Then
+    If (X >= -2020.0 And
+        X <= -1700.0 And
+        Z >= 860.0 And
+        Z <= 900.0) Then
         Return 23.12
     End If
 
-    If (X >= -1200.0 And X <= -840.0 And
-        Z >= -400.0 And Z <= -360.0) Then
+    If (X >= -1200.0 And
+        X <= -840.0 And
+        Z >= -400.0 And
+        Z <= -360.0) Then
         Return 23.12
     End If
 
-    If (X >= -1200.0 And X <= -840.0 And
-        Z >= 20.0 And Z <= 60.0) Then
+    If (X >= -1200.0 And
+        X <= -840.0 And
+        Z >= 20.0 And
+        Z <= 60.0) Then
         Return 23.12
     End If
 
-    If (X >= -1200.0 And X <= -840.0 And
-        Z >= 440.0 And Z <= 480.0) Then
+    If (X >= -1200.0 And
+        X <= -840.0 And
+        Z >= 440.0 And
+        Z <= 480.0) Then
         Return 23.12
     End If
 
-    If (X >= -1200.0 And X <= -840.0 And
-        Z >= 860.0 And Z <= 900.0) Then
+    If (X >= -1200.0 And
+        X <= -840.0 And
+        Z >= 860.0 And
+        Z <= 900.0) Then
         Return 23.12
     End If
 
-    If (X >= -2060.0 And X <= -1700.0 And
-        Z >= -1440.0 And Z <= -1400.0) Then
+    If (X >= -2060.0 And
+        X <= -1700.0 And
+        Z >= -1440.0 And
+        Z <= -1400.0) Then
         Return 23.12
     End If
 
-    If (X >= -2060.0 And X <= -1700.0 And
-        Z >= -1860.0 And Z <= -1820.0) Then
+    If (X >= -2060.0 And
+        X <= -1700.0 And
+        Z >= -1860.0 And
+        Z <= -1820.0) Then
         Return 23.12
     End If
 
-    If (X >= -2060.0 And X <= -1700.0 And
-        Z >= -2280.0 And Z <= -2240.0) Then
+    If (X >= -2060.0 And
+        X <= -1700.0 And
+        Z >= -2280.0 And
+        Z <= -2240.0) Then
         Return 23.12
     End If
 
-    If (X >= -2060.0 And X <= -1700.0 And
-        Z >= -2700.0 And Z <= -2660.0) Then
+    If (X >= -2060.0 And
+        X <= -1700.0 And
+        Z >= -2700.0 And
+        Z <= -2660.0) Then
         Return 23.12
     End If
 
-    If (X >= -2060.0 And X <= -1700.0 And
-        Z >= -3120.0 And Z <= -3080.0) Then
+    If (X >= -2060.0 And
+        X <= -1700.0 And
+        Z >= -3120.0 And
+        Z <= -3080.0) Then
         Return 23.12
     End If
 
-    If (X >= -1140.0 And X <= -840.0 And
-        Z >= -1440.0 And Z <= -1400.0) Then
+    If (X >= -1140.0 And
+        X <= -840.0 And
+        Z >= -1440.0 And
+        Z <= -1400.0) Then
         Return 23.12
     End If
 
-    If (X >= -1140.0 And X <= -840.0 And
-        Z >= -1860.0 And Z <= -1820.0) Then
+    If (X >= -1140.0 And
+        X <= -840.0 And
+        Z >= -1860.0 And
+        Z <= -1820.0) Then
         Return 23.12
     End If
 
-    If (X >= -1140.0 And X <= -840.0 And
-        Z >= -2280.0 And Z <= -2240.0) Then
+    If (X >= -1140.0 And
+        X <= -840.0 And
+        Z >= -2280.0 And
+        Z <= -2240.0) Then
         Return 23.12
     End If
 
-    If (X >= -1140.0 And X <= -840.0 And
-        Z >= -2700.0 And Z <= -2660.0) Then
+    If (X >= -1140.0 And
+        X <= -840.0 And
+        Z >= -2700.0 And
+        Z <= -2660.0) Then
         Return 23.12
     End If
 
-    If (X >= -1140.0 And X <= -840.0 And
-        Z >= -3120.0 And Z <= -3080.0) Then
+    If (X >= -1140.0 And
+        X <= -840.0 And
+        Z >= -3120.0 And
+        Z <= -3080.0) Then
         Return 23.12
     End If
 
-    If (X >= 840.0 And X <= 1160.0 And
-        Z >= 780.0 And Z <= 820.0) Then
+    If (X >= 840.0 And
+        X <= 1160.0 And
+        Z >= 780.0 And
+        Z <= 820.0) Then
         Return 23.12
     End If
 
-    If (X >= 840.0 And X <= 1160.0 And
-        Z >= 440.0 And Z <= 480.0) Then
+    If (X >= 840.0 And
+        X <= 1160.0 And
+        Z >= 440.0 And
+        Z <= 480.0) Then
         Return 23.12
     End If
 
-    If (X >= 840.0 And X <= 1160.0 And
-        Z >= 100.0 And Z <= 140.0) Then
+    If (X >= 840.0 And
+        X <= 1160.0 And
+        Z >= 100.0 And
+        Z <= 140.0) Then
         Return 23.12
     End If
 
-    If (X >= 840.0 And X <= 1160.0 And
-        Z >= -240.0 And Z <= -200.0) Then
+    If (X >= 840.0 And
+        X <= 1160.0 And
+        Z >= -240.0 And
+        Z <= -200.0) Then
         Return 23.12
     End If
 
-    If (X >= 840.0 And X <= 1160.0 And
-        Z >= -580.0 And Z <= -540.0) Then
+    If (X >= 840.0 And
+        X <= 1160.0 And
+        Z >= -580.0 And
+        Z <= -540.0) Then
         Return 23.12
     End If
 
-    If (X >= 840.0 And X <= 1160.0 And
-        Z >= -920.0 And Z <= -880.0) Then
+    If (X >= 840.0 And
+        X <= 1160.0 And
+        Z >= -920.0 And
+        Z <= -880.0) Then
         Return 23.12
     End If
 
-    If (X >= 1720.0 And X <= 2100.0 And
-        Z >= 780.0 And Z <= 820.0) Then
+    If (X >= 1720.0 And
+        X <= 2100.0 And
+        Z >= 780.0 And
+        Z <= 820.0) Then
         Return 23.12
     End If
 
-    If (X >= 1720.0 And X <= 2100.0 And
-        Z >= 440.0 And Z <= 480.0) Then
+    If (X >= 1720.0 And
+        X <= 2100.0 And
+        Z >= 440.0 And
+        Z <= 480.0) Then
         Return 23.12
     End If
 
-    If (X >= 1720.0 And X <= 2100.0 And
-        Z >= 100.0 And Z <= 140.0) Then
+    If (X >= 1720.0 And
+        X <= 2100.0 And
+        Z >= 100.0 And
+        Z <= 140.0) Then
         Return 23.12
     End If
 
-    If (X >= 1720.0 And X <= 2100.0 And
-        Z >= -240.0 And Z <= -200.0) Then
+    If (X >= 1720.0 And
+        X <= 2100.0 And
+        Z >= -240.0 And
+        Z <= -200.0) Then
         Return 23.12
     End If
 
-    If (X >= 1720.0 And X <= 2100.0 And
-        Z >= -580.0 And Z <= -540.0) Then
+    If (X >= 1720.0 And
+        X <= 2100.0 And
+        Z >= -580.0 And
+        Z <= -540.0) Then
         Return 23.12
     End If
 
-    If (X >= 1720.0 And X <= 2100.0 And
-        Z >= -920.0 And Z <= -880.0) Then
+    If (X >= 1720.0 And
+        X <= 2100.0 And
+        Z >= -920.0 And
+        Z <= -880.0) Then
         Return 23.12
     End If
 
-    If (X >= 850.0 And X <= 1290.0 And
-        Z >= -1650.0 And Z <= -1470.0) Then
+    If (X >= 850.0 And
+        X <= 1290.0 And
+        Z >= -1650.0 And
+        Z <= -1470.0) Then
         Return 23.12
     End If
 
-    If (X >= 850.0 And X <= 1290.0 And
-        Z >= -2170.0 And Z <= -1990.0) Then
+    If (X >= 850.0 And
+        X <= 1290.0 And
+        Z >= -2170.0 And
+        Z <= -1990.0) Then
         Return 23.12
     End If
 
-    If (X >= 850.0 And X <= 1290.0 And
-        Z >= -2690.0 And Z <= -2510.0) Then
+    If (X >= 850.0 And
+        X <= 1290.0 And
+        Z >= -2690.0 And
+        Z <= -2510.0) Then
         Return 23.12
     End If
 
-    If (X >= -2090.0 And X <= -1720.0 And
-        Z >= -1650.0 And Z <= -1610.0) Then
+    If (X >= -2090.0 And
+        X <= -1720.0 And
+        Z >= -1650.0 And
+        Z <= -1610.0) Then
         Return 23.12
     End If
 
-    If (X >= -2090.0 And X <= -1720.0 And
-        Z >= -2490.0 And Z <= -2450.0) Then
+    If (X >= -2090.0 And
+        X <= -1720.0 And
+        Z >= -2490.0 And
+        Z <= -2450.0) Then
         Return 23.12
     End If
 
-    If (X >= -2090.0 And X <= -1720.0 And
-        Z >= -2910.0 And Z <= -2870.0) Then
+    If (X >= -2090.0 And
+        X <= -1720.0 And
+        Z >= -2910.0 And
+        Z <= -2870.0) Then
         Return 23.12
     End If
 
-    If (X >= -1170.0 And X <= -860.0 And
-        Z >= -1650.0 And Z <= -1610.0) Then
+    If (X >= -1170.0 And
+        X <= -860.0 And
+        Z >= -1650.0 And
+        Z <= -1610.0) Then
         Return 23.12
     End If
 
-    If (X >= -1170.0 And X <= -860.0 And
-        Z >= -2490.0 And Z <= -2450.0) Then
+    If (X >= -1170.0 And
+        X <= -860.0 And
+        Z >= -2490.0 And
+        Z <= -2450.0) Then
         Return 23.12
     End If
 
-    If (X >= -1170.0 And X <= -860.0 And
-        Z >= -2910.0 And Z <= -2870.0) Then
+    If (X >= -1170.0 And
+        X <= -860.0 And
+        Z >= -2910.0 And
+        Z <= -2870.0) Then
         Return 23.12
     End If
 
-    If (X >= 1740.0 And X <= 2270.0 And
-        Z >= 270.0 And Z <= 310.0) Then
+    If (X >= 1740.0 And
+        X <= 2270.0 And
+        Z >= 270.0 And
+        Z <= 310.0) Then
         Return 23.12
     End If
 
-    If (X >= 1740.0 And X <= 2270.0 And
-        Z >= -750.0 And Z <= -710.0) Then
+    If (X >= 1740.0 And
+        X <= 2270.0 And
+        Z >= -750.0 And
+        Z <= -710.0) Then
         Return 23.12
     End If
 
-    If (X >= -1250.0 And X <= -1070.0 And
-        Z >= 1270.0 And Z <= 1810.0) Then
+    If (X >= -1250.0 And
+        X <= -1070.0 And
+        Z >= 1270.0 And
+        Z <= 1810.0) Then
         Return 23.12
     End If
 
-    If (X >= -3740.0 And X <= -3580.0 And
-        Z >= 1060.0 And Z <= 1480.0) Then
+    If (X >= -3740.0 And
+        X <= -3580.0 And
+        Z >= 1060.0 And
+        Z <= 1480.0) Then
         Return 23.12
     End If
 
-    If (X >= 1310.0 And X <= 1590.0 And
-        Z >= 1400.0 And Z <= 1940.0) Then
+    If (X >= 1310.0 And
+        X <= 1590.0 And
+        Z >= 1400.0 And
+        Z <= 1940.0) Then
         Return 23.12
     End If
 
-    If (X >= -730.0 And X <= -430.0 And
-        Z >= -1170.0 And Z <= -1070.0) Then
+    If (X >= -730.0 And
+        X <= -430.0 And
+        Z >= -1170.0 And
+        Z <= -1070.0) Then
         Return 23.12
     End If
 
-    If (X >= 430.0 And X <= 730.0 And
-        Z >= -1170.0 And Z <= -1070.0) Then
+    If (X >= 430.0 And
+        X <= 730.0 And
+        Z >= -1170.0 And
+        Z <= -1070.0) Then
         Return 23.12
     End If
 
-    If (X >= -730.0 And X <= -430.0 And
-        Z >= -1760.0 And Z <= -1640.0) Then
+    If (X >= -730.0 And
+        X <= -430.0 And
+        Z >= -1760.0 And
+        Z <= -1640.0) Then
         Return 23.12
     End If
 
-    If (X >= 430.0 And X <= 730.0 And
-        Z >= -1760.0 And Z <= -1640.0) Then
+    If (X >= 430.0 And
+        X <= 730.0 And
+        Z >= -1760.0 And
+        Z <= -1640.0) Then
         Return 23.12
     End If
 
-    If (X >= -730.0 And X <= -430.0 And
-        Z >= -2860.0 And Z <= -2740.0) Then
+    If (X >= -730.0 And
+        X <= -430.0 And
+        Z >= -2860.0 And
+        Z <= -2740.0) Then
         Return 23.12
     End If
 
-    If (X >= 430.0 And X <= 730.0 And
-        Z >= -2860.0 And Z <= -2740.0) Then
+    If (X >= 430.0 And
+        X <= 730.0 And
+        Z >= -2860.0 And
+        Z <= -2740.0) Then
         Return 23.12
     End If
 
-    If (X >= -70.0 And X <= 70.0 And
-        Z >= -520.0 And Z <= -200.0) Then
+    If (X >= -70.0 And
+        X <= 70.0 And
+        Z >= -520.0 And
+        Z <= -200.0) Then
         Return 23.12
     End If
 

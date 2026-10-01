@@ -52,7 +52,10 @@ Private Function AdjacentTile(ByRef Town As Document.State,
 
     Result = -1
 
-    If X >= 0 And X < Town.Surface.Columns And Z >= 0 And Z < Town.Surface.Rows Then
+    If (X >= 0 And
+        X < Town.Surface.Columns And
+        Z >= 0 And
+        Z < Town.Surface.Rows) Then
         Result = Lookup[X, Z] - 1
     End If
 
@@ -174,7 +177,8 @@ Private Function CollectConnected(ByRef Town As Document.State,
 
             If Adjacent >= 0 Then
 
-                If SameDestination And Town.MapTiles[Adjacent].Destination <> Town.MapTiles[First].Destination Then
+                If (SameDestination And
+                    Town.MapTiles[Adjacent].Destination <> Town.MapTiles[First].Destination) Then
                     Adjacent = -1
                 End If
 
@@ -275,9 +279,14 @@ Public Function PlaceRectangle(ByRef Town As Document.State, X0 As Number, Z0 As
     Dim Needed As Number
     Dim First As Number
 
-    If (X0 < 0 Or Z0 < 0 Or X1 < X0 Or Z1 < Z0 Or
-        X1 >= Town.Surface.Columns Or Z1 >= Town.Surface.Rows Or
-        Not Document.ValidName(Destination) Or Destination = Town.Name) Then
+    If (X0 < 0 Or
+        Z0 < 0 Or
+        X1 < X0 Or
+        Z1 < Z0 Or
+        X1 >= Town.Surface.Columns Or
+        Z1 >= Town.Surface.Rows Or
+        Not Document.ValidName(Destination) Or
+        Destination = Town.Name) Then
         Return False
     End If
 
@@ -295,7 +304,10 @@ Public Function PlaceRectangle(ByRef Town As Document.State, X0 As Number, Z0 As
         X = Town.MapTiles[Index].X
         Z = Town.MapTiles[Index].Z
 
-        If X >= X0 And X <= X1 And Z >= Z0 And Z <= Z1 Then
+        If (X >= X0 And
+            X <= X1 And
+            Z >= Z0 And
+            Z <= Z1) Then
             Lookup[X, Z] = Index + 1
             Needed = Needed - 1
         End If

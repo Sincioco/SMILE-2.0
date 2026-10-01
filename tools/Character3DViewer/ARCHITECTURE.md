@@ -1,5 +1,16 @@
 # Character Viewer Architecture
 
+## October 1 formatting follow-through
+
+The sixteen previously recorded formatting failures below are resolved in a separate
+format-only change. The transactional formatter and a diff review found whitespace
+and outer condition parentheses only. The repository check passes all 646 tracked
+SMILE sources; native town Foundations, Routes, Rendering and Session checks pass.
+The rebuilt VSIX 2.0.67 is installed with all 36 payload hashes verified. Source growth
+is 259 lines from formatting across sixteen existing files, chiefly expanded conditions
+in NerisTownLayout. No ownership, dependency, capacity or guardrail change is involved.
+These checks do not substitute for the remaining native interaction acceptance.
+
 ## October 1 Demo lighting and portable terrain repair
 
 TownDemo owns the 10/20-second phase calculation using its existing 30-second clock.

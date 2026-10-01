@@ -196,7 +196,9 @@ Public Function SetAngle(ByRef Value As State, ByRef Town As Document.State, Inp
     Dim DecimalSeen As Boolean
     Dim Angle As Double
 
-    If Text_Length(InputText) < 1 Or Text_Length(InputText) > 12 Or Value.SelectedCount < 1 Then
+    If (Text_Length(InputText) < 1 Or
+        Text_Length(InputText) > 12 Or
+        Value.SelectedCount < 1) Then
         Return False
     End If
 

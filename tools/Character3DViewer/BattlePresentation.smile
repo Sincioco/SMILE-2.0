@@ -389,7 +389,9 @@ Public Sub Apply(ByRef Value As State, Viewer As Workflow.Session,
 
         If Index = Growth.MIRA Then
 
-            If Healing And Battle.Turn = Growth.MIRA And Battle.Phase = Rules.EXECUTING Then
+            If (Healing And
+                Battle.Turn = Growth.MIRA And
+                Battle.Phase = Rules.EXECUTING) Then
                 Target = Battle.Target
             Else
                 Target = 4

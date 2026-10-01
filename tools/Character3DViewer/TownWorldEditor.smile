@@ -149,7 +149,9 @@ Private Function Leave(Action As Number) As Text
     Enabled = False
     Result = ReturnTown
 
-    If Action = 5 And Graph.Selected >= 0 And Graph.Selected < Map.NodeCount Then
+    If (Action = 5 And
+        Graph.Selected >= 0 And
+        Graph.Selected < Map.NodeCount) Then
         Result = Map.Nodes[Graph.Selected].Town
         Entering = True
     End If
@@ -479,7 +481,10 @@ Public Function PreviewRequest(CurrentTown As Text) As Text
     Dim Index As Number
     Dim Result As Text
 
-    If Not Enabled Or Transfer.Job > 0 Or Incoming.Job > 0 Or Not Previews.Has(CurrentTown) Then
+    If (Not Enabled Or
+        Transfer.Job > 0 Or
+        Incoming.Job > 0 Or
+        Not Previews.Has(CurrentTown)) Then
         Return ""
     End If
 

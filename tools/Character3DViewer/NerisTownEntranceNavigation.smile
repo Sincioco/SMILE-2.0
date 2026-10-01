@@ -64,7 +64,8 @@ Public Function DoorwayAt(X As Double, Z As Double) As Number
         Depth = Along(Item, X, Z)
 
         If (Abs(Across(Item, X, Z)) < Max(3.0, Item.Width / 2.0 - 3.0) And
-            Depth >= -18.0 And Depth <= 4.0) Then
+            Depth >= -18.0 And
+            Depth <= 4.0) Then
             Return Index
         End If
 

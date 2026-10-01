@@ -200,7 +200,9 @@ Public Function Gesture(ByRef Value As State, ByRef Map As Document.State,
 
         Value.DragNode = Held
 
-        If Held And Available And (Abs(Px - Value.ClickX) > 5 Or Abs(Py - Value.ClickY) > 5) Then
+        If (Held And
+            Available And
+            (Abs(Px - Value.ClickX) > 5 Or Abs(Py - Value.ClickY) > 5)) Then
 
             Value.ClickNode = 0
             Map.Nodes[Value.Selected].X = Max(0, Min(Document.MAX_COORDINATE,
@@ -233,8 +235,11 @@ Public Function Gesture(ByRef Value As State, ByRef Map As Document.State,
 
                 Value.Selected = Index
 
-                If (Value.ClickNode = Index + 1 And Now - Value.ClickTime <= 450 And
-                    Now >= Value.ClickTime And Abs(Px - Value.ClickX) <= 5 And Abs(Py - Value.ClickY) <= 5) Then
+                If (Value.ClickNode = Index + 1 And
+                    Now - Value.ClickTime <= 450 And
+                    Now >= Value.ClickTime And
+                    Abs(Px - Value.ClickX) <= 5 And
+                    Abs(Py - Value.ClickY) <= 5) Then
 
                     Value.EnterRequested = True
                     Value.ClickNode = 0

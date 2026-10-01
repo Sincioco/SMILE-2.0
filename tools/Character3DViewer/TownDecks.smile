@@ -34,7 +34,6 @@ Public Function Matches(ByRef Value As State, ByRef Town As Document.State) As B
             End If
 
             If (Item.Template <> Value.Items[Seen].Template Or
-
                 Item.Yaw <> Value.Items[Seen].Yaw Or
                 M.Distance(Item.Position, Value.Items[Seen].Position) > 0.000001 Or
                 M.Distance(Item.Scale, Value.Items[Seen].Scale) > 0.000001) Then
