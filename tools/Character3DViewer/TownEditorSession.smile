@@ -683,6 +683,16 @@ Private Sub FileCommand(Action As Number)
 
 End Sub
 
+Public Function DemoActive() As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = Showcase.Enabled
+
+    Return ReturnValue
+
+End Function
+
 Public Function StopDemoOnInput(Key As Number) As Boolean
 
     Dim Active As Boolean

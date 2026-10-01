@@ -1,5 +1,20 @@
 # Character Viewer Architecture
 
+## October 1 immediate startup showcase
+
+TownEditorSession retains ownership of the Demo clock and participation. Its
+read-only DemoActive query lets NerisTown frame the overview on the first loaded
+frame, including the factory fallback. NerisTown ignores Demo-cancel input while
+the scene is loading; normal click/key cancellation starts when it is ready.
+This prevents launch/loading input from ending the showcase before it appears.
+NativeProgram and the host remain unchanged. Growth is eight scene lines, ten
+session lines and a focused startup regression in TownSessionTests. Native town
+Foundations, Routes, Rendering and Session checks passed, including loading input,
+first-ready-frame orbit and subsequent cancellation. The complete 359-asset
+publication built and was gracefully relaunched. Direct mouse/visual acceptance
+remains pending; no compiler, runtime, asset limit or VSIX change was needed.
+
+
 ## October 1 Crown Isles palm refinement
 
 The capital layout author owns the road removal, two curved base bridges and

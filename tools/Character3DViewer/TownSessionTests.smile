@@ -104,10 +104,10 @@ Call CheckSunGesture()
 Call CheckSpecialToolSwitch()
 
 Ok = Editor.Available()
-Ok = Editor.StopDemoOnInput(KEY_E)
 
-Call Editor.BeginEditing()
 Call Town.Start(Value)
+Call Town.ObserveDemoInput(Value, KEY_E)
+Call Check(Editor.DemoActive(), "Loading Input Cannot Cancel Startup Demo")
 
 For Index = 0 To 180
 
@@ -120,6 +120,12 @@ For Index = 0 To 180
 End For
 
 Call Check(Value.Ready And Value.Edited And Not Value.Failed, "Editable Town And Party Load Together")
+Call Check(Editor.DemoActive() And Value.Cinematic And Value.OverviewOrbit And
+    Not Value.Follow And Not Value.OrbitPaused, "First Ready Frame Starts Demo Overview Orbit")
+Call Town.ObserveDemoInput(Value, KEY_E)
+Call Check(Not Editor.DemoActive() And Not Value.Cinematic,
+    "Input After Loading Ends Startup Demo")
+Call Editor.BeginEditing()
 
 If Value.Ready And Editor.TownName() = "Neris Town" Then
 

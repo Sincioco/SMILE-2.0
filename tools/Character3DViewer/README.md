@@ -1,5 +1,10 @@
 # SMILE 2.0 - Sin Star I - Game Engine and Studio
 
+Studio opens directly into the town Demo overview and starts orbiting as soon as
+the first map is ready. Loading input does not cancel it. After the map appears,
+a click or key ends Demo; the Demo button still toggles it. Saved map participation
+and the 30-second interval are unchanged.
+
 ## October 1 editable landscape shapes
 
 **Edit Town → Items → Surfaces** now includes **Triangle**, **Curve**, and

@@ -230,6 +230,10 @@ Public Sub LoadNext(ByRef Value As State)
 
     Value.Flight.Arrival = True
 
+    If Value.Ready And Authoring.DemoActive() Then
+        Call ResetOverview(Value)
+    End If
+
 End Sub
 
 Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
@@ -635,6 +639,10 @@ Public Sub FocusParty(ByRef Value As State)
 End Sub
 
 Public Sub ObserveDemoInput(ByRef Value As State, Key As Number)
+
+    If Not Value.Ready Then
+        Return
+    End If
 
     If Authoring.StopDemoOnInput(Key) Then
         Call HoldDisplayedView(Value)
