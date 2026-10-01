@@ -866,7 +866,8 @@ Public Sub FitTown(ByRef Value As State)
 
 End Sub
 
-Public Sub ResetOverview(ByRef Value As State, Optional Harbor As Boolean = False)
+Public Sub ResetOverview(ByRef Value As State, Optional Harbor As Boolean = False,
+    Optional TransitionMilliseconds As Number = 0)
 
     Value.View.MaximumPitch = M.Radians(80.0)
     Value.View.MinimumDistance = 80.0
@@ -906,7 +907,7 @@ Public Sub ResetOverview(ByRef Value As State, Optional Harbor As Boolean = Fals
         Call Tour.TownOverview(Value.BaseCamera, Authoring.MapCenter())
     End If
 
-    Call Arena.BeginTransition(Value.View, 0)
+    Call Arena.BeginTransition(Value.View, TransitionMilliseconds)
     Call Motion.Reset(Value.View.Controls, Value.View.Zoom)
     Call Arena.ComposeCamera(Value.View, Value.BaseCamera)
 
@@ -1108,6 +1109,7 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
     Dim Leader As P.Vector3
     Dim ArrivalHeading As Double
     Dim TabOverview As Boolean
+    Dim OverviewTransition As Number
     Dim MapCenter As P.Vector3
     Dim CenterOffset As P.Vector3
 
@@ -1138,6 +1140,8 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
     Held = Keyboard.ReadKeys(Authoring.CameraBlocked() Or
         (Authoring.Editing() And Key_Held(KEY_CONTROL)))
 
+    Call Authoring.UpdateDemoIdle(Value.View.LiveCamera, Elapsed,
+        Value.InputActive Or Keyboard.Active(Held) Or Residents.Talking(Value.Residents))
     Call UpdateIdle(Value, Value.InputActive Or Keyboard.Active(Held) Or RoadTravel.Active() Or
         Authoring.GestureActive() Or Residents.Talking(Value.Residents), Elapsed)
 
@@ -1179,7 +1183,11 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
 
             If TabOverview Then
 
-                Call ResetOverview(Value)
+                If Authoring.TakeDemoCamera(Value.View.LiveCamera) Then
+                    OverviewTransition = 1000
+                End If
+
+                Call ResetOverview(Value, False, OverviewTransition)
 
             Else If Authoring.Editing() Then
 
@@ -1478,7 +1486,9 @@ Public Sub Overlay(ByRef Value As State)
         Call Inset.Label(Value.PointOfView, Party.LeaderName(Value.People))
     End If
 
-    Call CameraPanel.MapStatistics(Value.Panel, Value.View, Residents.Talking(Value.Residents))
+    If Authoring.MapStatisticsVisible() Then
+        Call CameraPanel.MapStatistics(Value.Panel, Value.View, Residents.Talking(Value.Residents))
+    End If
 
     If Not Authoring.Editing() And Not Authoring.PreviewActive() Then
         Call Residents.Overlay(Value.Residents)

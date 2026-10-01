@@ -1,5 +1,34 @@
 # SMILE 2.0 - Sin Star I - Game Engine and Studio
 
+## October 1 Demo camera and countdown
+
+Turning **Demo On** eases from the displayed camera into the starting overview
+over one second, including when the current map is excluded. A small **Next Map**
+countdown above the Demo button shows the remaining seconds in its 30-second turn.
+Turning Demo off hides the countdown. Startup and right-click overview behavior
+remain unchanged.
+
+The statistics panel appears for the first 15 seconds of each Demo map and hides
+for the rest of that map's turn. It reappears when Demo starts, changes maps or
+stops. Compile information is plain text below the existing lower-right buttons.
+
+Two minutes without mouse or keyboard activity restarts the map Demo using the
+same camera transition. Editing, dialogs and conversations postpone this restart.
+
+## October 1 Neris orbital spacecraft
+
+The spaceport now has three compact shuttles across its two hangar aprons and an
+occasional medium transport on the marked central approach apron. All keep their
+noses facing away from the terminal. Shuttles reverse into the open hangars,
+emerge nose first and use staggered vertical takeoffs and landings. The original
+four alien visitors and Horizon aircraft are unchanged.
+
+NerisOrbitalFlight owns deterministic timing/positions; NerisOrbitalFleet owns two
+models and 16 instances. NerisSpaceportPreview delegates their lifecycle. The
+versioned Spacecraft package owns source geometry and checked exports. The Blender
+landmark owner places the same craft at matching parked positions. No bootstrap,
+shared runtime capacity, dependency or architecture exemption changes.
+
 ## October 1 spaceport paving
 
 Spaceport r09 removes fine apron grid meshes and bakes retained gold approach
@@ -154,7 +183,7 @@ absolute decimal building angle, including negative values. The 15-degree button
 remain shortcuts. Curved maps currently disable bulk section transfer to avoid
 silently losing their brushes; individual item editing remains available.
 
-**Demo** at the bottom cycles open town tabs every minute and starts map orbit.
+**Demo** at the bottom cycles included town tabs every 30 seconds and starts map orbit.
 Editing and file operations pause the cycle. Up to sixteen tabs are available;
 the **Maps** gallery shows their names and thumbnails. The generated Luma
 designs and separate World atlas are documented in
@@ -1711,9 +1740,9 @@ Viewer versions are saved **where you choose**. The private per-profile version
 index stores those paths. Repeated saves to the same dated name preserve the earlier
 revision as a numbered sibling. Retention removes only indexed files whose checksum
 still matches; externally modified files are preserved. Autosave/recovery remains in
-Windows Local AppData under `SMILE 2.0/Games/<application hash>/Data`, distinct from
-your chosen portable files. The launcher also handles the physical-profile versus
-MSIX LocalCache distinction when attaching to an existing Viewer.
+Windows Saved Games under `SMILE 2.0/Games/<application hash>/Data`, distinct from
+your chosen portable files. The native runtime and launcher share this known-folder
+location across ordinary desktop and packaged-host launches.
 
 Blender export uses Python `bpy`, immutable Neris templates and the editor document;
 it writes a temporary file, reopens it for verification, then replaces the selected

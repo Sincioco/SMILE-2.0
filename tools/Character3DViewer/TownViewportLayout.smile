@@ -108,4 +108,18 @@ Public Sub DrawButton(Index As Number, Selected As Boolean)
 
 End Sub
 
+Public Sub DrawCountdown(Seconds As Number)
+
+    Dim X As Number
+    Dim Y As Number
+
+    X = ButtonLeft(6) + Width(6) / 2 - 58
+    Y = Window_Height() - 61
+    Fill Rectangle X, Y, 116, 19, RGB(12, 23, 36) Opacity 88
+    Draw Text "Next Map:" At X + 7, Y + 2 Size 11 Color LIGHT_GRAY
+    Draw Number Seconds At X + 79, Y + 2 Size 11 Color CYAN
+    Draw Text "s" At X + 98, Y + 2 Size 11 Color CYAN
+
+End Sub
+
 End Module

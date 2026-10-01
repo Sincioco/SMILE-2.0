@@ -11,6 +11,7 @@ Import Smile.Tools.Character3DViewerCalibration As Numbers
 Import Smile.Tools.NerisSpaceportEntrance As Entrance
 Import Smile.Tools.NerisSpaceportGlow As Glow
 Import Smile.Tools.NerisAlienFleet As Fleet
+Import Smile.Tools.NerisOrbitalFleet As Orbital
 
 Public Type State
     Models[6] As Core.Model3D
@@ -18,6 +19,7 @@ Public Type State
     Doors As Entrance.State
     Light As Glow.State
     Visitors As Fleet.State
+    Shuttles As Orbital.State
     Loaded As Number
     ObjectCount As Number
     Ready As Boolean
@@ -37,10 +39,15 @@ Public Sub LoadNext(ByRef Value As State, WestDoor As Core.Model3D, EastDoor As 
 
     If Value.Loaded = 6 Then
 
-        Call Fleet.LoadNext(Value.Visitors)
+        If Not Value.Visitors.Ready Then
+            Call Fleet.LoadNext(Value.Visitors)
+        Else
 
-        Value.Ready = Value.Visitors.Ready
-        Value.Failed = Value.Visitors.Failed
+            Call Orbital.LoadNext(Value.Shuttles)
+        End If
+
+        Value.Ready = Value.Visitors.Ready And Value.Shuttles.Ready
+        Value.Failed = Value.Visitors.Failed Or Value.Shuttles.Failed
 
         Call Route.Enable(Value.Ready)
 
@@ -50,9 +57,10 @@ Public Sub LoadNext(ByRef Value As State, WestDoor As Core.Model3D, EastDoor As 
 
     If Value.Loaded = 0 Then
 
-        If (G.LiveModelCount3D() + 10 > G.MaximumModelCount3D() Or
-            G.LiveMeshCount3D() + 34 > G.MaximumMeshCount3D() Or
-            G.LiveMaterialCount3D() + 35 > G.MaximumMaterialCount3D()) Then
+        If (G.LiveModelCount3D() + 12 > G.MaximumModelCount3D() Or
+            G.LiveMeshCount3D() + 42 > G.MaximumMeshCount3D() Or
+            G.LiveMaterialCount3D() + 43 > G.MaximumMaterialCount3D() Or
+            G.LiveObjectCount3D() + 56 > G.MaximumObjectCount3D()) Then
             Value.Failed = True
 
             Return
@@ -94,6 +102,7 @@ End Sub
 Public Sub Update(ByRef Value As State, Elapsed As Number)
 
     Call Fleet.Update(Value.Visitors, Elapsed)
+    Call Orbital.Update(Value.Shuttles, Elapsed)
 
 End Sub
 
@@ -113,6 +122,7 @@ Public Function Draw(ByRef Value As State) As Boolean
         Ok = Entrance.Draw(Value.Doors) And Ok
         Ok = Glow.Draw(Value.Light) And Ok
         Ok = Fleet.Draw(Value.Visitors) And Ok
+        Ok = Orbital.Draw(Value.Shuttles) And Ok
 
     End If
 
@@ -128,6 +138,7 @@ Public Sub Destroy(ByRef Value As State)
     Call Entrance.Destroy(Value.Doors)
     Call Glow.Destroy(Value.Light)
     Call Fleet.Destroy(Value.Visitors)
+    Call Orbital.Destroy(Value.Shuttles)
 
     For Index = 0 To Value.ObjectCount - 1
         Call G.DestroyObject3D(Value.Objects[Index])

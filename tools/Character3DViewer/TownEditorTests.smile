@@ -44,6 +44,7 @@ Dim Surface As Grid.State
 Dim Ok As Boolean
 Dim Failures As Number
 Dim X As Number
+Dim Index As Number
 Dim Map As World.State
 Dim LoadedMap As World.State
 Dim RequestId As Number
@@ -63,6 +64,8 @@ Dim ReopenedChoices As Demo.Selection
 Call CheckMinimapGesture()
 Call Demo.Start(Showcase)
 Call Check(Showcase.Enabled, "Town Demo Starts Enabled")
+Call Check(Demo.SecondsRemaining(Showcase) = 30, "Demo Countdown Starts At Thirty")
+Call Check(Demo.StatisticsVisible(Showcase), "Demo Starts With Statistics Visible")
 
 Ok = Demo.StopOnInput(Showcase, False, False)
 
@@ -73,6 +76,8 @@ Ok = Demo.StopOnInput(Showcase, True, True)
 Call Check(Not Ok And Showcase.Enabled, "Demo Button Retains Its Toggle")
 Call Demo.Toggle(Showcase)
 Call Check(Not Showcase.Enabled, "Demo Button Turns It Off")
+Call Check(Demo.SecondsRemaining(Showcase) = 0, "Disabled Demo Has No Countdown")
+Call Check(Demo.StatisticsVisible(Showcase), "Statistics Stay Visible Outside Demo")
 Call Demo.Toggle(Showcase)
 
 Showcase.Elapsed = 1000
@@ -87,14 +92,57 @@ Call Check(Demo.DefaultIncluded("Neris Town") And Demo.DefaultIncluded("Neris Sp
     "Only The Four Approved Maps Default To Demo On")
 Call Demo.Start(Showcase)
 
+Showcase.Elapsed = 14999
+
+Call Check(Demo.StatisticsVisible(Showcase), "Demo Statistics Show For The First Fifteen Seconds")
+
+Showcase.Elapsed = 15000
+
+Call Check(Not Demo.StatisticsVisible(Showcase), "Demo Statistics Hide At Fifteen Seconds")
+
 Showcase.Elapsed = 29000
 Ok = Demo.Advance(Showcase, 999, True)
 
 Call Check(Not Ok, "Demo Waits Until Thirty Seconds")
+Call Check(Demo.SecondsRemaining(Showcase) = 1, "Demo Countdown Rounds Up The Last Second")
 
 Ok = Demo.Advance(Showcase, 1, True)
 
 Call Check(Ok And Showcase.Elapsed = 0, "Demo Changes Maps At Thirty Seconds")
+Call Check(Demo.SecondsRemaining(Showcase) = 30, "Next Map Restarts Countdown")
+Call Check(Demo.StatisticsVisible(Showcase), "Next Map Restores Statistics")
+
+Call Demo.Toggle(Showcase)
+
+For Index = 1 To 119
+    Ok = Demo.AdvanceIdle(Showcase, 1000, False, True)
+End For
+
+Call Check(Not Ok, "Idle Demo Waits Two Full Minutes")
+
+Ok = Demo.AdvanceIdle(Showcase, 999, False, True)
+
+Call Check(Not Ok, "Idle Demo Does Not Start One Millisecond Early")
+
+Ok = Demo.AdvanceIdle(Showcase, 1, False, True)
+
+Call Check(Ok And Showcase.IdleElapsed = 0, "Idle Demo Requests Start After Two Minutes")
+
+Showcase.IdleElapsed = 119999
+Ok = Demo.AdvanceIdle(Showcase, 1, True, True)
+
+Call Check(Not Ok And Showcase.IdleElapsed = 0, "Activity Resets The Idle Demo Timer")
+
+Showcase.IdleElapsed = 119999
+Ok = Demo.AdvanceIdle(Showcase, 1, False, False)
+
+Call Check(Not Ok And Showcase.IdleElapsed = 0, "Blocked Editor Or Dialog Cannot Start Idle Demo")
+
+Call Demo.Start(Showcase)
+
+Ok = Demo.AdvanceIdle(Showcase, 1000, False, True)
+
+Call Check(Not Ok And Showcase.IdleElapsed = 0, "Running Demo Cannot Restart Its Idle Timer")
 
 Ok = Demo.SetIncluded(DemoChoices, "Preference Fixture", True)
 

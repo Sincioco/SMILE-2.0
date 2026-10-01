@@ -44,6 +44,7 @@ if ($Target -in @('Native', 'All')) {
 }
 $nativeBattleSources = @(
     'NativeViewerHost.smile',
+    'StudioBuildStamp.smile',
     'NativeViewerTabs.smile',
     'TownPartyInset.smile',
     'NerisTown.smile',
@@ -55,6 +56,8 @@ $nativeBattleSources = @(
     'NerisCastleRoute.smile',
     'NerisSpaceportPreview.smile',
     'NerisAlienFleet.smile',
+    'NerisOrbitalFleet.smile',
+    'NerisOrbitalFlight.smile',
     'NerisSpaceportRoute.smile',
     'NerisSpaceportTraffic.smile',
     'NerisRunwayTraffic.smile',

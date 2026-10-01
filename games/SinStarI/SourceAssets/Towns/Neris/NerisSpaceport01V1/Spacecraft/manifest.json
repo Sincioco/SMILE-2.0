@@ -1,0 +1,45 @@
+{
+  "revision": 1,
+  "front_blender": "-Y",
+  "units": "metres",
+  "ships": [
+    {
+      "file": "Neris-Orbital-0.glb",
+      "parts": 4,
+      "vertices": 5470,
+      "triangles": 6544,
+      "bounds": [
+        [
+          -10.659646034240723,
+          -14.999995231628418,
+          0.0
+        ],
+        [
+          10.659646034240723,
+          15.0,
+          8.59999942779541
+        ]
+      ],
+      "sha256": "3e777e799a89a3fa1c1e915ae4c22e8b643036b722368e4c1486f2a5fa5a22b2"
+    },
+    {
+      "file": "Neris-Orbital-1.glb",
+      "parts": 4,
+      "vertices": 5826,
+      "triangles": 7138,
+      "bounds": [
+        [
+          -12.659778594970703,
+          -21.9999942779541,
+          0.0
+        ],
+        [
+          12.659778594970703,
+          22.0,
+          11.59999942779541
+        ]
+      ],
+      "sha256": "dd1c0171584a00caecaacfc5f13f5dae38c38cfe70dd42769f12f2bdac74138d"
+    }
+  ]
+}

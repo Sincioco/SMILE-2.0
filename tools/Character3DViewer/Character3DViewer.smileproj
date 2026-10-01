@@ -30,6 +30,8 @@
     <SmileSource Include="NerisSpaceportRoute.smile" />
     <SmileSource Include="NerisSpaceportPreview.smile" />
     <SmileSource Include="NerisAlienFleet.smile" />
+    <SmileSource Include="NerisOrbitalFleet.smile" />
+    <SmileSource Include="NerisOrbitalFlight.smile" />
     <SmileSource Include="NerisSpaceportTraffic.smile" />
     <SmileSource Include="NerisRunwayTraffic.smile" />
     <SmileSource Include="NerisSpaceportGlow.smile" />
@@ -528,6 +530,8 @@
     <Model3DAsset Include="BuildAssets\Neris\CastleV2\door-east.glb" Descriptor="BuildAssets\Neris\CastleV2\Castle.sm3d.json" LogicalPath="Assets/Neris/CastleV2/Door-East.sm3d" Profile="Static" Identity="sin-star-i.neris-castle.m06-r006.door-east" ProductionState="Prototype" />
     <Model3DAsset Include="BuildAssets\Neris\Spaceport01\Spaceport-00.glb" Descriptor="BuildAssets\Neris\Spaceport01\Spaceport.sm3d.json" LogicalPath="Assets/Neris/Spaceport01/Spaceport-00.sm3d" Profile="Static" Identity="sin-star-i.neris-spaceport-01.part-0" ProductionState="Prototype" />
     <Model3DAsset Include="BuildAssets\Neris\Spaceport01\Alien-0.glb" Descriptor="BuildAssets\Neris\Spaceport01\Spaceport.sm3d.json" LogicalPath="Assets/Neris/Spaceport01/Alien-0.sm3d" Profile="Static" Identity="sin-star-i.alien.aster" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Spaceport01\Neris-Orbital-0.glb" Descriptor="BuildAssets\Neris\Spaceport01\Spaceport.sm3d.json" LogicalPath="Assets/Neris/Spaceport01/Neris-Orbital-0.sm3d" Profile="Static" Identity="sin-star-i.neris-orbital.shuttle" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Spaceport01\Neris-Orbital-1.glb" Descriptor="BuildAssets\Neris\Spaceport01\Spaceport.sm3d.json" LogicalPath="Assets/Neris/Spaceport01/Neris-Orbital-1.sm3d" Profile="Static" Identity="sin-star-i.neris-orbital.transport" ProductionState="Prototype" />
     <Model3DAsset Include="BuildAssets\Neris\Spaceport01\Alien-1.glb" Descriptor="BuildAssets\Neris\Spaceport01\Spaceport.sm3d.json" LogicalPath="Assets/Neris/Spaceport01/Alien-1.sm3d" Profile="Static" Identity="sin-star-i.alien.vesper" ProductionState="Prototype" />
     <Model3DAsset Include="BuildAssets\Neris\Spaceport01\Alien-2.glb" Descriptor="BuildAssets\Neris\Spaceport01\Spaceport.sm3d.json" LogicalPath="Assets/Neris/Spaceport01/Alien-2.sm3d" Profile="Static" Identity="sin-star-i.alien.khepri" ProductionState="Prototype" />
     <Model3DAsset Include="BuildAssets\Neris\Spaceport01\Alien-3.glb" Descriptor="BuildAssets\Neris\Spaceport01\Spaceport.sm3d.json" LogicalPath="Assets/Neris/Spaceport01/Alien-3.sm3d" Profile="Static" Identity="sin-star-i.alien.vanta" ProductionState="Prototype" />

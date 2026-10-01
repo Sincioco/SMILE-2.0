@@ -43,4 +43,21 @@ for (const ship of fleet.ships) {
     throw Error('Alien manifest does not match its mesh: ' + ship.name);
   fs.writeFileSync(path.join(destination, ship.file), bytes);
 }
-console.log('Prepared Neris Spaceport r09: 6 models, 22 static parts, 472220 static triangles; four alien visitors in 12 additional parts.');
+const orbital = JSON.parse(fs.readFileSync(path.join(root, 'Spacecraft/manifest.json')));
+for (const ship of orbital.ships) {
+  const bytes = fs.readFileSync(path.join(root, 'Spacecraft/Native', ship.file));
+  if (createHash('sha256').update(bytes).digest('hex') !== ship.sha256 || ship.parts !== 4)
+    throw Error('Neris orbital craft contract changed: ' + ship.file);
+  const glb = JSON.parse(bytes.toString('utf8', 20, 20 + bytes.readUInt32LE(12)));
+  let vertices = 0, triangles = 0;
+  for (const mesh of glb.meshes) for (const part of mesh.primitives) {
+    const v = glb.accessors[part.attributes.POSITION].count, i = glb.accessors[part.indices].count;
+    if (v > 65535 || i > 196608 || part.attributes.TEXCOORD_0 === undefined)
+      throw Error('Orbital part exceeds native budget: ' + ship.file);
+    vertices += v; triangles += i / 3;
+  }
+  if (glb.meshes.length !== 4 || vertices !== ship.vertices || triangles !== ship.triangles || vertices > 131072)
+    throw Error('Orbital manifest differs from geometry: ' + ship.file);
+  fs.writeFileSync(path.join(destination, ship.file), bytes);
+}
+console.log('Prepared Spaceport r09: six static models, four alien visitors and two Neris orbital craft models.');

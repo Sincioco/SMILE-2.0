@@ -1,5 +1,41 @@
 # Character Viewer Architecture
 
+## October 1 Demo timing, camera and footer
+
+TownDemo derives whole seconds remaining from its existing 30-second clock; it
+adds no second timer. TownViewportLayout owns the small countdown above Demo.
+TownEditorSession captures the displayed camera when Demo is enabled by its button
+or the two-minute inactivity clock. NerisTown consumes that one-shot pose and uses ArenaCamera3D's existing
+one-second transition to the overview. Loading a different included map cannot
+overwrite the captured starting pose. Startup and ordinary resets retain their
+existing immediate overview behavior. No runtime, compiler or save format change.
+
+TownDemo also owns the 15-second statistics visibility decision and idle elapsed
+time. Session eligibility postpones inactivity restart during editing, dialogs and
+gestures; NerisTown supplies actual input and conversation activity. The idle clock
+never advances while Demo runs. StudioBuildStamp draws plain artifact metadata
+under the existing right-hand toolbar without changing button positions.
+
+Focused native checks cover countdown boundaries, disabled state, restart, the
+unchanged first camera frame, an intermediate frame, completion and orbit state.
+Foundations, Routes, Rendering and Session checks pass. The new sequence exposed
+an older NPC picking test's invalid inherited near plane; its close-up fixture
+now sets NearPlane explicitly. Production picking behavior is unchanged.
+Native checks also cover the exact idle threshold, input/blocked-state resets,
+statistics boundaries and map-turn reset. Normal Release and Debug builds and all
+four native town groups pass with idle/statistics/footer changes. In Release, direct button interaction
+showed an intermediate camera pose, the completed overview and the advancing
+countdown; opening Maps stopped Demo and hid the countdown. The final Release
+shows statistics at Demo start and outside Demo, hides them during the second
+half of a turn, and displays the plain lower-right footer below unchanged buttons.
+Build.ps1's explicit source inventory now includes the existing StudioBuildStamp
+module, correcting the script-only preflight failure after the footer addition.
+
+Growth review: TownDemo +49 lines, TownViewportLayout +14, TownEditorSession +57
+net lines, NerisTown +10 and StudioBuildStamp -3. These extend the existing clock, toolbar, session
+and camera owners; NativeProgram and NativeViewerHost do not grow. No guardrail,
+baseline, capacity or dependency exception changed.
+
 ## October 1 build identity and native save-store repair
 
 Windows inherited packaged-host LocalAppData virtualization split Studio's saves
@@ -45,6 +81,36 @@ WorldEditor). Focused changed-source checks pass. Evidence is
 `artifacts/build-stamp-style.log`; normalize these files in a separate formatting
 change, then rerun the repository check. This is not a full smoke-suite pass.
 
+## October 1 Neris orbital spacecraft
+
+The spaceport now has three compact shuttles across its two hangar aprons and an
+occasional medium transport on the marked central approach apron. All keep their
+noses facing away from the terminal. Shuttles reverse into the open hangars,
+emerge nose first and use staggered vertical takeoffs and landings. The original
+four alien visitors and Horizon aircraft are unchanged.
+
+NerisOrbitalFlight owns deterministic timing/positions; NerisOrbitalFleet owns two
+models and 16 instances. NerisSpaceportPreview delegates their lifecycle. The
+versioned Spacecraft package owns source geometry and checked exports. The Blender
+landmark owner places the same craft at matching parked positions. No bootstrap,
+shared runtime capacity, dependency or architecture exemption changes.
+
+Native foundations/routes/rendering/session checks pass, including parked positions,
+reverse/forward hangar motion, vertical flight axes, visibility intervals, renderer
+heading, resource release and the medium craft's apron height. The final transport
+anchor is the authored compass centre at X -5500, Z -5640, replacing the incorrect
+front-lawn placement reported by Sin. Sin confirmed its correct native landing
+after the October 1 20:48:48 Release build. Three parked shuttles were also directly
+inspected. Blender export checks report 122 source objects, 16 landing feet and
+matching deck heights; both GLB checksums and part budgets pass. Full-cycle visual
+observation was not performed; phase/trajectory evidence comes from native checks.
+These are ambient craft, with no boarding, moving collision, animated landing gear
+or hangar-door simulation.
+
+Growth: the two focused orbital owners total 236 lines; Preview +11 net lines,
+Blender landmark export +28, and two source/two asset declarations. Session checks
+also contain the separate Demo regression. No existing source-size limit changed.
+
 ## October 1 spaceport paving
 
 Spaceport r09 removes fine apron grid meshes and bakes retained gold approach
@@ -74,7 +140,8 @@ towns. Existing preflight, user-lighting preservation and backup checks remain.
 Validation: 25 entrances, connected paving, mirror symmetry and budget checks
 pass; all 50 directed atlas routes and clear forward arrivals pass in native code.
 Fresh-process import verifies the baked terrain/road bundle. The authored layout
-preview was inspected; an in-application visual inspection has not been performed.
+preview and the latest star layout were inspected in native Studio, including
+the actual Visual Studio Release and Debug launches during the build-store repair.
 
 ## October 1 immediate startup showcase
 

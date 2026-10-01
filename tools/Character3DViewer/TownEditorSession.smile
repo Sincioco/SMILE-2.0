@@ -51,6 +51,8 @@ Private Dim MapLoadOccupied As Boolean
 Private Dim MapLoadCooldown As Number
 Private Dim GatewayJourney As Journey.State
 Private Dim Showcase As Demo.State
+Private Dim DemoCameraPending As Boolean
+Private Dim DemoCameraFrom As P.Camera3D
 Private Dim OpenTabs As Tabs.State
 Private Dim Incoming As Document.State
 Private Dim Controls As Editor.State
@@ -693,6 +695,16 @@ Public Function DemoActive() As Boolean
 
 End Function
 
+Public Function MapStatisticsVisible() As Boolean
+
+    Dim Result As Boolean
+
+    Result = Demo.StatisticsVisible(Showcase)
+
+    Return Result
+
+End Function
+
 Public Function StopDemoOnInput(Key As Number) As Boolean
 
     Dim Active As Boolean
@@ -705,7 +717,67 @@ Public Function StopDemoOnInput(Key As Number) As Boolean
         Not World.Active() And Not OpenTabs.Menu.Visible)
     Result = Demo.StopOnInput(Showcase, Active, DemoButton)
 
+    If Result Then
+        DemoCameraPending = False
+    End If
+
     Return Result
+
+End Function
+
+Public Sub UpdateDemoIdle(View As P.Camera3D, Elapsed As Number, Active As Boolean)
+
+    Dim Available As Boolean
+
+    Available = (Ready And Not Editing() And Not World.Active() And
+        Not OpenTabs.Menu.Visible And Not Files.BlocksEditing(Transfers) And
+        Not GestureActive())
+
+    If Demo.AdvanceIdle(Showcase, Elapsed, Active, Available) Then
+        Call ToggleDemo(View)
+    End If
+
+End Sub
+
+Public Sub ToggleDemo(View As P.Camera3D)
+
+    Dim Ok As Boolean
+
+    Call Demo.Toggle(Showcase)
+
+    If Showcase.Enabled And Not Demo.Included(OpenTabs.Menu.Showcase, Town.Name) Then
+
+        Ok = Tabs.SelectTab(OpenTabs, Town, Tabs.NextDemo(OpenTabs), False)
+        Showcase.Enabled = Ok
+
+        If Ok Then
+            Call Editor.ResetDocument(Controls, Town)
+        Else
+            Controls.Ui.Message = "Enable Demo for a map in the Maps dialog first."
+        End If
+
+    End If
+
+    DemoCameraPending = Showcase.Enabled
+    DemoCameraFrom = View
+
+    If Showcase.Enabled Then
+        TeleportPending = True
+        TabOverviewPending = True
+    End If
+
+End Sub
+
+Public Function TakeDemoCamera(ByRef View As P.Camera3D) As Boolean
+
+    If Not DemoCameraPending Then
+        Return False
+    End If
+
+    DemoCameraPending = False
+    View = DemoCameraFrom
+
+    Return True
 
 End Function
 
@@ -777,27 +849,7 @@ Public Sub Input(View As P.Camera3D, Key As Number, Blocked As Boolean)
     End If
 
     If Toolbar.Clicked(6) Then
-
-        Call Demo.Toggle(Showcase)
-
-        If Showcase.Enabled And Not Demo.Included(OpenTabs.Menu.Showcase, Town.Name) Then
-
-            Ok = Tabs.SelectTab(OpenTabs, Town, Tabs.NextDemo(OpenTabs), False)
-            Showcase.Enabled = Ok
-
-            If Ok Then
-                Call Editor.ResetDocument(Controls, Town)
-            Else
-                Controls.Ui.Message = "Enable Demo for a map in the Maps dialog first."
-            End If
-
-        End If
-
-        If Showcase.Enabled Then
-            TeleportPending = True
-            TabOverviewPending = True
-        End If
-
+        Call ToggleDemo(View)
     End If
 
     If Controls.Ui.SunSlider.DragOwner > 0 Then
@@ -1187,6 +1239,10 @@ Public Sub Overlay(View As P.Camera3D, Optional Loading As Boolean = False)
     Call Toolbar.DrawButton(6, Showcase.Enabled)
     Call Toolbar.DrawButton(7, World.Active())
 
+    If Showcase.Enabled Then
+        Call Toolbar.DrawCountdown(Demo.SecondsRemaining(Showcase))
+    End If
+
     If Loading Then
 
         Call World.Draw(Town.Name, Progress())
@@ -1351,6 +1407,7 @@ Public Sub Release()
     Ok = G.ClearAdditionalLights3DChecked() And Ok
     Ready = False
     Prepared = False
+    DemoCameraPending = False
     TeleportPending = HaveDocument
     TabOverviewPending = HaveDocument
 

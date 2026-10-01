@@ -6,16 +6,13 @@ Option Explicit
 Public Sub Draw()
 
     Dim Caption As Text
-    Dim Width As Number
     Dim X As Number
     Dim Y As Number
 
     Caption = Build_Info()
-    Width = Text_Width(Caption, 11) + 16
-    X = (Window_Width() - Width) / 2
+    X = Max(8, Window_Width() - Text_Width(Caption, 11) - 18)
     Y = Window_Height() - 18
-    Fill Rectangle X, Y, Width, 18, RGB(12, 23, 36) Opacity 88
-    Draw Text Caption At Window_Width() / 2, Y + 2 Size 11 Color LIGHT_GRAY Centered
+    Draw Text Caption At X, Y + 2 Size 11 Color LIGHT_GRAY
 
 End Sub
 

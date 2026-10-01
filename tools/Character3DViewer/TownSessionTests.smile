@@ -40,6 +40,8 @@ Import Smile.Tools.NerisCastleFountain As CourtWater
 Import Smile.Tools.NerisSpaceportRoute As Spaceport
 Import Smile.Tools.NerisSpaceportPreview As Harbor
 Import Smile.Tools.NerisAlienFleet As Visitors
+Import Smile.Tools.NerisOrbitalFleet As Orbital
+Import Smile.Tools.NerisOrbitalFlight As OrbitalFlight
 Import Smile.Tools.NerisHorizonRoute As Airport
 Import Smile.Tools.NerisRunwayTraffic As Runway
 Import Smile.Tools.NerisHorizonGlow As AirportGlow
@@ -125,6 +127,7 @@ Call Check(Editor.DemoActive() And Value.Cinematic And Value.OverviewOrbit And
 Call Town.ObserveDemoInput(Value, KEY_E)
 Call Check(Not Editor.DemoActive() And Not Value.Cinematic,
     "Input After Loading Ends Startup Demo")
+Call CheckDemoTransition()
 Call Editor.BeginEditing()
 
 If Value.Ready And Editor.TownName() = "Neris Town" Then
@@ -720,6 +723,7 @@ Sub CheckWalkingConnection(ByRef Value As Town.State)
     Call Check(Value.Harbor.Doors.Ready And Value.Harbor.Light.Ready, "Original Doors And Crystals Remain Ready")
     Call Check(Value.Harbor.ObjectCount = 22, "Revised Paving Loads All Spaceport Static Parts")
     Call CheckAlienVisitors(Value)
+    Call CheckOrbitalCraft(Value)
     Call Inspection.MapOrbit(Value, Failures)
     Call Inspection.RightClickOrbit(Value, Failures)
     Call CheckNightToggle(Value)
@@ -862,6 +866,7 @@ Sub CheckResidentConversation(ByRef Value As Town.State)
     Shot = Value.View.LiveCamera
     Shot.Target = Bounds.Center
     Shot.Position = M.Add(Bounds.Center, P.Vector(0.0, 10.0, 70.0))
+    Shot.NearPlane = 0.25
     Pixel = Camera.ProjectViewerPoint(Bounds.Center, Shot, 1100, 720)
 
     Call Check(Conversation.Pick(Value.Residents, Shot, ToNumber(Pixel.X), ToNumber(Pixel.Y), 1100, 720) = 0,
@@ -966,6 +971,59 @@ Sub CheckShapeGestures()
 
 End Sub
 
+Sub CheckDemoTransition()
+
+    Dim Displayed As P.Camera3D
+    Dim Halfway As P.Vector3
+    Dim Tick As Number
+
+    Call Town.Update(Value, 0)
+    Call Town.FocusParty(Value)
+    Call Arena.AdvanceTransition(Value.View, 1000)
+    Call Town.Update(Value, 0)
+
+    Displayed = Value.View.LiveCamera
+
+    Call Editor.ToggleDemo(Displayed)
+    Call Town.Update(Value, 0)
+    Call Check(Editor.DemoActive() And Value.View.TransitionDuration = 1000 And
+        M.Distance(Value.View.LiveCamera.Position, Displayed.Position) < 0.01,
+        "Demo On Keeps The Displayed Camera At Transition Start")
+    Call Arena.AdvanceTransition(Value.View, 500)
+    Call Town.Update(Value, 0)
+
+    Halfway = Value.View.LiveCamera.Position
+
+    Call Check(M.Distance(Halfway, Displayed.Position) > 1.0 And
+        M.Distance(Halfway, Value.BaseCamera.Position) > 1.0,
+        "Demo Camera Eases Through An Intermediate Position")
+    Call Arena.AdvanceTransition(Value.View, 500)
+    Call Town.Update(Value, 0)
+    Call Check(Value.Cinematic And Value.OverviewOrbit And Not Value.OrbitPaused And
+        Value.View.TransitionDuration = 0 And
+        M.Distance(Value.View.LiveCamera.Position, Value.BaseCamera.Position) < 0.01,
+        "Demo Reaches Its Starting Overview And Retains Orbit")
+    Call Town.ObserveDemoInput(Value, KEY_E)
+    Call Check(Not Editor.DemoActive() And Value.View.TransitionDuration = 0,
+        "Deliberate Input Still Cancels Demo")
+
+    For Tick = 1 To 119
+        Call Editor.UpdateDemoIdle(Value.View.LiveCamera, 1000, False)
+    End For
+
+    Call Check(Not Editor.DemoActive(), "Idle Session Waits Two Minutes Before Demo")
+
+    Displayed = Value.View.LiveCamera
+
+    Call Editor.UpdateDemoIdle(Displayed, 1000, False)
+    Call Town.Update(Value, 0)
+    Call Check(Editor.DemoActive() And Value.View.TransitionDuration = 1000 And
+        M.Distance(Value.View.LiveCamera.Position, Displayed.Position) < 0.01,
+        "Idle Session Restarts Demo With The Same Smooth Camera Transition")
+    Call Town.ObserveDemoInput(Value, KEY_E)
+
+End Sub
+
 Sub CheckDemoChoices()
 
     Dim Ok As Boolean
@@ -1010,6 +1068,91 @@ Sub LoadResidents(ByRef Value As Town.State)
 
     Call Check(Value.Residents.Loaded = 9 And Not Value.Residents.Failed,
         "Resident Loading Completes Before Comparing Town Resource Counts")
+
+End Sub
+
+Sub CheckOrbitalCraft(ByRef Value As Town.State)
+
+    Dim Motion As OrbitalFlight.State
+    Dim Before As P.Vector3
+    Dim Point As P.Vector3
+    Dim Ship As Number
+    Dim Ok As Boolean
+    Dim Pose As P.Transform3D
+
+    Call Check(Value.Harbor.Shuttles.Ready And Value.Harbor.Shuttles.Loaded = 2,
+        "Two Orbital Models Supply Three Shuttles And One Transport")
+
+    For Ship = 0 To 2
+        Point = OrbitalFlight.Position(Motion, Ship)
+
+        Call Check(OrbitalFlight.Visible(Motion, Ship) And Point.Z = -5700.0,
+            "All Three Shuttles Start Parked In Front Of Hangars")
+    End For
+
+    Motion.Time = 30000
+    Before = OrbitalFlight.Position(Motion, 0)
+    Motion.Time = 42000
+    Point = OrbitalFlight.Position(Motion, 0)
+
+    Call Check(Point.Z = -6750.0 And Point.X = Before.X And Point.Y = Before.Y,
+        "Shuttle Backs Straight Into Its Hangar")
+
+    Motion.Time = 66000
+    Point = OrbitalFlight.Position(Motion, 0)
+
+    Call Check(Point.Z = Before.Z, "Shuttle Exits The Same Hangar Nose First")
+
+    Motion.Time = 90000
+    Point = OrbitalFlight.Position(Motion, 0)
+
+    Call Check(Point.X = Before.X And Point.Z = Before.Z And Point.Y > Before.Y + 3000.0,
+        "Orbital Takeoff Is Vertical Above The Apron")
+
+    Motion.Time = 100000
+
+    Call Check(Not OrbitalFlight.Visible(Motion, 0), "Departed Orbital Craft Leaves The Pad Clear")
+
+    Motion.Time = 136000
+    Point = OrbitalFlight.Position(Motion, 0)
+
+    Call Check(Point.X = Before.X And Point.Z = Before.Z And Point.Y > Before.Y,
+        "Orbital Landing Is Vertical Onto Its Own Apron")
+
+    Motion.Time = 20000
+    Point = OrbitalFlight.Position(Motion, 3)
+
+    Call Check(OrbitalFlight.Visible(Motion, 3) And Point.X = -5500.0 And Point.Z = -5640.0,
+        "Medium Craft Lands On The Terminal Approach Compass Marking")
+    Call Check(Point.Y = Before.Y, "Medium Craft Feet Rest On The Apron Deck")
+
+    Motion.Time = 16000
+    Before = OrbitalFlight.Position(Motion, 3)
+
+    Call Check(Before.X = Point.X And Before.Z = Point.Z And Before.Y > Point.Y,
+        "Medium Craft Descends Vertically Onto The Marked Apron")
+
+    Motion.Time = 48000
+    Before = OrbitalFlight.Position(Motion, 3)
+
+    Call Check(Before.X = Point.X And Before.Z = Point.Z And Before.Y > Point.Y,
+        "Medium Craft Takes Off Vertically From The Marked Apron")
+
+    Motion.Time = 20000
+
+    Value.Harbor.Shuttles.Motion = Motion
+
+    Call Town.Draw(Value)
+
+    Ok = P.TryTransform(Value.Harbor.Shuttles.Objects[0], Pose)
+
+    Call Check(Ok And Abs(Abs(Pose.Rotation.Y) - 180.0) < 0.001,
+        "Shuttle Rendering Retains Nose Out Heading")
+    Call OrbitalFlight.Advance(Motion, OrbitalFlight.CYCLE)
+    Call Check(Motion.Time = 20000, "Orbital Cycle Wrap Preserves Timing")
+
+    Value.Harbor.Shuttles.Motion.Time = 0
+    Print "Orbital Fleet: Three Hangar Shuttles, One Approach Transport, Nose Out Travel, Vertical Flights"
 
 End Sub
 

@@ -1,0 +1,114 @@
+''' Nose-out hangar travel and vertical flights in the existing spaceport placement.
+Module Smile.Tools.NerisOrbitalFlight
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Tools.NerisSpaceportRoute As Route
+
+Public Const CYCLE = 160000
+Public Const HEADING = 180.0
+
+Public Type State
+    Time As Number
+End Type
+
+Public Sub Advance(ByRef Value As State, Elapsed As Number)
+
+    Value.Time = (Value.Time + Max(0, Elapsed) Mod CYCLE) Mod CYCLE
+
+End Sub
+
+Public Function ShipTime(Value As State, Ship As Number) As Number
+
+    Dim Result As Number
+
+    Result = Value.Time
+
+    If Ship < 3 Then
+        Result = (Result + Ship * 13000) Mod CYCLE
+    End If
+
+    Return Result
+
+End Function
+
+Private Function Ease(Time As Number, Start As Number, Duration As Number) As Double
+
+    Dim Fraction As Double
+    Dim Result As Double
+
+    Fraction = Clamp(ToDouble(Time - Start) / ToDouble(Duration), 0.0, 1.0)
+    Result = Fraction * Fraction * (3.0 - 2.0 * Fraction)
+
+    Return Result
+
+End Function
+
+Public Function Visible(Value As State, Ship As Number) As Boolean
+
+    Dim Time As Number
+    Dim Result As Boolean
+
+    Time = ShipTime(Value, Ship)
+    Result = Time < 94000 Or Time >= 132000
+
+    If Ship = 3 Then
+        Result = Time >= 12000 And Time < 52000
+    End If
+
+    Return Result
+
+End Function
+
+Public Function Position(Value As State, Ship As Number) As P.Vector3
+
+    Dim Time As Number
+    Dim X As Double
+    Dim Forward As Double
+    Dim Height As Double
+    Dim Result As P.Vector3
+
+    Time = ShipTime(Value, Ship)
+    X = 200.0
+    Forward = 190.0
+
+    If Ship = 1 Then
+        X = 146.0
+    Else If Ship = 2 Then
+        X = -174.0
+    End If
+
+    If Ship = 3 Then
+
+        ' Centre of the authored compass marking on the terminal approach apron.
+        X = 0.0
+        Forward = 196.0
+        Height = 700.0 * (1.0 - Ease(Time, 12000, 8000))
+
+        If Time >= 44000 Then
+            Height = 700.0 * Ease(Time, 44000, 8000)
+        End If
+
+    Else
+
+        If Time >= 132000 Then
+            Height = 700.0 * (1.0 - Ease(Time, 132000, 8000))
+        Else If Time >= 86000 Then
+            Height = 700.0 * Ease(Time, 86000, 8000)
+        Else If Time >= 54000 Then
+            Forward = 85.0 + 105.0 * Ease(Time, 54000, 12000)
+        Else If Time >= 30000 Then
+            Forward = 190.0 - 105.0 * Ease(Time, 30000, 12000)
+        End If
+
+    End If
+
+    Result = P.Vector(Route.ORIGIN_X + X * Route.SCALE,
+        Route.DECK_Y + Height * Route.SCALE, Route.ORIGIN_Z + Forward * Route.SCALE)
+
+    Return Result
+
+End Function
+
+End Module

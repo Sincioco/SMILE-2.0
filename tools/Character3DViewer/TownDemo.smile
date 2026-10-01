@@ -4,6 +4,7 @@ Module Smile.Tools.TownDemo
 Option Explicit
 
 Public Const INTERVAL = 30000
+Public Const IDLE_INTERVAL = 120000
 
 Private Dim PreferenceByte[1] As Number
 
@@ -16,6 +17,7 @@ End Type
 Public Type State
     Enabled As Boolean
     Elapsed As Number
+    IdleElapsed As Number
 End Type
 
 Public Function DefaultIncluded(Name As Text) As Boolean
@@ -99,6 +101,7 @@ Public Sub Start(ByRef Value As State)
 
     Value.Enabled = True
     Value.Elapsed = 0
+    Value.IdleElapsed = 0
 
 End Sub
 
@@ -113,6 +116,7 @@ Public Function StopOnInput(ByRef Value As State, Active As Boolean, DemoButton 
 
     Value.Enabled = False
     Value.Elapsed = 0
+    Value.IdleElapsed = 0
     Return True
 
 End Function
@@ -121,8 +125,53 @@ Public Sub Toggle(ByRef Value As State)
 
     Value.Enabled = Not Value.Enabled
     Value.Elapsed = 0
+    Value.IdleElapsed = 0
 
 End Sub
+
+Public Function AdvanceIdle(ByRef Value As State, Elapsed As Number,
+    Active As Boolean, Ready As Boolean) As Boolean
+
+    If (Value.Enabled Or
+        Active Or
+        Not Ready) Then
+        Value.IdleElapsed = 0
+        Return False
+    End If
+
+    Value.IdleElapsed = Min(IDLE_INTERVAL, Value.IdleElapsed + Max(0, Min(Elapsed, 1000)))
+
+    If Value.IdleElapsed < IDLE_INTERVAL Then
+        Return False
+    End If
+
+    Value.IdleElapsed = 0
+
+    Return True
+
+End Function
+
+Public Function StatisticsVisible(Value As State) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Not Value.Enabled Or Value.Elapsed < 15000
+
+    Return Result
+
+End Function
+
+Public Function SecondsRemaining(Value As State) As Number
+
+    Dim Result As Number
+
+    If Value.Enabled Then
+        Result = Max(0, INTERVAL - Value.Elapsed + 999) / 1000
+    End If
+
+    Return Result
+
+End Function
 
 Public Function Advance(ByRef Value As State, Elapsed As Number, Ready As Boolean) As Boolean
 

@@ -1,0 +1,122 @@
+''' Two reusable craft models, three hangar instances and one occasional transport.
+Module Smile.Tools.NerisOrbitalFleet
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Tools.NerisOrbitalFlight As Flight
+Import Smile.Tools.Character3DViewerCalibration As Numbers
+
+Public Type State
+    Models[2] As Core.Model3D
+    Objects[16] As Core.Object3D
+    Motion As Flight.State
+    Loaded As Number
+    Ready As Boolean
+    Failed As Boolean
+End Type
+
+Public Sub LoadNext(ByRef Value As State)
+
+    Dim Part As Number
+    Dim Ship As Number
+    Dim First As Number
+    Dim Last As Number
+    Dim Ok As Boolean
+
+    If Value.Ready Or Value.Failed Then
+        Return
+    End If
+
+    Value.Models[Value.Loaded] = G.LoadModelGeometry3D("Assets/Neris/Spaceport01/Neris-Orbital-" +
+        Numbers.NumberText(Value.Loaded) + ".sm3d")
+    Ok = Value.Models[Value.Loaded].GeometryReady And Value.Models[Value.Loaded].PartCount = 4
+    Ok = G.PrepareModelPbr3D(Value.Models[Value.Loaded], G.TEXTURE_FILTER_ANISOTROPIC, 1, 16) And Ok
+    First = 0
+    Last = 2
+
+    If Value.Loaded = 1 Then
+        First = 3
+        Last = 3
+    End If
+
+    If Ok Then
+
+        For Ship = First To Last
+
+            For Part = 0 To 3
+                Value.Objects[Ship * 4 + Part] = G.CreateModelPart3D(Value.Models[Value.Loaded], Part)
+                Ok = Value.Objects[Ship * 4 + Part].Handle <> 0 And Ok
+                Ok = P.SetScale(Value.Objects[Ship * 4 + Part], 1000.0, 1000.0, 1000.0) And Ok
+                Ok = P.SetRotation(Value.Objects[Ship * 4 + Part], 0.0, Flight.HEADING, 0.0) And Ok
+            End For
+        End For
+
+    End If
+
+    Value.Loaded = Value.Loaded + 1
+    Value.Ready = Value.Loaded = 2 And Ok
+    Value.Failed = Not Ok
+
+End Sub
+
+Public Sub Update(ByRef Value As State, Elapsed As Number)
+
+    If Value.Ready Then
+        Call Flight.Advance(Value.Motion, Elapsed)
+    End If
+
+End Sub
+
+Public Function Draw(ByRef Value As State) As Boolean
+
+    Dim Ship As Number
+    Dim Part As Number
+    Dim Point As P.Vector3
+    Dim Ok As Boolean
+
+    Ok = True
+
+    If Value.Ready Then
+
+        For Ship = 0 To 3
+
+            If Flight.Visible(Value.Motion, Ship) Then
+
+                Point = Flight.Position(Value.Motion, Ship)
+
+                For Part = 0 To 3
+                    Ok = P.SetPosition(Value.Objects[Ship * 4 + Part], Point.X, Point.Y, Point.Z) And Ok
+                    Ok = G.DrawObject3D(Value.Objects[Ship * 4 + Part]) And Ok
+                End For
+
+            End If
+
+        End For
+
+    End If
+
+    Return Ok
+
+End Function
+
+Public Sub Destroy(ByRef Value As State)
+
+    Dim Index As Number
+    Dim Empty As State
+
+    For Index = 0 To 15
+        Call G.DestroyObject3D(Value.Objects[Index])
+    End For
+
+    For Index = 0 To 1
+        Call G.DestroyModel3D(Value.Models[Index])
+    End For
+
+    Value = Empty
+
+End Sub
+
+End Module

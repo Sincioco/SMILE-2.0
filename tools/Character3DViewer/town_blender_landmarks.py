@@ -120,12 +120,40 @@ def append_visitors():
     return count
 
 
+def append_orbital_craft():
+    """Park the four native craft at the same anchors for authoring inspection."""
+    from mathutils import Vector, Matrix
+    source = ROOT / 'NerisSpaceport01V1/Spacecraft/Neris-Orbital-r001.blend'
+    with bpy.data.libraries.load(str(source), link=False) as (_, loaded):
+        loaded.objects = list(_.objects)
+    collection = bpy.data.collections.new('Neris Orbital Craft - Parked')
+    bpy.context.scene.collection.children.link(collection)
+    deck = elevation('ROAD_Y') + distance('STRUCTURE_CLEARANCE')
+    anchors = [(-350, -570, deck), (-404, -570, deck), (-724, -570, deck),
+               (-550, -564, deck)]
+    count = 0
+    for source_object in loaded.objects:
+        if 'neris_spacecraft' in source_object:
+            model = int(source_object['neris_spacecraft'])
+            display_x = -23 if model == 0 else 23
+            targets = range(3) if model == 0 else (3,)
+            for index in targets:
+                obj = source_object.copy()
+                transform = Matrix.Translation(Vector(anchors[index])) @ Matrix.Rotation(math.pi, 4, 'Z')
+                obj.matrix_world = transform @ Matrix.Translation(Vector((-display_x, 0, 0))) @ source_object.matrix_basis.copy()
+                collection.objects.link(obj)
+                count += 1
+        bpy.data.objects.remove(source_object)
+    return count
+
+
 def populate(document):
     original = ROOT / 'NerisSpaceport01V1/Town/Neris-Town-Spaceport-SW-r003.blend'
     counts = {}
     if document['name'] == 'Neris Spaceport':
         counts['Spaceport01'] = append_spaceport()
         counts['AlienVisitors'] = append_visitors()
+        counts['NerisOrbitalCraft'] = append_orbital_craft()
     elif document['name'] == 'Horizon Airport':
         counts['Horizon'] = append_airport()
     if document.get('court_placed', document['name'].startswith('Neris Town')):
