@@ -8,7 +8,7 @@ catalog and terminal assemblies; no downloaded assets or new dependencies.
 | Neris Canals | Four-point Neris star, triangular residential quays and bridge approaches |
 | Neris Star Lake | Circular reservoir, eight bridge spokes, enlarged royal island and inward-facing homes |
 | Neris Crown Isles | Seven paired palm branches inside an open circular perimeter |
-| East Valley | Small castle-free relief village, City Hall, memorial gardens and orchards |
+| East Valley | Six-point star, circular perimeter, concentric promenades and six memorial gardens |
 | Orin's Village | Small castle-free home village, City Hall, twin lakes and repair stalls |
 | Neris Spaceport | Circular arrival landscape, eight approach bridges, embassy gardens and water pavilions |
 | Horizon Airport | Scalloped lagoons, twin arrival villages, perimeter drive and pavilion piers |
@@ -66,7 +66,7 @@ covers all 50 directed entrances.
 and full scenery-footprint clearance. It considers rotated model bounds and whole
 tree clusters. Small paths join the existing street network without passing through
 another building. `validate_access.py` protects the reported blocked-road and
-missing-entrance defects; it checks all thirteen generated maps and 160 entrances.
+missing-entrance defects; it checks all thirteen generated maps and their entrances.
 The user-approved center tower in Ancient Relay and Waterworks pump platforms have
 explicit exceptions. Castles and airport terminals retain their authored approaches.
 
@@ -80,8 +80,17 @@ Spaceport keeps its terminal and overall landscape. Its service drive joins the
 approaches, seven travel exits sit on dedicated outer spurs, the arrival circle is
 beyond the apron, and trees/fountains occupy gardens. `validate_spaceport.py` checks
 those specific regressions. Horizon retains its design with corrected plots and
-entrance paths. These latest cleanup documents still need installation and visual
-acceptance in Studio; passing geometry checks alone does not establish appearance.
+entrance paths. These cleanup documents are installed; direct visual acceptance
+remains pending where desktop tools were unavailable. Passing geometry checks
+alone does not establish appearance.
+
+East Valley follows Sin's six-point star-and-circle reference. Twenty-four homes
+face the radial avenues; six round memorial gardens join the outer promenade.
+The City Hall faces a short entrance walk ending at the innermost ring, and twelve
+small ponds surround the civic center. There are 66 trees and 80 lamps. All 25
+entrances pass the footprint/access check; native preparation and fresh import
+reuse the saved terrain and road data. Use `--map "East Valley"` with the installer
+to replace only this map, preserving edits in every other town.
 
 ## Reproduce and install
 

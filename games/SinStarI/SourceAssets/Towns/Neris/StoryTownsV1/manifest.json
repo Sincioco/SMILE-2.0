@@ -60,19 +60,19 @@
     "name": "East Valley",
     "file": "East Valley.town",
     "size_m": 420,
-    "items": 122,
+    "items": 177,
     "trees": 66,
-    "lamps": 34,
-    "houses": 10,
+    "lamps": 80,
+    "houses": 24,
     "castles": 0,
     "city_halls": 1,
-    "draw_cost": 718,
-    "local_lights": 40,
-    "water_percent": 34.3,
+    "draw_cost": 1061,
+    "local_lights": 86,
+    "water_percent": 48.6,
     "story_spaces": [
-      "Castle-free relief village with a public City Hall",
-      "Modest homes, paired orchards and practical market shelters",
-      "Quiet gardens for the East Valley memorial and resident-ledger scenes"
+      "Six-point star inside a circular waterfront promenade",
+      "Six round memorial gardens and twelve small ponds around the civic center",
+      "Road-facing homes along six clear avenues with connected ring paths"
     ]
   },
   {

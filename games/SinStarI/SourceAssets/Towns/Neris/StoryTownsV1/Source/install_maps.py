@@ -63,11 +63,16 @@ def plan_town(data, path, baseline, changes):
     return name
 
 
-def install(data, backup, original=None, source=None, baseline=None, dry_run=False):
+def install(data, backup, original=None, source=None, baseline=None, dry_run=False, maps=None):
     folder = Path(__file__).resolve().parent.parent
     source = source or folder / 'Towns'
     baseline = baseline or source
     manifest = json.loads((folder / 'manifest.json').read_text(encoding='utf-8'))
+    if maps:
+        unknown = set(maps) - {record['name'] for record in manifest}
+        if unknown:
+            raise ValueError('Unknown maps: ' + ', '.join(sorted(unknown)))
+        manifest = [record for record in manifest if record['name'] in maps]
     changes, names = {}, []
     for record in manifest:
         path = source / record['file']
@@ -115,5 +120,6 @@ if __name__ == '__main__':
     parser.add_argument('--baseline', type=Path, help='Previous authored maps for detecting user layout edits')
     parser.add_argument('--original', type=Path, help='Prepared original Neris with relocated travel markers only')
     parser.add_argument('--dry-run', action='store_true')
+    parser.add_argument('--map', action='append', dest='maps', help='Install only this generated map; may repeat')
     args = parser.parse_args()
-    install(args.data, args.backup, args.original, args.source, args.baseline, args.dry_run)
+    install(args.data, args.backup, args.original, args.source, args.baseline, args.dry_run, args.maps)

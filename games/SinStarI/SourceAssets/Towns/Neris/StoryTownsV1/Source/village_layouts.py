@@ -1,44 +1,67 @@
 """Two modest, castle-free story locations with a City Hall and clear public paths."""
+import math
 from town_design import Town, WATER, ROAD
 
 
 def east_valley():
     t=Town('East Valley',420,smooth=True)
-    t.rect(-174,-174,174,174)
-    # A cross of waterways and mirrored orchard terraces surround the civic island.
-    t.rect(-25,-174,25,174,WATER)
-    t.rect(-174,63,174,87,WATER)
-    t.rect(-47,75,47,174)
-    t.rect(-45,-174,45,50)
-    for x in (-140,-70,70,140):
-        t.path([(x,-160),(x,158)],10)
-    for z in (-145,-75,0,125):
-        t.path([(-190,z),(190,z)],12)
-    t.path([(0,-174),(0,92)],14)
-    t.ring(0,-65,22,8)
-    t.place(9,0,122,1.35)
-    t.place(20,0,-65,1.25)
-    for side in (-1,1):
-        for z in (-120,-40,32,102,151):
-            t.place(0,side*102,z,1.25,-side*90)
-        for z in (-120,-40,34):
-            t.grove(side*158,z,2,3,8,1.55)
-            t.grove(side*48,z,1,3,9,1.65)
-        t.grove(side*70,151,3,2,9,1.6)
-        t.place(8,side*29,-122,1.05,side*90)
-        t.place(17,side*29,-25,1.5,side*90)
-        # Paired quiet memorial gardens, leaving space for the story's relief work.
-        t.place(14,side*33,34,1.4,side*90)
-        t.place(16,side*32,20,1.6)
-        t.place(16,side*32,48,1.6)
-        for z in (-150,-95,-35,30,103,155):
-            t.place(15,side*61,z,1.6)
-            t.place(15,side*149,z,1.7)
-        t.place(15,side*16,91,1.8)
+    def point(radius, angle):
+        angle=math.radians(angle)
+        return radius*math.sin(angle),radius*math.cos(angle)
+    # Water reveals the six-point silhouette inside a continuous circular bank.
+    t.disk(0,0,198)
+    t.disk(0,0,171,WATER)
+    t.disk(0,0,96)
+    for angle in range(30,390,60):
+        t.triangle([point(96,angle-30),point(170,angle),point(96,angle+30)])
+        x,z=point(146,angle+30)
+        t.disk(x,z,22)
+    # Nested promenades and six short radial bridges keep the entire town linked.
+    t.ring(0,0,184,8)
+    t.ring(0,0,77,7)
+    t.ring(0,0,39,6)
+    for angle in range(30,390,60):
+        t.path([point(39,angle),point(184,angle)],7)
+        x,z=point(146,angle+30)
+        t.ring(x,z,16,5)
+        t.path([point(162,angle+30),point(184,angle+30)],6)
+        t.place(20,x,z,1.0)
+        # Homes sit beside the star avenues, facing their front steps toward them.
+        for radius,offset in ((108,16),(133,10)):
+            cx,cz=point(radius,angle)
+            nx,nz=point(1,angle+90)
+            for side in (-1,1):
+                t.place(0 if radius==108 else 4,cx+side*offset*nx,
+                        cz+side*offset*nz,.9,(angle+side*90)%360)
+        for radius in (55,91,151):
+            cx,cz=point(radius,angle)
+            nx,nz=point(1,angle+90)
+            for side in (-1,1):
+                t.place(15,cx+side*6*nx,cz+side*6*nz,1.5)
+        for turn in (-90,90,180):
+            dx,dz=point(9,angle+30+turn)
+            t.place(19,x+dx,z+dz,1.1)
+        for turn in (-60,60):
+            dx,dz=point(19,angle+30+turn)
+            t.place(15,x+dx,z+dz,1.45)
+    # Twelve small ponds repeat the reference's inner dotted circle.
+    for angle in range(0,360,30):
+        x,z=point(28,angle+15)
+        t.disk(x,z,3.5,WATER)
+    t.place(9,0,0,1.1)
+    for angle in range(0,360,15):
+        x,z=point(194,angle+7.5)
+        t.place(19,x,z,.85)
+        x,z=point(176,angle+7.5)
+        t.place(15,x,z,1.6)
+    for angle in range(0,360,30):
+        for radius in (51,64):
+            x,z=point(radius,angle+15)
+            t.place(19,x,z,1.35)
     t.gates()
-    t.notes=['Castle-free relief village with a public City Hall',
-        'Modest homes, paired orchards and practical market shelters',
-        'Quiet gardens for the East Valley memorial and resident-ledger scenes']
+    t.notes=['Six-point star inside a circular waterfront promenade',
+        'Six round memorial gardens and twelve small ponds around the civic center',
+        'Road-facing homes along six clear avenues with connected ring paths']
     return t
 
 
