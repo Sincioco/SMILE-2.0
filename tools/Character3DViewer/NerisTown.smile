@@ -1034,7 +1034,7 @@ Public Sub AdvanceKeyboard(ByRef Value As State, Keys As Keyboard.HeldKeys, Elap
         Call ManualCamera(Value)
     End If
 
-    If Value.Keys.FlyInspect Then
+    If Value.Keys.FlyInspect Or Authoring.TerrainGestureActive() Then
 
         Call RoadTravel.Cancel()
         Call Party.Stand(Value.People, Elapsed)
@@ -1116,6 +1116,7 @@ End Sub
 
 Public Sub Update(ByRef Value As State, Elapsed As Number)
 
+    Dim Index As Number
     Dim Held As Keyboard.HeldKeys
     Dim Leader As P.Vector3
     Dim ArrivalHeading As Double
@@ -1173,6 +1174,10 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
     Leader = Value.People.Path.Positions[0]
 
     If Value.Edited Then
+
+        For Index = 0 To Value.People.MemberCount - 1
+            Call Authoring.ProtectTerrainActor(Index, Value.People.Path.Positions[Index], Value.People.MemberCount)
+        End For
 
         Call Authoring.Update(Leader, Elapsed)
         Call Authoring.SizeArena(Value.View.Floor)

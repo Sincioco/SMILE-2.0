@@ -1,5 +1,49 @@
 # Character Viewer Architecture
 
+## October 2 terrain ownership and acceptance
+
+`TownDocument.Surface` owns immutable shared-corner elevations and authored water
+metadata. Shared `TerrainHeights3D`, `TerrainSurface3D`, `TerrainRay3D`,
+`TerrainSculpt3D`, `TerrainRamp3D`, `TerrainTraversal3D` and `TerrainWater3D` own
+storage, one triangular geometry contract, picking, deformation, ramps, slope
+eligibility and directed flow respectively. They do not depend on Viewer owners.
+
+`TownTerrainTools` owns gesture timing, snapshot rollback and publication;
+`TownTerrainProtection` checks footprints; `TownRampTools` and `TownWaterTools`
+own their two-point interactions; `TownTerrainPanel` owns presentation. The
+existing editor delegates inputs/history and the session acknowledges accepted
+geometry. TerrainBuilder/Renderer retain their bounded recipe and atomic GPU swap.
+No feature state or algorithm was added to NativeProgram/bootstrap.
+
+The existing document codec, save preparation and derived cache own TWN11 and
+Terrain4. Both native and Python exporters reject unsupported Blender terrain
+before publishing a request or replacing a destination. Flat exports remain
+supported. Graphics3D's bounded water-flow material operation is reusable; native
+DirectX owns its shader parameters. No capacity, dependency or guardrail exemption
+was added. Web adoption remains paused.
+
+Focused tests: TownElevationTests (sampler/geometry), TownSculptTests
+(transactions/timing/picking), TownRampTests (grades/corridors/routes), TownWaterTests
+(bed/flow/groups), TownTerrainPersistenceTests (save A/live B/atomic rejection),
+TownRenderTests (native geometry/resources), and TownSessionTests (four loaded
+actors travelling both directions and eased camera clearance). They run through
+the existing four-group `scripts/test-town-editor.ps1` harness.
+
+Actual Studio acceptance found and fixed three defects: flat minimap click Y was
+incorrectly included in elevated-road distance; the eased follow camera could
+intersect a hill; and a sub-50 ms sculpt stroke discarded its elapsed time.
+Regression tests now exercise those cases. The production Release/Debug builds
+and installed VSIX 2.0.69 include the fixes.
+
+Growth is responsibility-based: editor +132 lines delegates terrain gestures;
+document store +134 handles the optional format; builder +140 handles displaced
+triangles; renderer +103 manages bounded flow groups. Navigation and camera gain
+58 and 11 lines for terrain grounding/clearance. Existing large owners remain
+legacy review concerns; no limits/baselines/exclusions were changed. Focused new
+owners avoid moving those responsibilities into bootstrap or a general manager.
+See `docs/architecture/terrain-elevation.md` for memory budgets, acceptance matrix,
+actual screenshot/log paths and explicit unsupported paths.
+
 ## October 2 minimap and initial loading follow-through
 
 NerisTown's existing idle owner treats hovering the visible minimap as activity;

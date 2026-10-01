@@ -43,6 +43,13 @@
     <SmileSource Include="FreeCamera3D.smile" />
     <SmileSource Include="SurfacePath3D.smile" />
     <SmileSource Include="SurfacePaint3D.smile" />
+    <SmileSource Include="TerrainHeights3D.smile" />
+    <SmileSource Include="TerrainSurface3D.smile" />
+    <SmileSource Include="TerrainSculpt3D.smile" />
+    <SmileSource Include="TerrainRay3D.smile" />
+    <SmileSource Include="TerrainTraversal3D.smile" />
+    <SmileSource Include="TerrainWater3D.smile" />
+    <SmileSource Include="TerrainRamp3D.smile" />
     <SmileSource Include="SurfaceContours3D.smile" />
     <SmileSource Include="SurfaceGrid3D.smile" />
     <SmileSource Include="SurfaceSections3D.smile" />

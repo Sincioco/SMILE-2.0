@@ -1,0 +1,370 @@
+''' One captured terrain stroke owns its immutable before-state and fixed-rate sampling.
+Module Smile.Tools.TownTerrainTools
+
+Option Explicit
+
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownTerrainProtection As Protection
+Import Smile.Tools.TownSurfaceLayers As Layers
+Import Smile.Simple3D.TerrainHeights3D As Heights
+Import Smile.Simple3D.TerrainSurface3D As Terrain
+Import Smile.Simple3D.TerrainSculpt3D As Sculpt
+Import Smile.Simple3D.SurfacePaint3D As Paint
+Import Smile.Simple3D.SurfaceSections3D As Regions
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+
+Public Type State
+    Tool As Sculpt.Brush
+    ProtectedActors As Protection.Occupants
+    Before As Heights.State
+    BeforeCurves As Paint.State
+    BeforeSurfaceRevision As Number
+    BeforeTownRevision As Number
+    Active As Boolean
+    Pending As Boolean
+    OriginName As Text
+    SampleNext As Boolean
+    LastPoint As P.Vector3
+    LastStamp As P.Vector3
+    Remainder As Number
+    PreviousTime As Number
+    Message As Text
+End Type
+
+Public Sub Start(ByRef Value As State)
+
+    Value.Tool.Mode = Sculpt.RAISE
+    Value.Tool.Radius = 6.0 * Layers.UNITS_PER_METER
+    Value.Tool.Strength = 2.0 * Layers.UNITS_PER_METER
+    Value.PreviousTime = Timer()
+
+End Sub
+
+Public Sub Cancel(ByRef Value As State, ByRef Town As Document.State)
+
+    If (Value.Active Or Value.Pending) And Town.Name = Value.OriginName Then
+
+        Town.Surface.Heights = Value.Before
+        Town.Surface.Curves = Value.BeforeCurves
+        Town.Surface.Revision = Value.BeforeSurfaceRevision
+        Town.Revision = Value.BeforeTownRevision
+        Value.Message = "Terrain stroke cancelled."
+
+    End If
+
+    Value.Active = False
+    Value.Pending = False
+    Value.Remainder = 0
+
+End Sub
+
+''' Only a successfully displayed revision enters history. Failures restore the whole stroke.
+Public Function Publish(ByRef Value As State, ByRef Town As Document.State,
+    Ready As Boolean, Failed As Boolean) As Boolean
+
+    Dim Changed As Boolean
+
+    If Failed And (Value.Active Or Value.Pending) Then
+
+        Call Cancel(Value, Town)
+
+        Value.Message = "Terrain limit reached; stroke restored."
+
+    Else If Ready And Value.Pending Then
+
+        Value.Pending = False
+        Changed = Value.BeforeSurfaceRevision <> Town.Surface.Revision
+
+        If Changed Then
+            Value.Message = "Terrain stroke complete. Ctrl+Z to undo."
+        Else
+            Value.Message = "No terrain change."
+        End If
+
+    End If
+
+    Return Changed
+
+End Function
+
+Public Sub Capture(ByRef Value As State, ByRef Town As Document.State)
+
+    Value.Before = Town.Surface.Heights
+    Value.BeforeCurves = Town.Surface.Curves
+    Value.BeforeSurfaceRevision = Town.Surface.Revision
+    Value.BeforeTownRevision = Town.Revision
+    Value.OriginName = Town.Name
+
+End Sub
+
+''' Numeric prompts accept a signed decimal, never permissive text-to-zero conversion.
+Public Function Setting(InputText As Text, Minimum As Double, Maximum As Double,
+    ByRef Value As Double) As Boolean
+
+    Dim Index As Number
+    Dim Code As Number
+    Dim Digits As Number
+    Dim Points As Number
+    Dim Candidate As Double
+
+    If Text_Length(InputText) = 0 Or Text_Length(InputText) > 24 Then
+        Return False
+    End If
+
+    For Index = 0 To Text_Length(InputText) - 1
+
+        Code = Text_Code_At(InputText, Index)
+
+        If Code >= 48 And Code <= 57 Then
+            Digits = Digits + 1
+        Else If Code = 46 Then
+            Points = Points + 1
+        Else If Index <> 0 Or (Code <> 43 And Code <> 45) Then
+            Return False
+        End If
+
+    End For
+
+    If Digits = 0 Or Points > 1 Then
+        Return False
+    End If
+
+    Candidate = Text_To_Double(InputText)
+
+    If Not (Candidate >= Minimum And Candidate <= Maximum) Then
+        Return False
+    End If
+
+    Value = Candidate
+    Return True
+
+End Function
+
+''' Settings are UI state; no history entry until a stroke actually changes terrain.
+Public Function Command(ByRef Value As State, Action As Number) As Boolean
+
+    Dim InputText As Text
+    Dim Amount As Double
+
+    If Action >= 800 And Action <= 803 Then
+
+        Value.Tool.Mode = Action - 799
+        Value.SampleNext = False
+
+    Else If Action = 808 Then
+
+        Value.Tool.Mode = 5
+        Value.SampleNext = False
+
+    Else If Action = 804 Then
+
+        InputText = Text_Prompt("Terrain Radius", "Radius (m): 1 to 50", "6")
+
+        If Setting(InputText, 1.0, 50.0, Amount) Then
+            Value.Tool.Radius = Amount * Layers.UNITS_PER_METER
+        End If
+
+    Else If Action = 805 Then
+
+        InputText = Text_Prompt("Terrain Strength", "Strength (m/s): 0.1 to 20", "2")
+
+        If Setting(InputText, 0.1, 20.0, Amount) Then
+            Value.Tool.Strength = Amount * Layers.UNITS_PER_METER
+        End If
+
+    Else If Action = 806 Then
+
+        InputText = Text_Prompt("Terrain Elevation", "Elevation offset (m): -1000 to 1000", "0")
+
+        If Setting(InputText, -1000.0, 1000.0, Amount) Then
+            Value.Tool.Target = Amount * Layers.UNITS_PER_METER
+        End If
+
+    Else If Action = 807 Then
+
+        Value.SampleNext = True
+        Value.Message = "Click terrain to sample its elevation."
+
+    Else
+        Return False
+
+    End If
+
+    Return True
+
+End Function
+
+''' Return True only on a changed, completed stroke; callers then record history once.
+Public Function Gesture(ByRef Value As State, ByRef Town As Document.State,
+    Point As P.Vector3, Allowed As Boolean, Pressed As Boolean, Held As Boolean,
+    Elapsed As Number) As Boolean
+
+    Dim Area As Regions.Region
+    Dim Sample As Terrain.Sample
+    Dim Tick As Number
+    Dim Duration As Number
+    Dim Fraction As Double
+    Dim Position As P.Vector3
+    Dim Previous As Heights.State
+    Dim Ok As Boolean
+    Dim Changed As Boolean
+    Dim Steps As Number
+    Dim StepIndex As Number
+    Dim Stamp As P.Vector3
+    Dim StampSeconds As Double
+    Dim FinalStamp As Boolean
+
+    If Value.Pending Then
+        Return False
+    End If
+
+    If Not Value.Active Then
+
+        If Not Pressed Or Not Allowed Then
+            Return False
+        End If
+
+        If Value.SampleNext Then
+
+            Sample = Terrain.SamplePoint(Town.Surface, Point.X, Point.Z)
+            Value.Tool.Target = Sample.Offset
+            Value.SampleNext = False
+            Value.Message = "Elevation sampled."
+            Return False
+
+        End If
+
+        Call Capture(Value, Town)
+
+        Value.LastPoint = Point
+        Value.LastStamp = Point
+        Value.Remainder = 0
+        Value.Active = True
+        Value.Message = "Drag to sculpt; Esc restores the stroke."
+        Return False
+
+    End If
+
+    If Not Allowed Then
+
+        Value.Remainder = 0
+        Value.LastPoint = Point
+        Value.LastStamp = Point
+
+        If Not Held Then
+            Value.Active = False
+            Value.Pending = True
+        End If
+
+        Return False
+
+    End If
+
+    ' Fixed 20 Hz passes, interpolated along each pointer segment. No catch-up after stalls.
+    Duration = Max(0, Min(250, Elapsed))
+    Tick = 50 - Value.Remainder
+
+    Do
+
+        StampSeconds = 0.05
+
+        If Tick > Duration Then
+
+            If Not Held And Duration > Tick - 50 Then
+
+                StampSeconds = ToDouble(Duration - Tick + 50) / 1000.0
+                Tick = Duration
+                FinalStamp = True
+
+            Else
+                Exit Do
+
+            End If
+
+        End If
+
+        Fraction = ToDouble(Tick) / ToDouble(Max(1, Duration))
+        Position = M.Add(Value.LastPoint, M.Scale(M.Subtract(Point, Value.LastPoint), Fraction))
+        Area.MinX = Min(Value.LastStamp.X, Position.X) - Value.Tool.Radius
+        Area.MaxX = Max(Value.LastStamp.X, Position.X) + Value.Tool.Radius
+        Area.MinZ = Min(Value.LastStamp.Z, Position.Z) - Value.Tool.Radius
+        Area.MaxZ = Max(Value.LastStamp.Z, Position.Z) + Value.Tool.Radius
+
+        If Not Protection.ActorsClear(Value.ProtectedActors, Town.Surface, Area) Then
+
+            Call Cancel(Value, Town)
+
+            Value.Message = "Move the party away before sculpting."
+            Return False
+
+        End If
+
+        If Not Protection.Allowed(Town, Area) Then
+
+            Call Cancel(Value, Town)
+
+            Value.Message = "Blocked: building, bridge or stairs."
+            Return False
+
+        End If
+
+        Previous = Town.Surface.Heights
+        Steps = 1 + ToNumber(M.Distance(Value.LastStamp, Position) / (Value.Tool.Radius * 0.5))
+
+        If Steps > 256 Then
+
+            Call Cancel(Value, Town)
+
+            Value.Message = "Drag too far; terrain stroke restored."
+            Return False
+
+        End If
+
+        Ok = True
+
+        For StepIndex = 1 To Steps
+            Stamp = M.Add(Value.LastStamp, M.Scale(M.Subtract(Position, Value.LastStamp),
+                ToDouble(StepIndex) / ToDouble(Steps)))
+            Ok = Sculpt.Apply(Town.Surface, Value.Tool, Stamp.X, Stamp.Z, StampSeconds / ToDouble(Steps)) And Ok
+        End For
+
+        If Not Ok Then
+
+            Call Cancel(Value, Town)
+
+            Value.Message = "Terrain edit rejected; stroke restored."
+            Return False
+
+        End If
+
+        If Not Heights.Same(Previous, Town.Surface.Heights) Then
+            Town.Revision = Town.Revision + 1
+        End If
+
+        Value.LastStamp = Position
+
+        If FinalStamp Then
+            Exit Do
+        End If
+
+        Tick = Tick + 50
+
+    Loop
+
+    Value.Remainder = (Value.Remainder + Duration) Mod 50
+    Value.LastPoint = Point
+
+    If Not Held Then
+
+        Value.Active = False
+        Value.Pending = True
+        Value.Message = "Preparing terrain..."
+
+    End If
+
+    Return False
+
+End Function
+
+End Module

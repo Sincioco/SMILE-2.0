@@ -584,6 +584,13 @@ Public Sub Compose(ByRef Value As State, ByRef View As Arena.State,
 
     View.LiveCamera.Position.Y = View.LiveCamera.Position.Y + Lift
     View.LiveCamera.Target.Y = View.LiveCamera.Target.Y + Lift
+
+    ' Easing and input offsets happen after the drone solver, including drone-off follow.
+
+    If Following And Edited.Elevated() Then
+        View.LiveCamera = Edited.ClearTerrainSight(View.LiveCamera)
+    End If
+
     ' Elevated town views need more depth precision than a nearby character shot.
     ' The 6.2 cm bridge paving/deck gap otherwise collapses in the 24-bit buffer.
     View.LiveCamera.NearPlane = Max(25.0, (View.LiveCamera.Position.Y - 25.0) * 0.1)
@@ -591,6 +598,9 @@ Public Sub Compose(ByRef Value As State, ByRef View As Arena.State,
     If FreeInspect Then
         View.LiveCamera.NearPlane = Max(0.25, (View.LiveCamera.Position.Y -
             Navigation.GroundHeight(View.LiveCamera.Position.X, View.LiveCamera.Position.Z)) * 0.1)
+    Else If Following And Edited.Elevated() Then
+        View.LiveCamera.NearPlane = Max(0.25, Min(25.0,
+            M.Distance(View.LiveCamera.Position, View.LiveCamera.Target) * 0.1))
     End If
 
     Value.Focusing = Value.Focusing And View.TransitionDuration > 0
@@ -686,6 +696,7 @@ Public Function Resolve(ByRef Value As State, Desired As P.Camera3D,
     End If
 
     Result = Follow.Update(Value.Flight, Value.World, Desired, Elapsed, 18.0 - 12.0 * Value.CloseAmount)
+    Result = Edited.ClearTerrainSight(Result)
 
     Return Result
 

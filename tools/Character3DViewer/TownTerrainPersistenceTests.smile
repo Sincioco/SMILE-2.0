@@ -1,0 +1,171 @@
+''' Terrain save isolation, malformed data, portable recipes and safe export rejection.
+Module Smile.Tools.TownTerrainPersistenceTests
+
+Option Explicit
+
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownDocumentStore As Store
+Import Smile.Tools.TownDerivedCache As Derived
+Import Smile.Tools.TownSavePreparation As Preparation
+Import Smile.Tools.TownTerrainCache As Cache
+Import Smile.Simple3D.TerrainSurface3D As Terrain
+Import Smile.Simple3D.TerrainHeights3D As Heights
+Import Smile.Simple3D.TerrainWater3D As Water
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.SurfacePaint3D As Paint
+Import Smile.Simple3D.Precision3D As P
+
+Private Dim Current As Document.State
+Private Dim Snapshot As Document.State
+Private Dim Loaded As Document.State
+Private Dim Work As Preparation.State
+Private Dim Recipe As Cache.Batch
+Private Dim Bytes[524288] As Number
+
+Private Sub Check(Ok As Boolean, Label As Text, ByRef Failures As Number)
+
+    If Not Ok Then
+        Print "FAIL Terrain Persistence " + Label
+        Failures = Failures + 1
+    End If
+
+End Sub
+
+Public Sub Run(ByRef Failures As Number)
+
+    Dim Ok As Boolean
+    Dim Brush As Paint.Brush
+    Dim Index As Number
+    Dim Length As Number
+    Dim Status As Number
+    Dim Version As Number
+    Dim Key As Text
+    Dim Page As Text
+
+    Ok = Document.Blank(Current, "Terrain Save A", 8, 8, 20.0)
+    Ok = Terrain.SetCorner(Current.Surface, 2, 2, -12.34) And Ok
+    Ok = Terrain.SetCorner(Current.Surface, 3, 2, 100.0) And Ok
+    Ok = Water.Prepare(Current.Surface, P.Vector(-40.0, 0.0, -40.0),
+        P.Vector(40.0, 0.0, -40.0), 40.0, Brush) And Ok
+    Brush.FlowSign = -1
+    Brush.FlowSpeed = 0
+    Ok = Grid.PaintBrush(Current.Surface, Brush) And Ok
+    Current.Revision = 10
+    Current.SavedRevision = 9
+    Snapshot = Current
+    Ok = Store.SaveDocument(Snapshot, "Terrain.Save.A", False) And Ok
+
+    Call Preparation.Begin(Work, Snapshot, "Terrain.Save.A", 8001)
+
+    Ok = Terrain.SetCorner(Current.Surface, 2, 2, 90.0) And Ok
+    Current.Surface.Curves.Brushes[0].FlowSign = 1
+    Current.Surface.Curves.Brushes[0].FlowSpeed = 125
+    Current.Revision = 11
+
+    For Index = 0 To 2000
+
+        Call Preparation.Update(Work, Snapshot, 8001)
+
+        If Work.Stage = 0 Or Work.Failed Then
+            Exit For
+        End If
+
+    End For
+
+    Ok = Store.LoadDocument(Loaded, "Terrain.Save.A", True) And Ok
+
+    Call Check(Ok And Work.Stage = 0 And Not Work.Failed And
+        Derived.SameSurface(Loaded.Surface, Snapshot.Surface) And
+        Not Derived.SameSurface(Current.Surface, Loaded.Surface) And Document.Dirty(Current),
+        "Save A Keeps Negative Heights And Paused Reversed Flow While B Stays Dirty", Failures)
+    Call Check(Document.Dirty(Loaded), "Recovery Restores Dirty Snapshot", Failures)
+
+    Ok = Derived.BindBundle(Loaded, "Terrain.Save.A")
+    Key = Derived.ReadKey(Loaded, "Terrain4", False)
+    Ok = Cache.LoadBatch(Recipe, Key, 0) And Ok
+
+    Call Check(Ok And Text_Length(Key) > 0 And Recipe.PatchCount > 0,
+        "Prepared Terrain4 Is Bound To Saved Heights And Flow", Failures)
+    Call Check(Derived.ReadKey(Current, "Terrain4", False) = "",
+        "B Cannot Reuse A Geometry", Failures)
+
+    Loaded.Name = "Terrain Save As"
+    Ok = Store.SaveDocument(Loaded, "Terrain.Save.As")
+    Ok = Store.LoadDocument(Loaded, "Terrain.Save.As") And Ok
+
+    Call Check(Ok And Derived.SameSurface(Loaded.Surface, Snapshot.Surface),
+        "Save As Preserves Elevation And Flow", Failures)
+
+    Call Check(Not Document.SupportsBlender(Current),
+        "Blender Preflight Rejects Terrain And Flow", Failures)
+    Call Check(Store.QueueBlender(Current, 1) = 0 And Store.QueueBlender(Current, 2) = 0,
+        "Legacy Blender Queue Rejects Terrain Before Request Publication", Failures)
+
+    Load Data "Terrain.Save.A" Into Bytes Count Length Status Status
+    Version = Bytes[3]
+
+    Call Check(Status = DATA_STATUS_OK And Version = 11, "TWN11 Version", Failures)
+
+    Save Data Bytes Count Length - 1 To "Terrain.Save.Truncated" Status Status
+    Ok = Store.LoadDocument(Current, "Terrain.Save.Truncated")
+
+    Call Check(Not Ok And Terrain.Corner(Current.Surface, 2, 2) = 90.0,
+        "Truncated Document Leaves Live B Intact", Failures)
+
+    Bytes[3] = 12
+    Save Data Bytes Count Length To "Terrain.Save.Future" Status Status
+    Ok = Store.LoadDocument(Current, "Terrain.Save.Future")
+
+    Call Check(Not Ok And Current.Revision = 11, "Future Version Rejected Atomically", Failures)
+
+    Ok = Derived.WriteNumber(3, "Terrain.Save.A.PreparedVersion")
+
+    Call Check(Ok And Derived.ReadKey(Snapshot, "Terrain4", False) = "",
+        "Old Prepared Recipe Rejected", Failures)
+
+    Ok = Document.Blank(Current, "Legacy After Terrain", 8, 8, 20.0)
+    Ok = Store.SaveDocument(Current, "Terrain.Legacy") And Ok
+    Ok = Store.LoadDocument(Loaded, "Terrain.Legacy") And Ok
+
+    Call Check(Ok And Loaded.Surface.Heights.Nonzero = 0 And Loaded.Surface.Curves.BrushCount = 0,
+        "Loading Legacy Clears Candidate Terrain Metadata", Failures)
+
+    Current.Surface.Heights.CornerCount = 7
+
+    Call Check(Not Store.SaveDocument(Current, "Terrain.Invalid.Count"),
+        "Invalid Corner Count Rejected", Failures)
+
+    Current = Snapshot
+    Current.Surface.Heights.Pages[0] = "corrupt"
+
+    Call Check(Not Store.SaveDocument(Current, "Terrain.Invalid.Page"),
+        "Invalid Height Page Rejected", Failures)
+
+    Ok = Document.Blank(Current, "Over Budget Terrain", 512, 512, 20.0)
+    Page = Text_From_Code(34) + "   " + Text_From_Code(36) + "   "
+
+    For Index = 1 To 7
+        Page = Page + Page
+    End For
+
+    For Index = 0 To 1027
+        Current.Surface.Heights.Pages[Index] = Page
+    End For
+
+    Current.Surface.Heights.Pages[1028] = Text_From_Code(34) + Text_Slice(Page, 1, 3)
+    Page = " "
+
+    For Index = 1 To 10
+        Page = Page + Page
+    End For
+
+    Current.Surface.Heights.Pages[1028] = Current.Surface.Heights.Pages[1028] + Text_Slice(Page, 0, 1020)
+    Current.Surface.Heights.Nonzero = Heights.MAX_CORNERS
+
+    Call Check(Ok And Heights.Valid(Current.Surface.Heights, Heights.MAX_CORNERS) And
+        Not Store.SaveDocument(Current, "Terrain.Invalid.Budget"),
+        "Complex Maximum Grid Is Rejected At The Unchanged Document Byte Budget", Failures)
+
+End Sub
+
+End Module

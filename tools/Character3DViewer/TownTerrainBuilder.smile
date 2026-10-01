@@ -10,11 +10,15 @@ Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.SurfaceGrid3D As Grid
 Import Smile.Simple3D.SurfaceContours3D As Contours
 Import Smile.Simple3D.SurfacePaint3D As Paint
+Import Smile.Simple3D.TerrainSurface3D As Elevation
+Import Smile.Simple3D.TerrainWater3D As Flow
 Import Smile.Tools.TownTerrainCache As Cache
 
 Public Type State
     Surface As Grid.State
     SourceCurves As Paint.State
+    Flows As Flow.Groups
+    Detailed As Boolean
     Openings As Decks.State
     Buffer As Cache.Batch
     Row As Number
@@ -27,7 +31,9 @@ Public Sub Begin(ByRef Value As State, ByRef Town As Document.State)
     Value.SourceCurves = Town.Surface.Curves
     Value.Buffer.PatchCount = 0
     Value.Row = 0
-    Value.Failed = False
+    Value.Failed = Not Elevation.Valid(Value.Surface)
+    Value.Failed = Not Flow.Collect(Value.SourceCurves, Value.Flows) Or Value.Failed
+    Value.Detailed = Value.Surface.Heights.Nonzero > 0 Or Value.Flows.GroupCount > 0
 
     Call Decks.Capture(Value.Openings, Town)
 
@@ -50,7 +56,68 @@ Private Sub AddPatch(ByRef Value As State, X0 As Double, Z0 As Double,
     Value.Buffer.Patches[Value.Buffer.PatchCount].Y0 = Y0
     Value.Buffer.Patches[Value.Buffer.PatchCount].Y1 = Y1
     Value.Buffer.Patches[Value.Buffer.PatchCount].Plane = Plane
+    Value.Buffer.Patches[Value.Buffer.PatchCount].Y2 = 0.0
+    Value.Buffer.Patches[Value.Buffer.PatchCount].FlowGroup = 0
     Value.Buffer.PatchCount = Value.Buffer.PatchCount + 1
+
+End Sub
+
+Private Sub TrianglePatch(ByRef Value As State, PointA As P.Vector3,
+    PointB As P.Vector3, PointC As P.Vector3, Kind As Number)
+
+    Call AddPatch(Value, PointA.X, PointA.Z, PointB.X, PointB.Z, Kind, PointA.Y, PointB.Y, 5)
+
+    If Not Value.Failed Then
+
+        Value.Buffer.Patches[Value.Buffer.PatchCount - 1].X2 = PointC.X
+        Value.Buffer.Patches[Value.Buffer.PatchCount - 1].Z2 = PointC.Z
+        Value.Buffer.Patches[Value.Buffer.PatchCount - 1].Y2 = PointC.Y
+
+    End If
+
+End Sub
+
+''' Seal exposed displaced edges; neighboring terrain triangles share their exact vertices.
+Private Sub ElevatedEdge(ByRef Value As State, PointA As P.Vector3,
+    PointB As P.Vector3, Kind As Number)
+
+    Dim DeltaX As Double
+    Dim DeltaZ As Double
+    Dim Length As Double
+    Dim MiddleX As Double
+    Dim MiddleZ As Double
+    Dim FirstKind As Number
+    Dim LastKind As Number
+    Dim LowA As P.Vector3
+    Dim LowB As P.Vector3
+    Dim BaseY As Double
+
+    DeltaX = PointB.X - PointA.X
+    DeltaZ = PointB.Z - PointA.Z
+    Length = Sqrt(DeltaX * DeltaX + DeltaZ * DeltaZ)
+
+    If Length <= 0.000001 Or Kind = Grid.SURFACE_WATER Then
+        Return
+    End If
+
+    MiddleX = (PointA.X + PointB.X) * 0.5
+    MiddleZ = (PointA.Z + PointB.Z) * 0.5
+    FirstKind = Grid.ReadPoint(Value.Surface, MiddleX - DeltaZ / Length * 0.001, MiddleZ + DeltaX / Length * 0.001)
+    LastKind = Grid.ReadPoint(Value.Surface, MiddleX + DeltaZ / Length * 0.001, MiddleZ - DeltaX / Length * 0.001)
+
+    If (FirstKind <> Grid.SURFACE_EMPTY And
+        FirstKind <> Grid.SURFACE_WATER And
+        LastKind <> Grid.SURFACE_EMPTY And
+        LastKind <> Grid.SURFACE_WATER) Then
+        Return
+    End If
+
+    BaseY = Min(Layers.GROUND_Y - 1.2, Min(PointA.Y, PointB.Y) - 1.2)
+    LowA = P.Vector(PointA.X, BaseY, PointA.Z)
+    LowB = P.Vector(PointB.X, BaseY, PointB.Z)
+
+    Call TrianglePatch(Value, PointA, LowA, LowB, Kind)
+    Call TrianglePatch(Value, PointA, LowB, PointB, Kind)
 
 End Sub
 
@@ -60,8 +127,13 @@ Private Sub CurveTriangle(ByRef Value As State, PointA As P.Vector3, PointB As P
     Dim Slice As Contours.Slice
     Dim Index As Number
     Dim Face As Contours.Triangle
+    Dim Height As Double
+    Dim Sample As Elevation.Sample
+    Dim Group As Number
+    Dim PatchIndex As Number
 
-    Slice = Contours.Split(Value.Surface, PointA, PointB, PointC, Base)
+    Slice = Contours.Split(Value.Surface, PointA, PointB, PointC, Base,
+        Value.Detailed)
 
     For Index = 0 To Slice.FaceCount - 1
 
@@ -75,6 +147,66 @@ Private Sub CurveTriangle(ByRef Value As State, PointA As P.Vector3, PointB As P
 
         Value.Buffer.Patches[Value.Buffer.PatchCount - 1].X2 = Face.PointC.X
         Value.Buffer.Patches[Value.Buffer.PatchCount - 1].Z2 = Face.PointC.Z
+
+        If Value.Detailed Then
+
+            Height = Layers.GROUND_Y
+
+            If Face.Kind = Grid.SURFACE_ROAD Then
+                Height = Layers.ROAD_Y
+            End If
+
+            Sample = Elevation.SamplePoint(Value.Surface, Face.PointA.X, Face.PointA.Z)
+            Value.Buffer.Patches[Value.Buffer.PatchCount - 1].Y0 = Height + Sample.Offset
+            Sample = Elevation.SamplePoint(Value.Surface, Face.PointB.X, Face.PointB.Z)
+            Value.Buffer.Patches[Value.Buffer.PatchCount - 1].Y1 = Height + Sample.Offset
+            Sample = Elevation.SamplePoint(Value.Surface, Face.PointC.X, Face.PointC.Z)
+            Value.Buffer.Patches[Value.Buffer.PatchCount - 1].Y2 = Height + Sample.Offset
+            Value.Buffer.Patches[Value.Buffer.PatchCount - 1].Plane = 5
+
+            If Face.Kind = Grid.SURFACE_WATER Then
+
+                PatchIndex = Value.Buffer.PatchCount - 1
+                Group = Flow.GroupAt(Value.SourceCurves, Value.Flows,
+                    (Face.PointA.X + Face.PointB.X + Face.PointC.X) / 3.0,
+                    (Face.PointA.Z + Face.PointB.Z + Face.PointC.Z) / 3.0)
+                Value.Buffer.Patches[PatchIndex].FlowGroup = Group
+                Height = Layers.WATER_Y
+
+                If Value.SourceCurves.BrushCount > 0 Then
+                    Height = Layers.GROUND_Y - 1.0
+                End If
+
+                If Group = 0 Then
+
+                    Value.Buffer.Patches[PatchIndex].Y0 = Height
+                    Value.Buffer.Patches[PatchIndex].Y1 = Height
+                    Value.Buffer.Patches[PatchIndex].Y2 = Height
+
+                Else
+                    Value.Buffer.Patches[PatchIndex].Y0 = Value.Buffer.Patches[PatchIndex].Y0 + 0.02 * Layers.UNITS_PER_METER
+                    Value.Buffer.Patches[PatchIndex].Y1 = Value.Buffer.Patches[PatchIndex].Y1 + 0.02 * Layers.UNITS_PER_METER
+                    Value.Buffer.Patches[PatchIndex].Y2 = Value.Buffer.Patches[PatchIndex].Y2 + 0.02 * Layers.UNITS_PER_METER
+
+                End If
+
+                Call TrianglePatch(Value, P.Vector(Face.PointA.X, Value.Buffer.Patches[PatchIndex].Y0 - 0.2, Face.PointA.Z),
+                    P.Vector(Face.PointB.X, Value.Buffer.Patches[PatchIndex].Y1 - 0.2, Face.PointB.Z),
+                    P.Vector(Face.PointC.X, Value.Buffer.Patches[PatchIndex].Y2 - 0.2, Face.PointC.Z), 6)
+
+            Else
+                Face.PointA.Y = Value.Buffer.Patches[Value.Buffer.PatchCount - 1].Y0
+                Face.PointB.Y = Value.Buffer.Patches[Value.Buffer.PatchCount - 1].Y1
+                Face.PointC.Y = Value.Buffer.Patches[Value.Buffer.PatchCount - 1].Y2
+
+                Call ElevatedEdge(Value, Face.PointA, Face.PointB, Face.Kind)
+                Call ElevatedEdge(Value, Face.PointB, Face.PointC, Face.Kind)
+                Call ElevatedEdge(Value, Face.PointC, Face.PointA, Face.Kind)
+
+            End If
+
+        End If
+
     End For
 
     If Slice.Rail Then
@@ -105,7 +237,7 @@ Private Sub CurveRow(ByRef Value As State)
 
     ' Continuous water sits below the lawn; legacy cell water keeps its authored height.
 
-    If Value.Row = 0 Then
+    If Value.Row = 0 And Not Value.Detailed Then
         Call AddPatch(Value, Value.Surface.OriginX, Value.Surface.OriginZ,
             Value.Surface.XEdges[Value.Surface.Columns], Value.Surface.ZEdges[Value.Surface.Rows], 2, Layers.GROUND_Y - 1.0)
         Call AddPatch(Value, Value.Surface.OriginX, Value.Surface.OriginZ,
@@ -133,6 +265,14 @@ Private Sub CurveRow(ByRef Value As State)
             Min(3, Contours.Kind(Value.Surface, PointB, Base)) = Surface And
             Min(3, Contours.Kind(Value.Surface, PointC, Base)) = Surface And
             Min(3, Contours.Kind(Value.Surface, PointD, Base)) = Surface)
+
+        If Value.Detailed Then
+            Uniform = (Uniform And Surface <> Grid.SURFACE_WATER And
+                Elevation.Corner(Value.Surface, X, Value.Row) = 0.0 And
+                Elevation.Corner(Value.Surface, X + 1, Value.Row) = 0.0 And
+                Elevation.Corner(Value.Surface, X, Value.Row + 1) = 0.0 And
+                Elevation.Corner(Value.Surface, X + 1, Value.Row + 1) = 0.0)
+        End If
 
         If First >= 0 And (Not Uniform Or Surface <> RunKind) Then
             Call AddPatch(Value, Value.Surface.XEdges[First], PointA.Z, PointA.X, PointC.Z, RunKind)
@@ -273,7 +413,7 @@ Public Sub ScanRow(ByRef Value As State)
     Dim Z0 As Double
     Dim Z1 As Double
 
-    If Value.Surface.Curves.BrushCount > 0 Then
+    If Value.Surface.Curves.BrushCount > 0 Or Value.Surface.Heights.Nonzero > 0 Then
         Call CurveRow(Value)
 
         Return

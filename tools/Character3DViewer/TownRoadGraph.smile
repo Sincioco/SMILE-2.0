@@ -225,6 +225,7 @@ Public Function Connection(ByRef Value As State, Cell As Number, Side As Number,
     Dim Edge As Number
     Dim Point As P.Vector3
     Dim Work As Number
+    Dim Previous As P.Vector3
 
     Other = Neighbor(Value, Cell, Side)
 
@@ -270,6 +271,18 @@ Public Function Connection(ByRef Value As State, Cell As Number, Side As Number,
 
         If Value.SampleIndex >= Value.SampleCount Then
 
+            Previous = M.Add(Value.SampleStart, M.Scale(Value.SampleDelta,
+                ToDouble(Value.SampleCount - 1) / ToDouble(Value.SampleCount)))
+
+            If Not Collision.CanTraverse(Value.World, Previous, Center(Value, Other)) Then
+
+                Value.EdgesSeen[Edge] = Value.Generation
+                Value.EdgesOpen[Edge] = False
+                Value.PendingEdge = -1
+                Return 2
+
+            End If
+
             Value.EdgesSeen[Edge] = Value.Generation
             Value.EdgesOpen[Edge] = True
             Value.PendingEdge = -1
@@ -284,7 +297,10 @@ Public Function Connection(ByRef Value As State, Cell As Number, Side As Number,
         Point = M.Add(Value.SampleStart, M.Scale(Value.SampleDelta, ToDouble(Value.SampleIndex) / ToDouble(Value.SampleCount)))
         Value.Checks = Value.Checks + 1
 
-        If Not Collision.CanStand(Value.World, Point.X, Point.Z) Then
+        Previous = M.Add(Value.SampleStart, M.Scale(Value.SampleDelta,
+            ToDouble(Value.SampleIndex - 1) / ToDouble(Value.SampleCount)))
+
+        If Not Collision.CanTraverse(Value.World, Previous, Point) Then
 
             Value.EdgesSeen[Edge] = Value.Generation
             Value.EdgesOpen[Edge] = False

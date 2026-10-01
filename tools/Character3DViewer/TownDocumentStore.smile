@@ -5,6 +5,9 @@ Option Explicit
 
 Import Smile.Simple3D.SurfaceGrid3D As Grid
 Import Smile.Simple3D.SurfacePaint3D As Paint
+Import Smile.Simple3D.TerrainHeights3D As Heights
+Import Smile.Simple3D.TerrainSurface3D As Terrain
+Import Smile.Simple3D.TerrainWater3D As Water
 Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownCatalogData As Catalog
 
@@ -314,6 +317,18 @@ Private Function DocumentVersion(ByRef Value As Document.State) As Number
 
     Version = 7
 
+    If Value.Surface.Heights.Nonzero > 0 Then
+        Return 11
+    End If
+
+    For Index = 0 To Value.Surface.Curves.BrushCount - 1
+
+        If Value.Surface.Curves.Brushes[Index].WaterMode <> 0 Then
+            Return 11
+        End If
+
+    End For
+
     If Value.Landmark <> Document.LegacyLandmark(Value.Name) Then
         Return 10
     End If
@@ -332,14 +347,116 @@ Private Function DocumentVersion(ByRef Value As Document.State) As Number
 
 End Function
 
+''' TWN11: signed millimetre offsets, run-length encoded in canonical corner order.
+Private Sub WriteTerrain(ByRef Surface As Grid.State)
+
+    Dim Index As Number
+    Dim Finish As Number
+    Dim Height As Number
+    Dim Total As Number
+
+    Total = (Surface.Columns + 1) * (Surface.Rows + 1)
+
+    Call WriteInteger(Total)
+
+    Do
+        Height = ToNumber(Round(Heights.Read(Surface.Heights, Index) * 100.0))
+        Finish = Index + 1
+
+        Do
+
+            If Finish >= Total Then
+                Exit Do
+            End If
+
+            If ToNumber(Round(Heights.Read(Surface.Heights, Finish) * 100.0)) <> Height Then
+                Exit Do
+            End If
+
+            Finish = Finish + 1
+
+        Loop
+
+        Call WriteInteger(Finish - Index)
+        Call WriteInteger(Height)
+
+        Index = Finish
+
+    Loop Until Index >= Total Or Not Valid
+
+    For Index = 0 To Surface.Curves.BrushCount - 1
+        Call WriteInteger(Surface.Curves.Brushes[Index].WaterMode)
+        Call WriteInteger(Surface.Curves.Brushes[Index].FlowSign)
+        Call WriteInteger(Surface.Curves.Brushes[Index].FlowSpeed)
+    End For
+
+End Sub
+
+Private Function ReadTerrain(ByRef Surface As Grid.State) As Boolean
+
+    Dim Total As Number
+    Dim Index As Number
+    Dim RunLength As Number
+    Dim Height As Number
+    Dim Corner As Number
+    Dim Groups As Water.Groups
+
+    Total = ReadInteger()
+
+    If Total <> (Surface.Columns + 1) * (Surface.Rows + 1) Then
+        Return False
+    End If
+
+    Do
+        RunLength = ReadInteger()
+        Height = ReadInteger()
+
+        If (Not Valid Or
+            RunLength < 1 Or
+            RunLength > Total - Index Or
+            Abs(Height) > 1000000) Then
+            Return False
+        End If
+
+        If Height <> 0 Then
+
+            For Corner = Index To Index + RunLength - 1
+                Valid = Heights.Write(Surface.Heights, Corner, ToDouble(Height) * 0.01) And Valid
+            End For
+
+        End If
+
+        Index = Index + RunLength
+
+    Loop Until Index = Total
+
+    For Index = 0 To Surface.Curves.BrushCount - 1
+        Surface.Curves.Brushes[Index].WaterMode = ReadInteger()
+        Surface.Curves.Brushes[Index].FlowSign = ReadInteger()
+        Surface.Curves.Brushes[Index].FlowSpeed = ReadInteger()
+    End For
+
+    Valid = Water.Collect(Surface.Curves, Groups) And Valid
+    Return Valid
+
+End Function
+
 Private Sub Encode(ByRef Value As Document.State, MarkSaved As Boolean)
 
     Dim Index As Number
     Dim ActiveCount As Number
     Dim Brush As Paint.Brush
+    Dim Groups As Water.Groups
 
     Offset = 0
     Valid = True
+
+    If (Not Terrain.Valid(Value.Surface) Or
+        Not Heights.Valid(Value.Surface.Heights, (Value.Surface.Columns + 1) * (Value.Surface.Rows + 1)) Or
+        Not Water.Collect(Value.Surface.Curves, Groups)) Then
+        Valid = False
+        Return
+    End If
 
     Call WriteByte(84)
     Call WriteByte(87)
@@ -466,6 +583,10 @@ Private Sub Encode(ByRef Value As Document.State, MarkSaved As Boolean)
         Call WriteByte(Value.Landmark)
     End If
 
+    If DocumentVersion(Value) >= 11 Then
+        Call WriteTerrain(Value.Surface)
+    End If
+
     ByteCount = Offset
 
 End Sub
@@ -491,7 +612,7 @@ Private Function Decode() As Boolean
 
     Version = ReadByte()
 
-    If Version < 1 Or Version > 10 Then
+    If Version < 1 Or Version > 11 Then
         Return False
     End If
 
@@ -542,6 +663,8 @@ Private Function Decode() As Boolean
 
     Candidate.Surface.OriginX = Candidate.Surface.XEdges[0]
     Candidate.Surface.OriginZ = Candidate.Surface.ZEdges[0]
+
+    Call Heights.Reset(Candidate.Surface.Heights, (Candidate.Surface.Columns + 1) * (Candidate.Surface.Rows + 1))
 
     For Index = 0 To (Candidate.Surface.Columns * Candidate.Surface.Rows + 15) / 16 - 1
 
@@ -682,6 +805,9 @@ Private Function Decode() As Boolean
                 Candidate.Surface.Curves.Brushes[Index].Width = ReadPrecise()
                 Candidate.Surface.Curves.Brushes[Index].X2 = 0.0
                 Candidate.Surface.Curves.Brushes[Index].Z2 = 0.0
+                Candidate.Surface.Curves.Brushes[Index].WaterMode = 0
+                Candidate.Surface.Curves.Brushes[Index].FlowSign = 0
+                Candidate.Surface.Curves.Brushes[Index].FlowSpeed = 0
 
                 If (Version >= 9 And
                     Candidate.Surface.Curves.Brushes[Index].Form >= Paint.FORM_TRIANGLE) Then
@@ -711,6 +837,10 @@ Private Function Decode() As Boolean
     If Version >= 10 Then
         Candidate.Landmark = ReadByte()
         Valid = Valid And Candidate.Landmark <= Document.LANDMARK_HORIZON
+    End If
+
+    If Version >= 11 Then
+        Valid = ReadTerrain(Candidate.Surface) And Valid
     End If
 
     If Offset <> ByteCount Then
@@ -823,6 +953,10 @@ Public Function QueueBlender(ByRef Value As Document.State, Mode As Number) As N
     Dim RequestId As Number
     Dim Status As Number
     Dim Ok As Boolean
+
+    If Not Document.SupportsBlender(Value) Then
+        Return 0
+    End If
 
     Ok = SaveDocument(Value, "TownEditor.PendingBlender", False)
 

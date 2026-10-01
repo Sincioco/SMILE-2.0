@@ -4,6 +4,7 @@ Module Smile.Tools.TownInitialSurface
 Option Explicit
 
 Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.TerrainHeights3D As Heights
 
 Public Sub Populate(ByRef Value As Grid.State)
 
@@ -15,6 +16,10 @@ Public Sub Populate(ByRef Value As Grid.State)
     Value.OriginZ = -3550.000000
     Value.CellSize = 20.0
     Value.Revision = Value.Revision + 1
+
+    Call Heights.Reset(Value.Heights, (Value.Columns + 1) * (Value.Rows + 1))
+
+    Value.Curves.BrushCount = 0
 
     Value.XEdges[0] = -4900.000000
     Value.XEdges[1] = -4880.000000

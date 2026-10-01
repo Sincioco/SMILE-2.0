@@ -1,0 +1,188 @@
+''' Directed-water geometry, immutable edits and warnings over the canonical triangles.
+Module Smile.Tools.TownWaterTests
+
+Option Explicit
+
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownWaterTools As Tools
+Import Smile.Tools.TownTerrainTools As Strokes
+Import Smile.Tools.TownTerrainBuilder As Builder
+Import Smile.Tools.TownSurfaceLayers As Layers
+Import Smile.Tools.TownDerivedCache As Derived
+Import Smile.Simple3D.TerrainWater3D As Water
+Import Smile.Simple3D.TerrainSurface3D As Terrain
+Import Smile.Simple3D.TerrainHeights3D As Heights
+Import Smile.Simple3D.SurfacePaint3D As Paint
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.Precision3D As P
+
+Private Dim Town As Document.State
+Private Dim Recipe As Builder.State
+Private Dim Stroke As Strokes.State
+Private Dim Tool As Tools.State
+
+Private Sub Check(Condition As Boolean, Label As Text, ByRef Failures As Number)
+
+    If Not Condition Then
+        Print "FAIL Terrain Water " + Label
+        Failures = Failures + 1
+    End If
+
+End Sub
+
+Public Sub Run(ByRef Failures As Number)
+
+    Dim Ok As Boolean
+    Dim X As Number
+    Dim Z As Number
+    Dim Index As Number
+    Dim Found As Number
+    Dim Brush As Paint.Brush
+    Dim Groups As Water.Groups
+    Dim Sample As Terrain.Sample
+    Dim Before As Heights.State
+    Dim Original As Grid.State
+    Dim Flow As P.Vector3
+    Dim Sloped As Number
+
+    Ok = Document.Blank(Town, "Directed Water Fixture", 32, 32, 20.0)
+
+    For Z = 0 To Town.Surface.Rows
+
+        For X = 0 To Town.Surface.Columns
+            Ok = Terrain.SetCorner(Town.Surface, X, Z, -Town.Surface.XEdges[X] * 0.1) And Ok
+        End For
+    End For
+
+    Before = Town.Surface.Heights
+    Ok = Water.Prepare(Town.Surface, P.Vector(-100.0, 0.0, 0.0), P.Vector(100.0, 0.0, 0.0), 40.0, Brush) And Ok
+
+    Call Check(Ok And Brush.FlowSign = 1 And Not Water.Uphill(Town.Surface, Brush), "Downhill Direction", Failures)
+
+    Brush.FlowSign = -1
+
+    Call Check(Water.Uphill(Town.Surface, Brush), "Reverse Warns", Failures)
+
+    Brush.FlowSign = 1
+    Ok = Terrain.SetCorner(Town.Surface, 16, 16, 100.0)
+
+    Call Check(Water.Uphill(Town.Surface, Brush), "Interior Uphill Detected", Failures)
+
+    Town.Surface.Heights = Before
+
+    Ok = Water.Prepare(Town.Surface, P.Vector(100.0, 0.0, 0.0),
+        P.Vector(-100.0, 0.0, 0.0), 40.0, Brush)
+    Flow = Water.Direction(Brush)
+
+    Call Check(Ok And Brush.FlowSign = -1 And Flow.X > 0.99,
+        "Reversed Click Order Still Flows Downhill", Failures)
+
+    Ok = Water.Prepare(Town.Surface, P.Vector(0.0, 0.0, 0.0),
+        P.Vector(0.0, 0.0, 0.0), 40.0, Brush)
+
+    Call Check(Not Ok, "Zero Length Rejected", Failures)
+
+    Call Tools.Start(Tool)
+    Call Tools.Point(Tool, Town, Stroke, P.Vector(-100.0, 0.0, 0.0))
+    Call Tools.Point(Tool, Town, Stroke, P.Vector(100.0, 0.0, 0.0))
+    Call Check(Stroke.Pending And Town.Surface.Curves.BrushCount = 1, "One Pending Line", Failures)
+    Call Check(Heights.Same(Before, Town.Surface.Heights), "Paint Keeps Heights", Failures)
+
+    Ok = Strokes.Publish(Stroke, Town, True, False)
+
+    Call Check(Ok, "Accepted Line Is One Undo Change", Failures)
+
+    Original = Town.Surface
+    Ok = Tools.ChangeLast(Tool, Stroke, Town, 816)
+
+    Call Check(Ok And Stroke.Pending And Town.Surface.Curves.Brushes[0].FlowSign = -1, "Reverse Edit", Failures)
+    Call Check(Not Derived.SameSurface(Original, Town.Surface), "Direction Invalidates Derived Cache", Failures)
+
+    Ok = Strokes.Publish(Stroke, Town, False, True)
+
+    Call Check(Derived.SameSurface(Original, Town.Surface), "Failure Restores Flow Metadata", Failures)
+
+    Tool.Erase = True
+
+    Call Tools.Point(Tool, Town, Stroke, P.Vector(-100.0, 0.0, 0.0))
+    Call Tools.Point(Tool, Town, Stroke, P.Vector(100.0, 0.0, 0.0))
+    Call Check(Grid.ReadPoint(Town.Surface, 0.0, 0.0) = Grid.SURFACE_GROUND And
+        Heights.Same(Before, Town.Surface.Heights), "Erase Keeps Hills", Failures)
+    Call Strokes.Cancel(Stroke, Town)
+    Call Check(Derived.SameSurface(Original, Town.Surface), "Escape Restores Water", Failures)
+    Call Builder.Begin(Recipe, Town)
+
+    For Z = 0 To Town.Surface.Rows - 1
+        Recipe.Row = Z
+
+        Call Builder.ScanRow(Recipe)
+    End For
+
+    For Index = 0 To Recipe.Buffer.PatchCount - 1
+
+        If Recipe.Buffer.Patches[Index].FlowGroup = 1 Then
+
+            Sample = Terrain.SamplePoint(Town.Surface, Recipe.Buffer.Patches[Index].X0, Recipe.Buffer.Patches[Index].Z0)
+
+            Call Check(Recipe.Buffer.Patches[Index].Plane = 5 And
+                Abs(Recipe.Buffer.Patches[Index].Y0 - Sample.Offset - Layers.GROUND_Y - 0.2) < 0.00001,
+                "Draped Vertex Offset", Failures)
+
+            Sample = Terrain.SamplePoint(Town.Surface, Recipe.Buffer.Patches[Index].X1, Recipe.Buffer.Patches[Index].Z1)
+
+            Call Check(Abs(Recipe.Buffer.Patches[Index].Y1 - Sample.Offset - Layers.GROUND_Y - 0.2) < 0.00001,
+                "Second Vertex Shares Canonical Bed", Failures)
+
+            Sample = Terrain.SamplePoint(Town.Surface, Recipe.Buffer.Patches[Index].X2, Recipe.Buffer.Patches[Index].Z2)
+
+            Call Check(Abs(Recipe.Buffer.Patches[Index].Y2 - Sample.Offset - Layers.GROUND_Y - 0.2) < 0.00001,
+                "Third Vertex Shares Canonical Bed", Failures)
+
+            If (Abs(Recipe.Buffer.Patches[Index].Y0 - Recipe.Buffer.Patches[Index].Y1) > 0.001 Or
+                Abs(Recipe.Buffer.Patches[Index].Y0 - Recipe.Buffer.Patches[Index].Y2) > 0.001) Then
+                Sloped = Sloped + 1
+            End If
+
+            Found = Found + 1
+
+        End If
+
+    End For
+
+    Call Check(Not Recipe.Failed And Found > 0 And Sloped > 0, "Following Recipe Has Unequal Heights", Failures)
+
+    Ok = Terrain.SetCorner(Town.Surface, 16, 16, 100.0)
+
+    Call Check(Ok And Town.Surface.Curves.Brushes[0].FlowSign = 1 And
+        Water.Uphill(Town.Surface, Town.Surface.Curves.Brushes[0]),
+        "Bed Edit Preserves Authored Direction And Updates Warning", Failures)
+
+    Town.Surface.Heights = Before
+    Ok = Water.Prepare(Town.Surface, P.Vector(100.0, 0.0, 0.0),
+        P.Vector(200.0, 0.0, 0.0), 40.0, Brush)
+    Ok = Grid.PaintBrush(Town.Surface, Brush) And Ok
+    Ok = Water.Collect(Town.Surface.Curves, Groups) And Ok
+
+    Call Check(Ok And Groups.GroupCount = 1 And Groups.BrushGroup[0] = Groups.BrushGroup[1],
+        "Connected Sections Share One World Phase Material", Failures)
+
+    Town.Surface = Original
+
+    Town.Surface.Curves.Brushes[0].FlowSpeed = 0
+    Ok = Water.Collect(Town.Surface.Curves, Groups)
+
+    Call Check(Ok And Groups.Speed[0] = 0 And Groups.GroupCount = 1, "Paused Group", Failures)
+
+    For Index = 1 To 3
+        Brush.FlowSpeed = Index * 100
+        Town.Surface.Curves.Brushes[Index] = Brush
+    End For
+
+    Town.Surface.Curves.BrushCount = 4
+    Ok = Water.Collect(Town.Surface.Curves, Groups)
+
+    Call Check(Not Ok, "Existing Four-Batch Budget Enforced", Failures)
+
+End Sub
+
+End Module

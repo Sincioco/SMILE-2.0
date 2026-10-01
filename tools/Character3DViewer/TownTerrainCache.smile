@@ -16,6 +16,8 @@ Public Type Patch
     Plane As Number
     X2 As Double
     Z2 As Double
+    Y2 As Double
+    FlowGroup As Number
 End Type
 
 Public Type Batch
@@ -136,6 +138,12 @@ Public Function SaveBatch(ByRef Value As Batch, Key As Text, BatchIndex As Numbe
             Call Write(ToNumber(Round(Part.Z2 * 1000000.0)))
             Call Write(Part.Kind)
             Call Write(Part.Plane)
+
+            If Part.Plane = 5 Then
+                Call Write(ToNumber(Round(Part.Y2 * 1000000.0)))
+            End If
+
+            Call Write(Part.FlowGroup)
         End For
 
         If Not Valid Then
@@ -203,11 +211,30 @@ Public Function LoadBatch(ByRef Value As Batch, Key As Text, BatchIndex As Numbe
             Part.Z2 = ToDouble(Read()) / 1000000.0
             Part.Kind = Read()
             Part.Plane = Read()
+            Part.Y2 = 0.0
+
+            If Part.Plane = 5 Then
+                Part.Y2 = ToDouble(Read()) / 1000000.0
+            End If
+
+            Part.FlowGroup = Read()
 
             If (Part.Kind < 1 Or
                 Part.Kind > 6 Or
                 Part.Plane < 0 Or
-                Part.Plane > 4) Then
+                Part.Plane > 5 Or
+                Part.FlowGroup < 0 Or
+                Part.FlowGroup > 3 Or
+                (Part.FlowGroup > 0 And (Part.Kind <> 2 Or Part.Plane <> 5)) Or
+                Abs(Part.X0) > 1000000000.0 Or
+                Abs(Part.Z0) > 1000000000.0 Or
+                Abs(Part.X1) > 1000000000.0 Or
+                Abs(Part.Z1) > 1000000000.0 Or
+                Abs(Part.X2) > 1000000000.0 Or
+                Abs(Part.Z2) > 1000000000.0 Or
+                Abs(Part.Y0) > 1000000000.0 Or
+                Abs(Part.Y1) > 1000000000.0 Or
+                Abs(Part.Y2) > 1000000000.0) Then
                 Valid = False
             End If
 

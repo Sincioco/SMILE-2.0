@@ -101,11 +101,12 @@ Private Function Junction(ByRef Surface As Grid.State, PointA As P.Vector3,
 End Function
 
 Private Sub Face(ByRef Result As Slice, PointA As P.Vector3, PointB As P.Vector3,
-    PointC As P.Vector3, Surface As Number)
+    PointC As P.Vector3, Surface As Number, IncludeWater As Boolean)
 
     If (Surface <> 1 And
         Surface <> 3 And
-        Surface <> 4) Then
+        Surface <> 4 And
+        Not (IncludeWater And Surface = 2)) Then
         Return
     End If
 
@@ -118,7 +119,8 @@ Private Sub Face(ByRef Result As Slice, PointA As P.Vector3, PointB As P.Vector3
 End Sub
 
 Public Function Split(ByRef Surface As Grid.State, PointA As P.Vector3,
-    PointB As P.Vector3, PointC As P.Vector3, Optional Base As Number = -1) As Slice
+    PointB As P.Vector3, PointC As P.Vector3, Optional Base As Number = -1,
+    Optional IncludeWater As Boolean = False) As Slice
 
     Dim Result As Slice
     Dim Ka As Number
@@ -136,7 +138,7 @@ Public Function Split(ByRef Surface As Grid.State, PointA As P.Vector3,
     Kc = Min(3, Kind(Surface, PointC, Base))
 
     If Ka = Kb And Ka = Kc Then
-        Call Face(Result, PointA, PointB, PointC, Ka)
+        Call Face(Result, PointA, PointB, PointC, Ka, IncludeWater)
 
         Return Result
     End If
@@ -168,9 +170,9 @@ Public Function Split(ByRef Surface As Grid.State, PointA As P.Vector3,
 
     If Kb = Kc Then
 
-        Call Face(Result, PointA, Ab, Ca, Ka)
-        Call Face(Result, Ab, PointB, PointC, Kb)
-        Call Face(Result, Ab, PointC, Ca, Kb)
+        Call Face(Result, PointA, Ab, Ca, Ka, IncludeWater)
+        Call Face(Result, Ab, PointB, PointC, Kb, IncludeWater)
+        Call Face(Result, Ab, PointC, Ca, Kb, IncludeWater)
 
         Result.Rail = (Ka = 3 And Kb = 2) Or (Ka = 2 And Kb = 3)
         Result.EdgeA = Ab
@@ -184,22 +186,22 @@ Public Function Split(ByRef Surface As Grid.State, PointA As P.Vector3,
 
             Center = Junction(Surface, Ab, Ca, PointA, Kb, Base)
 
-            Call Face(Result, PointA, Ab, Ca, Ka)
+            Call Face(Result, PointA, Ab, Ca, Ka, IncludeWater)
 
         Else
 
             Center = P.Vector((Ab.X + Bc.X + Ca.X) / 3.0, 0.0,
                 (Ab.Z + Bc.Z + Ca.Z) / 3.0)
 
-            Call Face(Result, PointA, Ab, Center, Ka)
-            Call Face(Result, PointA, Center, Ca, Ka)
+            Call Face(Result, PointA, Ab, Center, Ka, IncludeWater)
+            Call Face(Result, PointA, Center, Ca, Ka, IncludeWater)
 
         End If
 
-        Call Face(Result, PointB, Bc, Center, Kb)
-        Call Face(Result, PointB, Center, Ab, Kb)
-        Call Face(Result, PointC, Ca, Center, Kc)
-        Call Face(Result, PointC, Center, Bc, Kc)
+        Call Face(Result, PointB, Bc, Center, Kb, IncludeWater)
+        Call Face(Result, PointB, Center, Ab, Kb, IncludeWater)
+        Call Face(Result, PointC, Ca, Center, Kc, IncludeWater)
+        Call Face(Result, PointC, Center, Bc, Kc, IncludeWater)
 
         Result.Rail = Ka = 3 And (Kb = 2 Or Kc = 2)
         Result.EdgeA = Center

@@ -1,0 +1,264 @@
+''' Line water authoring uses the same accepted terrain transaction as sculpting and ramps.
+Module Smile.Tools.TownWaterTools
+
+Option Explicit
+
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownSurfaceLayers As Layers
+Import Smile.Tools.TownTerrainTools As Tools
+Import Smile.Tools.TownTerrainProtection As Protection
+Import Smile.Simple3D.SurfaceSections3D As Regions
+Import Smile.Simple3D.SurfacePaint3D As Paint
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.TerrainWater3D As Water
+Import Smile.Simple3D.Precision3D As P
+
+Public Type State
+    First As P.Vector3
+    Stage As Number
+    Width As Double
+    Speed As Number
+    Following As Boolean
+    Erase As Boolean
+    LastIndex As Number
+    OriginName As Text
+    Message As Text
+    WarningRevision As Number
+    UphillCount As Number
+End Type
+
+Public Sub Start(ByRef Value As State)
+
+    Value.Width = 4.0 * Layers.UNITS_PER_METER
+    Value.Speed = 100
+    Value.Following = True
+    Value.LastIndex = -1
+    Value.WarningRevision = -1
+
+End Sub
+
+Public Function Warning(ByRef Value As State, ByRef Town As Document.State) As Boolean
+
+    Dim Index As Number
+    Dim Result As Boolean
+
+    If Value.WarningRevision <> Town.Surface.Revision Then
+
+        Value.UphillCount = 0
+
+        For Index = 0 To Town.Surface.Curves.BrushCount - 1
+
+            If Water.Uphill(Town.Surface, Town.Surface.Curves.Brushes[Index]) Then
+                Value.UphillCount = Value.UphillCount + 1
+            End If
+
+        End For
+
+        Value.WarningRevision = Town.Surface.Revision
+
+    End If
+
+    Result = Value.UphillCount > 0
+    Return Result
+
+End Function
+
+Private Function Admit(ByRef Town As Document.State, Brush As Paint.Brush,
+    ByRef Stroke As Tools.State) As Boolean
+
+    Dim Area As Regions.Region
+
+    Area.MinX = Min(Brush.X0, Brush.X1) - Brush.Width * 0.5
+    Area.MaxX = Max(Brush.X0, Brush.X1) + Brush.Width * 0.5
+    Area.MinZ = Min(Brush.Z0, Brush.Z1) - Brush.Width * 0.5
+    Area.MaxZ = Max(Brush.Z0, Brush.Z1) + Brush.Width * 0.5
+
+    If Not Protection.ActorsClear(Stroke.ProtectedActors, Town.Surface, Area) Then
+        Return False
+    End If
+
+    If Not Protection.Allowed(Town, Area) Then
+        Return False
+    End If
+
+    Return True
+
+End Function
+
+Public Sub Point(ByRef Value As State, ByRef Town As Document.State,
+    ByRef Stroke As Tools.State, Position As P.Vector3)
+
+    Dim Brush As Paint.Brush
+    Dim Groups As Water.Groups
+    Dim Ok As Boolean
+
+    If Value.Stage = 0 Then
+
+        Value.First = Position
+        Value.Stage = 1
+        Value.Message = "Click line end. Esc cancels."
+        Return
+
+    End If
+
+    Ok = Water.Prepare(Town.Surface, Value.First, Position, Value.Width, Brush)
+    Value.Stage = 0
+
+    If Not Value.Following Or Value.Erase Then
+
+        Brush.WaterMode = 0
+        Brush.FlowSign = 0
+        Brush.FlowSpeed = 0
+
+    Else
+        Brush.FlowSpeed = Value.Speed
+
+    End If
+
+    If Value.Erase Then
+        Brush.Surface = Grid.SURFACE_GROUND
+    End If
+
+    If Not Ok Or Town.Surface.Curves.BrushCount >= Paint.MAX_BRUSHES Then
+        Value.Message = "Line rejected: endpoints or brush limit."
+        Return
+    End If
+
+    If Not Admit(Town, Brush, Stroke) Then
+        Value.Message = "Blocked: move away from actors/structures."
+        Return
+    End If
+
+    Call Tools.Capture(Stroke, Town)
+
+    Stroke.Pending = True
+    Value.LastIndex = Town.Surface.Curves.BrushCount
+    Value.OriginName = Town.Name
+    Town.Surface.Curves.Brushes[Value.LastIndex] = Brush
+    Town.Surface.Curves.BrushCount = Town.Surface.Curves.BrushCount + 1
+
+    If Not Water.Collect(Town.Surface.Curves, Groups) Then
+
+        Call Tools.Cancel(Stroke, Town)
+
+        Value.Message = "Limit: three distinct flow directions/speeds."
+        Return
+
+    End If
+
+    Town.Surface.Revision = Town.Surface.Revision + 1
+    Town.Revision = Town.Revision + 1
+    Value.Message = "Preparing water; terrain heights retained."
+
+End Sub
+
+Public Function Command(ByRef Value As State, ByRef Stroke As Tools.State,
+    ByRef Town As Document.State, Action As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim InputText As Text
+    Dim Setting As Double
+    Dim Brush As Paint.Brush
+    Dim Groups As Water.Groups
+
+    If Action < 812 Or Action > 817 Then
+        Return False
+    End If
+
+    Stroke.Tool.Mode = 6
+    Value.Stage = 0
+
+    If Action = 813 Then
+
+        Value.Following = Not Value.Following
+
+    Else If Action = 817 Then
+
+        Value.Erase = Not Value.Erase
+
+    Else If Action = 814 Then
+
+        InputText = Text_Prompt("Water Width", "Metres: 1 to 50", "4")
+
+        If Tools.Setting(InputText, 1.0, 50.0, Setting) Then
+            Value.Width = Setting * Layers.UNITS_PER_METER
+        End If
+
+    Else If Action = 815 Then
+
+        InputText = Text_Prompt("Water Flow", "Speed multiplier: 0 (Pause) to 4", "1")
+
+        If Not Tools.Setting(InputText, 0.0, 4.0, Setting) Then
+            Return True
+        End If
+
+        Value.Speed = ToNumber(Setting * 100.0)
+
+    End If
+
+    ReturnValue = ChangeLast(Value, Stroke, Town, Action)
+
+    Return ReturnValue
+
+End Function
+
+Public Function ChangeLast(ByRef Value As State, ByRef Stroke As Tools.State,
+    ByRef Town As Document.State, Action As Number) As Boolean
+
+    Dim Brush As Paint.Brush
+    Dim Groups As Water.Groups
+
+    ' Reverse/speed updates the last authored line; settings also apply to the next line.
+
+    If Action = 816 Or Action = 815 Then
+
+        If (Value.LastIndex < 0 Or
+            Value.LastIndex >= Town.Surface.Curves.BrushCount Or
+            Value.OriginName <> Town.Name) Then
+            Value.Message = "Draw a following-water line first."
+            Return True
+        End If
+
+        Brush = Town.Surface.Curves.Brushes[Value.LastIndex]
+
+        If Brush.WaterMode <> 1 Then
+            Value.Message = "Last line is not following water."
+            Return True
+        End If
+
+        If Action = 815 And Brush.FlowSpeed = Value.Speed Then
+            Return True
+        End If
+
+        Call Tools.Capture(Stroke, Town)
+
+        Stroke.Pending = True
+
+        If Action = 816 Then
+            Brush.FlowSign = -Brush.FlowSign
+        Else
+            Brush.FlowSpeed = Value.Speed
+        End If
+
+        Town.Surface.Curves.Brushes[Value.LastIndex] = Brush
+
+        If Not Water.Collect(Town.Surface.Curves, Groups) Then
+
+            Call Tools.Cancel(Stroke, Town)
+
+            Value.Message = "Limit: three distinct flow directions/speeds."
+            Return True
+
+        End If
+
+        Town.Surface.Revision = Town.Surface.Revision + 1
+        Town.Revision = Town.Revision + 1
+
+    End If
+
+    Return True
+
+End Function
+
+End Module

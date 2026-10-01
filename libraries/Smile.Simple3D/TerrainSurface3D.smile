@@ -1,0 +1,206 @@
+''' Single height/normal authority over the grid's 00-to-11 diagonal.
+Module Smile.Simple3D.TerrainSurface3D
+
+Option Explicit
+
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.TerrainHeights3D As Heights
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+
+Public Type Sample
+    Supported As Boolean
+    Offset As Double
+    Normal As P.Vector3
+End Type
+
+Public Sub OffsetBounds(ByRef Value As Grid.State, ByRef Low As Double, ByRef High As Double)
+
+    Dim Index As Number
+    Dim Height As Double
+
+    Low = 0.0
+    High = 0.0
+
+    If Value.Heights.Nonzero = 0 Then
+        Return
+    End If
+
+    For Index = 0 To Value.Heights.CornerCount - 1
+        Height = Heights.Read(Value.Heights, Index)
+        Low = Min(Low, Height)
+        High = Max(High, Height)
+    End For
+
+End Sub
+
+Public Function Valid(ByRef Value As Grid.State) As Boolean
+
+    Dim Index As Number
+
+    If (Value.Columns < 1 Or
+        Value.Columns > Grid.MAX_COLUMNS Or
+        Value.Rows < 1 Or
+        Value.Rows > Grid.MAX_ROWS) Then
+        Return False
+    End If
+
+    For Index = 0 To Value.Columns
+
+        If Not (Value.XEdges[Index] >= -1000000000.0 And Value.XEdges[Index] <= 1000000000.0) Then
+            Return False
+        End If
+
+        If Index > 0 Then
+
+            If Not (Value.XEdges[Index] > Value.XEdges[Index - 1]) Then
+                Return False
+            End If
+
+        End If
+
+    End For
+
+    For Index = 0 To Value.Rows
+
+        If Not (Value.ZEdges[Index] >= -1000000000.0 And Value.ZEdges[Index] <= 1000000000.0) Then
+            Return False
+        End If
+
+        If Index > 0 Then
+
+            If Not (Value.ZEdges[Index] > Value.ZEdges[Index - 1]) Then
+                Return False
+            End If
+
+        End If
+
+    End For
+
+    If (Value.Heights.Nonzero < 0 Or
+        Value.Heights.Nonzero > Value.Heights.CornerCount Or
+        (Value.Heights.CornerCount <> 0 And
+        Value.Heights.CornerCount <> (Value.Columns + 1) * (Value.Rows + 1)) Or
+        Not (Value.CellSize > 0.0 And Value.CellSize <= 1000000000.0) Or
+        Value.OriginX <> Value.XEdges[0] Or
+        Value.OriginZ <> Value.ZEdges[0]) Then
+        Return False
+    End If
+
+    Return True
+
+End Function
+
+Public Function Corner(ByRef Value As Grid.State, X As Number, Z As Number) As Double
+
+    Dim Result As Double
+
+    If (X < 0 Or
+        Z < 0 Or
+        X > Value.Columns Or
+        Z > Value.Rows) Then
+        Return 0.0
+    End If
+
+    Result = Heights.Read(Value.Heights, Z * (Value.Columns + 1) + X)
+
+    Return Result
+
+End Function
+
+Public Function SetCorner(ByRef Value As Grid.State, X As Number, Z As Number,
+    Offset As Double) As Boolean
+
+    Dim Previous As Double
+    Dim Ok As Boolean
+
+    If (Value.Columns < 1 Or
+        Value.Columns > Grid.MAX_COLUMNS Or
+        Value.Rows < 1 Or
+        Value.Rows > Grid.MAX_ROWS Or
+        X < 0 Or
+        Z < 0 Or
+        X > Value.Columns Or
+        Z > Value.Rows) Then
+        Return False
+    End If
+
+    If Value.Heights.CornerCount = 0 Then
+        Call Heights.Reset(Value.Heights, (Value.Columns + 1) * (Value.Rows + 1))
+    End If
+
+    Previous = Corner(Value, X, Z)
+    Ok = Heights.Write(Value.Heights, Z * (Value.Columns + 1) + X, Offset)
+
+    If Ok And Previous <> Corner(Value, X, Z) Then
+        Value.Revision = Value.Revision + 1
+    End If
+
+    Return Ok
+
+End Function
+
+''' Call Valid once when admitting a document; this hot query checks its selected cell.
+Public Function SamplePoint(ByRef Value As Grid.State, X As Double, Z As Double) As Sample
+
+    Dim Result As Sample
+    Dim Column As Number
+    Dim Row As Number
+    Dim Width As Double
+    Dim Depth As Double
+    Dim UnitX As Double
+    Dim UnitZ As Double
+    Dim H00 As Double
+    Dim H10 As Double
+    Dim H01 As Double
+    Dim H11 As Double
+    Dim GradientX As Double
+    Dim GradientZ As Double
+
+    Result.Normal = P.Vector(0.0, 1.0, 0.0)
+
+    If (Value.Columns < 1 Or
+        Value.Columns > Grid.MAX_COLUMNS Or
+        Value.Rows < 1 Or
+        Value.Rows > Grid.MAX_ROWS) Then
+        Return Result
+    End If
+
+    If (Not (X >= Value.XEdges[0] And X <= Value.XEdges[Value.Columns]) Or
+        Not (Z >= Value.ZEdges[0] And Z <= Value.ZEdges[Value.Rows])) Then
+        Return Result
+    End If
+
+    Column = Min(Value.Columns - 1, Grid.CellX(Value, X))
+    Row = Min(Value.Rows - 1, Grid.CellZ(Value, Z))
+    Width = Value.XEdges[Column + 1] - Value.XEdges[Column]
+    Depth = Value.ZEdges[Row + 1] - Value.ZEdges[Row]
+
+    If Not (Width > 0.0 And Depth > 0.0) Then
+        Return Result
+    End If
+
+    UnitX = (X - Value.XEdges[Column]) / Width
+    UnitZ = (Z - Value.ZEdges[Row]) / Depth
+    H00 = Corner(Value, Column, Row)
+    H10 = Corner(Value, Column + 1, Row)
+    H01 = Corner(Value, Column, Row + 1)
+    H11 = Corner(Value, Column + 1, Row + 1)
+
+    If UnitZ >= UnitX Then
+        GradientX = (H11 - H01) / Width
+        GradientZ = (H01 - H00) / Depth
+    Else
+        GradientX = (H10 - H00) / Width
+        GradientZ = (H11 - H10) / Depth
+    End If
+
+    Result.Offset = (H00 + GradientX * (X - Value.XEdges[Column]) +
+        GradientZ * (Z - Value.ZEdges[Row]))
+    Result.Supported = M.TryNormalize(P.Vector(-GradientX, 1.0, -GradientZ), Result.Normal)
+
+    Return Result
+
+End Function
+
+End Module

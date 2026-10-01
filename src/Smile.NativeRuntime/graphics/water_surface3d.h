@@ -59,9 +59,20 @@ float3 WaterEnvironment(float3 reflected)
 }
 
 // Continuous world-space detail crosses strip seams and travels with the caller's clock.
+float3 WaterFlowPoint(float3 p, float seconds)
+{
+    if (waterFlow.w > .5)
+    {
+        p.xz -= waterFlow.xy * (seconds * waterFlow.z);
+        p.y = 0;
+    }
+    return p;
+}
+
 float WaterHeight(float3 p, float seconds, float footprint)
 {
-    p += float3(seconds * -1.8, seconds * 3.2, seconds * .9);
+    if (waterFlow.w > .5) p = WaterFlowPoint(p, seconds);
+    else p += float3(seconds * -1.8, seconds * 3.2, seconds * .9);
     float warp = sin(p.x*.12 + p.y*.16) + cos(p.z*.18 - p.y*.09);
     float broad = sin(p.x*.24 + warp) * cos(p.y*.21 - p.z*.19 + warp);
     float folds = sin(p.x*.71 - p.z*.53 + broad*2) * sin(p.y*.63 + warp);
@@ -180,7 +191,17 @@ float4 ShadeWater(float4 pixel, float2 uv, float4 base, float3 world, float3 sur
     }
     float foamNoise = sin(world.x*.62 + sin(world.z*.41)*2 + seconds*2.8) *
         sin(world.y*.83 - world.z*.36 + seconds*1.9);
+    if (waterFlow.w > .5)
+    {
+        float3 flowPoint = WaterFlowPoint(world, seconds);
+        float along = dot(flowPoint.xz, waterFlow.xy);
+        float across = dot(flowPoint.xz, float2(-waterFlow.y, waterFlow.x));
+        // Broad irregular crests remain trackable at normal editor distances.
+        foamNoise = sin(along*.25 + sin(across*.4)*.6);
+    }
     float foam = smoothstep(.72,.94,foamNoise) * waterParameters.z * (1-smoothstep(.8,3,footprint));
+    if (waterFlow.w > .5)
+        foam = smoothstep(.55,.85,foamNoise) * waterParameters.z * (1-smoothstep(3,12,footprint));
     // Water absorbs its transmitted color; reflected buildings retain their own color.
     // Rough surfaces soften the reflection instead of becoming a mirror-like floor.
     // Retain the material's blue identity at grazing angles; preserve a bounded sheen.

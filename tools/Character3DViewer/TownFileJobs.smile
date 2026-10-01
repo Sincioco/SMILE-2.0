@@ -117,6 +117,14 @@ Public Function Queue(ByRef Value As State, ByRef Town As Document.State,
     Value.Failed = False
     Value.Progress = 0
 
+    If Operation = SAVE_BLENDER And Not Document.SupportsBlender(Town) Then
+
+        Value.Failed = True
+        Value.Message = "Blender: elevations/directed flow unsupported. Use Save For Viewer."
+        Return False
+
+    End If
+
     Load Id From "TownEditor.File.Sequence" Default 0
     Id = Id + 1
     Save Id To "TownEditor.File.Sequence"

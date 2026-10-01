@@ -1,0 +1,147 @@
+''' Ramp corridor, reverse order, support and narrow-ridge acceptance.
+Module Smile.Tools.TownRampTests
+
+Option Explicit
+
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownCollisionWorld As Collision
+Import Smile.Tools.TownDocumentNavigation As Navigation
+Import Smile.Tools.TownSurfaceLayers As Layers
+Import Smile.Tools.TownRoadTravel As Travel
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.TerrainSurface3D As Terrain
+Import Smile.Simple3D.TerrainRamp3D As Ramp
+Import Smile.Simple3D.TerrainHeights3D As Heights
+Import Smile.Simple3D.Precision3D As P
+
+Private Dim Town As Document.State
+Private Dim Original As Grid.State
+Private Dim Result As Heights.State
+Private Dim World As Collision.State
+
+Private Sub Check(Condition As Boolean, Label As Text, ByRef Failures As Number)
+
+    If Not Condition Then
+        Print "FAIL Ramp " + Label
+        Failures = Failures + 1
+    End If
+
+End Sub
+
+Public Function Run() As Number
+
+    Dim Failures As Number
+    Dim X As Number
+    Dim Z As Number
+    Dim Index As Number
+    Dim Side As Number
+    Dim Ok As Boolean
+    Dim Plan As Ramp.Plan
+    Dim Sample As Terrain.Sample
+    Dim First As P.Vector3
+    Dim Last As P.Vector3
+    Dim Anchor As P.Vector3
+
+    Ok = Document.Blank(Town, "Terrain Ramp Fixture", 64, 64, 20.0)
+
+    For Z = 0 To Town.Surface.Rows
+
+        For X = 0 To Town.Surface.Columns
+
+            If Town.Surface.XEdges[X] >= 260.0 Then
+                Ok = Terrain.SetCorner(Town.Surface, X, Z, 100.0)
+            End If
+
+        End For
+    End For
+    Original = Town.Surface
+    First = P.Vector(0.0, 0.0, 0.0)
+    Last = P.Vector(500.0, 0.0, 0.0)
+    Ok = Ramp.Prepare(Town.Surface, First, Last, 60.0, 20.0, Plan)
+
+    Call Check(Ok And Abs(Plan.Grade - 0.2) < 0.000001 And Abs(Plan.Angle - 11.309932474) < 0.000001,
+        "Ten Metre Rise Over Fifty Metres Is Twenty Percent", Failures)
+
+    Ok = Ramp.Apply(Town.Surface, Plan)
+
+    Call Check(Ok And Plan.MaximumAngle > 30.0, "Actual Shoulder Slopes Are Reported", Failures)
+
+    Result = Town.Surface.Heights
+
+    Call Collision.Build(World, Town)
+    Call Navigation.Rebuild(Town)
+
+    For Side = 0 To 2
+
+        For Index = 0 To 100
+            Sample = Terrain.SamplePoint(Town.Surface, ToDouble(Index) * 5.0, ToDouble(Side - 1) * 30.0)
+
+            Call Check(Sample.Supported And Abs(Sample.Offset - ToDouble(Index)) < 0.011 And Sample.Normal.Y > 0.86,
+                "Full Six Metre Corridor Matches The Incline", Failures)
+        End For
+    End For
+
+    Call Check(Collision.CanTraverse(World, First, Last) And Collision.CanTraverse(World, Last, First),
+        "Centre Corridor Walks Both Directions", Failures)
+    Call Check(Abs(Navigation.GroundHeight(250.0, 0.0) - Layers.GROUND_WALK_Y - 50.0) < 0.011,
+        "Grounded Height Preserves The Legacy Contact Offset", Failures)
+
+    Call Grid.PaintRectangle(Town.Surface, 32, 31, 57, 32, Grid.SURFACE_ROAD)
+    Call Navigation.Rebuild(Town)
+
+    Ok = Travel.Begin(Town, P.Vector(10.0, 25.12, 0.0), P.Vector(490.0, Layers.ROAD_Y, 0.0))
+
+    Call Check(Ok, "Minimap Picks Elevated Road Using Horizontal Distance", Failures)
+    Call Check(Travel.Append(Town, P.Vector(470.0, Layers.ROAD_Y, 0.0)),
+        "Queued Minimap Destination Also Ignores Elevation", Failures)
+    Call Travel.Cancel()
+
+    Town.Surface = Original
+    Ok = Ramp.Prepare(Town.Surface, Last, First, 60.0, 20.0, Plan)
+    Ok = Ramp.Apply(Town.Surface, Plan) And Ok
+
+    Call Check(Ok And Heights.Same(Result, Town.Surface.Heights), "Reversed Anchors Make The Same Ramp", Failures)
+
+    Ok = Ramp.Prepare(Town.Surface, First, First, 60.0, 20.0, Plan)
+
+    Call Check(Not Ok, "Coincident Anchors Rejected", Failures)
+
+    Ok = Ramp.Prepare(Town.Surface, First, Last, 10.0, 20.0, Plan)
+
+    Call Check(Not Ok, "Subgrid Width Cannot Pretend To Be A Usable Corridor", Failures)
+
+    Town.Surface = Original
+    Ok = Ramp.Prepare(Town.Surface, First, P.Vector(500.0, 0.0, 400.0), 60.0, 20.0, Plan)
+    Ok = Ramp.Apply(Town.Surface, Plan) And Ok
+
+    Call Collision.Build(World, Town)
+    Call Check(Ok And Collision.CanTraverse(World, First, Plan.Last), "Diagonal Ramp Traversal", Failures)
+
+    Ok = Grid.Initialize(Town.Surface, 4, 1, 0.0, 0.0, 20.0, Grid.SURFACE_GROUND)
+    Town.Surface.XEdges[1] = 1.0
+    Town.Surface.XEdges[2] = 1.01
+    Town.Surface.XEdges[3] = 1.02
+    Town.Surface.XEdges[4] = 2.0
+    Ok = Terrain.SetCorner(Town.Surface, 2, 0, 100.0)
+    Ok = Terrain.SetCorner(Town.Surface, 2, 1, 100.0)
+
+    Call Collision.Build(World, Town)
+
+    First = P.Vector(0.5, 0.0, 10.0)
+    Last = P.Vector(1.5, 0.0, 10.0)
+
+    Call Check(Collision.CanStand(World, First.X, First.Z) And Collision.CanStand(World, Last.X, Last.Z) And
+        Not Collision.CanTraverse(World, First, Last), "Narrow Ridge Cannot Be Skipped By A Large Step", Failures)
+    Call Grid.PaintRectangle(Town.Surface, 0, 0, 3, 0, Grid.SURFACE_WATER)
+    Call Collision.Build(World, Town)
+    Call Check(Not Collision.CanStand(World, 0.5, 10.0), "Submerged Bed Does Not Make Water Walkable", Failures)
+    Call Grid.PaintRectangle(Town.Surface, 0, 0, 3, 0, Grid.SURFACE_ROAD)
+    Call Collision.Build(World, Town)
+    Call Check(Collision.CanTraverse(World, First, Last), "Existing Bridge Deck Overrides Terrain Slope", Failures)
+    Call Navigation.Disable()
+
+    Return Failures
+
+End Function
+
+End Module

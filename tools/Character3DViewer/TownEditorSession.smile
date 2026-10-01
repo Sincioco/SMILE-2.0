@@ -902,6 +902,11 @@ Public Sub Input(View As P.Camera3D, Key As Number, Blocked As Boolean)
 
     End If
 
+    If ((Controls.TerrainGesture.Active Or Controls.TerrainGesture.Pending) And
+        ((Pointer_Y() >= 94 And Pointer_Y() < 126 And Pointer_Pressed(POINTER_PRIMARY)) Or Key = KEY_TAB)) Then
+        Call Editor.Cancel(Controls, Town)
+    End If
+
     If Tabs.Input(OpenTabs, Town, Key) Then
 
         Showcase.Elapsed = 0
@@ -1070,7 +1075,8 @@ Public Sub Update(Leader As P.Vector3, Elapsed As Number)
 
     End If
 
-    If Ground.PendingRevision <> Town.Surface.Revision Then
+    If (Ground.PendingRevision <> Town.Surface.Revision And
+        (Not Controls.TerrainGesture.Active Or Ground.Stage = 0)) Then
         Call Terrain.BeginBuild(Ground, Town)
     End If
 
@@ -1093,11 +1099,20 @@ Public Sub Update(Leader As P.Vector3, Elapsed As Number)
 
     If Ground.Failed Then
 
-        Town.Surface = LiveSurface
-        Town.Revision = Town.Revision + 1
-        Controls.Ui.Message = "Terrain limit reached; edit reverted."
+        If Controls.TerrainGesture.Active Or Controls.TerrainGesture.Pending Then
 
-        Call Editor.ResetHistory(Controls, Town)
+            Call Editor.Cancel(Controls, Town)
+
+            Controls.Ui.Message = "Terrain limit reached; stroke restored."
+
+        Else
+            Town.Surface = LiveSurface
+            Town.Revision = Town.Revision + 1
+            Controls.Ui.Message = "Terrain limit reached; edit reverted."
+
+            Call Editor.ResetHistory(Controls, Town)
+
+        End If
 
         Call Terrain.BeginBuild(Ground, Town)
 
@@ -1110,6 +1125,7 @@ Public Sub Update(Leader As P.Vector3, Elapsed As Number)
 
     End If
 
+    Call Editor.AcceptTerrain(Controls, Town, Ground.LiveRevision = Town.Surface.Revision)
     Call Renderer.Update(Assets, Elapsed)
     Call Attachments.Update(Details, Town, Leader, Elapsed)
     Call Editor.UpdateGuideFiles(Controls, Town)
@@ -1403,11 +1419,36 @@ Public Function MapCenter(Optional Height As Double = 150.0) As P.Vector3
 
 End Function
 
+Public Sub ProtectTerrainActor(Index As Number, Position As P.Vector3, MemberCount As Number)
+
+    If Index >= 0 And Index < 8 Then
+
+        Controls.TerrainGesture.ProtectedActors.MemberCount = Min(8, MemberCount)
+        Controls.TerrainGesture.ProtectedActors.Positions[Index] = Position
+        Controls.RampGesture.ProtectedActors = Controls.TerrainGesture.ProtectedActors
+
+    End If
+
+End Sub
+
+Public Function TerrainGestureActive() As Boolean
+
+    Dim Result As Boolean
+
+    Result = (Controls.TerrainGesture.Active Or Controls.TerrainGesture.Pending Or
+        Controls.RampGesture.Stage > 0 Or Controls.WaterGesture.Stage > 0)
+    Return Result
+
+End Function
+
 Public Sub SizeArena(ByRef Floor As Arena.ArenaFloor)
 
     Dim Center As P.Vector3
     Dim Width As Number
     Dim Depth As Number
+    Dim Low As P.Vector3
+    Dim High As P.Vector3
+    Dim FloorY As Number
 
     If Ground.LiveRevision <> Town.Surface.Revision Then
         Return
@@ -1417,10 +1458,15 @@ Public Sub SizeArena(ByRef Floor As Arena.ArenaFloor)
     Width = ToNumber(Town.Surface.XEdges[Town.Surface.Columns] - Town.Surface.OriginX)
     Depth = ToNumber(Town.Surface.ZEdges[Town.Surface.Rows] - Town.Surface.OriginZ)
 
+    Call Navigation.SurfaceBounds(Low, High)
+
+    FloorY = ToNumber(Min(-1.0, Low.Y - 2.0))
+
     If (Floor.Ready And
         Floor.Width = Width And
         Floor.Depth = Depth And
         Floor.Floor.Position.X = ToNumber(Center.X) And
+        Floor.Floor.Position.Y = FloorY And
         Floor.Floor.Position.Z = ToNumber(Center.Z)) Then
         Return
     End If
@@ -1429,7 +1475,7 @@ Public Sub SizeArena(ByRef Floor As Arena.ArenaFloor)
 
     Floor = Arena.Create(Width, Depth, 24, 150, 255, 200, 2)
 
-    Call Arena.Place(Floor, ToNumber(Center.X), -1, ToNumber(Center.Z))
+    Call Arena.Place(Floor, ToNumber(Center.X), FloorY, ToNumber(Center.Z))
 
 End Sub
 

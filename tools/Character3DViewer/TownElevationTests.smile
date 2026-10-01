@@ -1,0 +1,167 @@
+''' Terrain acceptance: shared immutable corners, canonical planes and clipped material geometry.
+Module Smile.Tools.TownElevationTests
+
+Option Explicit
+
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.SurfacePaint3D As Paint
+Import Smile.Simple3D.TerrainHeights3D As Heights
+Import Smile.Simple3D.TerrainSurface3D As Terrain
+Import Smile.Tools.TownSurfaceLayers As Layers
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownTerrainBuilder As Builder
+Import Smile.Tools.TownTerrainCache As Cache
+Import Smile.Tools.TownDerivedCache As Derived
+Import Smile.Tools.TownDocumentStore As Store
+
+Private Dim Town As Document.State
+Private Dim Snapshot As Grid.State
+Private Dim Recipe As Builder.State
+Private Dim Capacity As Heights.State
+Private Dim Reopened As Document.State
+Private Dim ReopenedRecipe As Cache.Batch
+
+Private Sub Check(Condition As Boolean, Label As Text, ByRef Failures As Number)
+
+    If Not Condition Then
+        Print "FAIL Terrain " + Label
+        Failures = Failures + 1
+    End If
+
+End Sub
+
+Public Function Run() As Number
+
+    Dim Failures As Number
+    Dim Ok As Boolean
+    Dim Sample As Terrain.Sample
+    Dim Index As Number
+    Dim Part As Cache.Patch
+    Dim Brush As Paint.Brush
+    Dim BaseY As Double
+    Dim RoadCount As Number
+    Dim GroundCount As Number
+
+    Ok = Grid.Initialize(Town.Surface, 1, 1, 0.0, 0.0, 1.0, Grid.SURFACE_GROUND)
+    Snapshot = Town.Surface
+    Sample = Terrain.SamplePoint(Town.Surface, 0.25, 0.75)
+
+    Call Check(Ok And Sample.Supported And Sample.Offset = 0.0 And Sample.Normal.Y = 1.0,
+        "Flat Legacy Displacement Is Zero", Failures)
+
+    Ok = Terrain.SetCorner(Town.Surface, 1, 1, 2.0)
+    Sample = Terrain.SamplePoint(Town.Surface, 0.25, 0.75)
+
+    Call Check(Ok And Abs(Sample.Offset - 0.5) < 0.000001,
+        "Canonical Triangle Returns 0.5 Not Bilinear 0.375", Failures)
+    Call Check(Terrain.Corner(Snapshot, 1, 1) = 0.0 And
+        Not Derived.SameSurface(Town.Surface, Snapshot), "Snapshot And Cache Identity", Failures)
+
+    Sample = Terrain.SamplePoint(Town.Surface, 1.0, 1.0)
+
+    Call Check(Sample.Supported And Sample.Offset = 2.0, "Far Boundary Shares Last Corner", Failures)
+
+    Sample = Terrain.SamplePoint(Town.Surface, -0.001, 0.0)
+
+    Call Check(Not Sample.Supported, "Outside Rejected", Failures)
+
+    Snapshot = Town.Surface
+    Ok = Terrain.SetCorner(Town.Surface, 0, 0, -1.23)
+
+    Call Check(Ok And Abs(Terrain.Corner(Town.Surface, 0, 0) + 1.23) < 0.000001 And
+        Terrain.Corner(Snapshot, 0, 0) = 0.0, "Negative Millimetre Height And Immutable Page", Failures)
+    Call Check(Not Terrain.SetCorner(Town.Surface, 2, 0, 10.0) And
+        Not Terrain.SetCorner(Town.Surface, 0, 0, 10000.01), "Bounds Rejected", Failures)
+
+    Town.Surface = Snapshot
+    Town.Surface.XEdges[1] = 10.0
+    Town.Surface.ZEdges[1] = 30.0
+    Sample = Terrain.SamplePoint(Town.Surface, 2.5, 22.5)
+
+    Call Check(Terrain.Valid(Town.Surface) And Abs(Sample.Offset - 0.5) < 0.000001,
+        "Nonuniform Physical Edges", Failures)
+
+    Town.Surface.XEdges[1] = 0.0
+
+    Call Check(Not Terrain.Valid(Town.Surface), "Non-Increasing Edge Rejected", Failures)
+
+    Town.Surface = Snapshot
+    Brush.Form = Paint.FORM_LINE
+    Brush.Surface = Grid.SURFACE_ROAD
+    Brush.X0 = 0.5
+    Brush.Z0 = 0.0
+    Brush.X1 = 0.5
+    Brush.Z1 = 1.0
+    Brush.Width = 0.45
+    Ok = Grid.PaintBrush(Town.Surface, Brush)
+
+    Call Builder.Begin(Recipe, Town)
+    Call Builder.ScanRow(Recipe)
+    Call Check(Ok And Not Recipe.Failed And Recipe.Buffer.PatchCount > 0,
+        "Curved Material Recipe Generated", Failures)
+
+    For Index = 0 To Recipe.Buffer.PatchCount - 1
+
+        Part = Recipe.Buffer.Patches[Index]
+        BaseY = Layers.GROUND_Y
+
+        If Part.Kind = Grid.SURFACE_ROAD Then
+            BaseY = Layers.ROAD_Y
+            RoadCount = RoadCount + 1
+        Else If Part.Kind = Grid.SURFACE_GROUND Then
+            GroundCount = GroundCount + 1
+        End If
+
+        If ((Part.Kind = Grid.SURFACE_GROUND Or Part.Kind = Grid.SURFACE_ROAD) And
+            Abs((Part.X1 - Part.X0) * (Part.Z2 - Part.Z0) -
+                (Part.X2 - Part.X0) * (Part.Z1 - Part.Z0)) > 0.000001) Then
+            Sample = Terrain.SamplePoint(Town.Surface, (Part.X0 + Part.X1 + Part.X2) / 3.0,
+                (Part.Z0 + Part.Z1 + Part.Z2) / 3.0)
+
+            Call Check(Part.Plane = 5 And Sample.Supported And
+                Abs((Part.Y0 + Part.Y1 + Part.Y2) / 3.0 - BaseY - Sample.Offset) < 0.000001,
+                "Every Clipped Face Agrees With The Canonical Surface", Failures)
+        End If
+
+    End For
+
+    Call Check(RoadCount > 0 And GroundCount > 0, "Road And Ground Both Conform", Failures)
+
+    Town.Name = "Terrain Round Trip"
+    Town.Revision = 4
+    Ok = Store.SaveDocument(Town, "Terrain.Phase5.Document")
+    Ok = Store.LoadDocument(Reopened, "Terrain.Phase5.Document") And Ok
+
+    Call Check(Ok And Derived.SameSurface(Town.Surface, Reopened.Surface),
+        "TWN11 Preserves Heights And Curves", Failures)
+
+    Ok = Cache.SaveBatch(Recipe.Buffer, "Terrain.Phase5.Cache", 0)
+    Ok = Cache.LoadBatch(ReopenedRecipe, "Terrain.Phase5.Cache", 0) And Ok
+
+    Call Check(Ok And ReopenedRecipe.PatchCount = Recipe.Buffer.PatchCount,
+        "Terrain4 Preserves Triangle Recipes", Failures)
+
+    For Index = 0 To Recipe.Buffer.PatchCount - 1
+        Call Check(Abs(ReopenedRecipe.Patches[Index].Y2 - Recipe.Buffer.Patches[Index].Y2) < 0.000001,
+            "Third Vertex Height Round Trips", Failures)
+    End For
+
+    Call Heights.Reset(Capacity, Heights.MAX_CORNERS)
+
+    Ok = Heights.Write(Capacity, Heights.MAX_CORNERS - 1, -9999.99)
+
+    Call Check(Ok And Abs(Heights.Read(Capacity, Heights.MAX_CORNERS - 1) + 9999.99) < 0.000001,
+        "Last Bounded Corner Supported", Failures)
+    Call Check(Not Heights.Write(Capacity, Heights.MAX_CORNERS, 1.0),
+        "One Past Capacity Rejected", Failures)
+
+    Ok = Heights.Write(Capacity, Heights.MAX_CORNERS - 1, 0.0)
+
+    Call Check(Ok And Capacity.Nonzero = 0 And Text_Length(Capacity.Pages[1028]) = 0,
+        "Returning To Zero Releases Its Page", Failures)
+
+    Return Failures
+
+End Function
+
+End Module

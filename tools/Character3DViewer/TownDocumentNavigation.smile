@@ -14,6 +14,8 @@ Import Smile.Tools.TownCatalogData As Catalog
 Import Smile.Tools.TownCatalogFeatures As Features
 Import Smile.Tools.TownGeometry As Geometry
 Import Smile.Simple3D.CameraClearance3D As Clearance
+Import Smile.Simple3D.TerrainSurface3D As Terrain
+Import Smile.Simple3D.TerrainRay3D As TerrainRay
 
 Private Dim Snapshot As Collision.State
 Private Dim Enabled As Boolean
@@ -49,6 +51,43 @@ End Function
 Public Function Active() As Boolean
 
     Return Enabled
+
+End Function
+
+Public Function Elevated() As Boolean
+
+    Dim Result As Boolean
+
+    Result = Enabled And Snapshot.Surface.Heights.Nonzero > 0
+    Return Result
+
+End Function
+
+Public Function ClearTerrainSight(Camera As P.Camera3D) As P.Camera3D
+
+    Dim Point As P.Vector3
+    Dim Delta As P.Vector3
+    Dim Length As Double
+    Dim Distance As Double
+
+    If Elevated() Then
+
+        Camera.Position.Y = Max(Camera.Position.Y,
+            GroundHeight(Camera.Position.X, Camera.Position.Z) + 18.0)
+        Delta = M.Subtract(Camera.Position, Camera.Target)
+        Length = M.Length(Delta)
+
+        If TerrainRay.Pick(Snapshot.Surface, Camera.Target, Delta, Layers.GROUND_WALK_Y, Length, Point) Then
+            Distance = Max(1.0, M.Distance(Camera.Target, Point) * 0.98)
+            Camera.Position = M.Add(Camera.Target, M.Scale(Delta, Distance / Max(1.0, Length)))
+        End If
+
+        Camera.Position.Y = Max(Camera.Position.Y,
+            GroundHeight(Camera.Position.X, Camera.Position.Z) + 18.0)
+
+    End If
+
+    Return Camera
 
 End Function
 
@@ -135,8 +174,12 @@ Public Sub SurfaceBounds(ByRef Low As P.Vector3, ByRef High As P.Vector3)
     High = P.Vector(2750.0, Layers.ROAD_Y, 3550.0)
 
     If Enabled Then
+
         Low = P.Vector(Snapshot.Surface.OriginX, Layers.ROAD_Y, Snapshot.Surface.OriginZ)
         High = P.Vector(Snapshot.Surface.XEdges[Snapshot.Surface.Columns], Layers.ROAD_Y, Snapshot.Surface.ZEdges[Snapshot.Surface.Rows])
+        Low.Y = Layers.GROUND_Y + Snapshot.MinimumHeight
+        High.Y = Layers.ROAD_Y + Snapshot.MaximumHeight
+
     End If
 
 End Sub
@@ -161,12 +204,18 @@ Public Function GroundHeight(X As Double, Z As Double) As Double
     Dim Box As Features.Box
     Dim Height As Double
     Dim LocalHeight As Double
+    Dim Ground As Terrain.Sample
 
     Cell = Grid.ReadPoint(Snapshot.Surface, X, Z)
     Height = Layers.GROUND_WALK_Y
 
     If Cell = Grid.SURFACE_ROAD Or Cell = Grid.SURFACE_BRIDGE Then
         Height = Layers.ROAD_Y
+    End If
+
+    If Cell <> Grid.SURFACE_BRIDGE Then
+        Ground = Terrain.SamplePoint(Snapshot.Surface, X, Z)
+        Height = Height + Ground.Offset
     End If
 
     For Index = 0 To Snapshot.ItemCount - 1
@@ -211,6 +260,15 @@ Public Function GroundHeight(X As Double, Z As Double) As Double
     End For
 
     Return Height
+
+End Function
+
+Public Function CanTraverse(First As P.Vector3, Last As P.Vector3) As Boolean
+
+    Dim Ok As Boolean
+
+    Ok = Not Enabled Or Collision.CanTraverse(Snapshot, First, Last)
+    Return Ok
 
 End Function
 

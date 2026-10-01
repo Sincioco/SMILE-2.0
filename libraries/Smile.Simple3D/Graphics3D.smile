@@ -3158,6 +3158,25 @@ Public Function SetEffectMaterialWater3D(ByRef Material As Core.Material3D,
 
 End Function
 
+''' Optional native world-space water advection. Zero speed pauses every animated water pattern.
+Public Function SetEffectMaterialWaterFlow3D(ByRef Material As Core.Material3D,
+    Enabled As Boolean, DirectionX As Number, DirectionZ As Number,
+    Optional SpeedPercent As Number = 100) As Boolean
+
+    Dim Result As Boolean
+    Dim EnabledValue As Number
+
+    If Enabled Then
+        EnabledValue = 1
+    End If
+
+    Result = Dispatch(COMMAND_DISTORTION, 5, Material.Handle, EnabledValue,
+        DirectionX, DirectionZ, SpeedPercent, 0, 0, 0, 0) <> 0
+
+    Return Result
+
+End Function
+
 ''' Makes an effect material write bounded heat-distortion vectors rather than visible color.
 Public Function SetEffectMaterialDistortion3D(
     ByRef Material As Core.Material3D,

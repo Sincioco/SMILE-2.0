@@ -313,6 +313,27 @@ Public Function RemoveItem(ByRef Value As State, Index As Number) As Boolean
 
 End Function
 
+''' The current Blender converter preserves legacy geometry, not terrain elevations/flow.
+Public Function SupportsBlender(ByRef Value As State) As Boolean
+
+    Dim Index As Number
+
+    If Value.Surface.Heights.Nonzero > 0 Then
+        Return False
+    End If
+
+    For Index = 0 To Value.Surface.Curves.BrushCount - 1
+
+        If Value.Surface.Curves.Brushes[Index].WaterMode <> 0 Then
+            Return False
+        End If
+
+    End For
+
+    Return True
+
+End Function
+
 Public Function Dirty(ByRef Value As State) As Boolean
 
     Dim Result As Boolean

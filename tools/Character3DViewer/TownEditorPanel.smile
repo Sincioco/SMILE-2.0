@@ -442,10 +442,11 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State,
     Draw Text "Town Editor" At X, 138 Size 21 Color WHITE
 
     Call Button(Value, 400, X + 222, 136, 62, "Done")
-    Call Button(Value, 50, X, 174, 67, "Items", Value.Section = 0)
-    Call Button(Value, 51, X + 72, 174, 67, "Sun", Value.Section = 1)
-    Call Button(Value, 53, X + 144, 174, 67, "Guides", Value.Section = 3)
-    Call Button(Value, 52, X + 216, 174, 67, "Files", Value.Section = 2)
+    Call Button(Value, 50, X, 174, 49, "Items", Value.Section = 0)
+    Call Button(Value, 54, X + 53, 174, 66, "Terrain", Value.Section = 7)
+    Call Button(Value, 51, X + 123, 174, 42, "Sun", Value.Section = 1)
+    Call Button(Value, 53, X + 169, 174, 58, "Guides", Value.Section = 3)
+    Call Button(Value, 52, X + 231, 174, 52, "Files", Value.Section = 2)
 
     If Value.Section = 0 Then
 
@@ -503,7 +504,7 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State,
 
         Draw Text "Previous map kept in Open Recovery." At X, 676 Size 12 Color RGB(240, 205, 140)
 
-    Else
+    Else If Value.Section <> 7 Then
 
         Draw Text "Viewer (.town)" At X, 212 Size 15 Color WHITE
 
@@ -526,7 +527,9 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State,
 
     End If
 
-    If Value.Section = 0 Or Value.Section = 3 Then
+    If (Value.Section = 0 Or
+        Value.Section = 3 Or
+        (Value.Section = 7 And Window_Height() >= 820)) Then
         Call Button(Value, 98, X, Window_Height() - 294, 139, "2D Top View", Value.Orthographic)
         Call Button(Value, 99, X + 144, Window_Height() - 294, 139, "3D View", Not Value.Orthographic)
     End If

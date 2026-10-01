@@ -8,6 +8,11 @@ Import Smile.Simple3D.Precision3D As P
 Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownSectionTests As SectionTests
 Import Smile.Tools.TownCurvesTests As CurveTests
+Import Smile.Tools.TownElevationTests As ElevationTests
+Import Smile.Tools.TownSculptTests As SculptTests
+Import Smile.Tools.TownRampTests As RampTests
+Import Smile.Tools.TownWaterTests As WaterTests
+Import Smile.Tools.TownTerrainPersistenceTests As TerrainPersistenceTests
 Import Smile.Tools.TownSelection As Selection
 Import Smile.Tools.TownCatalogData As Catalog
 Import Smile.Tools.TownInitialSurface As Initial
@@ -421,6 +426,13 @@ Call CheckCastleDecks()
 
 Failures = Failures + SectionTests.Run()
 Failures = Failures + CurveTests.Run()
+Failures = Failures + ElevationTests.Run()
+Failures = Failures + SculptTests.Run()
+Failures = Failures + RampTests.Run()
+
+Call WaterTests.Run(Failures)
+Call TerrainPersistenceTests.Run(Failures)
+
 Failures = Failures + WorldTests.Run()
 Failures = Failures + GatewayTests.Run()
 Failures = Failures + ResidentTests.Run()

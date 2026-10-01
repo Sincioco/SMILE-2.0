@@ -34,6 +34,11 @@
     <SmileSource Include="TownDerivedCache.smile" />
     <SmileSource Include="TownGeometry.smile" />
     <SmileSource Include="TownDecks.smile" />
+    <SmileSource Include="TownTerrainProtection.smile" />
+    <SmileSource Include="TownTerrainTools.smile" />
+    <SmileSource Include="TownRampTools.smile" />
+    <SmileSource Include="TownWaterTools.smile" />
+    <SmileSource Include="TownTerrainPanel.smile" />
     <SmileSource Include="TownSections.smile" />
     <SmileSource Include="TownSurfaceLayers.smile" />
     <SmileSource Include="NerisCastleRoute.smile" />

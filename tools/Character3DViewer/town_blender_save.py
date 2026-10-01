@@ -10,7 +10,7 @@ import bpy
 from mathutils import Matrix, Vector
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from town_document_codec import decode, unwrap, respond, key_path, atomic_write
+from town_document_codec import decode, unwrap, respond, key_path, atomic_write, require_blender_support
 from town_surface_layers import elevation
 from town_surface_decks import footprints, rail_parts
 
@@ -254,6 +254,7 @@ def main():
     document = decode(unwrap(request.read_bytes()), catalog, request=True)
     rid = document['request_id']
     try:
+        require_blender_support(document)
         respond(data_folder, rid, 0, 5, 'Opening saved template scene...')
         source = TOWN / catalog.get('blend_source', 'Authoring/Catalog.blend')
         if hashlib.sha256(source.read_bytes()).hexdigest() != catalog['source_sha256']:

@@ -4,6 +4,7 @@ Module Smile.Simple3D.SurfaceGrid3D
 Option Explicit
 
 Import Smile.Simple3D.SurfacePaint3D As Paint
+Import Smile.Simple3D.TerrainHeights3D As Heights
 
 Public Const MAX_COLUMNS = 512
 Public Const MAX_ROWS = 512
@@ -24,6 +25,7 @@ Public Type State
     ' Sixteen three-bit surface IDs per Number, below the exact integer range on both targets.
     Cells[16384] As Number
     Curves As Paint.State
+    Heights As Heights.State
     Revision As Number
 End Type
 
@@ -51,6 +53,8 @@ Public Function Initialize(ByRef Value As State, Columns As Number, Rows As Numb
     Value.OriginZ = OriginZ
     Value.CellSize = CellSize
     Value.Revision = Value.Revision + 1
+
+    Call Heights.Reset(Value.Heights, (Columns + 1) * (Rows + 1))
 
     For Index = 0 To Columns
         Value.XEdges[Index] = OriginX + ToDouble(Index) * CellSize

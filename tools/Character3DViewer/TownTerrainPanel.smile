@@ -1,0 +1,238 @@
+''' Terrain controls and a surface-conforming cursor; no document mutations.
+Module Smile.Tools.TownTerrainPanel
+
+Option Explicit
+
+Import Smile.Tools.TownEditorPanel As Panel
+Import Smile.Tools.TownTerrainTools As Tools
+Import Smile.Tools.TownRampTools As Ramps
+Import Smile.Tools.TownWaterTools As Waters
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownSurfaceLayers As Layers
+Import Smile.Tools.TownGuides As Guides
+Import Smile.Simple3D.TerrainSurface3D As Terrain
+Import Smile.Simple3D.TerrainWater3D As Flow
+Import Smile.Simple3D.SurfacePaint3D As Paint
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+
+Public Sub Draw(ByRef Ui As Panel.State, ByRef Value As Tools.State, ByRef Ramp As Ramps.State,
+    ByRef Water As Waters.State, ByRef Town As Document.State)
+
+    Dim X As Number
+
+    X = Panel.LeftEdge() + 10
+
+    Call Button(Ui, 800, X, 212, 139, "Raise", Value.Tool.Mode = 1)
+    Call Button(Ui, 801, X + 144, 212, 139, "Lower", Value.Tool.Mode = 2)
+    Call Button(Ui, 802, X, 244, 139, "Flatten", Value.Tool.Mode = 3)
+    Call Button(Ui, 803, X + 144, 244, 139, "Smooth", Value.Tool.Mode = 4)
+    Call Button(Ui, 808, X, 276, 139, "Ramp", Value.Tool.Mode = 5)
+    Call Button(Ui, 812, X + 144, 276, 139, "Water Line", Value.Tool.Mode = 6)
+
+    If Waters.Warning(Water, Town) Then
+        Draw Text "Uphill Flow: Reverse Or Reshape" At X, Position(466) Size 12 Color YELLOW
+    End If
+
+    If Value.Tool.Mode = 6 Then
+
+        Call Button(Ui, 813, X, 308, 139, "Follow Terrain", Water.Following)
+        Call Button(Ui, 817, X + 144, 308, 139, "Erase Water", Water.Erase)
+        Call Button(Ui, 814, X, 340, 139, "Width: " + Text_From_Double(Water.Width / Layers.UNITS_PER_METER) + " m")
+        Call Button(Ui, 815, X + 144, 340, 139, "Speed: " + Text_From_Double(ToDouble(Water.Speed) / 100.0) + "x")
+        Call Button(Ui, 816, X, 372, 283, "Reverse Last Flow")
+
+        Draw Text "Click Start, Then End. Esc Cancels." At X, Position(406) Size 12 Color WHITE
+        Draw Text "Flow Starts Downhill; 0x Pauses." At X, Position(426) Size 12 Color WHITE
+        Draw Text "Erase Restores Land, Keeps Heights." At X, Position(446) Size 12 Color WHITE
+        Return
+
+    End If
+
+    If Value.Tool.Mode = 5 Then
+
+        Call Button(Ui, 810, X, 312, 139, "Width: " + Text_From_Double(Ramp.Width / Layers.UNITS_PER_METER) + " m")
+        Call Button(Ui, 811, X + 144, 312, 139, "Shoulder: " + Text_From_Double(Ramp.Shoulder / Layers.UNITS_PER_METER) + " m")
+
+        Draw Text "Vertex Anchors; One-Cell Edge Apron" At X, Position(344) Size 12 Color WHITE
+
+        If Ramp.Stage = 2 Then
+
+            Draw Text "Ends: " + Text_From_Double(Ramp.Plan.First.Y / Layers.UNITS_PER_METER) + ", " + Text_From_Double(Ramp.Plan.Last.Y / Layers.UNITS_PER_METER) + " m" At X, Position(365) Size 12 Color WHITE
+            Draw Text "Length: " + Text_From_Double(Ramp.Plan.Length / Layers.UNITS_PER_METER) + " m" At X, Position(384) Size 12 Color WHITE
+            Draw Text "Grade: " + Decimal(Abs(Ramp.Plan.Grade) * 100.0) + "%  Angle: " + Decimal(Ramp.Plan.Angle) At X, Position(403) Size 12 Color WHITE
+            Draw Text "Steepest: " + Decimal(Ramp.Plan.MaximumAngle) At X, Position(422) Size 12 Color WHITE
+
+            If Ramp.Plan.MaximumAngle > 30.0 Then
+                Draw Text "Non-Walkable Slopes (>30 Degrees)" At X, Position(442) Size 12 Color YELLOW
+            End If
+
+            Call Button(Ui, 809, X, 488, 283, "Apply Ramp")
+
+        End If
+
+        Return
+
+    End If
+
+    Call Button(Ui, 804, X, 312, 283,
+        "Radius: " + Text_From_Double(Value.Tool.Radius / Layers.UNITS_PER_METER) + " m")
+    Call Button(Ui, 805, X, 344, 283,
+        "Strength: " + Text_From_Double(Value.Tool.Strength / Layers.UNITS_PER_METER) + " m/s")
+
+    Draw Text "Elevation offset (m)" At X, Position(380) Size 14 Color WHITE
+
+    Call Button(Ui, 806, X, 404, 139, Text_From_Double(Value.Tool.Target / Layers.UNITS_PER_METER))
+    Call Button(Ui, 807, X + 144, 404, 139, "Sample Height", Value.SampleNext)
+
+    Draw Text "Drag: Sculpt   Esc: Cancel Stroke" At X, Position(442) Size 12 Color RGB(70, 225, 220)
+
+End Sub
+
+Private Function Decimal(Value As Double) As Text
+
+    Dim Tenths As Number
+    Dim Result As Text
+
+    Tenths = ToNumber(Round(Value * 10.0))
+    Result = Panel.NumberLabel(Tenths / 10) + "." + Panel.NumberLabel(Abs(Tenths Mod 10))
+    Return Result
+
+End Function
+
+Private Function Position(RowY As Number) As Number
+
+    Dim Scale As Double
+    Dim Result As Number
+
+    Scale = Max(0.75, Min(1.0, ToDouble(Window_Height() - 485) / 310.0))
+    Result = 212 + ToNumber(ToDouble(RowY - 212) * Scale)
+    Return Result
+
+End Function
+
+Private Sub Button(ByRef Ui As Panel.State, Action As Number, X As Number,
+    Y As Number, Width As Number, Label As Text, Optional Selected As Boolean = False)
+
+    Call Panel.Button(Ui, Action, X, Position(Y), Width, Label, Selected, True,
+        Position(238) - Position(212))
+
+End Sub
+
+Public Sub WaterPreview(ByRef Value As Waters.State, ByRef Town As Document.State,
+    Point As P.Vector3, View As P.Camera3D)
+
+    Dim Edge As Guides.Marker
+    Dim Index As Number
+    Dim Sample As Terrain.Sample
+    Dim Brush As Paint.Brush
+    Dim Direction As P.Vector3
+    Dim Tip As P.Vector3
+    Dim Side As Number
+    Dim Ok As Boolean
+
+    If Value.Stage <> 1 Then
+        Return
+    End If
+
+    Ok = Flow.Prepare(Town.Surface, Value.First, Point, Value.Width, Brush)
+
+    For Index = 0 To 31
+
+        Edge.First = M.Add(Value.First, M.Scale(M.Subtract(Point, Value.First), ToDouble(Index) / 32.0))
+        Edge.Last = M.Add(Value.First, M.Scale(M.Subtract(Point, Value.First), ToDouble(Index + 1) / 32.0))
+        Sample = Terrain.SamplePoint(Town.Surface, Edge.First.X, Edge.First.Z)
+        Edge.First.Y = Layers.GROUND_Y + Sample.Offset + 1.0
+        Sample = Terrain.SamplePoint(Town.Surface, Edge.Last.X, Edge.Last.Z)
+        Edge.Last.Y = Layers.GROUND_Y + Sample.Offset + 1.0
+
+        Call Guides.DrawMarker(Edge, View, RGB(70, 230, 215))
+    End For
+
+    If (Ok And
+        Value.Following And
+        Not Value.Erase) Then
+
+        Direction = Flow.Direction(Brush)
+        Tip = M.Add(M.Scale(M.Add(Value.First, Point), 0.5), M.Scale(Direction, 12.0))
+        Sample = Terrain.SamplePoint(Town.Surface, Tip.X, Tip.Z)
+        Tip.Y = Layers.GROUND_Y + Sample.Offset + 1.0
+
+        For Side = 0 To 1
+
+            Edge.First = Tip
+            Edge.Last = M.Add(Tip, P.Vector(-Direction.X * 12.0 + Direction.Z * ToDouble(Side * 2 - 1) * 8.0,
+                0.0, -Direction.Z * 12.0 - Direction.X * ToDouble(Side * 2 - 1) * 8.0))
+            Sample = Terrain.SamplePoint(Town.Surface, Edge.Last.X, Edge.Last.Z)
+            Edge.Last.Y = Layers.GROUND_Y + Sample.Offset + 1.0
+
+            Call Guides.DrawMarker(Edge, View, YELLOW)
+        End For
+
+        Sample = Terrain.SamplePoint(Town.Surface, Value.First.X, Value.First.Z)
+        Tip.Y = Sample.Offset
+        Sample = Terrain.SamplePoint(Town.Surface, Point.X, Point.Z)
+
+        If Abs(Tip.Y - Sample.Offset) < 0.01 Then
+            Draw Text "Flat Flow: Uses Drawn Direction" At 20, 180 Size 18 Color YELLOW
+        Else If Flow.Uphill(Town.Surface, Brush) Then
+            Draw Text "Uphill Section In This Stroke" At 20, 180 Size 18 Color YELLOW
+        End If
+
+    End If
+
+End Sub
+
+Public Sub RampPreview(ByRef Value As Ramps.State, View As P.Camera3D)
+
+    Dim Edge As Guides.Marker
+    Dim Side As Number
+    Dim Segment As Number
+    Dim Width As Double
+    Dim X As Double
+    Dim Z As Double
+
+    If Value.Stage <> 2 Then
+        Return
+    End If
+
+    X = (Value.Plan.Last.Z - Value.Plan.First.Z) / Value.Plan.Length
+    Z = -(Value.Plan.Last.X - Value.Plan.First.X) / Value.Plan.Length
+
+    For Side = 0 To 2
+        Width = ToDouble(Side - 1) * Value.Width * 0.5
+        Edge.First = P.Vector(Value.Plan.First.X + X * Width, Value.Plan.First.Y + Layers.ROAD_Y + 1.0, Value.Plan.First.Z + Z * Width)
+        Edge.Last = P.Vector(Value.Plan.Last.X + X * Width, Value.Plan.Last.Y + Layers.ROAD_Y + 1.0, Value.Plan.Last.Z + Z * Width)
+
+        Call Guides.DrawMarker(Edge, View, RGB(255, 210, 90))
+    End For
+
+End Sub
+
+Public Sub Preview(ByRef Value As Tools.State, ByRef Town As Document.State,
+    Point As P.Vector3, View As P.Camera3D)
+
+    Dim Index As Number
+    Dim Angle As Double
+    Dim Edge As Guides.Marker
+    Dim Sample As Terrain.Sample
+
+    For Index = 0 To 63
+
+        Angle = ToDouble(Index) * M.PI / 32.0
+        Edge.First = P.Vector(Point.X + Cos(Angle) * Value.Tool.Radius, 0.0,
+            Point.Z + Sin(Angle) * Value.Tool.Radius)
+        Angle = ToDouble(Index + 1) * M.PI / 32.0
+        Edge.Last = P.Vector(Point.X + Cos(Angle) * Value.Tool.Radius, 0.0,
+            Point.Z + Sin(Angle) * Value.Tool.Radius)
+        Sample = Terrain.SamplePoint(Town.Surface, Edge.First.X, Edge.First.Z)
+        Edge.First.Y = Layers.ROAD_Y + Sample.Offset + 0.5
+        Sample = Terrain.SamplePoint(Town.Surface, Edge.Last.X, Edge.Last.Z)
+        Edge.Last.Y = Layers.ROAD_Y + Sample.Offset + 0.5
+
+        Call Guides.DrawMarker(Edge, View, RGB(70, 230, 215))
+    End For
+
+End Sub
+
+End Module

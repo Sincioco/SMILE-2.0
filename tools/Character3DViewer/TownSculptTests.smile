@@ -1,0 +1,193 @@
+''' Terrain stroke acceptance, independent of native pointer timing.
+Module Smile.Tools.TownSculptTests
+
+Option Explicit
+
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownTerrainTools As Tools
+Import Smile.Tools.TownTerrainProtection As Protection
+Import Smile.Tools.TownHistory As History
+Import Smile.Tools.TownGuides As Guides
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.TerrainSurface3D As Terrain
+Import Smile.Simple3D.TerrainRay3D As Ray
+Import Smile.Simple3D.TerrainHeights3D As Heights
+Import Smile.Simple3D.TerrainSculpt3D As Sculpt
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+
+Private Dim Town As Document.State
+Private Dim Gesture As Tools.State
+Private Dim Journal As History.State
+Private Dim Ink As Guides.Drawing
+Private Dim Snapshot As Heights.State
+
+Private Sub Check(Condition As Boolean, Label As Text, ByRef Failures As Number)
+
+    If Not Condition Then
+        Print "FAIL Sculpt " + Label
+        Failures = Failures + 1
+    End If
+
+End Sub
+
+Private Sub HeldStroke(Frames As Number)
+
+    Dim Index As Number
+    Dim Elapsed As Number
+    Dim Ok As Boolean
+
+    Ok = Document.Blank(Town, "Terrain Stroke Fixture", 32, 32, 20.0)
+
+    Call Tools.Start(Gesture)
+    Call History.Reset(Journal, Town, Ink)
+
+    Ok = Tools.Gesture(Gesture, Town, P.Vector(0.0, 0.0, 0.0), True, True, True, 0)
+
+    For Index = 1 To Frames
+        Elapsed = Index * 2000 / Frames - (Index - 1) * 2000 / Frames
+        Ok = Tools.Gesture(Gesture, Town, P.Vector(0.0, 0.0, 0.0), True, False, True, Elapsed)
+    End For
+    Ok = Tools.Gesture(Gesture, Town, P.Vector(0.0, 0.0, 0.0), True, False, False, 0)
+
+End Sub
+
+Public Function Run() As Number
+
+    Dim Failures As Number
+    Dim Ok As Boolean
+    Dim X As Number
+    Dim Z As Number
+    Dim Point As P.Vector3
+    Dim Tool As Sculpt.Brush
+    Dim Sample As Terrain.Sample
+    Dim Setting As Double
+
+    Setting = 7.0
+
+    Call Check(Not Tools.Setting("NaN", -1000.0, 1000.0, Setting) And Setting = 7.0 And
+        Not Tools.Setting("wrong", -1000.0, 1000.0, Setting) And
+        Not Tools.Setting("", -1000.0, 1000.0, Setting) And
+        Not Tools.Setting("1.2.3", -1000.0, 1000.0, Setting),
+        "Invalid Numeric Prompts Never Change Settings", Failures)
+    Call Check(Tools.Setting("-1.25", -1000.0, 1000.0, Setting) And Setting = -1.25,
+        "Signed Decimal Prompt Accepted", Failures)
+
+    Call HeldStroke(120)
+
+    Snapshot = Town.Surface.Heights
+
+    Call Check(Gesture.Pending And Not Gesture.Active And History.UndoCount(Journal) = 0,
+        "Completed Gesture Waits For Resource Acceptance", Failures)
+
+    Sample = Terrain.SamplePoint(Town.Surface, 0.0, 0.0)
+
+    Call Check(Abs(Sample.Offset - 40.0) < 0.000001, "Two Metres Per Second For Two Seconds", Failures)
+
+    Ok = Tools.Publish(Gesture, Town, True, False)
+
+    If Ok Then
+        Call History.Record(Journal, Town, Ink)
+    End If
+
+    Call Check(History.UndoCount(Journal) = 1, "Exactly One History Entry", Failures)
+
+    Ok = History.Restore(Journal, Town, Ink, False)
+
+    Call Check(Ok And Town.Surface.Heights.Nonzero = 0, "Undo Restores Every Corner", Failures)
+
+    Ok = History.Restore(Journal, Town, Ink, True)
+
+    Call Check(Ok And Heights.Same(Snapshot, Town.Surface.Heights), "Redo Restores Immutable Pages", Failures)
+    Call HeldStroke(60)
+    Call Check(Heights.Same(Snapshot, Town.Surface.Heights), "Thirty And Sixty Frames Per Second Agree", Failures)
+
+    Ok = Tools.Publish(Gesture, Town, False, True)
+
+    Call Check(Not Ok And Town.Surface.Heights.Nonzero = 0 And Not Gesture.Pending,
+        "Resource Failure Restores Whole Stroke", Failures)
+
+    Ok = Tools.Gesture(Gesture, Town, P.Vector(0.0, 0.0, 0.0), False, True, True, 50)
+
+    Call Check(Not Gesture.Active And Town.Surface.Heights.Nonzero = 0, "Ui Capture Cannot Start Sculpt", Failures)
+
+    Ok = Tools.Gesture(Gesture, Town, P.Vector(0.0, 0.0, 0.0), True, True, True, 0)
+    Ok = Tools.Gesture(Gesture, Town, P.Vector(0.0, 0.0, 0.0), True, False, True, 250)
+
+    Call Tools.Cancel(Gesture, Town)
+    Call Check(Town.Surface.Heights.Nonzero = 0 And Town.Revision = Gesture.BeforeTownRevision,
+        "Escape Restores Values And Revision", Failures)
+
+    Ok = Tools.Gesture(Gesture, Town, P.Vector(0.0, 0.0, 0.0), True, True, True, 0)
+    Ok = Tools.Gesture(Gesture, Town, P.Vector(0.0, 0.0, 0.0), True, False, False, 16)
+
+    Call Check(Gesture.Pending And Abs(Terrain.Corner(Town.Surface, 16, 16) - 0.32) < 0.001,
+        "Short Stroke Flushes Its Elapsed Time", Failures)
+    Call Tools.Cancel(Gesture, Town)
+
+    Town.ItemCount = 1
+    Town.Items[0].Active = True
+    Town.Items[0].Template = 0
+    Town.Items[0].Category = 1
+    Town.Items[0].Scale = P.Vector(1.0, 1.0, 1.0)
+    Ok = Tools.Gesture(Gesture, Town, P.Vector(0.0, 0.0, 0.0), True, True, True, 0)
+    Ok = Tools.Gesture(Gesture, Town, P.Vector(0.0, 0.0, 0.0), True, False, True, 100)
+
+    Call Check(Not Gesture.Active And Town.Surface.Heights.Nonzero = 0,
+        "Structural Footprint Rejects Entire Stroke", Failures)
+
+    Town.ItemCount = 0
+    Ok = Grid.Initialize(Town.Surface, 2, 2, 0.0, 0.0, 10.0, Grid.SURFACE_GROUND)
+    Town.Surface.XEdges[2] = 40.0
+    Town.Surface.ZEdges[2] = 30.0
+    Tool.Mode = Sculpt.RAISE
+    Tool.Radius = 20.0
+    Tool.Strength = 20.0
+    Ok = Sculpt.Apply(Town.Surface, Tool, 10.0, 10.0, 0.05)
+
+    Call Check(Ok And Terrain.Corner(Town.Surface, 0, 1) = Terrain.Corner(Town.Surface, 1, 0),
+        "Nonuniform Brush Uses Physical Distance", Failures)
+
+    For Z = 0 To 2
+
+        For X = 0 To 2
+            Ok = Terrain.SetCorner(Town.Surface, X, Z, 5.0)
+        End For
+    End For
+    Snapshot = Town.Surface.Heights
+    Tool.Mode = Sculpt.SMOOTH
+    Tool.Radius = 100.0
+    Ok = Sculpt.Apply(Town.Surface, Tool, 10.0, 10.0, 0.05)
+
+    Call Check(Ok And Heights.Same(Snapshot, Town.Surface.Heights), "Smooth Preserves Constant Terrain", Failures)
+
+    Ok = Terrain.SetCorner(Town.Surface, 1, 1, 9.0)
+    Ok = Sculpt.Apply(Town.Surface, Tool, 10.0, 10.0, 0.05)
+
+    Call Check(Ok And Terrain.Corner(Town.Surface, 1, 1) = 8.0,
+        "Smooth Blends Twenty Five Percent From Immutable Neighbours", Failures)
+
+    Tool.Mode = Sculpt.FLATTEN
+    Tool.Target = 7.5
+    Ok = Sculpt.Apply(Town.Surface, Tool, 10.0, 10.0, 0.05)
+
+    Call Check(Ok And Terrain.Corner(Town.Surface, 1, 1) = 7.5, "Flatten Reaches Target Without Overshoot", Failures)
+
+    Ok = Grid.Initialize(Town.Surface, 1, 1, 0.0, 0.0, 1.0, Grid.SURFACE_GROUND)
+    Ok = Terrain.SetCorner(Town.Surface, 1, 1, 2.0)
+    Ok = Ray.Pick(Town.Surface, P.Vector(0.25, 10.0, 0.75), P.Vector(0.0, -1.0, 0.0), 0.0, 20.0, Point)
+
+    Call Check(Ok And Abs(Point.Y - 0.5) < 0.000001, "Vertical Pick Matches Triangle Plane", Failures)
+
+    Ok = Ray.Pick(Town.Surface, P.Vector(-1.0, 1.0, 0.75), P.Vector(1.0, 0.0, 0.0), 0.0, 20.0, Point)
+
+    Call Check(Ok And Abs(Point.X - 0.5) < 0.000001, "Oblique Ray Enters From Outside Grid", Failures)
+
+    Ok = Ray.Pick(Town.Surface, P.Vector(-1.0, 3.0, 0.75), P.Vector(1.0, 0.0, 0.0), 0.0, 20.0, Point)
+
+    Call Check(Not Ok, "Ray Above Terrain Does Not Pick A Flat Fallback", Failures)
+
+    Return Failures
+
+End Function
+
+End Module

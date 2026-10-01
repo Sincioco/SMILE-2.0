@@ -11,7 +11,7 @@ from mathutils import Matrix
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from town_blender_save import TOWN, populate_items, terrain, lighting
-from town_document_codec import decode, encode, unwrap, respond, key_path, atomic_write, landmark
+from town_document_codec import decode, encode, unwrap, respond, key_path, atomic_write, landmark, require_blender_support
 from town_blender_terrain import read_prepared
 
 
@@ -82,6 +82,7 @@ def import_document(path, catalog):
 
 
 def export_document(document, catalog, target, request_id, status, patches=None):
+    require_blender_support(document)
     source = TOWN / catalog.get('blend_source', 'Authoring/Catalog.blend')
     if hashlib.sha256(source.read_bytes()).hexdigest() != catalog['source_sha256']:
         raise ValueError('Immutable template scene checksum differs.')

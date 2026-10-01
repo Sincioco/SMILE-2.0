@@ -1,0 +1,184 @@
+''' Ray picking walks crossed grid cells, testing the same two triangles as sampling.
+Module Smile.Simple3D.TerrainRay3D
+
+Option Explicit
+
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.TerrainSurface3D As Terrain
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+
+Private Function ClipAxis(Origin As Double, Direction As Double, Low As Double,
+    High As Double, ByRef NearValue As Double, ByRef FarValue As Double) As Boolean
+
+    Dim First As Double
+    Dim Last As Double
+    Dim Ok As Boolean
+
+    If Abs(Direction) < 0.000000001 Then
+        Ok = Origin >= Low And Origin <= High
+        Return Ok
+    End If
+
+    First = (Low - Origin) / Direction
+    Last = (High - Origin) / Direction
+    NearValue = Max(NearValue, Min(First, Last))
+    FarValue = Min(FarValue, Max(First, Last))
+    Ok = NearValue <= FarValue
+    Return Ok
+
+End Function
+
+Private Function Triangle(Origin As P.Vector3, Ray As P.Vector3, PointA As P.Vector3,
+    PointB As P.Vector3, PointC As P.Vector3, ByRef Distance As Double) As Boolean
+
+    Dim EdgeA As P.Vector3
+    Dim EdgeB As P.Vector3
+    Dim CrossValue As P.Vector3
+    Dim Relative As P.Vector3
+    Dim Other As P.Vector3
+    Dim Determinant As Double
+    Dim U As Double
+    Dim V As Double
+    Dim Depth As Double
+
+    EdgeA = M.Subtract(PointB, PointA)
+    EdgeB = M.Subtract(PointC, PointA)
+    CrossValue = M.Cross(Ray, EdgeB)
+    Determinant = M.Dot(EdgeA, CrossValue)
+
+    If Abs(Determinant) < 0.000000001 Then
+        Return False
+    End If
+
+    Relative = M.Subtract(Origin, PointA)
+    U = M.Dot(Relative, CrossValue) / Determinant
+    Other = M.Cross(Relative, EdgeA)
+    V = M.Dot(Ray, Other) / Determinant
+    Depth = M.Dot(EdgeB, Other) / Determinant
+
+    If (U < -0.00000001 Or
+        V < -0.00000001 Or
+        U + V > 1.00000001 Or
+        Depth < 0.0 Or
+        Depth > Distance) Then
+        Return False
+    End If
+
+    Distance = Depth
+    Return True
+
+End Function
+
+Private Function Vertex(ByRef Surface As Grid.State, X As Number, Z As Number,
+    BaseY As Double) As P.Vector3
+
+    Dim Result As P.Vector3
+
+    Result = P.Vector(Surface.XEdges[X], BaseY + Terrain.Corner(Surface, X, Z), Surface.ZEdges[Z])
+    Return Result
+
+End Function
+
+Public Function Pick(ByRef Surface As Grid.State, Origin As P.Vector3, Direction As P.Vector3,
+    BaseY As Double, MaxDistance As Double, ByRef Point As P.Vector3) As Boolean
+
+    Dim Ray As P.Vector3
+    Dim NearValue As Double
+    Dim FarValue As Double
+    Dim Distance As Double
+    Dim NextX As Double
+    Dim NextZ As Double
+    Dim X As Number
+    Dim Z As Number
+    Dim StepX As Number
+    Dim StepZ As Number
+    Dim Iteration As Number
+    Dim StartPoint As P.Vector3
+    Dim PointA As P.Vector3
+    Dim PointB As P.Vector3
+    Dim PointC As P.Vector3
+    Dim PointD As P.Vector3
+    Dim Hit As Boolean
+
+    If (Not Terrain.Valid(Surface) Or
+        Not M.TryNormalize(Direction, Ray) Or
+        MaxDistance <= 0.0) Then
+        Return False
+    End If
+
+    FarValue = MaxDistance
+
+    If Not ClipAxis(Origin.X, Ray.X, Surface.XEdges[0], Surface.XEdges[Surface.Columns], NearValue, FarValue) Then
+        Return False
+    End If
+
+    If Not ClipAxis(Origin.Z, Ray.Z, Surface.ZEdges[0], Surface.ZEdges[Surface.Rows], NearValue, FarValue) Then
+        Return False
+    End If
+
+    StartPoint = M.Add(Origin, M.Scale(Ray, Min(FarValue, NearValue + 0.000001)))
+    X = Max(0, Min(Surface.Columns - 1, Grid.CellX(Surface, StartPoint.X)))
+    Z = Max(0, Min(Surface.Rows - 1, Grid.CellZ(Surface, StartPoint.Z)))
+    StepX = 1
+    StepZ = 1
+
+    If Ray.X < 0.0 Then
+        StepX = -1
+    End If
+
+    If Ray.Z < 0.0 Then
+        StepZ = -1
+    End If
+
+    For Iteration = 0 To Surface.Columns + Surface.Rows
+
+        PointA = Vertex(Surface, X, Z, BaseY)
+        PointB = Vertex(Surface, X + 1, Z, BaseY)
+        PointC = Vertex(Surface, X + 1, Z + 1, BaseY)
+        PointD = Vertex(Surface, X, Z + 1, BaseY)
+        Distance = FarValue
+        Hit = Triangle(Origin, Ray, PointA, PointB, PointC, Distance)
+        Hit = Triangle(Origin, Ray, PointA, PointC, PointD, Distance) Or Hit
+
+        If Hit Then
+            Point = M.Add(Origin, M.Scale(Ray, Distance))
+            Return True
+        End If
+
+        NextX = FarValue + 1.0
+        NextZ = FarValue + 1.0
+
+        If Abs(Ray.X) >= 0.000000001 Then
+            NextX = (Surface.XEdges[X + (StepX + 1) / 2] - Origin.X) / Ray.X
+        End If
+
+        If Abs(Ray.Z) >= 0.000000001 Then
+            NextZ = (Surface.ZEdges[Z + (StepZ + 1) / 2] - Origin.Z) / Ray.Z
+        End If
+
+        If Min(NextX, NextZ) > FarValue Then
+            Exit For
+        End If
+
+        If NextX <= NextZ Then
+            X = X + StepX
+        End If
+
+        If NextZ <= NextX Then
+            Z = Z + StepZ
+        End If
+
+        If (X < 0 Or
+            Z < 0 Or
+            X >= Surface.Columns Or
+            Z >= Surface.Rows) Then
+            Exit For
+        End If
+
+    End For
+    Return False
+
+End Function
+
+End Module

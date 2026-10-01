@@ -25,6 +25,10 @@ Import Smile.Tools.TownSunControls As Sun
 Import Smile.Tools.TownSectionTools As SectionTools
 Import Smile.Tools.TownCourtTools As CourtTools
 Import Smile.Tools.TownSurfaceTools As SurfaceTools
+Import Smile.Tools.TownTerrainTools As TerrainTools
+Import Smile.Tools.TownTerrainPanel As TerrainPanel
+Import Smile.Tools.TownRampTools As RampTools
+Import Smile.Tools.TownWaterTools As WaterTools
 
 Public Type State
     ViewRequest As Number
@@ -39,6 +43,9 @@ Public Type State
     CourtGesture As CourtTools.State
     MapGesture As MapLoadTools.State
     SurfaceGesture As SurfaceTools.State
+    TerrainGesture As TerrainTools.State
+    RampGesture As RampTools.State
+    WaterGesture As WaterTools.State
     HistoryState As History.State
     Enabled As Boolean
     Anchored As Boolean
@@ -59,6 +66,9 @@ Public Sub Start(ByRef Value As State)
 
     Call Selection.SetCategory(Value.Selected, 1)
     Call Guides.Start(Value.Guide)
+    Call TerrainTools.Start(Value.TerrainGesture)
+    Call RampTools.Start(Value.RampGesture)
+    Call WaterTools.Start(Value.WaterGesture)
 
 End Sub
 
@@ -66,7 +76,7 @@ Public Function CapturesMap(ByRef Value As State) As Boolean
 
     Dim Result As Boolean
 
-    Result = Value.Ui.Category <> 0 Or Value.Ui.Tool = 15 Or Value.Ui.Tool = 16 Or Value.Ui.Tool = 70
+    Result = Value.Ui.Section = 7 Or Value.Ui.Category <> 0 Or Value.Ui.Tool = 15 Or Value.Ui.Tool = 16 Or Value.Ui.Tool = 70
 
     Return Result
 
@@ -101,6 +111,11 @@ Public Sub Cancel(ByRef Value As State, ByRef Town As Document.State)
     Call SectionTools.Cancel(Value.SectionGesture)
     Call CourtTools.Cancel(Value.CourtGesture, Town)
     Call SurfaceTools.Cancel(Value.SurfaceGesture)
+    Call TerrainTools.Cancel(Value.TerrainGesture, Town)
+
+    Value.RampGesture.Stage = 0
+    Value.WaterGesture.Stage = 0
+    Value.WaterGesture.WarningRevision = -1
 
     Value.Rubber = False
     Value.Anchored = False
@@ -118,6 +133,16 @@ Public Sub ResetHistory(ByRef Value As State, ByRef Town As Document.State)
     Call Cancel(Value, Town)
     Call Selection.ClearSelection(Value.Selected)
     Call History.Reset(Value.HistoryState, Town, Value.Guide.Ink)
+
+End Sub
+
+Public Sub AcceptTerrain(ByRef Value As State, ByRef Town As Document.State, Ready As Boolean)
+
+    If TerrainTools.Publish(Value.TerrainGesture, Town, Ready, False) Then
+        Call History.Record(Value.HistoryState, Town, Value.Guide.Ink)
+
+        Value.Ui.Message = Value.TerrainGesture.Message
+    End If
 
 End Sub
 
@@ -146,10 +171,37 @@ Public Function Command(ByRef Value As State, ByRef Town As Document.State, Acti
         Return Action
     End If
 
+    If Value.TerrainGesture.Pending Then
+        Value.Ui.Message = "Preparing terrain; Esc cancels it."
+        Return 0
+    End If
+
+    If RampTools.Command(Value.RampGesture, Value.TerrainGesture, Town, Action) Then
+        Value.Ui.Message = Value.RampGesture.Message
+        Return 0
+    End If
+
     Call Cancel(Value, Town)
     Call History.Ensure(Value.HistoryState, Town, Value.Guide.Ink)
 
-    If Action >= 1 And Action <= 4 Then
+    If WaterTools.Command(Value.WaterGesture, Value.TerrainGesture, Town, Action) Then
+
+        Value.Ui.Section = 7
+        Value.Ui.Message = Value.WaterGesture.Message
+        Return 0
+
+    Else If TerrainTools.Command(Value.TerrainGesture, Action) Then
+
+        Value.Ui.Section = 7
+        Value.Ui.Message = Value.TerrainGesture.Message
+        Return 0
+
+    Else If Action = 54 Then
+
+        Value.Ui.Section = 7
+        Return 0
+
+    Else If Action >= 1 And Action <= 4 Then
 
         If Value.Ui.Category = Action Then
 
@@ -550,12 +602,17 @@ Public Function Input(ByRef Value As State, ByRef Town As Document.State,
     Dim RawPoint As P.Vector3
     Dim Point As Camera.ProjectedPoint
     Dim Radius As Double
+    Dim Now As Number
+    Dim Elapsed As Number
 
     If Not Value.Enabled Then
         Return 0
     End If
 
     Value.Ui.Orthographic = View.OrthographicHeight > 0.0
+    Now = Timer()
+    Elapsed = Max(0, Now - Value.TerrainGesture.PreviousTime)
+    Value.TerrainGesture.PreviousTime = Now
 
     Call History.Ensure(Value.HistoryState, Town, Value.Guide.Ink)
 
@@ -641,6 +698,57 @@ Public Function Input(ByRef Value As State, ByRef Town As Document.State,
         End If
 
         Action = Command(Value, Town, Index)
+
+    End If
+
+    If Value.Ui.Section = 7 Then
+
+        OnGround = Picking.TerrainPoint(Town, View, Pointer_X(), Pointer_Y(), Window_Width(), Window_Height(), Value.Current)
+
+        If Value.TerrainGesture.Tool.Mode = 5 Or Value.TerrainGesture.Tool.Mode = 6 Then
+
+            If (OnGround And
+                Not Blocked And
+                Not Panel.Hovered() And
+                Not Key_Held(KEY_SHIFT) And
+                Pointer_Pressed(POINTER_PRIMARY) And
+                Key <> KEY_ESCAPE And
+                Not Value.TerrainGesture.Pending) Then
+
+                Point = Camera.ProjectViewerPoint(Value.Current, View, Window_Width(), Window_Height())
+                Radius = Camera.WorldSizeForPixels(14, Max(View.NearPlane, Point.Depth), View.FovDegrees, Window_Height())
+
+                If View.OrthographicHeight > 0.0 Then
+                    Radius = View.OrthographicHeight * 14.0 / ToDouble(Window_Height())
+                End If
+
+                If Value.TerrainGesture.Tool.Mode = 5 Then
+                    Call RampTools.Point(Value.RampGesture, Town, Guides.Snap(Value.Guide, Value.Current, Radius))
+
+                    Value.Ui.Message = Value.RampGesture.Message
+                Else
+
+                    Call WaterTools.Point(Value.WaterGesture, Town, Value.TerrainGesture, Value.Current)
+
+                    Value.Ui.Message = Value.WaterGesture.Message
+                End If
+
+            End If
+
+            Return Action
+
+        End If
+
+        Ok = TerrainTools.Gesture(Value.TerrainGesture, Town, Value.Current,
+            OnGround And Not Blocked And Not Panel.Hovered() And Not Key_Held(KEY_SHIFT),
+            Pointer_Pressed(POINTER_PRIMARY) And Key <> KEY_ESCAPE, Pointer_Held(POINTER_PRIMARY), Elapsed)
+        Value.Ui.Message = Value.TerrainGesture.Message
+
+        If Ok Then
+            Call History.Record(Value.HistoryState, Town, Value.Guide.Ink)
+        End If
+
+        Return Action
 
     End If
 
@@ -995,6 +1103,30 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State, View As P.Ca
     Value.Ui.CanRedo = History.RedoCount(Value.HistoryState) > 0
 
     Call Panel.Draw(Value.Ui, Town, Value.Guide, Value.Selected.SelectedCount)
+
+    If Value.Ui.Section = 7 Then
+
+        Call TerrainPanel.Draw(Value.Ui, Value.TerrainGesture, Value.RampGesture, Value.WaterGesture, Town)
+
+        If Not Panel.Hovered() Then
+
+            Clip Rectangle 0, 128, Panel.LeftEdge(), Window_Height() - 178
+
+            If Value.TerrainGesture.Tool.Mode = 5 Then
+                Call TerrainPanel.RampPreview(Value.RampGesture, View)
+            Else If Value.TerrainGesture.Tool.Mode = 6 Then
+                Call TerrainPanel.WaterPreview(Value.WaterGesture, Town, Value.Current, View)
+            Else
+
+                Call TerrainPanel.Preview(Value.TerrainGesture, Town, Value.Current, View)
+            End If
+
+            End Clip
+
+        End If
+
+    End If
+
     Call GuideList.Draw(Value.GuideBrowser, Value.Guide)
 
 End Sub

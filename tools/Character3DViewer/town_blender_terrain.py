@@ -10,7 +10,8 @@ def read_prepared(read):
             raise ValueError('Invalid prepared terrain metadata')
         return int.from_bytes(data, 'big')
 
-    if number('.PreparedVersion') != 3:
+    version = number('.PreparedVersion')
+    if version not in (3, 4):
         raise ValueError('Unsupported terrain recipe; save the map in the current Studio first.')
     batches = number('.Terrain.Batches')
     if not 1 <= batches <= 256:
@@ -28,6 +29,11 @@ def read_prepared(read):
                 raise ValueError('Incomplete prepared terrain page')
             for _ in range(length):
                 patch = [r.precise() for _ in range(8)] + [r.integer(), r.integer()]
+                if version >= 4:
+                    if patch[9] == 5:
+                        raise ValueError('Blender elevations/directed flow unsupported; use Save For Viewer.')
+                    if r.integer() != 0:
+                        raise ValueError('Blender directed flow unsupported; export canceled.')
                 if not 1 <= patch[8] <= 6 or not 0 <= patch[9] <= 4:
                     raise ValueError('Unsupported terrain patch; export canceled without flattening.')
                 result.append(patch)

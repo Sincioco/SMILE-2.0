@@ -1,0 +1,177 @@
+''' Authored water direction and bounded flow groups; terrain remains the geometry authority.
+Module Smile.Simple3D.TerrainWater3D
+
+Option Explicit
+
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.SurfacePaint3D As Paint
+Import Smile.Simple3D.TerrainSurface3D As Terrain
+Import Smile.Simple3D.TerrainTraversal3D As Traversal
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+
+Public Type Groups
+    Direction[3] As P.Vector3
+    Speed[3] As Number
+    BrushGroup[256] As Number
+    GroupCount As Number
+End Type
+
+Public Function Direction(Value As Paint.Brush) As P.Vector3
+
+    Dim Result As P.Vector3
+    Dim Ok As Boolean
+
+    Ok = M.TryNormalize(P.Vector(Value.X1 - Value.X0, 0.0, Value.Z1 - Value.Z0), Result)
+    Result = M.Scale(Result, ToDouble(Value.FlowSign))
+    Return Result
+
+End Function
+
+Public Function Prepare(ByRef Surface As Grid.State, First As P.Vector3,
+    Last As P.Vector3, Width As Double, ByRef Brush As Paint.Brush) As Boolean
+
+    Dim StartHeight As Terrain.Sample
+    Dim EndHeight As Terrain.Sample
+    Dim Result As Boolean
+
+    StartHeight = Terrain.SamplePoint(Surface, First.X, First.Z)
+    EndHeight = Terrain.SamplePoint(Surface, Last.X, Last.Z)
+    Brush.Form = Paint.FORM_LINE
+    Brush.Surface = Grid.SURFACE_WATER
+    Brush.X0 = First.X
+    Brush.Z0 = First.Z
+    Brush.X1 = Last.X
+    Brush.Z1 = Last.Z
+    Brush.Width = Width
+    Brush.WaterMode = 1
+    Brush.FlowSign = 1
+    Brush.FlowSpeed = 100
+
+    If StartHeight.Offset < EndHeight.Offset Then
+        Brush.FlowSign = -1
+    End If
+
+    Result = StartHeight.Supported And EndHeight.Supported And Paint.Valid(Brush)
+    Return Result
+
+End Function
+
+''' Test every crossed canonical triangle, including uphill intervals between lower endpoints.
+Public Function Uphill(ByRef Surface As Grid.State, Brush As Paint.Brush) As Boolean
+
+    Dim First As P.Vector3
+    Dim Last As P.Vector3
+    Dim Point As P.Vector3
+    Dim Flow As P.Vector3
+    Dim Sample As Terrain.Sample
+    Dim Cursor As Double
+    Dim Index As Number
+
+    If Brush.WaterMode <> 1 Then
+        Return False
+    End If
+
+    First = P.Vector(Brush.X0, 0.0, Brush.Z0)
+    Last = P.Vector(Brush.X1, 0.0, Brush.Z1)
+    Flow = Direction(Brush)
+
+    For Index = 0 To 2 * (Surface.Columns + Surface.Rows) + 2
+
+        If Not Traversal.NextPoint(Surface, First, Last, Cursor, Point) Then
+            Return False
+        End If
+
+        Sample = Terrain.SamplePoint(Surface, Point.X, Point.Z)
+
+        If (Not Sample.Supported Or
+            Sample.Normal.X * Flow.X + Sample.Normal.Z * Flow.Z < -0.00001) Then
+            Return True
+        End If
+
+    End For
+
+    Return True
+
+End Function
+
+''' Three directed groups plus legacy water fit the renderer's existing four-batch budget.
+Public Function Collect(ByRef Curves As Paint.State, ByRef Value As Groups) As Boolean
+
+    Dim Index As Number
+    Dim Group As Number
+    Dim Match As Number
+    Dim Flow As P.Vector3
+    Dim Brush As Paint.Brush
+
+    Value.GroupCount = 0
+
+    For Index = 0 To Curves.BrushCount - 1
+
+        Value.BrushGroup[Index] = 0
+        Brush = Curves.Brushes[Index]
+
+        If Not Paint.Valid(Brush) Then
+            Return False
+        End If
+
+        If Brush.WaterMode = 1 Then
+
+            Flow = Direction(Brush)
+            Match = -1
+
+            For Group = 0 To Value.GroupCount - 1
+
+                If (M.Distance(Flow, Value.Direction[Group]) < 0.000001 And
+                    Brush.FlowSpeed = Value.Speed[Group]) Then
+                    Match = Group
+                End If
+
+            End For
+
+            If Match < 0 Then
+
+                If Value.GroupCount >= 3 Then
+                    Return False
+                End If
+
+                Match = Value.GroupCount
+                Value.Direction[Match] = Flow
+                Value.Speed[Match] = Brush.FlowSpeed
+                Value.GroupCount = Value.GroupCount + 1
+
+            End If
+
+            Value.BrushGroup[Index] = Match + 1
+
+        End If
+
+    End For
+
+    Return True
+
+End Function
+
+Public Function GroupAt(ByRef Curves As Paint.State, ByRef Value As Groups,
+    X As Double, Z As Double) As Number
+
+    Dim Offset As Number
+    Dim Index As Number
+    Dim Result As Number
+
+    For Offset = 0 To Curves.BrushCount - 1
+
+        Index = Curves.BrushCount - Offset - 1
+
+        If Paint.Contains(Curves.Brushes[Index], X, Z) Then
+            Result = Value.BrushGroup[Index]
+            Return Result
+        End If
+
+    End For
+
+    Return 0
+
+End Function
+
+End Module

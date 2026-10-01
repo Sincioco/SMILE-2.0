@@ -220,6 +220,7 @@ struct SmileMaterial3D
     float water_foam;
     float water_time;
     float water_ripple_strength;
+    float water_flow[4]; // normalized X/Z, native units/second, enabled
 };
 
 struct SmileModelChunkV2
@@ -566,6 +567,7 @@ struct SmileVfxConstants3D
     float water_shadow[4];
     float water_ambient[4];
     float water_shadow_style[4];
+    float water_flow[4];
 };
 
 struct SmileDepthConstants3D
@@ -2569,6 +2571,20 @@ static long long smile_3d_distortion_command(long long operation,
     long long b, long long c, long long d, long long e, long long f,
     long long g)
 {
+    if (operation == 5)
+    {
+        SmileMaterial3D* material = smile_3d_material(b);
+        if (!material || material->mode != 0 || material->alpha_mode != 2 ||
+            (c != 0 && c != 1) || d < -1000 || d > 1000 || e < -1000 || e > 1000 ||
+            f < 0 || f > 400 || (c && !d && !e))
+        { smile_last_error3d = SMILE_3D_DISTORTION_ERROR_INVALID; return 0; }
+        const float length = sqrtf((float)(d*d + e*e));
+        material->water_flow[0] = length > 0 ? (float)d / length : 0;
+        material->water_flow[1] = length > 0 ? (float)e / length : 0;
+        material->water_flow[2] = (float)f * .1f;
+        material->water_flow[3] = (float)c;
+        return 1;
+    }
     if (operation == 4)
     {
         SmileMaterial3D* material = smile_3d_material(b);
@@ -5183,7 +5199,7 @@ static int smile_3d_create_pipeline(void)
         "struct I{float3 p:POSITION;float2 uv:TEXCOORD0;float4 color:COLOR0;float3 n:NORMAL;};struct O{float4 p:SV_POSITION;float2 uv:TEXCOORD0;float4 color:COLOR0;float worldY:TEXCOORD1;float3 world:TEXCOORD2;float3 normal:TEXCOORD3;};"
         "O main(I i){O o;o.p=mul(float4(i.p,1),vp);o.worldY=i.p.y;o.world=i.p;o.normal=i.n;o.uv=i.uv;o.color=i.color;return o;}";
     static const char vfx_pixel_prefix[] =
-        "cbuffer V:register(b0){row_major float4x4 vp;float4 cameraRight;float4 cameraUp;float4 atlasOutput;float4 material;float4 softDepth;float4 target;float4 distortion;float4 fireRender;float4 reflectionClip;float4 waterCamera;float4 waterLightDirection;float4 waterLightColor;float4 waterParameters;float4 waterViewport;row_major float4x4 waterShadowMvp;float4 waterShadow;float4 waterAmbient;float4 waterShadowStyle;}"
+        "cbuffer V:register(b0){row_major float4x4 vp;float4 cameraRight;float4 cameraUp;float4 atlasOutput;float4 material;float4 softDepth;float4 target;float4 distortion;float4 fireRender;float4 reflectionClip;float4 waterCamera;float4 waterLightDirection;float4 waterLightColor;float4 waterParameters;float4 waterViewport;row_major float4x4 waterShadowMvp;float4 waterShadow;float4 waterAmbient;float4 waterShadowStyle;float4 waterFlow;}"
         "Texture2D effectTexture:register(t0);SamplerState effectSampler:register(s0);Texture2D sceneDepthTexture:register(t6);SamplerState sceneDepthSampler:register(s6);"
         "float3 ToLinear(float3 c){return lerp(c/12.92,pow((c+.055)/1.055,2.4),step(.04045,c));}"
         "float Linear(float z){return softDepth.z*softDepth.w/max(softDepth.w-z*(softDepth.w-softDepth.z),.000001);}";
@@ -8041,6 +8057,7 @@ static int smile_3d_draw_vfx_submission(const SmileSubmission3D* submission)
         constants.water_parameters[2] = material->water_foam;
         smile_3d_active_camera_position(constants.water_camera);
         constants.water_camera[3] = material->water_time;
+        memcpy(constants.water_flow, material->water_flow, sizeof(constants.water_flow));
         memcpy(constants.water_light_direction, smile_directional_light3d.direction, sizeof(float) * 3);
         constants.water_light_direction[3] = material->water_ripple_strength;
         memcpy(constants.water_light_color, smile_directional_light3d.color, sizeof(float) * 3);

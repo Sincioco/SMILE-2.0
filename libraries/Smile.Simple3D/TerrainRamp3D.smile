@@ -1,0 +1,176 @@
+''' A terrain-owned corridor between frozen grid-corner anchors, with blended shoulders.
+Module Smile.Simple3D.TerrainRamp3D
+
+Option Explicit
+
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.TerrainSurface3D As Terrain
+Import Smile.Simple3D.TerrainHeights3D As Heights
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+
+Public Type Plan
+    First As P.Vector3
+    Last As P.Vector3
+    Width As Double
+    Shoulder As Double
+    Padding As Double
+    Length As Double
+    Grade As Double
+    Angle As Double
+    MaximumAngle As Double
+End Type
+
+Public Function Anchor(ByRef Surface As Grid.State, Point As P.Vector3) As P.Vector3
+
+    Dim X As Number
+    Dim Z As Number
+    Dim Result As P.Vector3
+
+    X = Max(0, Min(Surface.Columns - 1, Grid.CellX(Surface, Point.X)))
+    Z = Max(0, Min(Surface.Rows - 1, Grid.CellZ(Surface, Point.Z)))
+
+    If Abs(Point.X - Surface.XEdges[X + 1]) < Abs(Point.X - Surface.XEdges[X]) Then
+        X = X + 1
+    End If
+
+    If Abs(Point.Z - Surface.ZEdges[Z + 1]) < Abs(Point.Z - Surface.ZEdges[Z]) Then
+        Z = Z + 1
+    End If
+
+    Result = P.Vector(Surface.XEdges[X], Terrain.Corner(Surface, X, Z), Surface.ZEdges[Z])
+    Return Result
+
+End Function
+
+Public Function Prepare(ByRef Surface As Grid.State, First As P.Vector3,
+    Last As P.Vector3, Width As Double, Shoulder As Double, ByRef Value As Plan) As Boolean
+
+    Dim X As Number
+    Dim Z As Number
+    Dim CellWidth As Double
+    Dim CellDepth As Double
+
+    If (Not Terrain.Valid(Surface) Or
+        Not (Width > 0.0 And Width <= 500.0) Or
+        Not (Shoulder > 0.0 And Shoulder <= 100.0)) Then
+        Return False
+    End If
+
+    Value.First = Anchor(Surface, First)
+    Value.Last = Anchor(Surface, Last)
+    Value.Width = Width
+    Value.Shoulder = Shoulder
+    Value.Length = Sqrt((Value.Last.X - Value.First.X) * (Value.Last.X - Value.First.X) +
+        (Value.Last.Z - Value.First.Z) * (Value.Last.Z - Value.First.Z))
+    Value.Padding = 0.0
+
+    For X = Max(0, Grid.CellX(Surface, Min(First.X, Last.X) - Width)) To Min(Surface.Columns - 1, Grid.CellX(Surface, Max(First.X, Last.X) + Width))
+        CellWidth = Max(CellWidth, Surface.XEdges[X + 1] - Surface.XEdges[X])
+    End For
+
+    For Z = Max(0, Grid.CellZ(Surface, Min(First.Z, Last.Z) - Width)) To Min(Surface.Rows - 1, Grid.CellZ(Surface, Max(First.Z, Last.Z) + Width))
+        CellDepth = Max(CellDepth, Surface.ZEdges[Z + 1] - Surface.ZEdges[Z])
+    End For
+    ' A one-cell apron keeps triangles crossing the requested corridor fully usable.
+    Value.Padding = Sqrt(CellWidth * CellWidth + CellDepth * CellDepth)
+
+    If (Width < 2.0 * Max(CellWidth, CellDepth) Or
+        Value.Length < Max(Width, Value.Padding * 2.0)) Then
+        Return False
+    End If
+
+    Value.Grade = (Value.Last.Y - Value.First.Y) / Value.Length
+    Value.Angle = M.Degrees(Atan2(Abs(Value.Last.Y - Value.First.Y), Value.Length))
+    Return True
+
+End Function
+
+''' Apply to a caller-owned preview, then publish that complete snapshot on explicit Apply.
+Public Function Apply(ByRef Surface As Grid.State, ByRef Value As Plan) As Boolean
+
+    Dim Before As Heights.State
+    Dim X As Number
+    Dim Z As Number
+    Dim FirstX As Number
+    Dim LastX As Number
+    Dim FirstZ As Number
+    Dim LastZ As Number
+    Dim Margin As Double
+    Dim AxisX As Double
+    Dim AxisZ As Double
+    Dim Along As Double
+    Dim Across As Double
+    Dim Beyond As Double
+    Dim Blend As Double
+    Dim Target As Double
+    Dim Previous As Double
+    Dim Sample As Terrain.Sample
+    Dim Angle As Double
+    Dim Side As Number
+    Dim Fraction As Double
+    Dim Ok As Boolean
+
+    If Value.Length <= 0.0 Or Value.Shoulder <= 0.0 Then
+        Return False
+    End If
+
+    Before = Surface.Heights
+    Margin = Value.Width * 0.5 + Value.Padding + Value.Shoulder
+    FirstX = Max(0, Grid.CellX(Surface, Min(Value.First.X, Value.Last.X) - Margin))
+    LastX = Min(Surface.Columns, Grid.CellX(Surface, Max(Value.First.X, Value.Last.X) + Margin) + 1)
+    FirstZ = Max(0, Grid.CellZ(Surface, Min(Value.First.Z, Value.Last.Z) - Margin))
+    LastZ = Min(Surface.Rows, Grid.CellZ(Surface, Max(Value.First.Z, Value.Last.Z) + Margin) + 1)
+    AxisX = (Value.Last.X - Value.First.X) / Value.Length
+    AxisZ = (Value.Last.Z - Value.First.Z) / Value.Length
+
+    For Z = FirstZ To LastZ
+
+        For X = FirstX To LastX
+
+            Along = ((Surface.XEdges[X] - Value.First.X) * AxisX +
+                (Surface.ZEdges[Z] - Value.First.Z) * AxisZ)
+            Across = Abs((Surface.XEdges[X] - Value.First.X) * AxisZ -
+                (Surface.ZEdges[Z] - Value.First.Z) * AxisX)
+            Beyond = Max(0.0, Max(-Along, Along - Value.Length) - Value.Padding)
+            Blend = 1.0 - Max(Beyond, Max(0.0, Across - Value.Width * 0.5 - Value.Padding)) / Value.Shoulder
+            Blend = Clamp(Blend, 0.0, 1.0)
+            Blend = Blend * Blend * (3.0 - 2.0 * Blend)
+
+            If Blend > 0.0 Then
+
+                Target = Value.First.Y + Clamp(Along / Value.Length, 0.0, 1.0) * (Value.Last.Y - Value.First.Y)
+                Previous = Terrain.Corner(Surface, X, Z)
+                Ok = Terrain.SetCorner(Surface, X, Z, Previous + (Target - Previous) * Blend)
+
+                If Not Ok Then
+                    Surface.Heights = Before
+                    Return False
+                End If
+
+            End If
+
+        End For
+    End For
+    Value.MaximumAngle = 0.0
+
+    For Z = FirstZ To Min(Surface.Rows - 1, LastZ)
+
+        For X = FirstX To Min(Surface.Columns - 1, LastX)
+
+            For Side = 0 To 1
+
+                Fraction = 0.25 + ToDouble(Side) * 0.5
+                Sample = Terrain.SamplePoint(Surface,
+                    Surface.XEdges[X] + (Surface.XEdges[X + 1] - Surface.XEdges[X]) * Fraction,
+                    Surface.ZEdges[Z] + (Surface.ZEdges[Z + 1] - Surface.ZEdges[Z]) * (1.0 - Fraction))
+                Angle = M.Degrees(Atan2(Sqrt(Max(0.0, 1.0 - Sample.Normal.Y * Sample.Normal.Y)), Sample.Normal.Y))
+                Value.MaximumAngle = Max(Value.MaximumAngle, Angle)
+            End For
+        End For
+    End For
+    Return True
+
+End Function
+
+End Module

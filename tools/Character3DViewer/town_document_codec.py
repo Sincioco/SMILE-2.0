@@ -1,4 +1,4 @@
-"""Bounded TWN1–TWN10 codec shared by the existing Blender document worker."""
+"""Bounded TWN1–TWN11 codec shared by the existing Blender document worker."""
 import math
 from functools import lru_cache
 import hashlib
@@ -152,12 +152,17 @@ def landmark(document):
     return document.get('landmark', legacy_landmark(document['name']))
 
 
+def require_blender_support(document):
+    if any(document.get('heights', [])) or any(flow[0] for flow in document.get('flows', [])):
+        raise ValueError('Blender elevations/directed flow unsupported. Use Save For Viewer; destination retained.')
+
+
 def decode(payload, catalog, request=False):
     r = Reader(payload)
     if bytes(r.byte() for _ in range(3)) != b'TWN':
         raise ValueError('Unsupported town format')
     version = r.byte()
-    if not 1 <= version <= 10:
+    if not 1 <= version <= 11:
         raise ValueError('Unsupported town format')
     fingerprint = catalog.get('document_fingerprint') or hashlib.sha256(json.dumps(catalog, sort_keys=True).encode()).hexdigest()
     if r.name() != fingerprint:
@@ -251,6 +256,36 @@ def decode(payload, catalog, request=False):
         result['landmark'] = r.byte()
         if not 0 <= result['landmark'] <= 2:
             raise ValueError('Invalid landmark identity')
+    if version >= 11:
+        total = r.integer()
+        if total != (columns + 1) * (rows + 1):
+            raise ValueError('Invalid terrain corner count')
+        heights = []
+        while len(heights) < total:
+            length, height = r.integer(), r.integer()
+            if not 1 <= length <= total-len(heights) or abs(height) > 1000000:
+                raise ValueError('Invalid terrain height run')
+            heights.extend([height / 100] * length)
+        result['heights'] = heights
+        flows, groups = [], set()
+        for brush in result.get('curves', []):
+            mode, sign, speed = r.integer(), r.integer(), r.integer()
+            if mode == 0:
+                if sign != 0 or speed != 0:
+                    raise ValueError('Flat water has directed-flow metadata')
+            elif mode == 1:
+                dx, dz = brush[4]-brush[2], brush[5]-brush[3]
+                length = math.hypot(dx, dz)
+                if (brush[0] != 4 or brush[1] != 2 or brush[6] <= 0 or
+                        length <= .000001 or sign not in (-1, 1) or not 0 <= speed <= 400):
+                    raise ValueError('Invalid following-water brush')
+                groups.add((round(sign*dx/length, 6), round(sign*dz/length, 6), speed))
+            else:
+                raise ValueError('Unsupported water mode')
+            flows.append([mode, sign, speed])
+        if len(groups) > 3:
+            raise ValueError('More than three distinct flow directions/speeds')
+        result['flows'] = flows
     result['payload'] = payload[:r.offset]
     if request:
         result['mode'], result['request_id'] = r.integer(), r.integer()
@@ -369,6 +404,16 @@ def encode(document, catalog):
             raise ValueError('Invalid landmark identity')
         if document['landmark'] != legacy_landmark(document['name']):
             version = 10
+    heights = document.get('heights', [])
+    flows = document.get('flows', [])
+    if heights and len(heights) != (document['columns']+1)*(document['rows']+1):
+        raise ValueError('Invalid terrain corner count')
+    if any(not math.isfinite(h) or abs(h) > 10000 for h in heights):
+        raise ValueError('Non-finite or out-of-range terrain height')
+    if flows and len(flows) != len(document.get('curves', [])):
+        raise ValueError('Invalid water metadata count')
+    if any(heights) or any(any(flow) for flow in flows):
+        version = 11
     result = bytearray(b'TWN') + bytes([version]) + name(fingerprint) + name(document['name']) + b'\0'
     precise = lambda value: integer(round(value * 1000000))
     result += integer(document['columns']) + integer(document['rows']) + precise(document['cell_size'])
@@ -386,13 +431,13 @@ def encode(document, catalog):
         result += integer(value)
     result += precise(document['sun'][5]) + precise(document['sun'][6]) + bytes([document['sun'][7]])
     if version >= 2:
-        result += bytes([document['sun'][8] + 1])
+        result += bytes([(document['sun'][8] if len(document['sun']) > 8 else -1) + 1])
     if version >= 3:
         result += integer(len(document.get('map_tiles', [])))
         for tile in document.get('map_tiles', []):
             result += integer(tile['x']) + integer(tile['z']) + name(tile['destination'])
     if version >= 4:
-        presets = document['presets']
+        presets = document.get('presets', {'night_active': False, 'day': None, 'night': None})
         result += bytes([int(presets['night_active'])])
         for key in ('day', 'night'):
             light = presets[key]
@@ -402,8 +447,8 @@ def encode(document, catalog):
                     result += integer(value)
                 result += precise(light[5]) + precise(light[6]) + bytes([light[7], light[8] + 1])
     if version >= 5:
-        result += b''.join(precise(value) for value in document['court_offset'])
-        result += bytes([int(document['court_placed'])])
+        result += b''.join(precise(value) for value in document.get('court_offset', [0, 0]))
+        result += bytes([int(document.get('court_placed', False))])
     if version >= 6:
         result += integer(len(document.get('curves', [])))
         for brush in document.get('curves', []):
@@ -412,7 +457,24 @@ def encode(document, catalog):
     if version >= 7:
         result += bytes([document.get('terrain_style', 0)])
     if version >= 10:
-        result += bytes([document['landmark']])
+        result += bytes([landmark(document)])
+    if version >= 11:
+        total = (document['columns']+1)*(document['rows']+1)
+        quantized = [round(h*100) for h in heights] if heights else [0]*total
+        result += integer(total)
+        start = 0
+        while start < total:
+            end = start+1
+            while end < total and quantized[end] == quantized[start]:
+                end += 1
+            result += integer(end-start) + integer(quantized[start])
+            start = end
+        for flow in flows or [[0, 0, 0]]*len(document.get('curves', [])):
+            if len(flow) != 3 or any(not isinstance(value, int) for value in flow):
+                raise ValueError('Invalid water metadata')
+            result += b''.join(integer(value) for value in flow)
+    if len(result) > 524288:
+        raise ValueError('Town exceeds the native 512 KiB document limit')
     decode(result, catalog)  # Same format/range checks apply in both directions.
     return bytes(result)
 

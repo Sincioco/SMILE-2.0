@@ -59,6 +59,7 @@ Import Smile.Tools.TownDocumentNavigation As DocumentNavigation
 Import Smile.Tools.NerisTownCameraPanel As CameraPanel
 Import Smile.Tools.NerisTownCamera As Drone
 Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.TerrainSurface3D As Terrain
 
 Dim Value As Town.State
 Dim Index As Number
@@ -93,6 +94,7 @@ Call CheckDemoChoices()
 Call CheckShapeGestures()
 Call CheckLateBlenderResponse()
 Call CheckDemoLighting()
+Call CheckTerrainCamera()
 
 Action = Commands.Command(Controls, Draft, 3)
 
@@ -292,6 +294,7 @@ If Value.Ready Then
 
 End If
 
+Call CheckTerrainParty()
 Call Town.Destroy(Value)
 
 Call Town.Start(Value)
@@ -1746,5 +1749,116 @@ Sub CheckCourtPlacement()
     Call CourtPreview.Update(Value.Comparison, 16)
     Call Check(Castle.Active() And Value.Comparison.Visible,
         "Replacing The Court Reuses One Complete Assembly")
+
+End Sub
+
+Sub CheckTerrainCamera()
+
+    Dim Shot As P.Camera3D
+    Dim View As Arena.State
+    Dim Flight As Drone.State
+    Dim Column As Number
+    Dim Row As Number
+    Dim Variant As Number
+    Dim Accepted As Boolean
+
+    Accepted = Document.Blank(Draft, "Terrain Camera Fixture", 64, 64, 20.0)
+
+    For Row = 0 To Draft.Surface.Rows
+
+        For Column = 0 To Draft.Surface.Columns
+            Accepted = Terrain.SetCorner(Draft.Surface, Column, Row,
+                Clamp(Draft.Surface.XEdges[Column] * 0.2, 0.0, 100.0)) And Accepted
+        End For
+    End For
+
+    Call DocumentNavigation.Rebuild(Draft)
+
+    For Variant = 0 To 1
+
+        Shot.Position = P.Vector(350.0, 50.0, 0.0)
+        Shot.Target = P.Vector(100.0, 85.0, 0.0)
+        Shot.FovDegrees = 32.0
+        Shot.FarPlane = 50000.0
+        View.LiveCamera = Shot
+        View.MaximumDistance = 50000.0
+        Flight.Enabled = Variant = 1
+        Flight.Focusing = True
+
+        Call Motion.Reset(View.Controls, View.Zoom)
+        Call Arena.BeginTransition(View, 1000)
+        Call Arena.AdvanceTransition(View, 500)
+        Call Drone.Compose(Flight, View, Shot, True, 16, True)
+        Call Check(Accepted And View.LiveCamera.Position.Y >=
+            DocumentNavigation.GroundHeight(View.LiveCamera.Position.X, View.LiveCamera.Position.Z) + 17.99,
+            "Terrain Clears Final Eased Camera In Both Party Modes")
+    End For
+
+    Call DocumentNavigation.Disable()
+
+End Sub
+
+Sub CheckTerrainParty()
+
+    Dim Column As Number
+    Dim Row As Number
+    Dim StepIndex As Number
+    Dim Direction As Number
+    Dim MemberIndex As Number
+    Dim Accepted As Boolean
+    Dim Grounded As Boolean
+    Dim Continuous As Boolean
+    Dim Leader As P.Vector3
+    Dim Previous As P.Vector3
+    Dim Position As P.Vector3
+    Dim ActorPosition As P.Vector3
+
+    Accepted = Document.Blank(Draft, "Terrain Party Fixture", 64, 64, 20.0)
+    Grounded = True
+    Continuous = True
+
+    For Row = 0 To Draft.Surface.Rows
+
+        For Column = 0 To Draft.Surface.Columns
+            Accepted = Terrain.SetCorner(Draft.Surface, Column, Row,
+                Clamp((400.0 - Draft.Surface.ZEdges[Row]) * 0.2, 0.0, 100.0)) And Accepted
+        End For
+    End For
+
+    Call DocumentNavigation.Rebuild(Draft)
+
+    Leader = P.Vector(0.0, Navigation.GroundHeight(0.0, 450.0), 450.0)
+
+    Call Party.Teleport(Value.People, Leader)
+
+    For Direction = 0 To 1
+
+        For StepIndex = 1 To 300
+
+            Previous = Leader
+            Leader = Navigation.Move(Leader, 0.0, ToDouble(Direction * 4 - 2))
+
+            Call Party.Update(Value.People, Leader, 16)
+
+            Continuous = Continuous And Abs(Leader.Y - Previous.Y) <= 0.41
+
+            For MemberIndex = 0 To Value.People.MemberCount - 1
+                Position = Value.People.Path.Positions[MemberIndex]
+                Grounded = Grounded And Abs(Position.Y - Navigation.GroundHeight(Position.X, Position.Z)) < 0.011
+                Accepted = Character.TryPosition(Value.People.Members[MemberIndex].Body.Actor, ActorPosition) And Accepted
+            End For
+        End For
+
+        If Direction = 0 Then
+            Call Check(Leader.Z < -149.9 And Leader.Y > 122.0, "Loaded Party Reaches Ramp Plateau")
+        Else
+
+            Call Check(Leader.Z > 449.9 And Leader.Y < 24.0, "Loaded Party Returns Down Ramp")
+        End If
+
+    End For
+
+    Call Check(Accepted And Grounded And Continuous And Value.People.Ready,
+        "Four Loaded Actors Stay Grounded Through Both Continuous Ramp Journeys")
 
 End Sub

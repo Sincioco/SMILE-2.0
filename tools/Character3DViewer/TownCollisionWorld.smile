@@ -10,12 +10,16 @@ Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownCatalogData As Catalog
 Import Smile.Tools.TownCatalogFeatures As Features
 Import Smile.Tools.TownGeometry As Geometry
+Import Smile.Simple3D.TerrainSurface3D As Terrain
+Import Smile.Simple3D.TerrainTraversal3D As Traversal
 
 Public Type State
     Surface As Grid.State
     Items[1024] As Document.Item
     Shapes[Catalog.TEMPLATE_COUNT] As Catalog.Template
     ItemCount As Number
+    MinimumHeight As Double
+    MaximumHeight As Double
     LowX[1024] As Double
     LowZ[1024] As Double
     HighX[1024] As Double
@@ -31,6 +35,9 @@ Public Sub Build(ByRef Value As State, ByRef Town As Document.State)
     Dim Shape As Catalog.Template
 
     Value.Surface = Town.Surface
+
+    Call Terrain.OffsetBounds(Value.Surface, Value.MinimumHeight, Value.MaximumHeight)
+
     Value.ItemCount = Town.ItemCount
 
     For Index = 0 To Value.ItemCount - 1
@@ -145,10 +152,18 @@ Public Function CanStand(ByRef Value As State, X As Double, Z As Double) As Bool
     Dim Blocked As Boolean
     Dim Supported As Boolean
     Dim Opening As Boolean
+    Dim Ground As Terrain.Sample
 
     Cell = Grid.ReadPoint(Value.Surface, X, Z)
 
     Supported = Cell <> Grid.SURFACE_EMPTY And Cell <> Grid.SURFACE_WATER
+
+    If (Supported And
+        Cell <> Grid.SURFACE_BRIDGE And
+        Value.Surface.Heights.Nonzero > 0) Then
+        Ground = Terrain.SamplePoint(Value.Surface, X, Z)
+        Supported = Ground.Supported And Ground.Normal.Y >= Cos(M.Radians(30.0))
+    End If
 
     For Index = 0 To Value.ItemCount - 1
 
@@ -194,6 +209,40 @@ Public Function CanStand(ByRef Value As State, X As Double, Z As Double) As Bool
     Blocked = Supported And Not Blocked
 
     Return Blocked
+
+End Function
+
+''' Test every crossed terrain triangle, including a narrow ridge between endpoint samples.
+Public Function CanTraverse(ByRef Value As State, First As P.Vector3, Last As P.Vector3) As Boolean
+
+    Dim Cursor As Double
+    Dim Point As P.Vector3
+    Dim Iteration As Number
+
+    If Not CanStand(Value, Last.X, Last.Z) Then
+        Return False
+    End If
+
+    If Value.Surface.Heights.Nonzero = 0 Then
+        Return True
+    End If
+
+    If Not CanStand(Value, First.X, First.Z) Then
+        Return False
+    End If
+
+    For Iteration = 0 To (Value.Surface.Columns + Value.Surface.Rows) * 2 + 2
+
+        If Not Traversal.NextPoint(Value.Surface, First, Last, Cursor, Point) Then
+            Return True
+        End If
+
+        If Not CanStand(Value, Point.X, Point.Z) Then
+            Return False
+        End If
+
+    End For
+    Return False
 
 End Function
 

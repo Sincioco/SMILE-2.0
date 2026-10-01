@@ -1,0 +1,155 @@
+''' Physical circular brushes. Each pass reads immutable heights before writing.
+Module Smile.Simple3D.TerrainSculpt3D
+
+Option Explicit
+
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.TerrainHeights3D As Heights
+Import Smile.Simple3D.TerrainSurface3D As Terrain
+
+Public Const RAISE = 1
+Public Const LOWER = 2
+Public Const FLATTEN = 3
+Public Const SMOOTH = 4
+
+Public Type Brush
+    Mode As Number
+    Radius As Double
+    Strength As Double
+    Target As Double
+End Type
+
+Private Function NeighborAverage(ByRef Surface As Grid.State, ByRef Before As Heights.State,
+    X As Number, Z As Number) As Double
+
+    Dim Side As Number
+    Dim Column As Number
+    Dim Row As Number
+    Dim Distance As Double
+    Dim Weight As Double
+    Dim Total As Double
+    Dim Result As Double
+
+    For Side = 0 To 3
+
+        Column = X
+        Row = Z
+
+        If Side = 0 Then
+            Column = X - 1
+        Else If Side = 1 Then
+            Column = X + 1
+        Else If Side = 2 Then
+            Row = Z - 1
+        Else
+            Row = Z + 1
+        End If
+
+        If (Column >= 0 And
+            Column <= Surface.Columns And
+            Row >= 0 And
+            Row <= Surface.Rows) Then
+
+            Distance = ((Surface.XEdges[Column] - Surface.XEdges[X]) *
+                (Surface.XEdges[Column] - Surface.XEdges[X]) +
+                (Surface.ZEdges[Row] - Surface.ZEdges[Z]) * (Surface.ZEdges[Row] - Surface.ZEdges[Z]))
+            Weight = 1.0 / Max(0.000001, Distance)
+            Result = Result + Heights.Read(Before, Row * (Surface.Columns + 1) + Column) * Weight
+            Total = Total + Weight
+
+        End If
+
+    End For
+
+    If Total > 0.0 Then
+        Result = Result / Total
+    Else
+        Result = Heights.Read(Before, Z * (Surface.Columns + 1) + X)
+    End If
+
+    Return Result
+
+End Function
+
+''' Seconds is a bounded simulation interval, not a per-frame height increment.
+Public Function Apply(ByRef Surface As Grid.State, Tool As Brush, CenterX As Double,
+    CenterZ As Double, Seconds As Double) As Boolean
+
+    Dim Before As Heights.State
+    Dim X As Number
+    Dim Z As Number
+    Dim FirstX As Number
+    Dim LastX As Number
+    Dim FirstZ As Number
+    Dim LastZ As Number
+    Dim Distance As Double
+    Dim Falloff As Double
+    Dim Previous As Double
+    Dim NextHeight As Double
+    Dim Change As Double
+    Dim Ok As Boolean
+
+    If (Not Terrain.Valid(Surface) Or
+        Tool.Mode < RAISE Or
+        Tool.Mode > SMOOTH) Then
+        Return False
+    End If
+
+    If (Not (CenterX >= Surface.XEdges[0] And CenterX <= Surface.XEdges[Surface.Columns]) Or
+        Not (CenterZ >= Surface.ZEdges[0] And CenterZ <= Surface.ZEdges[Surface.Rows])) Then
+        Return False
+    End If
+
+    If (Not (Tool.Radius > 0.0 And Tool.Radius <= 500.0) Or
+        Not (Tool.Strength > 0.0 And Tool.Strength <= 200.0) Or
+        Not (Tool.Target >= -Heights.MAX_OFFSET And Tool.Target <= Heights.MAX_OFFSET) Or
+        Not (Seconds >= 0.0 And Seconds <= 0.25)) Then
+        Return False
+    End If
+
+    Before = Surface.Heights
+    FirstX = Max(0, Grid.CellX(Surface, CenterX - Tool.Radius))
+    LastX = Min(Surface.Columns, Grid.CellX(Surface, CenterX + Tool.Radius) + 1)
+    FirstZ = Max(0, Grid.CellZ(Surface, CenterZ - Tool.Radius))
+    LastZ = Min(Surface.Rows, Grid.CellZ(Surface, CenterZ + Tool.Radius) + 1)
+
+    For Z = FirstZ To LastZ
+
+        For X = FirstX To LastX
+
+            Distance = Sqrt((Surface.XEdges[X] - CenterX) * (Surface.XEdges[X] - CenterX) +
+                (Surface.ZEdges[Z] - CenterZ) * (Surface.ZEdges[Z] - CenterZ))
+
+            If Distance < Tool.Radius Then
+
+                Falloff = 1.0 - Distance / Tool.Radius
+                Falloff = Falloff * Falloff * (3.0 - 2.0 * Falloff)
+                Previous = Heights.Read(Before, Z * (Surface.Columns + 1) + X)
+                Change = Tool.Strength * Seconds * Falloff
+                NextHeight = Previous + Change
+
+                If Tool.Mode = LOWER Then
+                    NextHeight = Previous - Change
+                Else If Tool.Mode = FLATTEN Then
+                    NextHeight = Previous + Clamp(Tool.Target - Previous, -Change, Change)
+                Else If Tool.Mode = SMOOTH Then
+                    NextHeight = (Previous + (NeighborAverage(Surface, Before, X, Z) - Previous) *
+                        Min(0.25, Seconds * 5.0) * Falloff)
+                End If
+
+                Ok = Terrain.SetCorner(Surface, X, Z, Clamp(NextHeight, -Heights.MAX_OFFSET, Heights.MAX_OFFSET))
+
+                If Not Ok Then
+                    Surface.Heights = Before
+                    Return False
+                End If
+
+            End If
+
+        End For
+    End For
+    Return True
+
+End Function
+
+End Module

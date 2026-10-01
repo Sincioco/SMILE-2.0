@@ -451,10 +451,25 @@ Public Sub Update(ByRef Value As State, Leader As P.Vector3, Elapsed As Number)
     Dim TargetOpacity As Double
     Dim Separation As Double
     Dim PreviousSeparation As Double
+    Dim Before[8] As P.Vector3
+    Dim Destination As P.Vector3
+
+    For Index = 0 To Value.MemberCount - 1
+        Before[Index] = Value.Path.Positions[Index]
+    End For
 
     Call Trail.Advance(Value.Path, Leader, Elapsed, WalkingSpeed(Value) * 1.2, 14.0)
 
     For Index = 0 To Value.MemberCount - 1
+
+        If Index > 0 And Navigation.Elevated() Then
+
+            Destination = Value.Path.Positions[Index]
+            Value.Path.Positions[Index] = Navigation.Move(Before[Index], Destination.X - Before[Index].X,
+                Destination.Z - Before[Index].Z)
+            Value.Path.Moving[Index] = M.Distance(Value.Path.Positions[Index], Before[Index]) > 0.001
+
+        End If
 
         Separation = M.Length(M.Subtract(Value.Path.Positions[Index], Leader))
         PreviousSeparation = M.Length(M.Subtract(Value.Path.Positions[Index],

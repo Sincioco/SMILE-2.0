@@ -151,11 +151,14 @@ def generate(catalog):
             road = inside(x, z, terrain['roadRectangles']) or bridge
             cells.append(4 if water and bridge else 2 if water else 3 if road else 1)
     packed = [sum(v*8**j for j, v in enumerate(cells[i:i+16])) for i in range(0, len(cells), 16)]
-    lines = begin('TownInitialSurface', ['Import Smile.Simple3D.SurfaceGrid3D As Grid'])
+    lines = begin('TownInitialSurface', ['Import Smile.Simple3D.SurfaceGrid3D As Grid',
+                                       'Import Smile.Simple3D.TerrainHeights3D As Heights'])
     lines += ['Public Sub Populate(ByRef Value As Grid.State)', '', '    Dim Index As Number', '',
               f'    Value.Columns = {len(xs)-1}', f'    Value.Rows = {len(zs)-1}',
               f'    Value.OriginX = {number(west*10)}', f'    Value.OriginZ = {number(south*10)}',
-              '    Value.CellSize = 20.0', '    Value.Revision = Value.Revision + 1', '']
+              '    Value.CellSize = 20.0', '    Value.Revision = Value.Revision + 1', '',
+              '    Call Heights.Reset(Value.Heights, (Value.Columns + 1) * (Value.Rows + 1))', '',
+              '    Value.Curves.BrushCount = 0', '']
     for name, values in [('XEdges', xs), ('ZEdges', zs)]:
         lines.extend(f'    Value.{name}[{i}] = {number(v*10)}' for i, v in enumerate(values))
         lines.append('')

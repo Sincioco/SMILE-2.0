@@ -1,5 +1,42 @@
 # SMILE 2.0 - Sin Star I - Game Engine and Studio
 
+## October 2 terrain, ramps and flowing water
+
+Open **Edit Town → Terrain**. Raise and Lower drag a circular brush; Radius is in
+metres and Strength is metres per second. Flatten uses the entered elevation
+offset or **Sample Height**. Smooth blends neighbouring corners. **2D Top View**
+and **3D View** use the same ground picking. Escape cancels a stroke; Ctrl+Z/Y
+undoes/redoes one complete accepted gesture. Short clicks retain their elapsed
+sculpt time. Protected structures and current actors reject intersecting edits.
+
+For **Ramp**, click its two ground anchors, inspect the frozen heights, length,
+grade and maximum transition angle, then Apply. Default usable width is 6 m with
+2 m shoulders. The walking limit is 30 degrees; a gentle centreline does not make
+steep shoulders walkable. Arin and followers use the same triangular ground surface.
+
+For **Water Line**, click a start and end. **Follow Terrain** drapes the water
+2 cm above its bed and initially chooses downhill flow. Width, speed (0–4×),
+Reverse Last Flow and Erase Water are available. Zero speed pauses the pattern;
+erasing retains the terrain heights. An uphill warning reports any uphill part,
+including a hump between downhill endpoints. Reshape the bed or reverse the flow.
+This is authored water over terrain, not fluid simulation or a free-falling curtain.
+There are at most three independent direction/speed groups per map.
+
+Viewer saves, Save As, recovery and portable imports retain terrain and flow in
+TWN11. Existing maps retain their previous format until they need the new data.
+The existing 512 KiB authored-document budget still applies; complex saves fail
+explicitly if they exceed it. **Save For Blender** and section transfer currently
+reject elevated/directed-water content before replacing any destination. They do
+not silently flatten it. Ordinary flat map exports remain supported.
+
+Run `pwsh -NoProfile -File scripts/create-terrain-acceptance.ps1` from the repository
+to create a separate **Terrain-and-Flowing-Water-MVP.town** under a new artifacts/tests
+folder. Open it using **Edit Town → Files → Open For Viewer**. The centre road climbs
+a 10 m plateau; side streams include an intentional uphill warning. It does not
+replace a permanent town. Native Release/Debug and VSIX 2.0.69 include the feature;
+existing executables require recompilation. Detailed evidence and ownership are in
+`docs/architecture/terrain-elevation.md`.
+
 ## October 1 persistent map photographs
 
 The Maps chooser reuses saved thumbnails across Studio launches. Each card has
@@ -21,11 +58,14 @@ remains paused and unsupported backends return failure/zero.
 
 ## October 1 Demo camera and countdown
 
-Turning **Demo On** eases from the displayed camera into the starting overview
-over one second, including when the current map is excluded. A small **Next Map**
-countdown above the Demo button shows the remaining seconds in its 30-second turn.
+Turning **Demo On** eases from the displayed camera into the next orbit position
+over one second, including when the current map is excluded. A large numeric
+countdown in the upper right shows the remaining seconds in its 30-second turn.
 Turning Demo off hides the countdown. Startup and right-click overview behavior
 remain unchanged.
+
+Each Demo turn toggles day/night at 10 seconds and restores it at 20 seconds.
+Manual lighting changes preserve Demo and orbit.
 
 The statistics panel appears for the first 15 seconds of each Demo map and hides
 for the rest of that map's turn. It reappears when Demo starts, changes maps or

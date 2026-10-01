@@ -1,0 +1,117 @@
+''' Conservative support guards shared by sculpt strokes and ramps.
+Module Smile.Tools.TownTerrainProtection
+
+Option Explicit
+
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownSections As Sections
+Import Smile.Tools.TownCatalogData As Catalog
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.SurfaceSections3D As Regions
+Import Smile.Simple3D.Precision3D As P
+
+Public Type Occupants
+    Positions[8] As P.Vector3
+    MemberCount As Number
+End Type
+
+Public Function ActorsClear(ByRef Value As Occupants, ByRef Surface As Grid.State,
+    Area As Regions.Region) As Boolean
+
+    Dim Index As Number
+
+    Area.MinX = Surface.XEdges[Max(0, Grid.CellX(Surface, Area.MinX) - 1)]
+    Area.MaxX = Surface.XEdges[Min(Surface.Columns, Grid.CellX(Surface, Area.MaxX) + 2)]
+    Area.MinZ = Surface.ZEdges[Max(0, Grid.CellZ(Surface, Area.MinZ) - 1)]
+    Area.MaxZ = Surface.ZEdges[Min(Surface.Rows, Grid.CellZ(Surface, Area.MaxZ) + 2)]
+
+    For Index = 0 To Min(8, Value.MemberCount) - 1
+
+        If (Value.Positions[Index].X >= Area.MinX - 20.0 And
+            Value.Positions[Index].X <= Area.MaxX + 20.0 And
+            Value.Positions[Index].Z >= Area.MinZ - 20.0 And
+            Value.Positions[Index].Z <= Area.MaxZ + 20.0) Then
+            Return False
+        End If
+
+    End For
+    Return True
+
+End Function
+
+Public Function Allowed(ByRef Town As Document.State, Area As Regions.Region) As Boolean
+
+    Dim Index As Number
+    Dim X As Number
+    Dim Z As Number
+    Dim FirstX As Number
+    Dim LastX As Number
+    Dim FirstZ As Number
+    Dim LastZ As Number
+    Dim Shape As Catalog.Template
+    Dim Court As Regions.Region
+
+    ' Include the complete support of every affected corner, not just the brush centre.
+    FirstX = Max(0, Grid.CellX(Town.Surface, Area.MinX) - 1)
+    LastX = Min(Town.Surface.Columns - 1, Grid.CellX(Town.Surface, Area.MaxX) + 1)
+    FirstZ = Max(0, Grid.CellZ(Town.Surface, Area.MinZ) - 1)
+    LastZ = Min(Town.Surface.Rows - 1, Grid.CellZ(Town.Surface, Area.MaxZ) + 1)
+    Area.MinX = Town.Surface.XEdges[FirstX]
+    Area.MaxX = Town.Surface.XEdges[LastX + 1]
+    Area.MinZ = Town.Surface.ZEdges[FirstZ]
+    Area.MaxZ = Town.Surface.ZEdges[LastZ + 1]
+
+    If (Town.Landmark = Document.LANDMARK_SPACEPORT And
+        Sections.ProtectedArea("Neris Spaceport", Area)) Then
+        Return False
+    End If
+
+    If (Town.Landmark = Document.LANDMARK_HORIZON And
+        Sections.ProtectedArea("Horizon Airport", Area)) Then
+        Return False
+    End If
+
+    If Town.CourtPlaced Then
+
+        Court = Sections.CourtArea(Town)
+
+        If (Area.MinX < Court.MaxX And
+            Area.MaxX > Court.MinX And
+            Area.MinZ < Court.MaxZ And
+            Area.MaxZ > Court.MinZ) Then
+            Return False
+        End If
+
+    End If
+
+    For Index = 0 To Town.ItemCount - 1
+
+        Shape = Catalog.TemplateAt(Town.Items[Index].Template)
+
+        If (Shape.Category = 1 Or
+            Shape.StepCount > 0 Or
+            Shape.FloorCount > 0) Then
+
+            If Sections.IncludesItem(Area, Town.Items[Index]) Then
+                Return False
+            End If
+
+        End If
+
+    End For
+
+    For Z = FirstZ To LastZ
+
+        For X = FirstX To LastX
+
+            If Grid.ReadCell(Town.Surface, X, Z) = Grid.SURFACE_BRIDGE Then
+                Return False
+            End If
+
+        End For
+    End For
+    Return True
+
+End Function
+
+End Module

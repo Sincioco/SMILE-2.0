@@ -8,10 +8,19 @@
     <SmileSource Include="TownEditorTests.smile" StartupOnly="true" />
     <SmileSource Include="TownSectionTests.smile" />
     <SmileSource Include="TownCurvesTests.smile" />
+    <SmileSource Include="TownElevationTests.smile" />
+    <SmileSource Include="TownSculptTests.smile" />
+    <SmileSource Include="TownRampTests.smile" />
+    <SmileSource Include="TownWaterTests.smile" />
+    <SmileSource Include="TownTerrainPersistenceTests.smile" />
     <SmileSource Include="TownDocument.smile" />
     <SmileSource Include="TownMapLoads.smile" />
     <SmileSource Include="TownGeometry.smile" />
     <SmileSource Include="TownDecks.smile" />
+    <SmileSource Include="TownTerrainProtection.smile" />
+    <SmileSource Include="TownTerrainTools.smile" />
+    <SmileSource Include="TownRampTools.smile" />
+    <SmileSource Include="TownWaterTools.smile" />
     <SmileSource Include="TownSections.smile" />
     <SmileSource Include="TownSurfaceLayers.smile" />
     <SmileSource Include="NerisCastleRoute.smile" />

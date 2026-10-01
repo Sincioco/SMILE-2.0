@@ -236,6 +236,9 @@ Public Function Append(ByRef Town As Document.State, Clicked As P.Vector3) As Bo
         Return False
     End If
 
+    ' Minimap picking is horizontal; its flat projection does not supply terrain Y.
+    Clicked.Y = Point.Y
+
     If M.Length(M.Subtract(Clicked, Point)) > PickRadius Then
         Notice = "Click a road on the minimap."
         Return False
@@ -275,6 +278,8 @@ Public Function Begin(ByRef Town As Document.State, Leader As P.Vector3,
     Surface = Town.Surface
     PickRadius = Max(Surface.XEdges[Surface.Columns] - Surface.OriginX,
         Surface.ZEdges[Surface.Rows] - Surface.OriginZ) / 128.0
+
+    Clicked.Y = Destination.Y
 
     If M.Length(M.Subtract(Clicked, Destination)) > PickRadius Then
         Call Cancel("Click a road on the minimap.")

@@ -1,0 +1,247 @@
+''' Optional shared-corner offsets. Immutable text pages make document/history copies cheap.
+Module Smile.Simple3D.TerrainHeights3D
+
+Option Explicit
+
+Public Const MAX_CORNERS = 263169
+Public Const PAGE_CORNERS = 256
+Public Const MAX_PAGES = 1029
+Public Const MAX_OFFSET = 10000.0
+
+Public Type State
+    Pages[1029] As Text
+    CornerCount As Number
+    Nonzero As Number
+End Type
+
+Public Sub Reset(ByRef Value As State, CornerCount As Number)
+
+    Dim Index As Number
+
+    For Index = 0 To MAX_PAGES - 1
+        Value.Pages[Index] = ""
+    End For
+
+    Value.CornerCount = Min(MAX_CORNERS, Max(0, CornerCount))
+    Value.Nonzero = 0
+
+End Sub
+
+''' Validate stored pages at serialization boundaries, not on each terrain query.
+Public Function Valid(ByRef Value As State, ExpectedCorners As Number) As Boolean
+
+    Dim PageIndex As Number
+    Dim Character As Number
+    Dim Index As Number
+    Dim Nonzero As Number
+    Dim Size As Number
+    Dim Code As Number
+    Dim Copy As State
+    Dim Height As Double
+
+    If (ExpectedCorners < 1 Or
+        ExpectedCorners > MAX_CORNERS Or
+        (Value.CornerCount <> 0 And Value.CornerCount <> ExpectedCorners) Or
+        Value.Nonzero < 0 Or
+        Value.Nonzero > Value.CornerCount) Then
+        Return False
+    End If
+
+    Copy = Value
+    Copy.CornerCount = MAX_CORNERS
+    Copy.Nonzero = 1
+
+    For PageIndex = 0 To MAX_PAGES - 1
+
+        Size = Text_Length(Value.Pages[PageIndex])
+
+        If Size <> 0 Then
+
+            If Size <> 1024 Or PageIndex * PAGE_CORNERS >= Value.CornerCount Then
+                Return False
+            End If
+
+            For Character = 0 To Size - 1
+
+                Code = Text_Code_At(Value.Pages[PageIndex], Character)
+
+                If Code < 32 Or Code > 95 Then
+                    Return False
+                End If
+
+            End For
+
+            For Index = PageIndex * PAGE_CORNERS To Min(MAX_CORNERS - 1, (PageIndex + 1) * PAGE_CORNERS - 1)
+
+                Height = Read(Copy, Index)
+
+                If Abs(Height) > MAX_OFFSET Or (Index >= Value.CornerCount And Height <> 0.0) Then
+                    Return False
+                End If
+
+                If Height <> 0.0 Then
+                    Nonzero = Nonzero + 1
+                End If
+
+            End For
+
+        End If
+
+    End For
+
+    If Nonzero <> Value.Nonzero Then
+        Return False
+    End If
+
+    Return True
+
+End Function
+
+Private Function EmptyPage() As Text
+
+    Dim Result As Text
+    Dim Index As Number
+
+    Result = "    "
+
+    For Index = 1 To 8
+        Result = Result + Result
+    End For
+
+    Return Result
+
+End Function
+
+''' Quantization is 0.01 native units (one millimetre in a ten-units/metre town).
+Public Function Read(ByRef Value As State, Index As Number) As Double
+
+    Dim Page As Text
+    Dim Position As Number
+    Dim Digit As Number
+    Dim Encoded As Number
+    Dim SignedValue As Number
+    Dim Result As Double
+
+    If (Index < 0 Or
+        Index >= Value.CornerCount Or
+        Value.Nonzero = 0) Then
+        Return 0.0
+    End If
+
+    Page = Value.Pages[Index / PAGE_CORNERS]
+
+    If Text_Length(Page) = 0 Then
+        Return 0.0
+    End If
+
+    Position = (Index Mod PAGE_CORNERS) * 4
+
+    For Digit = 0 To 3
+        Encoded = Encoded * 64 + Text_Code_At(Page, Position + 3 - Digit) - 32
+    End For
+
+    SignedValue = Encoded / 2
+
+    If Encoded Mod 2 = 1 Then
+        SignedValue = -SignedValue - 1
+    End If
+
+    Result = ToDouble(SignedValue) * 0.01
+
+    Return Result
+
+End Function
+
+Public Function Write(ByRef Value As State, Index As Number, Offset As Double) As Boolean
+
+    Dim Previous As Number
+    Dim Quantized As Number
+    Dim Encoded As Number
+    Dim Digit As Number
+    Dim PageIndex As Number
+    Dim Position As Number
+    Dim Page As Text
+    Dim Codes As Text
+
+    If (Index < 0 Or
+        Index >= Value.CornerCount Or
+        Not (Offset >= -MAX_OFFSET And Offset <= MAX_OFFSET)) Then
+        Return False
+    End If
+
+    Previous = ToNumber(Round(Read(Value, Index) * 100.0))
+    Quantized = ToNumber(Round(Offset * 100.0))
+
+    If Previous = Quantized Then
+        Return True
+    End If
+
+    Encoded = Quantized * 2
+
+    If Quantized < 0 Then
+        Encoded = -Quantized * 2 - 1
+    End If
+
+    For Digit = 0 To 3
+        Codes = Codes + Text_From_Code(32 + Encoded Mod 64)
+        Encoded = Encoded / 64
+    End For
+
+    PageIndex = Index / PAGE_CORNERS
+    Position = (Index Mod PAGE_CORNERS) * 4
+    Page = Value.Pages[PageIndex]
+
+    If Text_Length(Page) = 0 Then
+        Page = EmptyPage()
+    End If
+
+    Value.Pages[PageIndex] = (Text_Slice(Page, 0, Position) + Codes +
+        Text_Slice(Page, Position + 4, 1024 - Position - 4))
+
+    If Previous = 0 Then
+        Value.Nonzero = Value.Nonzero + 1
+    End If
+
+    If Quantized = 0 Then
+
+        Value.Nonzero = Value.Nonzero - 1
+
+        If Value.Pages[PageIndex] = EmptyPage() Then
+            Value.Pages[PageIndex] = ""
+        End If
+
+    End If
+
+    Return True
+
+End Function
+
+Public Function Same(ByRef First As State, ByRef Second As State) As Boolean
+
+    Dim Index As Number
+
+    If First.Nonzero <> Second.Nonzero Then
+        Return False
+    End If
+
+    If First.Nonzero = 0 Then
+        Return True
+    End If
+
+    If First.CornerCount <> Second.CornerCount Then
+        Return False
+    End If
+
+    For Index = 0 To (First.CornerCount + PAGE_CORNERS - 1) / PAGE_CORNERS - 1
+
+        If First.Pages[Index] <> Second.Pages[Index] Then
+            Return False
+        End If
+
+    End For
+
+    Return True
+
+End Function
+
+End Module

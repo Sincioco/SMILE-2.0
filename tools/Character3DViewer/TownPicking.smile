@@ -10,6 +10,23 @@ Import Smile.Simple3D.PrecisionCamera3D As Camera
 Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownCatalogData As Catalog
 Import Smile.Tools.TownGeometry As Geometry
+Import Smile.Simple3D.TerrainRay3D As TerrainRay
+
+Public Function TerrainPoint(ByRef Town As Document.State, View As P.Camera3D,
+    X As Number, Y As Number, Width As Number, Height As Number,
+    ByRef Point As P.Vector3) As Boolean
+
+    Dim Origin As P.Vector3
+    Dim Ray As P.Vector3
+    Dim Ok As Boolean
+
+    Origin = Camera.CursorPointAtDepth(View, X, Y, View.NearPlane, Width, Height)
+    Ray = M.Subtract(Camera.CursorPointAtDepth(View, X, Y,
+        Max(1000.0, View.NearPlane + 1.0), Width, Height), Origin)
+    Ok = TerrainRay.Pick(Town.Surface, Origin, Ray, Layers.GROUND_Y, View.FarPlane, Point)
+    Return Ok
+
+End Function
 
 Public Type ScreenBox
     X0 As Number

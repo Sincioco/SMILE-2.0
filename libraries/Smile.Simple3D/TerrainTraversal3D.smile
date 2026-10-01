@@ -1,0 +1,76 @@
+''' Exact XZ segment intervals split at grid edges and the canonical cell diagonal.
+Module Smile.Simple3D.TerrainTraversal3D
+
+Option Explicit
+
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+
+Public Function NextPoint(ByRef Surface As Grid.State, First As P.Vector3,
+    Last As P.Vector3, ByRef Cursor As Double, ByRef Point As P.Vector3) As Boolean
+
+    Dim Delta As P.Vector3
+    Dim Current As P.Vector3
+    Dim X As Number
+    Dim Z As Number
+    Dim EndValue As Double
+    Dim Crossing As Double
+    Dim Divisor As Double
+    Dim Width As Double
+    Dim Depth As Double
+
+    If Cursor >= 1.0 Then
+        Return False
+    End If
+
+    Delta = M.Subtract(Last, First)
+    Current = M.Add(First, M.Scale(Delta, Min(1.0, Cursor + 0.000000001)))
+    X = Min(Surface.Columns - 1, Grid.CellX(Surface, Current.X))
+    Z = Min(Surface.Rows - 1, Grid.CellZ(Surface, Current.Z))
+
+    If X < 0 Or Z < 0 Then
+
+        Cursor = 1.0
+        Point = Current
+        Return True
+
+    End If
+
+    Width = Surface.XEdges[X + 1] - Surface.XEdges[X]
+    Depth = Surface.ZEdges[Z + 1] - Surface.ZEdges[Z]
+    EndValue = 1.0
+
+    If Delta.X > 0.000000001 Then
+        EndValue = Min(EndValue, (Surface.XEdges[X + 1] - First.X) / Delta.X)
+    Else If Delta.X < -0.000000001 Then
+        EndValue = Min(EndValue, (Surface.XEdges[X] - First.X) / Delta.X)
+    End If
+
+    If Delta.Z > 0.000000001 Then
+        EndValue = Min(EndValue, (Surface.ZEdges[Z + 1] - First.Z) / Delta.Z)
+    Else If Delta.Z < -0.000000001 Then
+        EndValue = Min(EndValue, (Surface.ZEdges[Z] - First.Z) / Delta.Z)
+    End If
+
+    Divisor = Delta.Z / Depth - Delta.X / Width
+
+    If Abs(Divisor) > 0.000000001 Then
+
+        Crossing = ((First.X - Surface.XEdges[X]) / Width -
+            (First.Z - Surface.ZEdges[Z]) / Depth) / Divisor
+
+        If Crossing > Cursor + 0.000000001 Then
+            EndValue = Min(EndValue, Crossing)
+        End If
+
+    End If
+
+    EndValue = Min(1.0, Max(Cursor + 0.000000001, EndValue))
+    Point = M.Add(First, M.Scale(Delta, (Cursor + EndValue) * 0.5))
+    Cursor = EndValue
+    Return True
+
+End Function
+
+End Module

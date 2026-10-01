@@ -1,0 +1,158 @@
+''' Isolated authored terrain fixture. The harness substitutes only its output path.
+
+Option Explicit
+
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownDocumentStore As Store
+Import Smile.Tools.TownSavePreparation As Preparation
+Import Smile.Tools.TownDocumentNavigation As Navigation
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.SurfacePaint3D As Paint
+Import Smile.Simple3D.TerrainSurface3D As Terrain
+Import Smile.Simple3D.TerrainRamp3D As Ramps
+Import Smile.Simple3D.TerrainWater3D As Water
+Import Smile.Simple3D.Precision3D As P
+
+Dim Town As Document.State
+Dim Work As Preparation.State
+Dim Ramp As Ramps.Plan
+Dim Brush As Paint.Brush
+Dim X As Number
+Dim Z As Number
+Dim Px As Double
+Dim Pz As Double
+Dim Height As Double
+Dim Weight As Double
+Dim Ok As Boolean
+Dim Frame As Number
+Dim Job As Number
+Dim Status As Number
+Dim Progress As Number
+Dim Deadline As Number
+
+Call Generate()
+
+Sub Generate()
+
+    Ok = Document.Blank(Town, "Terrain-and-Flowing-Water-MVP", 128, 128, 20.0)
+
+    For Z = 0 To Town.Surface.Rows
+
+        For X = 0 To Town.Surface.Columns
+
+            Px = Town.Surface.XEdges[X]
+            Pz = Town.Surface.ZEdges[Z]
+            Height = 0.0
+
+            If (Abs(Px) <= 280.0 And
+                Pz >= -600.0 And
+                Pz <= -60.0) Then
+                Height = 100.0
+            End If
+
+            ' Two independent slopes; the western stream has an intentional uphill bump.
+
+            If Abs(Px - 700.0) < 280.0 Then
+                Weight = Max(0.0, 1.0 - Abs(Px - 700.0) / 280.0)
+                Height = Weight * Max(0.0, Min(100.0, (500.0 - Pz) * 0.1))
+            Else If Abs(Px + 750.0) < 260.0 Then
+                Weight = Max(0.0, 1.0 - Abs(Px + 750.0) / 260.0)
+                Height = Weight * (Max(0.0, Min(90.0, (400.0 - Pz) * 0.1)) +
+                    Max(0.0, 32.0 - Abs(Pz + 100.0) * 0.8))
+            End If
+
+            Ok = Terrain.SetCorner(Town.Surface, X, Z, Height) And Ok
+        End For
+    End For
+
+    Ok = Ramps.Prepare(Town.Surface, P.Vector(0.0, 0.0, 400.0),
+        P.Vector(0.0, 0.0, -100.0), 60.0, 20.0, Ramp) And Ok
+    Ok = Ramps.Apply(Town.Surface, Ramp) And Ok
+
+    Brush.Form = Paint.FORM_LINE
+    Brush.Surface = Grid.SURFACE_ROAD
+    Brush.X0 = 0.0
+    Brush.Z0 = 750.0
+    Brush.X1 = 0.0
+    Brush.Z1 = -480.0
+    Brush.Width = 60.0
+    Ok = Grid.PaintBrush(Town.Surface, Brush) And Ok
+
+    Ok = Water.Prepare(Town.Surface, P.Vector(700.0, 0.0, -500.0),
+        P.Vector(700.0, 0.0, 450.0), 40.0, Brush) And Ok
+    Ok = Grid.PaintBrush(Town.Surface, Brush) And Ok
+    Ok = Water.Prepare(Town.Surface, P.Vector(-740.0, 0.0, 300.0),
+        P.Vector(-740.0, 0.0, -500.0), 40.0, Brush) And Ok
+    Ok = Grid.PaintBrush(Town.Surface, Brush) And Ok
+
+    Brush.WaterMode = 0
+    Brush.FlowSign = 0
+    Brush.FlowSpeed = 0
+    Brush.Form = Paint.FORM_CIRCLE
+    Brush.Surface = Grid.SURFACE_WATER
+    Brush.X0 = -750.0
+    Brush.Z0 = 850.0
+    Brush.X1 = 100.0
+    Brush.Z1 = 0.0
+    Brush.Width = 0.0
+    Ok = Grid.PaintBrush(Town.Surface, Brush) And Ok
+
+    Call Grid.PaintRectangle(Town.Surface, 24, 105, 28, 108, Grid.SURFACE_BRIDGE)
+    Call Navigation.Rebuild(Town)
+
+    For Frame = 0 To 100
+        Pz = 400.0 - ToDouble(Frame) * 5.0
+        Ok = Navigation.CanStand(0.0, Pz) And Ok
+    End For
+
+    If Not Ok Then
+        Print "FAIL Terrain acceptance authoring or ramp eligibility"
+        Return
+    End If
+
+    Ok = Store.SaveDocument(Town, "TerrainAcceptance.Document")
+
+    Call Preparation.Begin(Work, Town, "TerrainAcceptance.Document", 12001)
+
+    For Frame = 0 To 100000
+
+        Call Preparation.Update(Work, Town, 12001)
+
+        If Work.Stage = 0 Or Work.Failed Then
+            Exit For
+        End If
+
+    End For
+
+    If (Not Ok Or
+        Work.Stage <> 0 Or
+        Work.Failed) Then
+        Print "FAIL Terrain acceptance preparation"
+        Return
+    End If
+
+    Job = Data_BundleStart(True, "TerrainAcceptance.Document", "__TERRAIN_OUTPUT__", Work.Records)
+
+    If Job = 0 Then
+        Print "FAIL Terrain acceptance export start"
+        Return
+    End If
+
+    Deadline = Timer() + 10000
+
+    Do
+        Status = Data_FileStatus(Job)
+
+        If Status <> 0 Or Timer() >= Deadline Then
+            Exit Do
+        End If
+
+    Loop
+
+    If Status = 1 Then
+        Print "PASS Terrain acceptance map saved with prepared geometry and walkable ramp"
+    Else
+        Print "FAIL Terrain acceptance export"
+    End If
+
+End Sub

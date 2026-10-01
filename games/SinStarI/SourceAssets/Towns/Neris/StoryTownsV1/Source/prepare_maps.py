@@ -112,7 +112,7 @@ Sub Verify(Input As Text)
 
     Call Check(Ok, "Imported Preparation Binds")
 
-    Key = Derived.ReadKey(Town, "Terrain3", False)
+    Key = Derived.ReadKey(Town, "Terrain4", False)
 
     Call Check(Text_Length(Key) > 0, "Terrain Is Prepared")
 

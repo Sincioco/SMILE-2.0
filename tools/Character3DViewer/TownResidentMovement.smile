@@ -38,6 +38,10 @@ Public Function ClearRoad(Start As P.Vector3, Finish As P.Vector3,
 
     Steps = Max(1, ToNumber(M.Distance(Start, Finish) / 8.0) + 1)
 
+    If Not Navigation.CanTraverse(Start, Finish) Then
+        Return False
+    End If
+
     For Index = 0 To Steps
 
         Point = M.Add(Start, M.Scale(M.Subtract(Finish, Start), ToDouble(Index) / ToDouble(Steps)))

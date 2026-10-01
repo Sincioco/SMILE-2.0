@@ -1,0 +1,149 @@
+''' Frozen ramp preview and explicit publication into the terrain stroke transaction.
+Module Smile.Tools.TownRampTools
+
+Option Explicit
+
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownSurfaceLayers As Layers
+Import Smile.Tools.TownTerrainTools As Tools
+Import Smile.Tools.TownTerrainProtection As Protection
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.SurfaceSections3D As Regions
+Import Smile.Simple3D.TerrainRamp3D As Ramp
+Import Smile.Simple3D.Precision3D As P
+
+Public Type State
+    ProtectedActors As Protection.Occupants
+    Source As Grid.State
+    Preview As Grid.State
+    Plan As Ramp.Plan
+    Stage As Number
+    Width As Double
+    Shoulder As Double
+    Revision As Number
+    Message As Text
+End Type
+
+Public Sub Start(ByRef Value As State)
+
+    Value.Width = 6.0 * Layers.UNITS_PER_METER
+    Value.Shoulder = 2.0 * Layers.UNITS_PER_METER
+
+End Sub
+
+Private Function Prepare(ByRef Value As State, ByRef Town As Document.State) As Boolean
+
+    Dim Area As Regions.Region
+    Dim Margin As Double
+    Dim Ok As Boolean
+
+    Ok = Ramp.Prepare(Value.Source, Value.Plan.First, Value.Plan.Last,
+        Value.Width, Value.Shoulder, Value.Plan)
+
+    If Not Ok Then
+        Value.Message = "Wider ramp or more distant anchors needed."
+        Return False
+    End If
+
+    Margin = Value.Width * 0.5 + Value.Shoulder + Value.Plan.Padding
+    Area.MinX = Min(Value.Plan.First.X, Value.Plan.Last.X) - Margin
+    Area.MaxX = Max(Value.Plan.First.X, Value.Plan.Last.X) + Margin
+    Area.MinZ = Min(Value.Plan.First.Z, Value.Plan.Last.Z) - Margin
+    Area.MaxZ = Max(Value.Plan.First.Z, Value.Plan.Last.Z) + Margin
+
+    If Not Protection.ActorsClear(Value.ProtectedActors, Town.Surface, Area) Then
+        Value.Message = "Move the party away before building a ramp."
+        Return False
+    End If
+
+    If Not Protection.Allowed(Town, Area) Then
+        Value.Message = "Blocked: building, bridge or stairs."
+        Return False
+    End If
+
+    Value.Preview = Value.Source
+    Ok = Ramp.Apply(Value.Preview, Value.Plan)
+    Value.Stage = 2
+    Value.Message = "Preview ready. Apply to change terrain."
+
+    If Value.Plan.MaximumAngle > 30.0 Then
+        Value.Message = "Warning: some slopes exceed 30 degrees."
+    End If
+
+    Return Ok
+
+End Function
+
+Public Sub Point(ByRef Value As State, ByRef Town As Document.State, Position As P.Vector3)
+
+    Dim Ok As Boolean
+
+    If Value.Stage = 0 Then
+
+        Value.Source = Town.Surface
+        Value.Plan.First = Ramp.Anchor(Value.Source, Position)
+        Value.Revision = Town.Surface.Revision
+        Value.Stage = 1
+        Value.Message = "Start snapped. Click the end anchor."
+
+    Else If Value.Stage = 1 Then
+
+        Value.Plan.Last = Ramp.Anchor(Value.Source, Position)
+        Ok = Prepare(Value, Town)
+
+    End If
+
+End Sub
+
+Public Function Command(ByRef Value As State, ByRef Stroke As Tools.State,
+    ByRef Town As Document.State, Action As Number) As Boolean
+
+    Dim InputText As Text
+    Dim Setting As Double
+    Dim Ok As Boolean
+
+    If Action < 809 Or Action > 811 Then
+        Return False
+    End If
+
+    If Action = 809 Then
+
+        If Value.Stage <> 2 Or Town.Surface.Revision <> Value.Revision Then
+            Value.Message = "Pick both anchors on the current terrain."
+            Return True
+        End If
+
+        Call Tools.Capture(Stroke, Town)
+
+        Stroke.Pending = True
+        Town.Surface.Heights = Value.Preview.Heights
+        Town.Surface.Revision = Town.Surface.Revision + 1
+        Town.Revision = Town.Revision + 1
+        Value.Stage = 0
+        Value.Message = "Preparing ramp..."
+
+    Else
+        InputText = Text_Prompt("Ramp Dimensions", "Metres (1 to 50)", "6")
+
+        If Tools.Setting(InputText, 1.0, 50.0, Setting) Then
+
+            If Action = 810 Then
+                Value.Width = Setting * Layers.UNITS_PER_METER
+            Else
+                Value.Shoulder = Min(10.0, Setting) * Layers.UNITS_PER_METER
+            End If
+
+            If Value.Stage = 2 Then
+                Value.Stage = 1
+                Ok = Prepare(Value, Town)
+            End If
+
+        End If
+
+    End If
+
+    Return True
+
+End Function
+
+End Module

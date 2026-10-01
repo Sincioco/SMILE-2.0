@@ -26,6 +26,9 @@ Public Type Brush
     Width As Double
     X2 As Double
     Z2 As Double
+    WaterMode As Number
+    FlowSign As Number
+    FlowSpeed As Number
 End Type
 
 Public Type State
@@ -43,6 +46,15 @@ Public Function Valid(Value As Brush) As Boolean
         Abs(Value.X1) <= 1000000000.0 And Abs(Value.Z1) <= 1000000000.0 And
         Abs(Value.X2) <= 1000000000.0 And Abs(Value.Z2) <= 1000000000.0 And
         Value.Width >= 0.0 And Value.Width <= 1000000000.0)
+
+    If Value.WaterMode = 1 Then
+        Result = (Result And Value.Surface = 2 And Value.Form = FORM_LINE And
+            Value.Width > 0.0 And (Value.FlowSign = -1 Or Value.FlowSign = 1) And
+            Value.FlowSpeed >= 0 And Value.FlowSpeed <= 400 And
+            Abs(Value.X1 - Value.X0) + Abs(Value.Z1 - Value.Z0) > 0.000001)
+    Else
+        Result = Result And Value.WaterMode = 0 And Value.FlowSign = 0 And Value.FlowSpeed = 0
+    End If
 
     If Value.Form = FORM_CIRCLE Or Value.Form = FORM_RING Then
         Result = Result And Value.X1 > 0.0

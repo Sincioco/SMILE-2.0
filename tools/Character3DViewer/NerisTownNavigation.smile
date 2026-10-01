@@ -14,6 +14,15 @@ Import Smile.Tools.NerisCastleRoute As Castle
 Import Smile.Tools.NerisSpaceportRoute As Spaceport
 Import Smile.Tools.NerisHorizonRoute As Horizon
 
+Public Function Elevated() As Boolean
+
+    Dim Result As Boolean
+
+    Result = Edited.Elevated()
+    Return Result
+
+End Function
+
 Public Function CanStand(X As Double, Z As Double) As Boolean
 
     Dim ReturnValue As Boolean
@@ -125,6 +134,21 @@ Public Function GroundHeight(X As Double, Z As Double) As Double
 End Function
 
 ''' Substeps prevent tunnelling; axis sliding keeps building edges comfortable.
+Private Function TerrainAllows(First As P.Vector3, Last As P.Vector3) As Boolean
+
+    Dim Ok As Boolean
+
+    If (Castle.Contains(Last.X, Last.Z) Or
+        Spaceport.Contains(Last.X, Last.Z) Or
+        Horizon.Contains(Last.X, Last.Z)) Then
+        Return True
+    End If
+
+    Ok = Edited.CanTraverse(First, Last)
+    Return Ok
+
+End Function
+
 Public Function Move(Position As P.Vector3, DeltaX As Double, DeltaZ As Double) As P.Vector3
 
     Dim Index As Number
@@ -137,12 +161,14 @@ Public Function Move(Position As P.Vector3, DeltaX As Double, DeltaZ As Double) 
     For Index = 1 To Steps
 
         If (CanStand(Result.X + DeltaX / ToDouble(Steps), Result.Z) And
+            TerrainAllows(Result, P.Vector(Result.X + DeltaX / ToDouble(Steps), Result.Y, Result.Z)) And
             GroundHeight(Result.X + DeltaX / ToDouble(Steps), Result.Z) <= Result.Y + 12.0) Then
             Result.X = Result.X + DeltaX / ToDouble(Steps)
             Result.Y = GroundHeight(Result.X, Result.Z)
         End If
 
         If (CanStand(Result.X, Result.Z + DeltaZ / ToDouble(Steps)) And
+            TerrainAllows(Result, P.Vector(Result.X, Result.Y, Result.Z + DeltaZ / ToDouble(Steps))) And
             GroundHeight(Result.X, Result.Z + DeltaZ / ToDouble(Steps)) <= Result.Y + 12.0) Then
             Result.Z = Result.Z + DeltaZ / ToDouble(Steps)
             Result.Y = GroundHeight(Result.X, Result.Z)
