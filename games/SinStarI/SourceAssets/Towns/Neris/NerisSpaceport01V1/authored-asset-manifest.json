@@ -1,22 +1,23 @@
 {
   "asset_id": "NSP01",
-  "revision": "r08",
+  "revision": "r09",
   "units": "metres",
-  "status": "native-validated",
+  "status": "native-validated; moving-camera visual acceptance pending",
   "source": {
-    "file": "Source/NSP01-final-r08.blend",
-    "bytes": 4560350,
-    "sha256": "6f313b75abc8fce2e37563c8e3e476e6958e2594fc9d2f74d0609d8f715333fd"
+    "file": "Source/NSP01-final-r09.blend",
+    "bytes": 8206183,
+    "sha256": "ad6ae280c3b020d07910a55cddec2a6acb4d34e5421e4cda08fc28f03876c1cd"
   },
   "portable": {
     "file": "NSP01-preview.glb",
-    "bytes": 26860032,
-    "sha256": "c8d8148bbd3ca524bd5714bb6c24c24ab8d942a8bcb55b52ff3049d3ccc74b83"
+    "bytes": 30523464,
+    "sha256": "3e9b4b2216596a2222e0ae12ba0a42b03065041ea6bbbc32062d2f81aee59c31"
   },
   "town": {
     "file": "Town/Neris-Town-Spaceport-SW-r003.blend",
     "bytes": 19859416,
-    "sha256": "aa7b4809a415e16e163dd23c26c44b6327f3f91b0f170859e6bbae41efd8222a"
+    "sha256": "aa7b4809a415e16e163dd23c26c44b6327f3f91b0f170859e6bbae41efd8222a",
+    "status": "Historical assembly; current export appends r09 standalone source."
   },
   "terrain": {
     "file": "Town/Neris-Town-Spaceport-SW-r001.town",
@@ -41,8 +42,8 @@
       620,
       404
     ],
-    "triangles": 483336,
-    "uv_meshes": 185
+    "triangles": 482028,
+    "uv_meshes": 184
   },
   "component_counts": {
     "pads": 4,
@@ -55,12 +56,12 @@
     "tip_crystals": 13,
     "window_assemblies": 99
   },
-  "authoring_objects": 2407,
-  "materials": 11,
+  "authoring_objects": 2341,
+  "materials": 12,
   "native": {
     "models": 6,
-    "static_parts": 21,
-    "static_triangles": 473528,
+    "static_parts": 22,
+    "static_triangles": 472220,
     "borrowed_door_triangles": 9808
   },
   "preserved": {
@@ -70,7 +71,7 @@
     "document_unchanged": true,
     "source_sha256": "6f313b75abc8fce2e37563c8e3e476e6958e2594fc9d2f74d0609d8f715333fd"
   },
-  "evidence": "Checkpoints/r08",
+  "evidence": "Checkpoints/r09",
   "native_layout": "Native/native-layout.json",
   "original_manifest": "Revisions/r001/authored-asset-manifest.json",
   "limitations": [
@@ -101,5 +102,14 @@
     "curved_strip_pairs": 4,
     "gold_vertical_ties": 8,
     "source_sha256": "6f313b75abc8fce2e37563c8e3e476e6958e2594fc9d2f74d0609d8f715333fd"
+  },
+  "apron_revision": {
+    "removed_grid_objects": 60,
+    "paint_meshes_baked": 6,
+    "texture": "Textures/Approach-Paint-r09.png",
+    "dimensions": [
+      2048,
+      4096
+    ]
   }
 }

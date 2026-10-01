@@ -1,13 +1,23 @@
 [
   {
     "file": "authored-asset-manifest.json",
-    "bytes": 2991,
-    "sha256": "43bc5bc889bb2175bc53db9e4d6a9596af49a53cdfed5fb3a06deb6a223990ea"
+    "bytes": 3418,
+    "sha256": "7d173708ad320f99cfa021c48cadeafc8a353cfc4cd37e6d45a7d41effdc64cf"
+  },
+  {
+    "file": "Automation/apron_r09.py",
+    "bytes": 5108,
+    "sha256": "436d297d59356dcd0be1a46261931f07b2fb653626d3383a77daf42207d6aa71"
   },
   {
     "file": "Automation/pack-native.mjs",
     "bytes": 9165,
     "sha256": "b73e3a954c6435256081d644941bee6f9fa9d055e3dca28c8af6719f6af6de64"
+  },
+  {
+    "file": "Automation/portable_export.py",
+    "bytes": 5604,
+    "sha256": "1b8b004ee5d0bcbfbe17505adade7f782f9a1298e6e122b0b781ec1ecbd9afe1"
   },
   {
     "file": "Checkpoints/blender-assembly-checks.json",
@@ -365,6 +375,36 @@
     "sha256": "c081fd99794275033d02da17be11ced16b592952eeedbbb8f406dde0ad21cfa8"
   },
   {
+    "file": "Checkpoints/r09/apron-validation.json",
+    "bytes": 300378,
+    "sha256": "ffd2cdfd9235ad58291bb95b36d811fcfceb15183469272ae8a5d9bebaaa0026"
+  },
+  {
+    "file": "Checkpoints/r09/build.log",
+    "bytes": 26314,
+    "sha256": "cc27b8037e1cecd1f064c1d3b1c97d29ed861287a09b833a8114833d4f4fba8c"
+  },
+  {
+    "file": "Checkpoints/r09/export-check.json",
+    "bytes": 267,
+    "sha256": "ac30827b8181ce4a38d6bf1989390997bcb9bec448f2d5d9e0c1342dcb2934b1"
+  },
+  {
+    "file": "Checkpoints/r09/format.log",
+    "bytes": 41,
+    "sha256": "a70a3cb4ecae8a63c8d7c242c12586f03b94a0463a4db5aad122bef268ada4f7"
+  },
+  {
+    "file": "Checkpoints/r09/relaunch.log",
+    "bytes": 743,
+    "sha256": "56c77f4b355ff9a5b739a596ba84d43b126ca19c41fe8087d98c1111809e86e6"
+  },
+  {
+    "file": "Checkpoints/r09/tests.log",
+    "bytes": 642,
+    "sha256": "6f7cb91e5545bbfe339047525a730a62fdc968511cd5dc5c395d3e18f9d58695"
+  },
+  {
     "file": "Checkpoints/session-final.log",
     "bytes": 103,
     "sha256": "408a4a89e247436e04dcd14374393e880188a0e72057043d2f1f603c41ad3c0f"
@@ -390,74 +430,114 @@
     "sha256": "8b6b9e49892897e7d016d68914bf3da7f18d9dc86cf0171fb86dd41654704651"
   },
   {
+    "file": "Fleet/Alien-Visitors-r001.blend",
+    "bytes": 247050,
+    "sha256": "3ebdf1a4dc741b4c7e98dd7a560ba939f24ead74a97255b5623b4e61a01043e6"
+  },
+  {
+    "file": "Fleet/manifest.json",
+    "bytes": 1452,
+    "sha256": "1611229282dba43d54c9c381b018ed103ea98ea78217fabed6970b680c1e5aa1"
+  },
+  {
+    "file": "Fleet/Native/Alien-0.glb",
+    "bytes": 549084,
+    "sha256": "caf46987716b9cb74231e493281e93ba45031e89273dea5da7e2bee7c9c04793"
+  },
+  {
+    "file": "Fleet/Native/Alien-1.glb",
+    "bytes": 337704,
+    "sha256": "9b07d1eadf0b0fbe1c686aa19b3d283573a8e803201cce8e3b6f3beed31aacc7"
+  },
+  {
+    "file": "Fleet/Native/Alien-2.glb",
+    "bytes": 396552,
+    "sha256": "d2f3313014f48363a6c3bf961604b186158df32a32d8ff3c3c7ed2b752e3e46f"
+  },
+  {
+    "file": "Fleet/Native/Alien-3.glb",
+    "bytes": 214508,
+    "sha256": "0512315d0ecfaa7988536a518a805a1282af0d0be249601160655e70e5143348"
+  },
+  {
+    "file": "Fleet/Previews/Fleet.png",
+    "bytes": 1025376,
+    "sha256": "b7c5efd0a4b44b5e3529f50499e9f1c7a656cceba55f8a02508151aec936d2d6"
+  },
+  {
+    "file": "Fleet/README.md",
+    "bytes": 1654,
+    "sha256": "d3b8bc74e990e15317ecb3015ccbfa3822f4ee519cecb0ac5e3f92c13b6cfe65"
+  },
+  {
+    "file": "Fleet/Source/build_fleet.py",
+    "bytes": 7242,
+    "sha256": "27f0a683940897d1393eb010ec7d686254cc81f1fdc79b6ff653a7dccbed1ae3"
+  },
+  {
     "file": "INTEGRATION-HANDOFF.md",
-    "bytes": 4632,
-    "sha256": "f649384395e933369f10144ec1f18b355e035233946740c6394bc77c1c6381eb"
+    "bytes": 5631,
+    "sha256": "b7d12a3b02e17d7ef2b96f9e67bf21d8f95c59508bd718383c3d3d91ce03f3f6"
   },
   {
     "file": "Native/native-layout.json",
-    "bytes": 12229,
-    "sha256": "81933b580827e832afc1005ea2c270fb40dc6caf79ef919742f02f1b84151c27"
+    "bytes": 12255,
+    "sha256": "2e9c3d28eef156bd6f01f5b08ead86008e6fae467a530dedb5715965d56a5ff4"
   },
   {
     "file": "Native/Spaceport-00.glb",
-    "bytes": 6668352,
-    "sha256": "3da62bbacb77b1d857264fa42820cf0ad4e07a578991245b10e20d319c27c090"
+    "bytes": 10431920,
+    "sha256": "348e8393512827f2d73693ca7ec63ce2613265df245fc89a13711865e340b406"
   },
   {
     "file": "Native/Spaceport-01.glb",
-    "bytes": 6822852,
-    "sha256": "bb7ca1982c3ad0c5f12131b0876a268bf9d63fa03bc7792b7669764325025d4e"
+    "bytes": 10558824,
+    "sha256": "2c35bb4e2470f29a9af4e08e3840d521f7584ae95edb2e70e85ba21005de6173"
   },
   {
     "file": "Native/Spaceport-02.glb",
-    "bytes": 6869052,
-    "sha256": "693f429af48096cef170d57bdcabc659696704532aeab9fcc8622e6a0f57f4d1"
+    "bytes": 10544872,
+    "sha256": "97e1a8e753e6fe875030492793b72e93eefff8fde17beca4f45c7587512fd66a"
   },
   {
     "file": "Native/Spaceport-03.glb",
-    "bytes": 6125480,
-    "sha256": "f3656445a8bffb8b2084bcb82ba55db508ccb236616cbc729d7c4064f59f7031"
+    "bytes": 9874716,
+    "sha256": "3cd2fa6d62d570620700a66a5364c67b212cfc069a0f3982d0af971bab95fb04"
   },
   {
     "file": "Native/Spaceport-04.glb",
-    "bytes": 6005232,
-    "sha256": "12f77ba30e8d1f5a34112d661cb4a03330528749dba4b668a9938b32f3bac138"
+    "bytes": 9754472,
+    "sha256": "4cf226929e50cbe952a18346778f25878722798379c20c1c611701998054f2ef"
   },
   {
     "file": "Native/Spaceport-05.glb",
-    "bytes": 6425432,
-    "sha256": "614c6c36457e93e0aa8d3e2a9fa7c5aa22db61dc62f21337a3c029692f246ebc"
+    "bytes": 10127368,
+    "sha256": "7c7d2e866e1bc5f68405a6ef6e9d423ca93cbef140afddd5d9a2ec1485f4b2d6"
   },
   {
     "file": "NSP01-anchors.json",
-    "bytes": 16186,
-    "sha256": "d47e28d301db2353cd18501c1f114320e467b6909a97c9191d87f71354967372"
+    "bytes": 17116,
+    "sha256": "09ea6072c964b00e9efe856ee04edf369f4f6795182b587d61b90736a8889f96"
   },
   {
     "file": "NSP01-preview.glb",
-    "bytes": 26860032,
-    "sha256": "c8d8148bbd3ca524bd5714bb6c24c24ab8d942a8bcb55b52ff3049d3ccc74b83"
+    "bytes": 30523464,
+    "sha256": "3e9b4b2216596a2222e0ae12ba0a42b03065041ea6bbbc32062d2f81aee59c31"
   },
   {
     "file": "prepare-native.mjs",
-    "bytes": 1750,
-    "sha256": "95a279cfb401fade53e566cdccbcaa28eab408b197fc852bf78d6343038a64fb"
+    "bytes": 2889,
+    "sha256": "8e945357762c5e6f3d1bd37dfc2525b58905819b7467160116b65a70c11bb343"
   },
   {
     "file": "README.md",
-    "bytes": 4604,
-    "sha256": "0b18b5640f8e5f3e1ce9fca41f52dc7e14bbc5f8469fdd3ec78ee5337babfd74"
+    "bytes": 5376,
+    "sha256": "508c003f8feb213276e6e890820664e9f1c49bd8440c0a68feba5a3705ae2b16"
   },
   {
     "file": "Revisions/r001/authored-asset-manifest.json",
     "bytes": 137925,
     "sha256": "951a842c41179f5435245c72233af81f17ff3581c6cfce39c0d6af80cb37a4d5"
-  },
-  {
-    "file": "Revisions/r001/delivery-checksums.json",
-    "bytes": 6637,
-    "sha256": "412e504e9c637876efa00ab24ded5092e441447833d63d0c80649549a757f783"
   },
   {
     "file": "Revisions/r001/INTEGRATION-HANDOFF.md",
@@ -508,11 +588,6 @@
     "file": "Revisions/r007/authored-asset-manifest.json",
     "bytes": 2197,
     "sha256": "65c6f329220730fa07d6a0c0635bf1a0045740a5878e75fbd242f906bdeee33f"
-  },
-  {
-    "file": "Revisions/r007/delivery-checksums.json",
-    "bytes": 13796,
-    "sha256": "b9cd06b6782390ae0161f81e3aa73403cafc7e198c4763a73aa135adeb84b4f4"
   },
   {
     "file": "Revisions/r007/INTEGRATION-HANDOFF.md",
@@ -590,9 +665,19 @@
     "sha256": "6f313b75abc8fce2e37563c8e3e476e6958e2594fc9d2f74d0609d8f715333fd"
   },
   {
+    "file": "Source/NSP01-final-r09.blend",
+    "bytes": 8206183,
+    "sha256": "ad6ae280c3b020d07910a55cddec2a6acb4d34e5421e4cda08fc28f03876c1cd"
+  },
+  {
     "file": "Spaceport.sm3d.json",
     "bytes": 14,
     "sha256": "50208d78350a7a160dec59a82df1499b6ca7da33e54c5eb11c97e342118e68bb"
+  },
+  {
+    "file": "Textures/Approach-Paint-r09.png",
+    "bytes": 3749088,
+    "sha256": "0f80445421e68f1fbbe9114e7cd09d3b5748c76bd3a194ca42d6ee227cf7bc9c"
   },
   {
     "file": "Town/Neris-Town-Spaceport-SW-r001.blend",
@@ -618,5 +703,25 @@
     "file": "Town/spaceport-placement.json",
     "bytes": 782,
     "sha256": "b870aaa900add912cbab7ec7371901daea3b64380eeadc5c3ecef47b8d3b3b8f"
+  },
+  {
+    "file": "ViewerOwners/NerisSpaceportEntrance.smile",
+    "bytes": 2052,
+    "sha256": "93d98803b779f0e3baf3a755f68d0c57e92dd93d56c3fd4175c5caa65fa2291e"
+  },
+  {
+    "file": "ViewerOwners/NerisSpaceportGlow.smile",
+    "bytes": 2848,
+    "sha256": "d95d61b169df6a953f32a1cbc4603057871f23f3b5634f4ea85987bfe536db20"
+  },
+  {
+    "file": "ViewerOwners/NerisSpaceportPreview.smile",
+    "bytes": 3312,
+    "sha256": "883997a179a0ef0f6418cbed95609b58842630fd2a2397d1d32ff9be68a53114"
+  },
+  {
+    "file": "ViewerOwners/NerisSpaceportRoute.smile",
+    "bytes": 2928,
+    "sha256": "dd31cfb9af4e0dd10f360edc13f661241091bb0d0c7949b64abb67a2ca8fb0c2"
   }
 ]

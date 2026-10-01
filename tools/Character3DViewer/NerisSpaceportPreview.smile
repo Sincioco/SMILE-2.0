@@ -14,7 +14,7 @@ Import Smile.Tools.NerisAlienFleet As Fleet
 
 Public Type State
     Models[6] As Core.Model3D
-    Objects[21] As Core.Object3D
+    Objects[22] As Core.Object3D
     Doors As Entrance.State
     Light As Glow.State
     Visitors As Fleet.State
@@ -51,8 +51,8 @@ Public Sub LoadNext(ByRef Value As State, WestDoor As Core.Model3D, EastDoor As 
     If Value.Loaded = 0 Then
 
         If (G.LiveModelCount3D() + 10 > G.MaximumModelCount3D() Or
-            G.LiveMeshCount3D() + 33 > G.MaximumMeshCount3D() Or
-            G.LiveMaterialCount3D() + 34 > G.MaximumMaterialCount3D()) Then
+            G.LiveMeshCount3D() + 34 > G.MaximumMeshCount3D() Or
+            G.LiveMaterialCount3D() + 35 > G.MaximumMaterialCount3D()) Then
             Value.Failed = True
 
             Return
@@ -85,7 +85,7 @@ Public Sub LoadNext(ByRef Value As State, WestDoor As Core.Model3D, EastDoor As 
     End If
 
     Value.Failed = Not Ok
-    Value.Ready = Ok And Value.Loaded = 6 And Value.ObjectCount = 21 And Value.Visitors.Ready
+    Value.Ready = Ok And Value.Loaded = 6 And Value.ObjectCount = 22 And Value.Visitors.Ready
 
     Call Route.Enable(Value.Ready)
 

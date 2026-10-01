@@ -1,5 +1,14 @@
 # SMILE 2.0 - Sin Star I - Game Engine and Studio
 
+## October 1 spaceport paving
+
+Spaceport r09 removes fine apron grid meshes and bakes retained gold approach
+markings into filtered pavement. The asset package owns the source, texture and
+portable/native exports; NerisSpaceportPreview still owns incremental resources,
+now with 22 static parts. The Blender landmark exporter appends the same r09
+source at the shared road/structure height. Both castle sources are unchanged.
+No map, language, runtime capacity or bootstrap behavior changes are required.
+
 Studio opens directly into the town Demo overview and starts orbiting as soon as
 the first map is ready. Loading input does not cancel it. After the map appears,
 a click or key ends Demo; the Demo button still toggles it. Saved map participation

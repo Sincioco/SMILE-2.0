@@ -1,4 +1,20 @@
-# Current r08 removal revision
+# Current r09 pavement revision — October 1, 2026
+
+The current standalone source is `Source/NSP01-final-r09.blend`. The earlier
+r08 file and historical town assemblies are preserved. Native and Blender export
+both use r09. Sixty grid strips are removed; six gold markings become filtered
+paint on the approach deck. Bounds remain 720 by 620 by 404 metres. Portable:
+482,028 triangles; native static: 472,220 triangles in six models and 22 parts.
+The existing borrowed doors, four alien visitors and both castles are unchanged.
+
+Fresh GLB roundtrip and appended Blender export checks pass. The export check
+includes evaluated curves, packed texture presence, world bounds and absent grids.
+Native build/session validation is recorded in the current revision evidence.
+Moving-camera visual acceptance has not been performed for r09.
+
+Earlier handoffs below describe their own historical validation only.
+
+# Historical r08 removal revision
 
 September 29: removed four ivory/gold flying-strip pairs (eight objects) and eight
 hanging gold dock ties, exactly matching the two marked screenshots. Saved fresh

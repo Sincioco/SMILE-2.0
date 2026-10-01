@@ -2,7 +2,7 @@
 from pathlib import Path
 import bpy
 import math
-from town_surface_layers import distance
+from town_surface_layers import distance, elevation
 
 ROOT = Path(__file__).resolve().parents[2] / 'games/SinStarI/SourceAssets/Towns/Neris'
 
@@ -63,6 +63,37 @@ def append_airport():
     return count
 
 
+def append_spaceport():
+    """Append the current standalone source, preserving all authored hierarchies."""
+    scene = bpy.context.scene
+    source = ROOT / 'NerisSpaceport01V1/Source/NSP01-final-r09.blend'
+    with bpy.data.libraries.load(str(source), link=False) as (_, loaded):
+        loaded.scenes = ['NSP01.NerisSpaceportFinal']
+    incoming = loaded.scenes[0]
+    collection = bpy.data.collections.new('Neris Spaceport 01 - Southwest')
+    scene.collection.children.link(collection)
+    anchor = bpy.data.objects.new('Spaceport Full Size Placement', None)
+    collection.objects.link(anchor)
+    anchor.location = (-550, -760, elevation('ROAD_Y') + distance('STRUCTURE_CLEARANCE'))
+    anchor.rotation_euler.z = math.pi
+    members = {obj for obj in incoming.objects
+               if obj.get('asset_id') == 'NSP01' and obj.get('export_eligible')}
+    if not members:
+        raise ValueError('Spaceport source contains no eligible asset objects.')
+    for obj in list(members):
+        parent = obj.parent
+        while parent:
+            members.add(parent)
+            parent = parent.parent
+    for obj in members:
+        collection.objects.link(obj)
+        if obj.parent is None:
+            obj.parent = anchor
+    bpy.data.scenes.remove(incoming)
+    bpy.context.window.scene = scene
+    return len(members)
+
+
 def append_visitors():
     """Use the native pad anchors, with all visitors parked for Blender inspection."""
     from mathutils import Vector, Matrix
@@ -93,7 +124,7 @@ def populate(document):
     original = ROOT / 'NerisSpaceport01V1/Town/Neris-Town-Spaceport-SW-r003.blend'
     counts = {}
     if document['name'] == 'Neris Spaceport':
-        counts['Spaceport01'] = append_collection(original, 'Neris Spaceport 01 - Southwest')
+        counts['Spaceport01'] = append_spaceport()
         counts['AlienVisitors'] = append_visitors()
     elif document['name'] == 'Horizon Airport':
         counts['Horizon'] = append_airport()

@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 const root = path.dirname(fileURLToPath(import.meta.url));
 const destination = path.resolve(root, '../../../../../../tools/Character3DViewer/BuildAssets/Neris/Spaceport01');
 const layout = JSON.parse(fs.readFileSync(path.join(root, 'Native/native-layout.json')));
-if (layout.models !== 6 || layout.parts !== 21 || layout.triangles !== 473528)
+if (layout.models !== 6 || layout.parts !== 22 || layout.triangles !== 472220)
   throw Error('Review native spaceport contract.');
 for (const chunk of layout.native_chunks) {
   const bytes = fs.readFileSync(path.join(root, 'Native', chunk.file));
@@ -43,4 +43,4 @@ for (const ship of fleet.ships) {
     throw Error('Alien manifest does not match its mesh: ' + ship.name);
   fs.writeFileSync(path.join(destination, ship.file), bytes);
 }
-console.log('Prepared Neris Spaceport r08: 6 models, 21 static parts, 473528 static triangles; four alien visitors in 12 additional parts.');
+console.log('Prepared Neris Spaceport r09: 6 models, 22 static parts, 472220 static triangles; four alien visitors in 12 additional parts.');

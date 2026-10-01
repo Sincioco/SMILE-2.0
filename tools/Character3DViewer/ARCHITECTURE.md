@@ -1,5 +1,21 @@
 # Character Viewer Architecture
 
+## October 1 spaceport paving
+
+Spaceport r09 removes fine apron grid meshes and bakes retained gold approach
+markings into filtered pavement. The asset package owns the source, texture and
+portable/native exports; NerisSpaceportPreview still owns incremental resources,
+now with 22 static parts. The Blender landmark exporter appends the same r09
+source at the shared road/structure height. Both castle sources are unchanged.
+No map, language, runtime capacity or bootstrap behavior changes are required.
+
+Validation: the full 360-asset native build and town Foundations, Routes, Rendering
+and Session checks pass, including 22 static parts and resource release. The
+appended Blender source retains evaluated bounds and the packed paint texture.
+Two-file style and diff checks pass. Preview changes four lines, the existing
+Blender landmark owner grows by 33 lines and the session test by one. No dependency
+or guardrail exception. Moving-camera visual acceptance remains pending.
+
 ## October 1 East Valley star landscape
 
 The existing village layout author owns the six-point star, concentric promenades,

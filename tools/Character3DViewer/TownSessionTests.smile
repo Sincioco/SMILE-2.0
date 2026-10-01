@@ -718,6 +718,7 @@ Sub CheckWalkingConnection(ByRef Value As Town.State)
     Call Check(Value.Harbor.Ready And Not Value.Horizon.Ready And Not Value.Comparison.Ready,
         "West Map Loads Only The Original Spaceport")
     Call Check(Value.Harbor.Doors.Ready And Value.Harbor.Light.Ready, "Original Doors And Crystals Remain Ready")
+    Call Check(Value.Harbor.ObjectCount = 22, "Revised Paving Loads All Spaceport Static Parts")
     Call CheckAlienVisitors(Value)
     Call Inspection.MapOrbit(Value, Failures)
     Call Inspection.RightClickOrbit(Value, Failures)
