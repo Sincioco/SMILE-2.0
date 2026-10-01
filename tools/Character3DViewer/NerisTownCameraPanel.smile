@@ -242,12 +242,19 @@ Public Sub Draw(ByRef Value As State, ByRef View As Arena.State,
 
 End Sub
 
-Public Sub MapStatistics(ByRef Value As State, ByRef View As Arena.State)
+Public Sub MapStatistics(ByRef Value As State, ByRef View As Arena.State,
+    Optional Conversation As Boolean = False)
 
+    Dim Labels[6] As Text
+    Dim Readings[6] As Text
+    Dim Index As Number
+    Dim LabelWidth As Number
+    Dim ReadingWidth As Number
+    Dim PanelWidth As Number
+    Dim StatsY As Number
+    Dim ReadingX As Number
     Dim WidthMeters As Double
     Dim LengthMeters As Double
-    Dim StatsX As Number
-    Dim StatsY As Number
 
     If Value.StatisticsHidden Then
         Return
@@ -255,27 +262,42 @@ Public Sub MapStatistics(ByRef Value As State, ByRef View As Arena.State)
 
     WidthMeters = ToDouble(View.Floor.Width) / 10.0
     LengthMeters = ToDouble(View.Floor.Depth) / 10.0
-    StatsX = Window_Width() - 338
-    StatsY = Window_Height() - 126
-
-    Fill Rectangle StatsX, StatsY, 326, 114, RGB(12, 20, 32) Opacity 80
-    Draw Text "Map Polygons (Triangles)" At StatsX + 8, StatsY + 4 Size 11 Color LIGHT_GRAY
-    Draw Text CountLabel(Value.MapTriangles) At StatsX + 198, StatsY + 4 Size 11 Color CYAN
-    Draw Text "Map Vertices" At StatsX + 8, StatsY + 22 Size 11 Color LIGHT_GRAY
-    Draw Text CountLabel(Value.MapVertices) At StatsX + 198, StatsY + 22 Size 11 Color CYAN
-    Draw Text "Map Area (mÂ²)" At StatsX + 8, StatsY + 40 Size 11 Color LIGHT_GRAY
-    Draw Text MeasureLabel(WidthMeters * LengthMeters) At StatsX + 198, StatsY + 40 Size 11 Color CYAN
-    Draw Text "Map Length (m)" At StatsX + 8, StatsY + 58 Size 11 Color LIGHT_GRAY
-    Draw Text MeasureLabel(LengthMeters) At StatsX + 198, StatsY + 58 Size 11 Color CYAN
-    Draw Text "Map Width (m)" At StatsX + 8, StatsY + 76 Size 11 Color LIGHT_GRAY
-    Draw Text MeasureLabel(WidthMeters) At StatsX + 198, StatsY + 76 Size 11 Color CYAN
-    Draw Text "Map Load Time (ms)" At StatsX + 8, StatsY + 94 Size 11 Color LIGHT_GRAY
+    Labels[0] = "Map Polygons (Triangles)"
+    Labels[1] = "Map Vertices"
+    Labels[2] = "Map Area (m²)"
+    Labels[3] = "Map Length (m)"
+    Labels[4] = "Map Width (m)"
+    Labels[5] = "Map Load Time (ms)"
+    Readings[0] = CountLabel(Value.MapTriangles)
+    Readings[1] = CountLabel(Value.MapVertices)
+    Readings[2] = MeasureLabel(WidthMeters * LengthMeters)
+    Readings[3] = MeasureLabel(LengthMeters)
+    Readings[4] = MeasureLabel(WidthMeters)
+    Readings[5] = CountLabel(Value.LoadMilliseconds)
 
     If Value.Loading Then
-        Draw Text "Loading..." At StatsX + 198, StatsY + 94 Size 11 Color CYAN
-    Else
-        Draw Text CountLabel(Value.LoadMilliseconds) At StatsX + 198, StatsY + 94 Size 11 Color CYAN
+        Readings[5] = "Loading..."
     End If
+
+    For Index = 0 To 5
+        LabelWidth = Max(LabelWidth, Text_Width(Labels[Index], 11))
+        ReadingWidth = Max(ReadingWidth, Text_Width(Readings[Index], 11))
+    End For
+
+    PanelWidth = 8 + LabelWidth + 16 + ReadingWidth + 8
+    StatsY = Window_Height() - 126
+
+    If Conversation Then
+        StatsY = StatsY - 130
+    End If
+
+    Fill Rectangle 18, StatsY, PanelWidth, 114, RGB(12, 20, 32) Opacity 80
+
+    For Index = 0 To 5
+        Draw Text Labels[Index] At 26, StatsY + 4 + Index * 18 Size 11 Color LIGHT_GRAY
+        ReadingX = 18 + PanelWidth - 8 - Text_Width(Readings[Index], 11)
+        Draw Text Readings[Index] At ReadingX, StatsY + 4 + Index * 18 Size 11 Color CYAN
+    End For
 
 End Sub
 

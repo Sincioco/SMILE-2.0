@@ -770,6 +770,19 @@ Public Sub Input(View As P.Camera3D, Key As Number, Blocked As Boolean)
 
         Call Demo.Toggle(Showcase)
 
+        If Showcase.Enabled And Not Demo.Included(OpenTabs.Menu.Showcase, Town.Name) Then
+
+            Ok = Tabs.SelectTab(OpenTabs, Town, Tabs.NextDemo(OpenTabs), False)
+            Showcase.Enabled = Ok
+
+            If Ok Then
+                Call Editor.ResetDocument(Controls, Town)
+            Else
+                Controls.Ui.Message = "Enable Demo for a map in the Maps dialog first."
+            End If
+
+        End If
+
         If Showcase.Enabled Then
             TeleportPending = True
             TabOverviewPending = True
@@ -1027,7 +1040,7 @@ Public Sub Update(Leader As P.Vector3, Elapsed As Number)
         Not World.Active() And Not OpenTabs.Menu.Visible And
         Not Files.BlocksEditing(Transfers) And OpenTabs.TabCount > 1) Then
 
-        Ok = Tabs.SelectTab(OpenTabs, Town, (OpenTabs.Active + 1) Mod OpenTabs.TabCount, False)
+        Ok = Tabs.SelectTab(OpenTabs, Town, Tabs.NextDemo(OpenTabs), False)
 
         If Ok Then
 

@@ -61,10 +61,13 @@ function Test-ViewerProcessOwned(
     $normalizedPath = [IO.Path]::GetFullPath($ExecutablePath)
     $toolPrefix = $toolRoot.TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
     $studioPrefix = (Join-Path $repositoryRoot 'tools\SmileStudio').TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
+    $artifactPrefix = (Join-Path $repositoryRoot 'artifacts').TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
 
     return $normalizedPath -ieq $ResolvedExecutable -or
         ($ProcessName -like 'Character3DViewer*' -and
             $normalizedPath.StartsWith($toolPrefix, [StringComparison]::OrdinalIgnoreCase)) -or
+        ($ProcessName -eq 'Character3DViewer' -and
+            $normalizedPath.StartsWith($artifactPrefix, [StringComparison]::OrdinalIgnoreCase)) -or
         ($ProcessName -eq 'SmileStudio' -and
             $normalizedPath.StartsWith($studioPrefix, [StringComparison]::OrdinalIgnoreCase))
 }

@@ -1,5 +1,54 @@
 # Character Viewer Architecture
 
+## October 1: map showcase selection and viewport layout
+
+TownDemo owns the 30-second clock and saved participation keyed by map name.
+TownMapPicker owns each thumbnail toggle and hit rectangle; TownTabs selects the
+next participating document. The session coordinates tab changes, including an
+immediate switch when Demo starts from an excluded map. No map data is changed by
+toggling participation. An empty selection starts no load; a single included map
+keeps orbiting without reloading itself.
+
+NerisTown delegates screen-to-world picking to TownPicking and cursor-anchored
+zoom to NerisTownCamera, retaining its current automatic orbit state. Reset and
+top-view commands release the old cursor anchor. TownViewportLayout remains the
+shared drawing/hit-testing authority for the toolbar, now aligned right with Edit
+Town last. NerisTownCameraPanel measures its own labels and readings to size the
+bottom-left statistics panel and avoid active conversation text.
+
+TownResidents owns the relocated starting positions. TownResidentMovement rejects
+autonomous errands crossing the 26-metre entrance exclusion area. TownCatalogData
+owns preview indices, allowing repeated object instances to share one atlas image;
+the renderer-generated palette includes all landforms without duplicate fountain
+cells. No bootstrap behavior, capacity, dependency or architecture limit changes.
+
+Validation: native Foundations, Routes, Rendering and Session checks pass, including
+saved Demo choices, exclusion/wrap/single-map behavior, 30-second timing, separate
+button hit areas, cursor anchoring through moving/paused orbits, and reset cleanup.
+The 359-asset build was gracefully installed. Exact mouse/visual acceptance remains
+pending because the desktop-control tool stopped for the current turn.
+
+Growth review: NerisTown +14 net lines, Session +13, MapPicker +80, TownDemo +85,
+CameraPanel +22 and Tabs +26. These additions remain in their existing responsible
+owners; NativeProgram and ViewerWorkflow do not change. A session fixture initially
+overflowed its stack by declaring sixteen full map documents locally; its dedicated
+test-owned storage now has static duration. Empty failed fixture output now reports
+the native exit code instead of hiding it behind a PowerShell null error. The
+launcher recognizes repository-staged Studio builds when closing older versions.
+The original scene/calibration suite and launcher preservation fixtures pass too.
+Inspection tests now tear down the editor directly even in the legacy factory scene,
+which intentionally does not route input through editable-town controls.
+
+Tracked diagnostic issue: `Dim Left As Number : Left = 94 : Print Left` compiles,
+but reads the direction constant 12. Evidence is the isolated PickerMath native
+probe and Syntax.cs's LeftKeyword mapping; the new button coordinate uses ButtonX.
+The remaining ViewerParty uses assign 12, so they currently render as intended.
+A compiler diagnostic or contextual-name resolution change is deferred from this
+layout milestone because it changes shared keyword compatibility. Next action:
+add a language regression for declared direction-name reads and select a consistent
+parser/semantic diagnostic policy before updating both native and Web generation.
+
+
 ## October 1: minimap gestures, route fidelity and conversation presentation
 
 TownMinimapInput owns press/drag/release classification and capture; it reads a

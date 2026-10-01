@@ -10,6 +10,7 @@ Import Smile.Tools.TownDocumentStore As Storage
 Import Smile.UI.Controls As UI
 Import Smile.Tools.TownMapPicker As Picker
 Import Smile.Tools.TownWorldPreviews As Previews
+Import Smile.Tools.TownDemo As Demo
 
 Public Const CAPACITY = 16
 
@@ -444,6 +445,31 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State)
     End If
 
 End Sub
+
+''' Skip excluded tabs without touching their documents or renderer resources.
+Public Function NextDemo(ByRef Value As State) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Offset As Number
+    Dim Index As Number
+
+    For Offset = 1 To Value.TabCount
+
+        Index = (Value.Active + Offset) Mod Value.TabCount
+
+        If (Index <> Value.Active And
+            Demo.Included(Value.Menu.Showcase, Value.Documents[Index].Name)) Then
+            Return Index
+        End If
+
+    End For
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
 
 Public Sub DrawPicker(ByRef Value As State)
 

@@ -24,6 +24,17 @@ PALETTE_LABELS = {'group:Wayfinding Post': 'Civic Plaza Sign',
                   'group:Wayfinding Post.002': 'Market Walk Sign'}
 
 
+def palette_slots(catalog):
+    """Stable template IDs share compact preview slots for repeated placements."""
+    slots, result = {}, []
+    for template in catalog['templates']:
+        source = template['source']
+        if source in PALETTE_COPIES:
+            source = source.rsplit('.', 1)[0]
+        result.append(slots.setdefault(source, len(slots)))
+    return result
+
+
 def number(value):
     return f'{value:.6f}'
 
@@ -62,13 +73,14 @@ def generate(catalog):
               f'Public Const TEMPLATE_COUNT = {len(catalog["templates"])}',
               f'Public Const INITIAL_ITEMS = {len(catalog["instances"])}', '',
               'Public Type Template', '    Label As Text', '    Category As Number',
-              '    PaletteVisible As Boolean',
+              '    PaletteVisible As Boolean', '    PreviewIndex As Number',
               '    Low As P.Vector3', '    High As P.Vector3',
               '    PartCount As Number', '    Parts[32] As Number',
               '    SolidCount As Number', '    CameraCount As Number', '    StepCount As Number',
               '    FloorCount As Number', '    DoorCount As Number', '    WaterCount As Number', 'End Type', '',
               'Public Function TemplateAt(Index As Number) As Template', '',
               '    Dim Result As Template', '', '    Select Case Index']
+    previews = palette_slots(catalog)
     for template in catalog['templates']:
         parts = [m*16+p for m, p in template['parts']]
         if template.get('existingCastle'):
@@ -81,6 +93,7 @@ def generate(catalog):
                   f'            Result.Label = {quoted(PALETTE_LABELS.get(template["source"], template["label"]))}',
                   f'            Result.Category = {category}',
                   f'            Result.PaletteVisible = {template["source"] not in PALETTE_COPIES}',
+                  f'            Result.PreviewIndex = {previews[template["id"]]}',
                   f'            Result.Low = {vector((low[0]*10,low[2]*10,low[1]*10))}',
                   f'            Result.High = {vector((high[0]*10,high[2]*10,high[1]*10))}',
                   f'            Result.PartCount = {len(parts)}',

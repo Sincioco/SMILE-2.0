@@ -20,6 +20,9 @@
 
 ## Permanent task progress reporting
 
+- When Sin sends `tasks` on a line by itself, enumerate the outstanding tasks.
+- After every Studio relaunch, enumerate changes completed since the previous relaunch, identify what is ready for testing, and list all outstanding tasks.
+
 - When beginning a new task, state what the task is in a bolded bulleted list.
 - When completing a task, list every remaining task in a bolded bulleted list.
 - When work is interrupted and then resumed, state what task will be resumed in a bolded bulleted list.

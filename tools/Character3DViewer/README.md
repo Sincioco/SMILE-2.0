@@ -12,8 +12,14 @@ editing behavior. Adults are 21 native units tall versus Arin's 22; Pip, Nia and
 Tobin are children at 14.5 units, and Mochi is the dog.
 
 Demo starts enabled and stops on a click or key press. Clicking **Demo On/Off**
-still toggles it explicitly. Rapid wheel scrolling accelerates smoothly up to
+still toggles it explicitly. Each thumbnail in **Maps** has its own saved Demo
+On/Off toggle. Only Neris Town, Neris Spaceport, Horizon Airport and Neris Star Lake
+are included by default; each map is shown for 30 seconds. Starting Demo on an
+excluded map switches to the next included map. Rapid wheel scrolling accelerates smoothly up to
 three times a single scroll's step; pausing or reversing direction resets the gain.
+Wheel zoom during map orbit moves toward the world point under the cursor while
+orbit continues, including an idle orbit. A paused orbit stays paused. Residents start farther inside Neris Town;
+their autonomous errands keep a 26-metre area around Arin's entrance spawn clear.
 
 ## October 1 prepared map loading
 
@@ -85,10 +91,13 @@ handles. Resize participates in Undo. `.guide` version 2 adds names and still re
 version 1. Native file dialogs reset pointer capture so loading a guide cannot turn
 the dialog's mouse motion into a map pan.
 
-The header is an 80% opaque overlay over the full scene. The left-aligned bottom row
-contains Help, Day/Night, Orbit, Fit, Fly Inspect and Edit Town, sized to their labels.
+The header is an 80% opaque overlay over the full scene. The right-aligned bottom row
+contains Help, Day/Night, Orbit, Fit, Fly Inspect, Demo, World Map and Edit Town,
+sized to their labels, with Edit Town last at the right edge.
 Orbit/zoom and camera diagnostics sit at the upper right; geometry, dimensions and
-measured map loading milliseconds sit at the lower right. `Ctrl+M` hides or shows
+measured map loading milliseconds sit at the lower left. The statistics panel fits
+its longest label and value with an eight-pixel right margin. It moves above active
+conversation text. `Ctrl+M` hides or shows
 that statistics panel; `M` alone toggles the minimap. A second live camera
 attached below the minimap looks ahead from Arin's eye position while the party moves,
 independent of the main view. Route status appears below that inset.

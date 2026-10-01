@@ -35,12 +35,12 @@ Private Function Home(Index As Number) As P.Vector3
 
     Dim Result As P.Vector3
 
-    Result = P.Vector(-65.0, 0.0, -2660.0)
+    Result = P.Vector(-450.0, 0.0, -2450.0)
 
     If Index = 1 Then
-        Result = P.Vector(60.0, 0.0, -2560.0)
+        Result = P.Vector(400.0, 0.0, -2450.0)
     Else If Index = 2 Then
-        Result = P.Vector(0.0, 0.0, -2280.0)
+        Result = P.Vector(0.0, 0.0, -2000.0)
     Else If Index = 3 Then
         Result = P.Vector(-700.0, 0.0, -2450.0)
     Else If Index = 4 Then
@@ -52,7 +52,7 @@ Private Function Home(Index As Number) As P.Vector3
     Else If Index = 7 Then
         Result = P.Vector(-400.0, 0.0, -1000.0)
     Else If Index = 8 Then
-        Result = P.Vector(45.0, 0.0, -2735.0)
+        Result = P.Vector(950.0, 0.0, -2450.0)
     End If
 
     Return Result

@@ -280,7 +280,10 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
 
     ' Wake idle orbit before deciding which visible control owns this event.
 
-    Call UpdateIdle(Value, Value.InputActive, 0)
+    Call UpdateIdle(Value, Value.InputActive, 0,
+        Pointer_Wheel_Delta() <> 0 And Key = KEY_NONE And
+        Not Pointer_Held(POINTER_PRIMARY) And Not Pointer_Held(POINTER_MIDDLE) And
+        Not Pointer_Held(POINTER_SECONDARY))
 
     ' Header hover blocks pointer gestures, not independent keyboard framing.
 
@@ -655,19 +658,24 @@ Public Sub HoldDisplayedView(ByRef Value As State)
 
 End Sub
 
-''' All town tabs resolve wheel zoom against the visible surface under the cursor.
-Private Sub BeginPointerZoom(ByRef Value As State)
+''' Zoom follows the picked map point while retaining the current orbit state.
+Public Sub BeginPointerZoom(ByRef Value As State, Optional X As Number = -1, Optional Y As Number = -1)
 
     Dim Point As P.Vector3
 
-    If Picking.OrbitPoint(Value.View.LiveCamera, Pointer_X(), Pointer_Y(),
+    If X < 0 Or Y < 0 Then
+        X = Pointer_X()
+        Y = Pointer_Y()
+    End If
+
+    If Picking.OrbitPoint(Value.View.LiveCamera, X, Y,
         Window_Width(), Window_Height(), Point) Then
 
-        Call Drone.BeginCursorZoom(Value.Flight, Value.View, Value.BaseCamera, Point, Pointer_X(), Pointer_Y())
+        Call Drone.BeginCursorZoom(Value.Flight, Value.View, Value.BaseCamera, Point, X, Y)
 
         Value.Follow = False
         Value.PartyCamera = False
-        Value.Cinematic = False
+        Value.OverviewOrbit = False
         Value.IdleOrbit = False
         Value.IdleTime = 0
 
@@ -857,6 +865,7 @@ Public Sub ResetOverview(ByRef Value As State, Optional Harbor As Boolean = Fals
     Value.View.MaximumDistance = 18000.0
     Value.Flight.CursorOrbit = False
     Value.Flight.OrbitAtParty = False
+    Value.Flight.CursorZoom = False
     Value.Keys.FlyInspect = False
 
     If Value.Harbor.Ready Or Value.Horizon.Ready Then
@@ -901,6 +910,7 @@ Public Sub TopDown(ByRef Value As State, Optional Orthographic As Boolean = Fals
     Dim Distance As Double
 
     Value.Flight.CursorOrbit = False
+    Value.Flight.CursorZoom = False
 
     Call Keyboard.StopTravel(Value.Keys)
 
@@ -1218,7 +1228,8 @@ Private Function MovementHeld() As Boolean
 
 End Function
 
-Public Sub UpdateIdle(ByRef Value As State, Active As Boolean, Elapsed As Number)
+Public Sub UpdateIdle(ByRef Value As State, Active As Boolean, Elapsed As Number,
+    Optional WheelOnly As Boolean = False)
 
     If (Active Or
         Authoring.Editing() Or
@@ -1226,7 +1237,7 @@ Public Sub UpdateIdle(ByRef Value As State, Active As Boolean, Elapsed As Number
 
         Value.IdleTime = 0
 
-        If Value.IdleOrbit Then
+        If Value.IdleOrbit And Not (WheelOnly And Value.Cinematic) Then
             Call HoldDisplayedView(Value)
         End If
 
@@ -1459,7 +1470,7 @@ Public Sub Overlay(ByRef Value As State)
         Call Inset.Label(Value.PointOfView, Party.LeaderName(Value.People))
     End If
 
-    Call CameraPanel.MapStatistics(Value.Panel, Value.View)
+    Call CameraPanel.MapStatistics(Value.Panel, Value.View, Residents.Talking(Value.Residents))
 
     If Not Authoring.Editing() And Not Authoring.PreviewActive() Then
         Call Residents.Overlay(Value.Residents)

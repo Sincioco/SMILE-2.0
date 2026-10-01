@@ -57,6 +57,8 @@ Dim BeforeSurface As Number
 Dim CellPreview As Guides.Marker
 Dim MarkerGesture As MarkerTools.State
 Dim Showcase As Demo.State
+Dim DemoChoices As Demo.Selection
+Dim ReopenedChoices As Demo.Selection
 
 Call CheckMinimapGesture()
 Call Demo.Start(Showcase)
@@ -78,6 +80,31 @@ Ok = Demo.StopOnInput(Showcase, True, False)
 
 Call Check(Ok And Not Showcase.Enabled And Showcase.Elapsed = 0,
     "Click Or Key Stops Demo And Clears Its Timer")
+
+Call Check(Demo.DefaultIncluded("Neris Town") And Demo.DefaultIncluded("Neris Spaceport") And
+    Demo.DefaultIncluded("Horizon Airport") And Demo.DefaultIncluded("Neris Star Lake") And
+    Not Demo.DefaultIncluded("Neris Canals") And Not Demo.DefaultIncluded("New Map"),
+    "Only The Four Approved Maps Default To Demo On")
+Call Demo.Start(Showcase)
+
+Showcase.Elapsed = 29000
+Ok = Demo.Advance(Showcase, 999, True)
+
+Call Check(Not Ok, "Demo Waits Until Thirty Seconds")
+
+Ok = Demo.Advance(Showcase, 1, True)
+
+Call Check(Ok And Showcase.Elapsed = 0, "Demo Changes Maps At Thirty Seconds")
+
+Ok = Demo.SetIncluded(DemoChoices, "Preference Fixture", True)
+
+Call Check(Ok And Demo.Included(ReopenedChoices, "Preference Fixture"),
+    "Map Demo Choice Persists When Reopened")
+
+Ok = Demo.SetIncluded(DemoChoices, "Preference Fixture", False)
+
+Call Check(Ok And Not Demo.Included(DemoChoices, "Preference Fixture"),
+    "Map Demo Toggle Can Be Turned Off")
 
 Call Check(Layers.BED_Y < Layers.GROUND_Y And Layers.GROUND_Y < Layers.WATER_Y And
     Layers.WATER_Y < Layers.ROAD_Y, "Physical Terrain Layers Stay Strictly Ordered")

@@ -5,6 +5,7 @@ Option Explicit
 
 Import Smile.UI.Controls As UI
 Import Smile.Tools.TownWorldPreviews As Previews
+Import Smile.Tools.TownDemo As Demo
 
 Public Type State
     Visible As Boolean
@@ -13,6 +14,8 @@ Public Type State
     EntryCount As Number
     Active As Number
     Photos As Previews.State
+    Showcase As Demo.Selection
+    Message As Text
 End Type
 
 Public Function PanelWidth() As Number
@@ -57,7 +60,10 @@ Public Function Pick(Px As Number, Py As Number, PanelX As Number, EntryCount As
 
     ColumnPitch = (Width - 24) / 4
 
-    If Px < PanelX + 16 Or Px >= PanelX + Width - 16 Or Py < 222 Or Py >= 222 + Pitch * 4 Then
+    If (Px < PanelX + 16 Or
+        Px >= PanelX + Width - 16 Or
+        Py < 222 Or
+        Py >= 222 + Pitch * 4) Then
         ReturnValue = -1
 
         Return ReturnValue
@@ -68,7 +74,8 @@ Public Function Pick(Px As Number, Py As Number, PanelX As Number, EntryCount As
     Result = Row * 4 + Column
 
     If (Px - PanelX - 16 - Column * ColumnPitch >= ColumnPitch - 8 Or
-        Py - 222 - Row * Pitch >= Pitch - 8 Or Result >= EntryCount) Then
+        Py - 222 - Row * Pitch >= Pitch - 8 Or
+        Result >= EntryCount) Then
         ReturnValue = -1
 
         Return ReturnValue
@@ -78,11 +85,49 @@ Public Function Pick(Px As Number, Py As Number, PanelX As Number, EntryCount As
 
 End Function
 
+Public Function DemoHit(Px As Number, Py As Number, PanelX As Number, EntryCount As Number,
+    Optional Width As Number = 960, Optional Pitch As Number = 150) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Index As Number
+    Dim ButtonX As Number
+    Dim Top As Number
+    Dim PitchX As Number
+
+    Index = Pick(Px, Py, PanelX, EntryCount, Width, Pitch)
+
+    If Index < 0 Then
+        ReturnValue = -1
+
+        Return ReturnValue
+    End If
+
+    PitchX = (Width - 24) / 4
+    ButtonX = PanelX + 16 + (Index Mod 4) * PitchX + (PitchX - 78) / 2
+    Top = 222 + (Index / 4) * Pitch + Pitch - 31
+
+    If (Px >= ButtonX And
+        Px < ButtonX + 70 And
+        Py >= Top And
+        Py < Top + 20) Then
+        Return Index
+    End If
+
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
 Public Function Input(ByRef Value As State, Key As Number) As Number
+
+    Dim ReturnValue2 As Number
 
     Dim ReturnValue As Number
 
     Dim Result As Number
+    Dim Ok As Boolean
 
     Value.Consumed = Value.Visible
 
@@ -107,6 +152,24 @@ Public Function Input(ByRef Value As State, Key As Number) As Number
         Return ReturnValue
     End If
 
+    Result = DemoHit(Pointer_X(), Pointer_Y(), LeftEdge(), Value.EntryCount, PanelWidth(), RowPitch())
+
+    If Result >= 0 Then
+
+        Ok = Demo.SetIncluded(Value.Showcase, Value.Names[Result],
+            Not Demo.Included(Value.Showcase, Value.Names[Result]))
+        Value.Message = ""
+
+        If Not Ok Then
+            Value.Message = "Demo setting could not be saved."
+        End If
+
+        ReturnValue2 = -1
+
+        Return ReturnValue2
+
+    End If
+
     Result = Pick(Pointer_X(), Pointer_Y(), LeftEdge(), Value.EntryCount, PanelWidth(), RowPitch())
 
     If Result >= 0 Or UI.Contains(LeftEdge() + PanelWidth() - 94, 172, 78, 30) Then
@@ -126,6 +189,8 @@ Public Sub Draw(ByRef Value As State)
     Dim PitchX As Number
     Dim PitchY As Number
     Dim PictureWidth As Number
+    Dim Included As Boolean
+    Dim Label As Text
 
     If Not Value.Visible Then
         Return
@@ -134,7 +199,7 @@ Public Sub Draw(ByRef Value As State)
     PanelX = LeftEdge()
     PitchX = (PanelWidth() - 24) / 4
     PitchY = RowPitch()
-    PictureWidth = Min(PitchX - 18, (PitchY - 45) * 8 / 5)
+    PictureWidth = Min(PitchX - 18, (PitchY - 65) * 8 / 5)
     Fill Rectangle 0, 126, Window_Width(), Window_Height() - 126, BLACK Opacity 55
     Fill Rectangle PanelX, 158, PanelWidth(), 100 + PitchY * 4, RGB(12, 23, 36)
     Draw Text "Choose A Map" At PanelX + 16, 177 Size 22 Color WHITE
@@ -149,12 +214,27 @@ Public Sub Draw(ByRef Value As State)
 
         Call UI.DrawButton(CardX, CardY, PitchX - 8, PitchY - 8, "", Index = Value.Active)
         Call Previews.Draw(Value.Photos, Index, CardX + (PitchX - 8 - PictureWidth) / 2,
-            CardY + 5, PictureWidth, PitchY - 45)
+            CardY + 5, PictureWidth, PitchY - 65)
 
-        Draw Text Value.Names[Index] At CardX + (PitchX - 8) / 2, CardY + PitchY - 34 Size 14 Color WHITE Centered
+        Draw Text Value.Names[Index] At CardX + (PitchX - 8) / 2, CardY + PitchY - 54 Size 14 Color WHITE Centered
+
+        Included = Demo.Included(Value.Showcase, Value.Names[Index])
+        Label = "Demo Off"
+
+        If Included Then
+            Label = "Demo On"
+        End If
+
+        Call UI.DrawButton(CardX + (PitchX - 78) / 2, CardY + PitchY - 31, 70, 20, Label, Included)
     End For
 
-    Draw Text "Choose a map to enter. Esc closes this list." At PanelX + 16, 235 + PitchY * 4 Size 13 Color CYAN
+    Label = "Choose a map. Demo On includes it in the 30-second cycle."
+
+    If Text_Length(Value.Message) > 0 Then
+        Label = Value.Message
+    End If
+
+    Draw Text Label At PanelX + 16, 235 + PitchY * 4 Size 13 Color CYAN
 
 End Sub
 

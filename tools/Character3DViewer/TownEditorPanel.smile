@@ -306,11 +306,7 @@ Private Sub Library(ByRef Value As State, X As Number)
                     Call Button(Value, 100 + Index, TileX, TileY, 139,
                         "", Value.Template = Index, True, 89)
 
-                    If Index < 35 Then
-                        Draw Image Value.Atlas From (Index Mod 5) * 128, (Index / 5) * 96 Size 128 By 96 At TileX + 20, TileY + 2 Size 96 By 72 Filter Smooth
-                    Else
-                        Draw Text "Rock / Landform" At TileX + 8, TileY + 30 Size 12 Color RGB(212, 184, 140)
-                    End If
+                    Draw Image Value.Atlas From (Shape.PreviewIndex Mod 5) * 128, (Shape.PreviewIndex / 5) * 96 Size 128 By 96 At TileX + 20, TileY + 2 Size 96 By 72 Filter Smooth
 
                     Draw Text Text_Slice(Shape.Label, 0, 19) At TileX + 5, TileY + 72 Size 11 Color WHITE
 

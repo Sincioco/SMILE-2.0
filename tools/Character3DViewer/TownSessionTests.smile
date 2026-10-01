@@ -4,6 +4,9 @@ Option Explicit
 
 Import Smile.Tools.NerisTown As Town
 Import Smile.Tools.TownResidents As Residents
+Import Smile.Tools.TownDemo As Demo
+Import Smile.Tools.TownMapPicker As MapPicker
+Import Smile.Tools.TownViewportLayout As Toolbar
 Import Smile.Tools.TownResidentInteraction As Conversation
 Import Smile.Tools.NerisTownKeyboard As Keyboard
 Import Smile.Simple3D.Character3D As Character
@@ -58,6 +61,7 @@ Dim Controls As Commands.State
 Dim Action As Number
 Dim Shape As Catalog.Template
 Dim OpenTabs As Tabs.State
+Dim DemoOptions As Tabs.State
 Dim SecondTown As Document.State
 Dim AirportMapPoint As P.Vector3
 Dim DustFlights As Traffic.State
@@ -74,6 +78,7 @@ Shape = Catalog.TemplateAt(Controls.Ui.Template)
 
 Call Check(Shape.Category = 3, "Changing Category Selects A Matching Placement Template")
 Call CheckDecorPalette()
+Call CheckDemoChoices()
 
 Action = Commands.Command(Controls, Draft, 3)
 
@@ -121,6 +126,13 @@ If Value.Ready And Editor.TownName() = "Neris Town" Then
 
     Call Check(Value.Residents.Loaded = 9 And Not Value.Residents.Failed,
         "Nine Residents Fit The Full Town Material Budget")
+
+    For Index = 0 To 8
+        Call Check(M.Distance(Value.Residents.People[Index].Motion.Position,
+            P.Vector(0.0, 23.12, -2780.0)) > 300.0,
+            "Every Resident Starts Away From Arin Spawn")
+    End For
+
     Call CheckResidentConversation(Value)
     Call Residents.Destroy(Value.Residents)
 
@@ -889,6 +901,39 @@ Sub CheckResidentConversation(ByRef Value As Town.State)
 
 End Sub
 
+Sub CheckDemoChoices()
+
+    Dim Ok As Boolean
+
+    DemoOptions.TabCount = 3
+    DemoOptions.Documents[0].Name = "Demo Fixture A"
+    DemoOptions.Documents[1].Name = "Demo Fixture B"
+    DemoOptions.Documents[2].Name = "Demo Fixture C"
+    Ok = Demo.SetIncluded(DemoOptions.Menu.Showcase, DemoOptions.Documents[0].Name, True)
+    Ok = Demo.SetIncluded(DemoOptions.Menu.Showcase, DemoOptions.Documents[1].Name, False) And Ok
+    Ok = Demo.SetIncluded(DemoOptions.Menu.Showcase, DemoOptions.Documents[2].Name, True) And Ok
+
+    Call Check(Ok And Tabs.NextDemo(DemoOptions) = 2, "Demo Skips Excluded Maps")
+
+    DemoOptions.Active = 2
+
+    Call Check(Tabs.NextDemo(DemoOptions) = 0, "Demo Wraps To The Next Included Map")
+
+    Ok = Demo.SetIncluded(DemoOptions.Menu.Showcase, DemoOptions.Documents[0].Name, False)
+
+    Call Check(Ok And Tabs.NextDemo(DemoOptions) = -1, "One Included Map Keeps Orbiting Without Reloading")
+
+    Ok = Demo.SetIncluded(DemoOptions.Menu.Showcase, DemoOptions.Documents[2].Name, False)
+
+    Call Check(Ok And Tabs.NextDemo(DemoOptions) = -1, "No Included Maps Starts No Map Load")
+    Call Check(MapPicker.DemoHit(110, 345, 0, 14) = 0 And
+        MapPicker.DemoHit(110, 260, 0, 14) = -1,
+        "Demo Button Hit Is Separate From The Thumbnail")
+    Call Check(Toolbar.ButtonLeft(2) + Toolbar.Width(2) = Window_Width() - 18,
+        "Edit Town Ends The Toolbar At The Right Margin")
+
+End Sub
+
 Sub LoadResidents(ByRef Value As Town.State)
 
     Dim Step As Number
@@ -1171,6 +1216,25 @@ Sub CheckDecorPalette()
     Entry = Catalog.TemplateAt(34)
 
     Call Check(Entry.Label = "Market Walk Sign" And Seen[34] = 1, "Market Sign Keeps Its Own Lettering")
+
+    For Item = 20 To 25
+        Entry = Catalog.TemplateAt(Item)
+
+        Call Check(Entry.PreviewIndex = 20, "Repeated Fountains Share One Thumbnail")
+    End For
+
+    For Item = 27 To 32
+        Entry = Catalog.TemplateAt(Item)
+
+        Call Check(Entry.PreviewIndex = 22, "Repeated Crystal Circles Share One Thumbnail")
+    End For
+
+    For Item = 35 To 38
+        Entry = Catalog.TemplateAt(Item)
+
+        Call Check(Entry.PreviewIndex = Item - 10, "Each Landform Has Its Own Thumbnail")
+    End For
+
     Call Panel.Release(Controls.Ui)
 
 End Sub

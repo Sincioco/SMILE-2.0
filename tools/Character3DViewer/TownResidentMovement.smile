@@ -68,6 +68,24 @@ Public Sub Start(ByRef Value As State, Position As P.Vector3, Index As Number)
 
 End Sub
 
+''' Keep autonomous errands outside the entrance where Arin initially appears.
+Public Function AvoidsSpawn(Start As P.Vector3, Finish As P.Vector3) As Boolean
+
+    Dim Delta As P.Vector3
+    Dim Closest As P.Vector3
+    Dim Amount As Double
+    Dim Result As Boolean
+
+    Delta = M.Subtract(Finish, Start)
+    Amount = Clamp((-Start.X * Delta.X + (-2780.0 - Start.Z) * Delta.Z) /
+        Max(0.000001, Delta.X * Delta.X + Delta.Z * Delta.Z), 0.0, 1.0)
+    Closest = M.Add(Start, M.Scale(Delta, Amount))
+    Result = Closest.X * Closest.X + (Closest.Z + 2780.0) * (Closest.Z + 2780.0) >= 260.0 * 260.0
+
+    Return Result
+
+End Function
+
 Private Sub Plan(ByRef Value As State)
 
     Dim Attempt As Number
@@ -97,7 +115,9 @@ Private Sub Plan(ByRef Value As State)
             Target.Z = Target.Z - Length
         End If
 
-        If M.Distance(Target, Value.Home) < 420.0 And ClearRoad(Value.Position, Target) Then
+        If (M.Distance(Target, Value.Home) < 420.0 And
+            AvoidsSpawn(Value.Position, Target) And
+            ClearRoad(Value.Position, Target)) Then
 
             Value.Destination = Target
             Value.Moving = True

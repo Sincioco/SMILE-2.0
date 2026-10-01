@@ -1,4 +1,4 @@
-''' Shared draw/hit layout for the left-aligned town viewport toolbar.
+''' Shared draw/hit layout for the right-aligned town viewport toolbar.
 Module Smile.Tools.TownViewportLayout
 
 Option Explicit
@@ -49,9 +49,11 @@ Public Function ButtonLeft(Index As Number) As Number
     Dim Offset As Number
     Dim Item As Number
     Dim Result As Number
+    Dim Total As Number
 
     For Item = 0 To 7
 
+        Total = Total + Width(Item) + 8
         ' Preserve action IDs while placing Edit Town at the right end.
 
         If (Item <> 2 And (Item < Index Or Index = 2)) Then
@@ -60,7 +62,7 @@ Public Function ButtonLeft(Index As Number) As Number
 
     End For
 
-    Result = 18 + Offset
+    Result = Max(18, Window_Width() - 18 - (Total - 8)) + Offset
 
     Return Result
 

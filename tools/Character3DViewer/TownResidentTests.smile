@@ -30,6 +30,12 @@ Public Function Run() As Number
     Dim Failures As Number
     Dim Ok As Boolean
 
+    If (Movement.AvoidsSpawn(P.Vector(-400.0, 0.0, -2780.0), P.Vector(400.0, 0.0, -2780.0)) Or
+        Not Movement.AvoidsSpawn(P.Vector(-400.0, 0.0, -2450.0), P.Vector(400.0, 0.0, -2450.0))) Then
+        Print "FAIL Resident Errands Keep Arin Spawn Clear"
+        Failures = Failures + 1
+    End If
+
     Ok = Document.Blank(Town, "Resident Roads", 20, 20, 20.0)
 
     Call Grid.PaintRectangle(Town.Surface, 0, 8, 19, 11, Grid.SURFACE_ROAD)

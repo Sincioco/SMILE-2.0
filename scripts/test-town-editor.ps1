@@ -22,9 +22,9 @@ function Invoke-Check([string]$Project, [string]$Executable, [string]$Expected) 
     $process = Start-Process -FilePath $Executable -WorkingDirectory (Split-Path $Executable -Parent) `
         -WindowStyle Hidden -RedirectStandardOutput "$Executable.log" -RedirectStandardError "$Executable.errors.log" -PassThru
     if (-not $process.WaitForExit(45000)) { throw "Town fixture did not finish: $Executable (PID $($process.Id))" }
-    $text = Get-Content "$Executable.log" -Raw
+    $text = [string](Get-Content "$Executable.log" -Raw)
     Write-Host $text.Trim()
-    if ($process.ExitCode -ne 0 -or $text -match 'FAIL' -or $text -notmatch $Expected) { throw "Town fixture failed: $Executable" }
+    if ($process.ExitCode -ne 0 -or $text -match 'FAIL' -or $text -notmatch $Expected) { throw "Town fixture failed: $Executable (exit $($process.ExitCode))" }
 }
 
 Invoke-Check (Join-Path $viewer 'TownEditorTests.smileproj') (Join-Path $output 'Foundations.exe') 'PASS Town Editor Foundations'
@@ -79,7 +79,7 @@ if (-not $SkipRendering) {
         [Text.Encoding]::UTF8.GetBytes('TownRender.Canals'))).ToLowerInvariant()
     $renderData = Join-Path $env:LOCALAPPDATA "SMILE 2.0\Games\$renderHash\Data"
     $null = New-Item -ItemType Directory -Path $renderData -Force
-    Copy-Item -LiteralPath (Join-Path $root 'games/SinStarI/SourceAssets/Towns/Neris/StoryTownsV1/Towns/Neris Canals.town') `
+    Copy-Item -LiteralPath (Join-Path $viewer 'Fixtures/DenseCanals.town') `
         -Destination (Join-Path $renderData "$canalHash.bin") -Force
     Invoke-Check (Join-Path $viewer 'TownRenderTests.smileproj') (Join-Path $output 'TownRenderTests.exe') 'PASS Town Editor Rendering'
 

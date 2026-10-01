@@ -1,14 +1,99 @@
-''' Reusable one-minute tab showcase timer, paused while editing or loading.
+''' Showcase timing and saved per-map participation, independent of tab documents.
 Module Smile.Tools.TownDemo
 
 Option Explicit
 
-Public Const INTERVAL = 60000
+Public Const INTERVAL = 30000
+
+Private Dim PreferenceByte[1] As Number
+
+Public Type Selection
+    Names[16] As Text
+    Enabled[16] As Boolean
+    EntryCount As Number
+End Type
 
 Public Type State
     Enabled As Boolean
     Elapsed As Number
 End Type
+
+Public Function DefaultIncluded(Name As Text) As Boolean
+
+    Dim Result As Boolean
+
+    Result = (Name = "Neris Town" Or Name = "Neris Spaceport" Or
+        Name = "Horizon Airport" Or Name = "Neris Star Lake")
+
+    Return Result
+
+End Function
+
+Private Function Find(ByRef Value As Selection, Name As Text) As Number
+
+    Dim Index As Number
+    Dim Length As Number
+    Dim Status As Number
+
+    For Index = 0 To Value.EntryCount - 1
+
+        If Value.Names[Index] = Name Then
+            Return Index
+        End If
+
+    End For
+
+    Index = Value.EntryCount Mod 16
+    Value.EntryCount = Min(16, Value.EntryCount + 1)
+    Value.Names[Index] = Name
+    Value.Enabled[Index] = DefaultIncluded(Name)
+
+    Load Data "TownDemo.Include." + Name Into PreferenceByte Count Length Status Status
+
+    If (Status = DATA_STATUS_OK And
+        Length = 1 And
+        PreferenceByte[0] <= 1) Then
+        Value.Enabled[Index] = PreferenceByte[0] = 1
+    End If
+
+    Return Index
+
+End Function
+
+Public Function Included(ByRef Value As Selection, Name As Text) As Boolean
+
+    Dim Index As Number
+    Dim Result As Boolean
+
+    Index = Find(Value, Name)
+    Result = Value.Enabled[Index]
+
+    Return Result
+
+End Function
+
+Public Function SetIncluded(ByRef Value As Selection, Name As Text, Enabled As Boolean) As Boolean
+
+    Dim Index As Number
+    Dim Status As Number
+
+    Index = Find(Value, Name)
+    PreferenceByte[0] = 0
+
+    If Enabled Then
+        PreferenceByte[0] = 1
+    End If
+
+    Save Data PreferenceByte Count 1 To "TownDemo.Include." + Name Status Status
+
+    If Status <> DATA_STATUS_OK Then
+        Return False
+    End If
+
+    Value.Enabled[Index] = Enabled
+    Return True
+
+End Function
 
 Public Sub Start(ByRef Value As State)
 

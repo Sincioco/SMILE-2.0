@@ -46,12 +46,79 @@ Public Sub Run(ByRef Value As Town.State, ByRef Failures As Number)
     Call QuarterTurn(Value, Failures)
     Call FrontView(Value, Failures)
     Call CursorZoom(Value, Failures)
+    Call OrbitZoom(Value, Failures)
 
     Call Party.Teleport(Value.People, SavedPosition)
     Call Party.Update(Value.People, SavedPosition, 0)
 
     Value.Map = SavedMap
     Value.Look.Time = 0
+
+End Sub
+
+Private Sub OrbitZoom(ByRef Value As Town.State, ByRef Failures As Number)
+
+    Dim Pointer As Motion.PointerInput
+    Dim Anchor As P.Vector3
+    Dim Eye As P.Vector3
+    Dim Pixel As Camera.ProjectedPoint
+    Dim Before As Double
+    Dim Yaw As Double
+    Dim Mode As Number
+    Dim Direction As Number
+    Dim Frame As Number
+    Dim Ok As Boolean
+    Dim Anchored As Boolean
+
+    For Mode = 0 To 2
+
+        Call Town.ResetOverview(Value)
+        Call Arena.AdvanceTransition(Value.View, 1000)
+        Call Town.Update(Value, 0)
+
+        Value.IdleOrbit = Mode = 1
+        Value.OrbitPaused = Mode = 2
+
+        For Direction = 0 To 1
+
+            Eye = Value.View.LiveCamera.Position
+            Ok = Picking.OrbitPoint(Value.View.LiveCamera, 430, 360,
+                Window_Width(), Window_Height(), Anchor)
+            Before = M.Distance(Eye, Anchor)
+
+            Call Town.UpdateIdle(Value, True, 0, True)
+            Call Town.BeginPointerZoom(Value, 430, 360)
+            Call Check(Ok And Value.Flight.CursorZoom And M.Distance(Eye, Value.View.LiveCamera.Position) < 0.01,
+                "Orbit Wheel Picks The Cursor World Point Without Jumping", Failures)
+
+            Yaw = Value.View.Controls.OrbitYaw
+            Pointer.Wheel = 3 - Direction * 6
+            Ok = Motion.UpdatePointer(Value.View.Controls, Value.View.Zoom, Pointer)
+            Anchored = True
+
+            For Frame = 1 To 20
+                Call Motion.Advance(Value.View.Controls, Value.View.Zoom, 16)
+                Call Town.Update(Value, 16)
+
+                Pixel = Camera.ProjectViewerPoint(Anchor, Value.View.LiveCamera, Window_Width(), Window_Height())
+                Anchored = Anchored And Pixel.Visible And Abs(Pixel.X - 430.0) < 0.5 And Abs(Pixel.Y - 360.0) < 0.5
+            End For
+
+            Call Check(Anchored And Value.Cinematic And Not Value.IdleOrbit,
+                "Cursor Point Stays Under The Mouse While Zoom And Orbit Advance Together", Failures)
+            Call Check((Mode = 2 And Value.View.Controls.OrbitYaw = Yaw) Or
+                (Mode <> 2 And Value.View.Controls.OrbitYaw <> Yaw),
+                "Zoom Keeps Active Orbit Moving And Paused Orbit Paused", Failures)
+            Call Check((Direction = 0 And M.Distance(Value.View.LiveCamera.Position, Anchor) < Before) Or
+                (Direction = 1 And M.Distance(Value.View.LiveCamera.Position, Anchor) > Before),
+                "Orbit Zoom Moves Toward Or Away From The Picked Map Point", Failures)
+        End For
+    End For
+
+    Call Town.ResetOverview(Value)
+
+    Call Check(Not Value.Flight.CursorZoom,
+        "Reset Overview Releases The Previous Cursor Zoom Anchor", Failures)
 
 End Sub
 
@@ -510,10 +577,16 @@ Public Sub RightClickOrbit(ByRef Value As Town.State, ByRef Failures As Number)
             M.Distance(Point, Authoring.MapCenter(1044.0)) < 0.01 And
             Abs(Bearing + 21.0) < 0.01 And Abs(Elevation - 17.0) < 0.01,
             "Spaceport Overview Starts At The Approved Front Angle Around Map Center", Failures)
-    Else If Not Value.Harbor.Ready Then
+    Else If Value.Edited Then
         Call Check(M.Distance(Point, P.Vector(-1225.0, 150.0, 375.0)) < 0.01 And
             M.Distance(M.Subtract(Before.Position, Point), P.Vector(4475.0, 2907.0, -6616.0)) < 0.01,
             "Neris Town Right Click Keeps Approved Angle Around Map Center", Failures)
+    Else
+
+        Call Check(M.Distance(Point, P.Vector(-1075.0, 150.0, 0.0)) < 0.01 And
+            Abs(Radius - 8725.0) < 0.01 And Abs(Bearing + 179.0) < 0.01 And
+            Abs(Elevation - 33.0) < 0.01,
+            "Legacy Factory Town Keeps Its Own Overview Center And Angle", Failures)
     End If
 
     For Index = 1 To 4
@@ -1003,6 +1076,10 @@ Private Sub IdleOrbit(ByRef Value As Town.State, ByRef Failures As Number)
     Call Town.UpdateIdle(Value, False, 20000)
     Call Check(Not Value.Cinematic And Not Value.IdleOrbit And Value.IdleTime = 0,
         "Editor Remains Still After The Idle Orbit Interval", Failures)
+
+    ' The legacy scene does not delegate input to an editable document.
+
+    Call Authoring.Input(Value.View.LiveCamera, KEY_TAB, True)
     Call Town.Input(Value, KEY_TAB, True)
 
 End Sub

@@ -153,6 +153,12 @@ $standardExecutable = [IO.Path]::GetFullPath(
 )
 Assert-True (Test-ViewerProcessOwned 'Character3DViewer' $standardExecutable $standardExecutable) `
     'The intended Viewer executable was not recognized.'
+Assert-True (Test-ViewerProcessOwned 'Character3DViewer' `
+    (Join-Path $repositoryRoot 'artifacts\studio-previous-stage\Character3DViewer.exe') $standardExecutable) `
+    'A previous staged Studio must close when another build is launched.'
+Assert-True (-not (Test-ViewerProcessOwned 'Character3DViewer' `
+    (Join-Path ($repositoryRoot + '-other') 'artifacts\Character3DViewer.exe') $standardExecutable)) `
+    'A similarly named workspace must not count as an owned Studio.'
 Assert-True (-not (Test-ViewerProcessOwned 'chrome' `
     (Join-Path $env:ProgramFiles 'Google\Chrome\Application\chrome.exe') $standardExecutable)) `
     'An unrelated browser path was accepted as the Viewer.'
