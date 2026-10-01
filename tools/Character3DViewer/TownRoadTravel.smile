@@ -251,7 +251,8 @@ Public Function Append(ByRef Town As Document.State, Clicked As P.Vector3) As Bo
 End Function
 
 Public Function Begin(ByRef Town As Document.State, Leader As P.Vector3,
-    Clicked As P.Vector3, Optional ContinueTrip As Boolean = False) As Boolean
+    Clicked As P.Vector3, Optional ContinueTrip As Boolean = False,
+    Optional ExactTarget As Boolean = False) As Boolean
 
     Dim StartPoint As P.Vector3
     Dim StartCell As Number
@@ -284,6 +285,10 @@ Public Function Begin(ByRef Town As Document.State, Leader As P.Vector3,
     StartCell = Grid.CellZ(Surface, StartPoint.Z) * Surface.Columns + Grid.CellX(Surface, StartPoint.X)
     GoalCell = Grid.CellZ(Surface, Destination.Z) * Surface.Columns + Grid.CellX(Surface, Destination.X)
     Destination = LaneCenter(GoalCell)
+
+    If ExactTarget And Navigation.IsRoad(Clicked) Then
+        Destination = Clicked
+    End If
 
     If Text_Length(Tiles.DestinationAt(Town, Clicked.X, Clicked.Z)) > 0 Then
         Destination = Center(GoalCell)
@@ -417,7 +422,8 @@ Public Function Direction(ByRef Town As Document.State, Leader As P.Vector3,
         Return Result
     End If
 
-    If (Town.Name <> TownName Or Town.Revision <> Revision Or
+    If (Town.Name <> TownName Or
+        Town.Revision <> Revision Or
         Navigation.Version() <> CollisionVersion) Then
         Call Cancel("Route canceled because the map changed.")
 
@@ -435,13 +441,7 @@ Public Function Direction(ByRef Town As Document.State, Leader As P.Vector3,
         Waypoint = Destination
 
         If Cursor >= 0 Then
-
-            Waypoint = LaneCenter(Queue[Cursor])
-
-            If Not ClearSegment(Leader, Waypoint) Then
-                Waypoint = Center(Queue[Cursor])
-            End If
-
+            Waypoint = Center(Queue[Cursor])
         End If
 
         WaypointCursor = Cursor
@@ -471,6 +471,10 @@ Public Function Direction(ByRef Town As Document.State, Leader As P.Vector3,
 
         Cursor = Cursor - 1
         Stalled = 0
+
+        If Cursor >= 0 And TurnCursor > 0 Then
+            Cursor = Turns[TurnCursor - 1]
+        End If
 
         If Cursor < -1 Then
 

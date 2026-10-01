@@ -32,6 +32,7 @@ Import Smile.Tools.TownStartingCamera As StartingCamera
 Import Smile.Tools.TownViewportLayout As Toolbar
 Import Smile.Tools.TownTabs As Tabs
 Import Smile.Tools.TownDocumentMap As Map
+Import Smile.Tools.TownMinimapInput As MinimapInput
 Import Smile.Tools.TownRoadTravel As RoadTravel
 Import Smile.Simple3D.PrecisionMath3D As Math3D
 Import Smile.Tools.TownWorldEditor As World
@@ -41,8 +42,10 @@ Import Smile.Simple3D.SurfaceGrid3D As Grid
 Import Smile.Tools.NerisTownTour As Tour
 Import Smile.Tools.NerisTownConnections As Connections
 Import Smile.Simple3D.Arena3D As Arena
+Import Smile.Simple3D.ArenaCamera3D As Motion
 
 Private Dim Town As Document.State
+Private Dim MinimapGesture As MinimapInput.State
 Private Dim Transfers As Files.State
 Private Dim MapLoadOccupied As Boolean
 Private Dim MapLoadCooldown As Number
@@ -72,6 +75,9 @@ Public Function Available() As Boolean
     If Not AttemptedRecovery Then
 
         AttemptedRecovery = True
+
+        Call Demo.Start(Showcase)
+
         HaveDocument = Library.Recover(Town)
         TeleportPending = HaveDocument
         TabOverviewPending = HaveDocument
@@ -130,9 +136,49 @@ Public Function MapHovered() As Boolean
 
     Dim Result As Boolean
 
-    Result = Map.Hovered()
+    Result = Map.Hovered() Or MinimapGesture.Button <> 0
 
     Return Result
+
+End Function
+
+Public Function MinimapCaptured() As Boolean
+
+    Dim Result As Boolean
+
+    Result = MinimapGesture.Button <> 0
+
+    Return Result
+
+End Function
+
+Public Function HandleMinimap(Leader As P.Vector3) As Number
+
+    Dim Action As Number
+    Dim Started As Boolean
+
+    If MinimapGesture.Button = 0 And Map.ZoomInput(Town) Then
+        Return 1
+    End If
+
+    Action = MinimapInput.Update(MinimapGesture, Motion.ReadPointer(False),
+        Pointer_X(), Pointer_Y(), Map.Hovered() And Pointer_Y() >= 259)
+
+    If MinimapGesture.DeltaX <> 0 Or MinimapGesture.DeltaY <> 0 Then
+        Call Map.Pan(Town, MinimapGesture.DeltaX, MinimapGesture.DeltaY)
+    End If
+
+    If Action = 2 Then
+
+        Started = BeginRoadTrip(Leader)
+
+        If Not Started Then
+            Action = 1
+        End If
+
+    End If
+
+    Return Action
 
 End Function
 
@@ -159,11 +205,15 @@ Public Function BeginRoadTrip(Leader As P.Vector3) As Boolean
 
 End Function
 
-Public Function ZoomMinimap() As Boolean
+Public Function BeginRoadTripTo(Leader As P.Vector3, Target As P.Vector3) As Boolean
 
     Dim Result As Boolean
 
-    Result = Map.ZoomInput(Town)
+    If Ground.Stage <> 0 Then
+        Return False
+    End If
+
+    Result = RoadTravel.Begin(Town, Leader, Target, False, True)
 
     Return Result
 
@@ -632,6 +682,22 @@ Private Sub FileCommand(Action As Number)
     End If
 
 End Sub
+
+Public Function StopDemoOnInput(Key As Number) As Boolean
+
+    Dim Active As Boolean
+    Dim DemoButton As Boolean
+    Dim Result As Boolean
+
+    Active = (Key <> KEY_NONE Or Pointer_Pressed(POINTER_PRIMARY) Or
+        Pointer_Pressed(POINTER_SECONDARY) Or Pointer_Pressed(POINTER_MIDDLE))
+    DemoButton = (Pointer_Pressed(POINTER_PRIMARY) And Toolbar.Hovered(6) And
+        Not World.Active() And Not OpenTabs.Menu.Visible)
+    Result = Demo.StopOnInput(Showcase, Active, DemoButton)
+
+    Return Result
+
+End Function
 
 Public Sub Input(View As P.Camera3D, Key As Number, Blocked As Boolean)
 

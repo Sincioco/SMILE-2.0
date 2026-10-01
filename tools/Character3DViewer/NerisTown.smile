@@ -40,10 +40,12 @@ Import Smile.Tools.TownWorldPreviews As WorldPreviews
 Import Smile.Tools.TownDocumentNavigation As DocumentNavigation
 Import Smile.Tools.TownRoadTravel As RoadTravel
 Import Smile.Tools.TownResidents As Residents
+Import Smile.Tools.TownResidentInteraction As Conversation
 Import Smile.Tools.TownDocumentMap As DocumentMap
 
 Public Type State
     Residents As Residents.State
+    ConversationFramed As Boolean
     PointOfView As Inset.State
     Town As Assets.State
     Comparison As Castle.State
@@ -239,6 +241,8 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
     Dim MovingGesture As Boolean
     Dim OrbitPoint As P.Vector3
     Dim RequestedView As Number
+    Dim ResidentIndex As Number
+    Dim Started As Boolean
 
     If Not Value.Ready Then
 
@@ -262,6 +266,10 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
         If Residents.Input(Value.Residents, Key) Then
 
             Call RoadTravel.Cancel()
+
+            If Not Residents.Talking(Value.Residents) Then
+                Call HoldDisplayedView(Value)
+            End If
 
             Value.IdleTime = 0
             Return
@@ -339,29 +347,16 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
     End If
 
     If (Value.Edited And
-        Not Blocked And
+        (Not Blocked Or Authoring.MinimapCaptured()) And
         Not Authoring.Editing() And
         Not Authoring.CameraBlocked() And
         Not Value.Cinematic And
         Value.Map.Opacity > 0.0 And
         Authoring.MapHovered()) Then
 
-        If Authoring.ZoomMinimap() Then
-            Return
-        End If
+        If Authoring.HandleMinimap(Value.People.Path.Positions[0]) = 2 Then
 
-    End If
-
-    If (Value.Edited And
-        Not Blocked And
-        Not Authoring.Editing() And
-        Not Authoring.CameraBlocked() And
-        Not Value.Cinematic And
-        Value.Map.Opacity > 0.0 And
-        Authoring.MapHovered() And
-        Pointer_Pressed(POINTER_PRIMARY)) Then
-
-        If Authoring.BeginRoadTrip(Value.People.Path.Positions[0]) Then
+            Value.Residents.ApproachActive = False
 
             Call Keyboard.StopTravel(Value.Keys)
             Call Drone.Focus(Value.Flight, Value.People.Members[0].Yaw, Value.View.LiveCamera)
@@ -392,6 +387,8 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
 
         If Picking.Ground(Value.View.LiveCamera, Pointer_X(), Pointer_Y(),
             Window_Width(), Window_Height(), OrbitPoint) Then
+            Value.Residents.ApproachActive = False
+
             Call MoveToRoad(Value, OrbitPoint)
         End If
 
@@ -489,6 +486,41 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
 
     End If
 
+    If (Not Blocked And
+        Not Authoring.Editing() And
+        Not Authoring.CameraBlocked() And
+        Pointer_Y() >= 126 And
+        Pointer_Y() < Window_Height() - 52 And
+        Not Key_Held(KEY_CONTROL) And
+        Not Key_Held(KEY_SHIFT) And
+        Pointer_Pressed(POINTER_PRIMARY)) Then
+
+        ResidentIndex = Conversation.Pick(Value.Residents, Value.View.LiveCamera,
+            Pointer_X(), Pointer_Y(), Window_Width(), Window_Height())
+
+        If ResidentIndex >= 0 Then
+
+            Call RoadTravel.Cancel()
+            Call Keyboard.StopTravel(Value.Keys)
+
+            Started = Conversation.Request(Value.Residents, ResidentIndex,
+                Value.People.Path.Positions[0], OrbitPoint)
+
+            If Started And Value.Residents.ApproachActive Then
+                Started = Authoring.BeginRoadTripTo(Value.People.Path.Positions[0], OrbitPoint)
+                Value.Residents.ApproachActive = Started
+            End If
+
+            Value.Keys.FlyInspect = False
+
+            Call HoldDisplayedView(Value)
+
+            Return
+
+        End If
+
+    End If
+
     Pointer = Motion.ReadPointer(Blocked)
 
     If (Not Blocked And
@@ -543,12 +575,9 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
     If (Not Blocked And
         Not MovingGesture And
         Not (Value.Follow And Pointer.OrbitPressed And Not Pointer.PanModifier) And
-        (Pointer.OrbitPressed Or Pointer.PanPressed Or Pointer_Pressed(POINTER_PRIMARY))) Then
-
-        Value.Cinematic = False
-        Value.Flight.Suspended = True
-        Value.PartyCamera = False
-
+        (Pointer.OrbitPressed Or Pointer.PanPressed)) Then
+        Call Keyboard.Capture(Value.Keys, Value.View, Value.BaseCamera)
+        Call ManualCamera(Value)
     End If
 
     If (Not Blocked And
@@ -567,39 +596,62 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
     End If
 
     If Not Blocked And Pointer_Pressed(POINTER_SECONDARY) Then
-
         Call StartOverviewOrbit(Value)
-
     Else If Key = KEY_C Or Key = KEY_O Then
-
         Call StartOrbit(Value)
-
     Else If Key = KEY_TAB And Key_Event_Held(KEY_CONTROL) Then
-
         Call Party.CycleLeader(Value.People)
-
     Else If Key = KEY_TAB Then
-
-        Value.View.MaximumPitch = M.Radians(80.0)
-
-        Call Keyboard.StopTravel(Value.Keys)
-
-        Value.Flight.Focusing = True
-        Value.Flight.Enabled = True
-
-        Call Arena.BeginTransition(Value.View, 1000)
-
-        Value.Follow = True
-        Value.PartyCamera = True
-        Value.Keys.FlyInspect = False
-        Value.Cinematic = False
-
-        Call Drone.Focus(Value.Flight, Value.People.Members[0].Yaw, Value.View.LiveCamera)
-        Call Motion.Reset(Value.View.Controls, Value.View.Zoom)
-
+        Call FocusParty(Value)
     End If
 
     Call Arena.Update(Value.View, ArenaKey, Blocked, 24)
+
+End Sub
+
+''' Tab and conversation entry share the same eased return to the leader.
+Public Sub FocusParty(ByRef Value As State)
+
+    Value.View.MaximumPitch = M.Radians(80.0)
+
+    Call Keyboard.StopTravel(Value.Keys)
+
+    Value.Flight.Focusing = True
+    Value.Flight.Enabled = True
+
+    Call Arena.BeginTransition(Value.View, 1000)
+
+    Value.Follow = True
+    Value.PartyCamera = True
+    Value.Keys.FlyInspect = False
+    Value.Cinematic = False
+
+    Call Drone.Focus(Value.Flight, Value.People.Members[0].Yaw, Value.View.LiveCamera)
+    Call Motion.Reset(Value.View.Controls, Value.View.Zoom)
+
+End Sub
+
+Public Sub ObserveDemoInput(ByRef Value As State, Key As Number)
+
+    If Authoring.StopDemoOnInput(Key) Then
+        Call HoldDisplayedView(Value)
+    End If
+
+End Sub
+
+''' Keep the displayed shot while the actors turn, rather than swinging behind the new heading.
+Public Sub HoldDisplayedView(ByRef Value As State)
+
+    If Value.Follow Then
+        Call Drone.AnchorParty(Value.Flight, Value.View, Value.BaseCamera, Value.People.Path.Positions[0])
+    Else
+
+        Call Drone.AnchorPoint(Value.Flight, Value.View, Value.BaseCamera, Value.View.LiveCamera.Target)
+    End If
+
+    Value.Cinematic = False
+    Value.IdleOrbit = False
+    Value.IdleTime = 0
 
 End Sub
 
@@ -926,12 +978,25 @@ Public Sub AdvanceKeyboard(ByRef Value As State, Keys As Keyboard.HeldKeys, Elap
     Dim Translating As Boolean
     Dim Walking As Boolean
 
+    Call Conversation.Advance(Value.Residents, Value.People.Path.Positions[0],
+        Keys.Sideways <> 0.0 Or Keys.ForwardAmount <> 0.0 Or Value.Keys.FlyInspect)
+
     If Residents.Talking(Value.Residents) Then
-        Call Party.Stand(Value.People, Elapsed)
+
+        Call Party.FaceLeader(Value.People, Value.Residents.People[Value.Residents.Speaking].Motion.Position)
+        Call Party.Stand(Value.People, Elapsed, True)
+
+        If Not Value.ConversationFramed Then
+            Call FocusParty(Value)
+
+            Value.ConversationFramed = True
+        End If
 
         Return
+
     End If
 
+    Value.ConversationFramed = False
     Direction = Keyboard.CameraDirection(Value.View.LiveCamera, Keys, Value.Keys.FlyInspect)
     Translating = Keyboard.Translate(Value.Keys, Value.View, Value.BaseCamera, Direction, Elapsed)
 
@@ -1123,7 +1188,8 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
 
     Call Castle.Synchronize(Value.Comparison, Authoring.CourtExists(), Authoring.CourtOffset())
     Call Castle.Update(Value.Comparison, Elapsed)
-    Call TownMap.Update(Value.Map, Party.IsMoving(Value.People), Elapsed)
+    Call TownMap.Update(Value.Map, Party.IsMoving(Value.People) Or
+        (Value.Map.Opacity > 0.0 And Authoring.MapHovered()), Elapsed)
     Call Inset.Update(Value.PointOfView, Party.IsMoving(Value.People), Elapsed)
     Call Residents.Update(Value.Residents, Authoring.TownName(), Authoring.Editing(), Leader, Elapsed)
 
@@ -1161,8 +1227,7 @@ Public Sub UpdateIdle(ByRef Value As State, Active As Boolean, Elapsed As Number
         Value.IdleTime = 0
 
         If Value.IdleOrbit Then
-            Value.Cinematic = False
-            Value.IdleOrbit = False
+            Call HoldDisplayedView(Value)
         End If
 
     Else

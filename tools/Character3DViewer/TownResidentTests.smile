@@ -8,6 +8,8 @@ Import Smile.Tools.TownDocumentNavigation As Navigation
 Import Smile.Tools.TownResidentMovement As Movement
 Import Smile.Tools.TownResidentDialogue As Dialogue
 Import Smile.Tools.TownResidents As Residents
+Import Smile.Tools.TownResidentInteraction As Interaction
+Import Smile.Tools.TownRoadTravel As Travel
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PrecisionMath3D As M
 Import Smile.Simple3D.SurfaceGrid3D As Grid
@@ -21,6 +23,9 @@ Public Function Run() As Number
     Dim Initial As P.Vector3
     Dim Forward As P.Vector3
     Dim Delta As P.Vector3
+    Dim Target As P.Vector3
+    Dim NpcPosition As P.Vector3
+    Dim LeaderForward As P.Vector3
     Dim Index As Number
     Dim Failures As Number
     Dim Ok As Boolean
@@ -68,6 +73,64 @@ Public Function Run() As Number
 
     If M.Distance(Point, Errand.Position) > 0.001 Then
         Print "FAIL Talking Must Pause Resident Movement"
+        Failures = Failures + 1
+    End If
+
+    People.Enabled = True
+    People.Loaded = 1
+    People.Speaking = -1
+    People.People[0].Ready = True
+    NpcPosition = M.Add(Initial, P.Vector(90.0, 0.0, 0.0))
+    People.People[0].Motion.Position = NpcPosition
+    Ok = Interaction.Request(People, 0, Initial, Target)
+    Ok = Travel.Begin(Town, Initial, Target, False, True) And Ok
+
+    If (Not Ok Or
+        Not People.ApproachActive Or
+        M.Distance(Travel.Target(), Target) > 0.001) Then
+        Print "FAIL Clicked Resident Uses A Precise Clear Approach"
+        Failures = Failures + 1
+    End If
+
+    Point = Initial
+
+    For Index = 0 To 500
+
+        Call Interaction.Advance(People, Point, False)
+
+        If People.Speaking = 0 Then
+            Exit For
+        End If
+
+        Delta = Travel.Direction(Town, Point, 8.0, 100)
+        Point = M.Add(Point, M.Scale(Delta, 8.0))
+    End For
+
+    If (People.Speaking <> 0 Or
+        Travel.Active() Or
+        M.Distance(Point, NpcPosition) > 30.0) Then
+        Print "FAIL Clicked Resident Conversation Starts After Approaching"
+        Failures = Failures + 1
+    End If
+
+    LeaderForward = M.Rotate(P.Vector(0.0, 0.0, -1.0),
+        P.Vector(0.0, Movement.Facing(Point, NpcPosition), 0.0))
+    Forward = M.Rotate(P.Vector(0.0, 0.0, -1.0),
+        P.Vector(0.0, Movement.Facing(NpcPosition, Point), 0.0))
+
+    If (M.Dot(LeaderForward, Forward) > -0.99 Or
+        M.Dot(LeaderForward, M.Subtract(NpcPosition, Point)) <= 0.0) Then
+        Print "FAIL Conversation Partners Face One Another"
+        Failures = Failures + 1
+    End If
+
+    People.Speaking = -1
+    Ok = Interaction.Request(People, 0, Initial, Target)
+
+    Call Interaction.Advance(People, Initial, True)
+
+    If People.ApproachActive Or People.Speaking >= 0 Then
+        Print "FAIL Manual Movement Cancels Pending Conversation"
         Failures = Failures + 1
     End If
 

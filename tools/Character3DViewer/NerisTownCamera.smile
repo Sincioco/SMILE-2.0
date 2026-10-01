@@ -48,11 +48,16 @@ Public Sub BeginCursorZoom(ByRef Value As State, ByRef View As Arena.State,
     Dim Forward As P.Vector3
     Dim RightValue As P.Vector3
     Dim UpValue As P.Vector3
+    Dim PendingZoom As Double
 
     Projected = Camera.ProjectViewerPoint(Point, View.LiveCamera, Window_Width(), Window_Height())
 
     If Not Projected.Visible Or Not Camera.Basis(View.LiveCamera, Forward, RightValue, UpValue) Then
         Return
+    End If
+
+    If Value.CursorZoom Then
+        PendingZoom = View.Zoom.Target - View.Zoom.Current
     End If
 
     Base = View.LiveCamera
@@ -73,6 +78,9 @@ Public Sub BeginCursorZoom(ByRef Value As State, ByRef View As Arena.State,
 
     Call Motion.Reset(View.Controls, View.Zoom)
     Call Arena.BeginTransition(View, 0)
+
+    View.Zoom.Target = Clamp(View.Zoom.Current + PendingZoom, View.Zoom.Minimum, View.Zoom.Maximum)
+    View.Controls.ZoomTarget = View.Zoom.Target
 
 End Sub
 

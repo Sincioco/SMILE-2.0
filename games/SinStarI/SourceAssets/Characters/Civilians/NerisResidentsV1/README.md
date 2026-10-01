@@ -31,9 +31,21 @@ not a Studio screenshot. The blend keeps relative links to `Models/*-palette.png
   near the party or during conversation. It does not reuse or cancel the party's
   minimap search. It is not a town-wide job/quest simulation.
 - `TownResidentDialogue` owns names, greetings and the conversation panel. Approach
-  a resident and press **E**. Humans say “Hi, my name is {name}.” Mochi barks and
+  a resident and press **E**, or click their body to approach and start automatically.
+  Both characters face each other while speaking. Manual movement cancels an approach.
+  Humans say “Hi, my name is {name}.” Mochi barks and
   shows his collar name. E, Enter or Esc closes the greeting. Speaking residents
   face the leader and idle; party movement pauses.
+
+Adult presentation height is 21 native units versus Arin's 22. Pip, Nia and Tobin
+are children at 14.5 units; Mochi is 8.5. The smaller Tobin is intentional.
+TownResidentInteraction owns picking and the pending approach; it delegates the
+journey to the existing town road system and leaves animation in TownResidents.
+
+October 1 face correction: the human mouth geometry was behind the chin surface.
+The source now places it just ahead of the chin. All eight human models, checksums,
+grounding measurements and the Blender cast preview were regenerated. This changes
+no skeleton or clip timing; the generated clips retain their ground contact.
 
 Dialogue content has a separate owner for later quests and branching dialogue;
 those later systems are not implemented. `TownResidentTests` checks road errands,

@@ -1,0 +1,136 @@
+''' Pick a resident and approach on the existing road journey before opening dialogue.
+Module Smile.Tools.TownResidentInteraction
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Simple3D.PrecisionCamera3D As Camera
+Import Smile.Simple3D.Character3D As Character
+Import Smile.Tools.TownResidents As Residents
+Import Smile.Tools.TownResidentMovement As Movement
+Import Smile.Tools.TownDocumentNavigation As Navigation
+Import Smile.Tools.TownPicking As Picking
+Import Smile.Tools.TownRoadTravel As Travel
+
+Public Function Pick(ByRef Value As Residents.State, View As P.Camera3D,
+    X As Number, Y As Number, Width As Number, Height As Number) As Number
+
+    Dim Origin As P.Vector3
+    Dim Ray As P.Vector3
+    Dim Bounds As Character.PreciseBounds3D
+    Dim Index As Number
+    Dim Result As Number
+    Dim Distance As Double
+    Dim Best As Double
+
+    Result = -1
+    Best = 1000000.0
+    Origin = Camera.CursorPointAtDepth(View, X, Y, View.NearPlane, Width, Height)
+    Ray = M.Subtract(Camera.CursorPointAtDepth(View, X, Y,
+        Max(1000.0, View.NearPlane + 1.0), Width, Height), Origin)
+
+    For Index = 0 To Value.Loaded - 1
+
+        If Value.People[Index].Ready Then
+
+            Bounds = Character.WorldBoundsPrecise(Value.People[Index].Actor, 1.5)
+            Distance = Best
+
+            If (Bounds.Valid And
+                Picking.RayBounds(Origin, Ray, Bounds.Minimum, Bounds.Maximum, Distance)) Then
+                Result = Index
+                Best = Distance
+            End If
+
+        End If
+
+    End For
+
+    Return Result
+
+End Function
+
+Public Function Request(ByRef Value As Residents.State, Index As Number,
+    Leader As P.Vector3, ByRef Target As P.Vector3) As Boolean
+
+    Dim Position As P.Vector3
+    Dim Bearing As Double
+    Dim Angle As Double
+    Dim Attempt As Number
+
+    Value.ApproachActive = False
+
+    If (Not Value.Enabled Or
+        Index < 0 Or
+        Index >= Value.Loaded) Then
+        Return False
+    End If
+
+    If Not Value.People[Index].Ready Then
+        Return False
+    End If
+
+    Position = Value.People[Index].Motion.Position
+
+    If M.Distance(Leader, Position) <= 30.0 And Movement.ClearRoad(Leader, Position, False) Then
+        Value.Speaking = Index
+        Return True
+    End If
+
+    Bearing = Atan2(Leader.X - Position.X, Leader.Z - Position.Z)
+
+    For Attempt = 0 To 7
+
+        Angle = Bearing + M.Radians(ToDouble(Attempt) * 45.0)
+        Target = M.Add(Position, P.Vector(Sin(Angle) * 24.0, 0.0, Cos(Angle) * 24.0))
+
+        If Navigation.IsRoad(Target) And Movement.ClearRoad(Target, Position) Then
+
+            Value.ApproachActive = True
+            Value.Approaching = Index
+            Value.ApproachVersion = Navigation.Version()
+            Return True
+
+        End If
+
+    End For
+
+    Return False
+
+End Function
+
+Public Sub Advance(ByRef Value As Residents.State, Leader As P.Vector3, ManualMovement As Boolean)
+
+    Dim Position As P.Vector3
+
+    If Not Value.ApproachActive Then
+        Return
+    End If
+
+    If (ManualMovement Or
+        Value.ApproachVersion <> Navigation.Version() Or
+        Value.Approaching < 0 Or
+        Value.Approaching >= Value.Loaded) Then
+        Value.ApproachActive = False
+        Return
+    End If
+
+    Position = Value.People[Value.Approaching].Motion.Position
+
+    If M.Distance(Leader, Position) <= 30.0 And Movement.ClearRoad(Leader, Position, False) Then
+
+        Value.Speaking = Value.Approaching
+        Value.ApproachActive = False
+
+        Call Travel.Cancel()
+
+    Else If Not Travel.Active() Then
+
+        Value.ApproachActive = False
+
+    End If
+
+End Sub
+
+End Module

@@ -156,6 +156,26 @@ Private Function ClipAxis(Origin As Double, Direction As Double, Low As Double,
 
 End Function
 
+Public Function RayBounds(Origin As P.Vector3, Ray As P.Vector3,
+    Low As P.Vector3, High As P.Vector3, ByRef Distance As Double) As Boolean
+
+    Dim NearValue As Double
+    Dim FarValue As Double
+    Dim Ok As Boolean
+
+    FarValue = Distance
+    Ok = ClipAxis(Origin.X, Ray.X, Low.X, High.X, NearValue, FarValue)
+    Ok = ClipAxis(Origin.Y, Ray.Y, Low.Y, High.Y, NearValue, FarValue) And Ok
+    Ok = ClipAxis(Origin.Z, Ray.Z, Low.Z, High.Z, NearValue, FarValue) And Ok
+
+    If Ok Then
+        Distance = NearValue
+    End If
+
+    Return Ok
+
+End Function
+
 Public Function ItemAt(ByRef Town As Document.State, Category As Number, View As P.Camera3D,
     X As Number, Y As Number, Width As Number, Height As Number) As Number
 
@@ -163,7 +183,6 @@ Public Function ItemAt(ByRef Town As Document.State, Category As Number, View As
     Dim Result As Number
     Dim Nearest As Double
     Dim NearValue As Double
-    Dim FarValue As Double
     Dim Point As P.Vector3
     Dim Origin As P.Vector3
     Dim Ray As P.Vector3
@@ -181,11 +200,8 @@ Public Function ItemAt(ByRef Town As Document.State, Category As Number, View As
             Shape = Catalog.TemplateAt(Town.Items[Index].Template)
             Origin = Geometry.ToLocal(Town.Items[Index], Camera.CursorPointAtDepth(View, X, Y, View.NearPlane, Width, Height))
             Ray = M.Subtract(Geometry.ToLocal(Town.Items[Index], Point), Origin)
-            NearValue = 0.0
-            FarValue = Nearest
-            Ok = ClipAxis(Origin.X, Ray.X, Shape.Low.X, Shape.High.X, NearValue, FarValue)
-            Ok = ClipAxis(Origin.Y, Ray.Y, Shape.Low.Y, Shape.High.Y, NearValue, FarValue) And Ok
-            Ok = ClipAxis(Origin.Z, Ray.Z, Shape.Low.Z, Shape.High.Z, NearValue, FarValue) And Ok
+            NearValue = Nearest
+            Ok = RayBounds(Origin, Ray, Shape.Low, Shape.High, NearValue)
 
             If Ok And NearValue < Nearest Then
                 Nearest = NearValue

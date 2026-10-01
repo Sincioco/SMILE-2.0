@@ -4,6 +4,9 @@ Option Explicit
 
 Import Smile.Tools.NerisTown As Town
 Import Smile.Tools.TownResidents As Residents
+Import Smile.Tools.TownResidentInteraction As Conversation
+Import Smile.Tools.NerisTownKeyboard As Keyboard
+Import Smile.Simple3D.Character3D As Character
 Import Smile.Tools.TownEditorSession As Editor
 Import Smile.Tools.Character3DViewerCalibration As Calibration
 Import Smile.Tools.NerisTownInspectionTests As Inspection
@@ -24,6 +27,7 @@ Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PrecisionMath3D As M
 Import Smile.Simple3D.PrecisionCamera3D As Camera
 Import Smile.Simple3D.ArenaCamera3D As Motion
+Import Smile.Simple3D.ArenaViewport3D As Arena
 Import Smile.Tools.NerisCastleRoute As Castle
 Import Smile.Tools.NerisCastlePreview As CourtPreview
 Import Smile.Tools.NerisCastleFountain As CourtWater
@@ -41,6 +45,7 @@ Import Smile.Tools.NerisTownNavigation As Navigation
 Import Smile.Tools.NerisSpaceportTraffic As Traffic
 Import Smile.Tools.TownDocumentNavigation As DocumentNavigation
 Import Smile.Tools.NerisTownCameraPanel As CameraPanel
+Import Smile.Tools.NerisTownCamera As Drone
 Import Smile.Simple3D.Core As Core
 
 Dim Value As Town.State
@@ -90,6 +95,7 @@ Call CheckSunGesture()
 Call CheckSpecialToolSwitch()
 
 Ok = Editor.Available()
+Ok = Editor.StopDemoOnInput(KEY_E)
 
 Call Editor.BeginEditing()
 Call Town.Start(Value)
@@ -115,6 +121,7 @@ If Value.Ready And Editor.TownName() = "Neris Town" Then
 
     Call Check(Value.Residents.Loaded = 9 And Not Value.Residents.Failed,
         "Nine Residents Fit The Full Town Material Budget")
+    Call CheckResidentConversation(Value)
     Call Residents.Destroy(Value.Residents)
 
 End If
@@ -478,6 +485,18 @@ Sub CheckGuideAndMapControls()
 
     Call Check(Other.X = 120.0 And Other.Z = 120.0,
         "Minimap Full Zoom Stays Within The Map Edges")
+    Call DocumentMap.Pan(Draft, 32, 16)
+
+    Other = DocumentMap.Pick(Draft, Window_Width() - 116, 403)
+
+    Call Check(Abs(Other.X) < 0.01 And Abs(Other.Z) < 0.01,
+        "Panning Moves The Same World Point With The Pointer")
+    Call DocumentMap.Pan(Draft, 10000, -10000)
+
+    Other = DocumentMap.Pick(Draft, Window_Width() - 148, 387)
+
+    Call Check(Other.X = -120.0 And Other.Z = -120.0,
+        "Minimap Pan Remains Bounded At The Map Edges")
 
 End Sub
 
@@ -740,6 +759,133 @@ Sub CheckWalkingConnection(ByRef Value As Town.State)
         "Three Map Round Trip Releases All Airport Resources")
 
     Print "Walking: West Spaceport And East Horizon Round Trips, Four Members, Door Entry, Day Night, No Resource Growth"
+
+End Sub
+
+Sub CheckResidentConversation(ByRef Value As Town.State)
+
+    Dim Saved As P.Vector3
+    Dim SavedView As Arena.State
+    Dim SavedBase As P.Camera3D
+    Dim SavedFlight As Drone.State
+    Dim SavedFollow As Boolean
+    Dim SavedParty As Boolean
+    Dim SavedCinematic As Boolean
+    Dim WasEditing As Boolean
+    Dim Npc As P.Vector3
+    Dim LeaderRotation As P.Vector3
+    Dim NpcRotation As P.Vector3
+    Dim LeaderForward As P.Vector3
+    Dim NpcForward As P.Vector3
+    Dim Shot As P.Camera3D
+    Dim Pixel As Camera.ProjectedPoint
+    Dim Bounds As Character.PreciseBounds3D
+    Dim Held As Keyboard.HeldKeys
+    Dim MemberIndex As Number
+    Dim SavedOpacity[8] As Double
+    Dim Ok As Boolean
+
+    Saved = Value.People.Path.Positions[0]
+    SavedView = Value.View
+    SavedBase = Value.BaseCamera
+    SavedFlight = Value.Flight
+    SavedFollow = Value.Follow
+    SavedParty = Value.PartyCamera
+    SavedCinematic = Value.Cinematic
+    WasEditing = Editor.Editing()
+
+    Call Editor.Input(Value.View.LiveCamera, KEY_TAB, False)
+
+    Npc = Value.Residents.People[0].Motion.Position
+
+    Call Party.Teleport(Value.People, M.Add(Npc, P.Vector(24.0, 0.0, 0.0)))
+
+    Value.Residents.Speaking = 0
+
+    For MemberIndex = 1 To Value.People.MemberCount - 1
+        SavedOpacity[MemberIndex] = Value.People.Members[MemberIndex].Opacity
+        Value.People.Members[MemberIndex].Opacity = 35.0
+    End For
+
+    Call Town.AdvanceKeyboard(Value, Held, 16)
+    Call Residents.Update(Value.Residents, "Neris Town", False, Value.People.Path.Positions[0], 16)
+
+    Call Check(Value.ConversationFramed And Value.Follow And Value.PartyCamera And
+        Value.View.TransitionDuration = 1000 And Value.Flight.Focusing,
+        "Conversation Uses The Same Eased Party Focus As Tab")
+
+    Value.View.TransitionElapsed = 400
+
+    Call Town.Input(Value, KEY_NONE, False)
+    Call Town.AdvanceKeyboard(Value, Held, 16)
+    Call Check(Value.View.TransitionElapsed = 400 And Value.Flight.Focusing,
+        "Ongoing Conversation Does Not Restart The Camera Transition")
+    Call Check(Value.People.Members[0].Visible, "Conversation Keeps The Party Leader Visible")
+
+    For MemberIndex = 1 To Value.People.MemberCount - 1
+        Call Check(Not Value.People.Members[MemberIndex].Visible,
+            "Conversation Hides Partially Faded Companions Completely")
+    End For
+
+    Ok = Character.TryRotation(Value.People.Members[0].Body.Actor, LeaderRotation)
+    Ok = Character.TryRotation(Value.Residents.People[0].Actor, NpcRotation) And Ok
+    LeaderForward = M.Rotate(P.Vector(0.0, 0.0, -1.0), LeaderRotation)
+    NpcForward = M.Rotate(P.Vector(0.0, 0.0, -1.0), NpcRotation)
+
+    Call Check(Ok And M.Dot(LeaderForward, NpcForward) < -0.99 And LeaderForward.X < -0.99,
+        "Presented Party Leader And Resident Face Each Other During Dialogue")
+
+    Bounds = Character.WorldBoundsPrecise(Value.Residents.People[0].Actor)
+    Shot = Value.View.LiveCamera
+    Shot.Target = Bounds.Center
+    Shot.Position = M.Add(Bounds.Center, P.Vector(0.0, 10.0, 70.0))
+    Pixel = Camera.ProjectViewerPoint(Bounds.Center, Shot, 1100, 720)
+
+    Call Check(Conversation.Pick(Value.Residents, Shot, ToNumber(Pixel.X), ToNumber(Pixel.Y), 1100, 720) = 0,
+        "Click Picking Finds The Displayed Resident Body")
+
+    Value.View.LiveCamera = Shot
+    Value.Follow = True
+    Value.PartyCamera = True
+    Value.IdleOrbit = True
+    Value.Cinematic = True
+
+    Call Town.UpdateIdle(Value, True, 0)
+
+    Value.BaseCamera = Drone.Frame(Value.Flight, Value.BaseCamera,
+        Value.People.Path.Positions[0], Value.People.Members[0].Yaw, False, 16)
+
+    Call Drone.Compose(Value.Flight, Value.View, Value.BaseCamera, True, 16, True)
+    Call Check(Not Value.Cinematic And Not Value.IdleOrbit And
+        M.Distance(Shot.Position, Value.View.LiveCamera.Position) < 0.01 And
+        M.Distance(Shot.Target, Value.View.LiveCamera.Target) < 0.01,
+        "Waking Idle Orbit For Conversation Keeps The Displayed Shot")
+
+    Value.Residents.Speaking = -1
+    Value.ConversationFramed = False
+
+    Call Party.Stand(Value.People, 16)
+
+    For MemberIndex = 1 To Value.People.MemberCount - 1
+        Call Check(Value.People.Members[MemberIndex].Visible And
+            Value.People.Members[MemberIndex].Opacity = 35.0,
+            "Ending Conversation Restores Normal Companion Presentation")
+
+        Value.People.Members[MemberIndex].Opacity = SavedOpacity[MemberIndex]
+    End For
+
+    Value.View = SavedView
+    Value.BaseCamera = SavedBase
+    Value.Flight = SavedFlight
+    Value.Follow = SavedFollow
+    Value.PartyCamera = SavedParty
+    Value.Cinematic = SavedCinematic
+
+    If WasEditing Then
+        Call Editor.BeginEditing()
+    End If
+
+    Call Party.Teleport(Value.People, Saved)
 
 End Sub
 

@@ -43,6 +43,7 @@
     <SmileSource Include="TownMapLoads.smile" />
     <SmileSource Include="TownGatewayJourney.smile" />
     <SmileSource Include="TownResidents.smile" />
+    <SmileSource Include="TownResidentInteraction.smile" />
     <SmileSource Include="TownResidentMovement.smile" />
     <SmileSource Include="TownResidentDialogue.smile" />
     <SmileSource Include="TownDemo.smile" />
@@ -54,6 +55,7 @@
     <SmileSource Include="TownEditor.smile" />
     <SmileSource Include="TownLibrary.smile" />
     <SmileSource Include="TownDocumentMap.smile" />
+    <SmileSource Include="TownMinimapInput.smile" />
     <SmileSource Include="TownRoadTravel.smile" />
     <SmileSource Include="TownRoadNetwork.smile" />
     <SmileSource Include="TownRoadGraph.smile" />

@@ -54,6 +54,9 @@ Sub RunChecks()
     Dim Above As P.Vector3
     Dim CenterPixel As Core.ProjectedPoint3D
     Dim AbovePixel As Core.ProjectedPoint3D
+    Dim Wheel As Motion.WheelState
+    Dim OtherWheel As Motion.WheelState
+    Dim StepSize As Number
 
     Call Motion.Reset(Controls, Zoom)
 
@@ -141,6 +144,32 @@ Sub RunChecks()
     Call Check(Zoom.Target = ToDouble(Motion.ZOOM_IN_LIMIT))
     Call Motion.Reset(Controls, Zoom)
     Call Check(Controls.PanX = 0.0 And Controls.OrbitYaw = 0.0 And Zoom.Current = -16.0)
+
+    StepSize = Motion.AcceleratedWheelStep(Wheel, 1, 1000, 8)
+
+    Call Check(StepSize = 8)
+
+    For Index = 1 To 5
+        StepSize = Motion.AcceleratedWheelStep(Wheel, 1, 1000 + Index * 50, 8)
+    End For
+
+    Call Check(StepSize = 24)
+
+    StepSize = Motion.AcceleratedWheelStep(Wheel, -1, 1300, 8)
+
+    Call Check(StepSize = 8)
+
+    StepSize = Motion.AcceleratedWheelStep(Wheel, -1, 1350, 8)
+
+    Call Check(StepSize = 12)
+
+    StepSize = Motion.AcceleratedWheelStep(Wheel, -1, 1700, 8)
+
+    Call Check(StepSize = 8)
+
+    StepSize = Motion.AcceleratedWheelStep(OtherWheel, -1, 1750, 8)
+
+    Call Check(StepSize = 8 And OtherWheel.Ticks = 1)
 
     ''' Diagonal rear-facing Battle camera must never roll or cross an orbit pole.
 

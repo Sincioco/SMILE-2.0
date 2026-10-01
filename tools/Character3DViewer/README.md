@@ -1,5 +1,20 @@
 # SMILE 2.0 - Sin Star I - Game Engine and Studio
 
+## October 1 resident interaction
+
+Click a resident's body to walk up along the road and begin a conversation.
+The resident waits while the party approaches. Both the leader and resident turn
+to face each other; **E** nearby still works. Conversation entry eases back to Arin
+using the same close follow view as **Tab**. Other party members are hidden until
+the conversation ends, then resume their normal presentation. Manual movement or choosing another
+road destination cancels the pending conversation. Editor clicks retain their
+editing behavior. Adults are 21 native units tall versus Arin's 22; Pip, Nia and
+Tobin are children at 14.5 units, and Mochi is the dog.
+
+Demo starts enabled and stops on a click or key press. Clicking **Demo On/Off**
+still toggles it explicitly. Rapid wheel scrolling accelerates smoothly up to
+three times a single scroll's step; pausing or reversing direction resets the gain.
+
 ## October 1 prepared map loading
 
 Terrain mesh recipes and completed road connections now persist beside native map
@@ -125,6 +140,13 @@ remaining road bends, with a yellow destination marker. Planning says
 **Acquiring GPS signal, stand by...**, followed by
 **GPS signal acquired, going to destination...**.
 
+Drag inside the minimap with the **left mouse button**, or hold **Shift** while
+starting a **middle-button drag**, to pan it. A simple left click selects a road
+destination on release; dragging never starts a journey. Captured drags continue
+outside the minimap until release, and the minimap stays visible while hovered.
+Road movement follows the same bend points drawn by the cyan route, without
+resnapping each intervening grid cell to a different road center at junctions.
+
 **Shift + left-click** appends up to 64 pending destinations, marked in numbered
 order. A normal click replaces the queue. Each next leg is planned automatically
 on arrival; its confirmed route then appears in cyan. An obstructed/disconnected
@@ -133,7 +155,7 @@ queue. Appending a stop preserves the current camera-follow transition.
 
 Routing uses distance-weighted A* with a Manhattan lower bound and an indexed
 priority queue. It finds the shortest path on the collision-validated four-neighbor
-road grid, including nonuniform tile dimensions. Existing safe road-center walking
+road grid, including nonuniform tile dimensions. Existing safe road walking
 and collision checks remain. This is not a claim of a globally shortest continuous
 path across all terrain; parties stay on roads and bridges.
 

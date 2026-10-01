@@ -16,6 +16,7 @@ Import Smile.Tools.TownWorldDocument As World
 Import Smile.Tools.TownWorldTests As WorldTests
 Import Smile.Tools.TownGatewayTests As GatewayTests
 Import Smile.Tools.TownResidentTests As ResidentTests
+Import Smile.Tools.TownDemo As Demo
 Import Smile.Tools.TownGuideEditingTests As GuideEditingTests
 Import Smile.Tools.TownGuides As Guides
 Import Smile.Tools.TownTileGuides As TileGuides
@@ -24,6 +25,8 @@ Import Smile.Tools.TownHistory As History
 Import Smile.Tools.TownMapLoads As Links
 Import Smile.Tools.TownGuideFiles As GuideFiles
 Import Smile.Tools.TownRoadTravel As Roads
+Import Smile.Tools.TownMinimapInput As MinimapInput
+Import Smile.Simple3D.ArenaCamera3D As Motion
 Import Smile.Tools.TownRoadStops As Stops
 Import Smile.Tools.TownRoadSearchTests As RoadSearchTests
 Import Smile.Tools.TownPreparationTests As PreparationTests
@@ -53,6 +56,28 @@ Dim Identity As Number
 Dim BeforeSurface As Number
 Dim CellPreview As Guides.Marker
 Dim MarkerGesture As MarkerTools.State
+Dim Showcase As Demo.State
+
+Call CheckMinimapGesture()
+Call Demo.Start(Showcase)
+Call Check(Showcase.Enabled, "Town Demo Starts Enabled")
+
+Ok = Demo.StopOnInput(Showcase, False, False)
+
+Call Check(Not Ok And Showcase.Enabled, "Hover Alone Leaves Demo Running")
+
+Ok = Demo.StopOnInput(Showcase, True, True)
+
+Call Check(Not Ok And Showcase.Enabled, "Demo Button Retains Its Toggle")
+Call Demo.Toggle(Showcase)
+Call Check(Not Showcase.Enabled, "Demo Button Turns It Off")
+Call Demo.Toggle(Showcase)
+
+Showcase.Elapsed = 1000
+Ok = Demo.StopOnInput(Showcase, True, False)
+
+Call Check(Ok And Not Showcase.Enabled And Showcase.Elapsed = 0,
+    "Click Or Key Stops Demo And Clears Its Timer")
 
 Call Check(Layers.BED_Y < Layers.GROUND_Y And Layers.GROUND_Y < Layers.WATER_Y And
     Layers.WATER_Y < Layers.ROAD_Y, "Physical Terrain Layers Stay Strictly Ordered")
@@ -312,6 +337,57 @@ Sub Check(Condition As Boolean, Label As Text)
 
 End Sub
 
+Sub CheckMinimapGesture()
+
+    Dim Gesture As MinimapInput.State
+    Dim Input As Motion.PointerInput
+    Dim Empty As Motion.PointerInput
+    Dim Action As Number
+
+    Input.PanPressed = True
+    Input.PanHeld = True
+    Action = MinimapInput.Update(Gesture, Input, 100, 100, True)
+
+    Call Check(Action = 1, "Minimap Press Waits Before Selecting A Destination")
+
+    Input.PanPressed = False
+    Action = MinimapInput.Update(Gesture, Input, 120, 110, True)
+
+    Call Check(Action = 1 And Gesture.DeltaX = 20 And Gesture.DeltaY = 10,
+        "Left Drag Pans The Minimap")
+
+    Input.PanHeld = False
+    Input.PanReleased = True
+    Action = MinimapInput.Update(Gesture, Input, 120, 110, False)
+
+    Call Check(Action = 1 And Gesture.Button = 0,
+        "Drag Release Outside The Minimap Cannot Start A Journey")
+
+    Input = Empty
+    Input.PanPressed = True
+    Input.PanHeld = True
+    Action = MinimapInput.Update(Gesture, Input, 100, 100, True)
+    Input.PanPressed = False
+    Input.PanHeld = False
+    Input.PanReleased = True
+    Action = MinimapInput.Update(Gesture, Input, 101, 100, True)
+
+    Call Check(Action = 2, "A Click Without Drag Selects Its Destination On Release")
+
+    Input = Empty
+    Input.OrbitPressed = True
+    Input.OrbitHeld = True
+    Input.PanModifier = True
+    Action = MinimapInput.Update(Gesture, Input, 100, 100, True)
+    Input.OrbitPressed = False
+    Input.PanModifier = False
+    Action = MinimapInput.Update(Gesture, Input, 90, 80, False)
+
+    Call Check(Action = 1 And Gesture.DeltaX = -10 And Gesture.DeltaY = -20,
+        "Shift Middle Drag Keeps Its Capture Outside The Map And After Shift Release")
+
+End Sub
+
 Sub CheckRoadTrips()
 
     Dim Leader As P.Vector3
@@ -322,6 +398,8 @@ Sub CheckRoadTrips()
     Dim RouteChecked As Boolean
     Dim FirstBend As P.Vector3
     Dim LastBend As P.Vector3
+    Dim LateralTravel As Double
+    Dim ForwardOnly As Boolean
 
     Ok = Document.Blank(Town, "Road Fixture", 20, 12, 20.0)
     Ok = Grid.Initialize(Town.Surface, 20, 12, 0.0, 0.0, 20.0, Grid.SURFACE_GROUND) And Ok
@@ -431,6 +509,34 @@ Sub CheckRoadTrips()
 
     Call Check(Ok And Abs(Leader.X - 370.0) < 0.5 And Abs(Leader.Z - 50.0) < 0.5,
         "Wide Road Travel And Destination Use The Road Middle Instead Of Its Edge")
+
+    Ok = Grid.Initialize(Town.Surface, 20, 12, 0.0, 0.0, 20.0, Grid.SURFACE_GROUND)
+
+    Call Grid.PaintRectangle(Town.Surface, 1, 2, 18, 4, Grid.SURFACE_ROAD)
+    Call Grid.PaintRectangle(Town.Surface, 8, 0, 10, 11, Grid.SURFACE_ROAD)
+    Call Navigation.Rebuild(Town)
+
+    Leader = P.Vector(30.0, 23.12, 50.0)
+    LateralTravel = 0.0
+    ForwardOnly = True
+    Ok = Roads.Begin(Town, Leader, P.Vector(370.0, 23.12, 50.0)) And Ok
+
+    For Frame = 0 To 1000
+
+        Direction = Roads.Direction(Town, Leader, 3.0, 16)
+        ForwardOnly = ForwardOnly And Direction.X >= -0.001
+        LateralTravel = LateralTravel + Abs(Direction.Z * 3.0)
+        Leader = Math3D.Add(Leader, Math3D.Scale(Direction, 3.0))
+
+        If Not Roads.Active() Then
+            Exit For
+        End If
+
+    End For
+
+    Call Check(Ok And ForwardOnly And Not Roads.Active() And LateralTravel <= 20.5 And
+        Abs(Leader.X - 370.0) < 0.5 And Abs(Leader.Z - 70.0) < 0.5,
+        "Crossroad Travel Follows The Displayed Route Without Repeated Lane Hunting")
 
     Ok = Links.PlaceRectangle(Town, 1, 1, 3, 2, "Horizon Airport")
 

@@ -24,6 +24,9 @@ Public Type State
     Version As Number
     Nearest As Number
     Speaking As Number
+    Approaching As Number
+    ApproachVersion As Number
+    ApproachActive As Boolean
     Enabled As Boolean
     Failed As Boolean
 End Type
@@ -142,8 +145,11 @@ Public Function Input(ByRef Value As State, Key As Number) As Boolean
     End If
 
     If Key = KEY_E And Value.Nearest >= 0 Then
+
         Value.Speaking = Value.Nearest
+        Value.ApproachActive = False
         Return True
+
     End If
 
     Return False
@@ -176,8 +182,11 @@ Public Sub Update(ByRef Value As State, TownName As Text, Paused As Boolean,
     End If
 
     If Paused Then
+
         Value.Speaking = -1
+        Value.ApproachActive = False
         Return
+
     End If
 
     If Value.Loaded < 9 And Not Value.Failed Then
@@ -200,7 +209,8 @@ Public Sub Update(ByRef Value As State, TownName As Text, Paused As Boolean,
             End If
 
             Distance = M.Distance(Leader, Value.People[Index].Motion.Position)
-            Pausing = Distance < 42.0 Or Value.Speaking = Index
+            Pausing = (Distance < 42.0 Or Value.Speaking = Index Or
+                (Value.ApproachActive And Value.Approaching = Index))
 
             If (Distance < Best And
                 Movement.ClearRoad(Leader, Value.People[Index].Motion.Position, False)) Then
@@ -232,8 +242,7 @@ Public Sub Update(ByRef Value As State, TownName As Text, Paused As Boolean,
             Position = Value.People[Index].Motion.Position
 
             If Value.Speaking = Index Then
-                Value.People[Index].Motion.Heading = M.WrapDegrees(M.Degrees(Atan2(Leader.X - Position.X,
-                    Leader.Z - Position.Z)) + 180.0)
+                Value.People[Index].Motion.Heading = Movement.Facing(Position, Leader)
             End If
 
             Ok = Character.Update(Value.People[Index].Actor, Elapsed) And Ok

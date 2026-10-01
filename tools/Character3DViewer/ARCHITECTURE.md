@@ -1,5 +1,56 @@
 # Character Viewer Architecture
 
+## October 1: minimap gestures, route fidelity and conversation presentation
+
+TownMinimapInput owns press/drag/release classification and capture; it reads a
+pointer snapshot without navigation or renderer dependencies. TownDocumentMap owns
+bounded world extents and map projection. TownEditorSession delegates the gesture,
+pans those extents, and starts a journey only for a click released without dragging.
+The existing NerisTown input routing consumes captured drags outside the map too.
+TownRoadTravel now walks the same compressed grid bends that its public route
+points expose; independent lane-center projections caused the reported hunting at
+junctions. Graph validation and the existing final destination behavior remain.
+
+ArenaCamera3D owns wheel-cadence acceleration; ArenaViewport3D keeps per-view state
+and retains its existing smooth bounded zoom. NerisTownCamera preserves unfinished
+zoom while reanchoring to the cursor. Conversation framing reuses NerisTown's Tab
+operation once per conversation; NerisTownParty hides followers only in presentation
+and preserves their logical opacity. TownResidentInteraction owns click-to-approach.
+TownDemo owns default-on and input-stop policy, with input observed before tab routing.
+
+Focused regressions cover click versus drag, captured Shift-middle drag, pan/world
+coordinates, junction lateral wandering, wheel ramp/reset, ongoing conversation
+framing, follower visibility restoration, facing and body picking. No dependency,
+resource capacity, bootstrap algorithm, architecture exclusion or baseline changes.
+The complete native town and shared arena checks pass; final live acceptance and
+installation are tracked separately in the task handoff.
+
+Growth review: MinimapInput is 95 lines and ResidentInteraction 136. Existing
+coordinators grew by 65 net lines in NerisTown and 66 in TownEditorSession for
+delegation and lifecycle; NativeViewerHost adds four input-observation lines.
+TownDocumentMap adds 33 lines for its own extents/presentation. NativeProgram and
+ViewerWorkflow remain unchanged. Native town tests, 73 shared arena checks,
+native hardening, 359-asset publication and the 20-file style check pass. Desktop
+control was interrupted before installing the staged build, so these results do
+not claim final live gesture or conversation acceptance.
+
+## October 1: click-to-converse and mutual facing
+
+TownResidentInteraction owns character-body ray picking and pending approach state
+transitions. The resident population holds the selected index and navigation stamp;
+the existing road journey owns pathfinding. Its optional exact endpoint prevents a
+conversation destination from being snapped away to a wide road's center. Movement,
+map edits and failed journeys cancel the approach; residents wait until it finishes.
+TownPicking shares its existing slab intersection with resident picking. NerisTown
+only wires the request, road journey and presentation. NerisTownParty turns the leader
+through its existing grounded/equipment presentation; no character assets or accepted
+calibration were changed. Residents retain their individual model headings.
+
+Focused regressions prove precise approach, dialogue after arrival, manual cancellation,
+opposing forward vectors, actual presented actor rotations and body picking in the full
+scene. The complete native town suite and 359-asset publication pass. The interaction
+owner is below 150 lines; no bootstrap growth, new dependencies or changed limits.
+
 ## October 1: immutable save preparation and portable maps
 
 TownSavePreparation owns one clicked revision's cooperative CPU work. It uses a

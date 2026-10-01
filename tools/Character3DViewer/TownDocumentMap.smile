@@ -102,6 +102,27 @@ Public Function ZoomInput(ByRef Town As Document.State) As Boolean
 
 End Function
 
+Public Sub Pan(ByRef Town As Document.State, DeltaX As Number, DeltaY As Number)
+
+    Dim Width As Double
+    Dim Depth As Double
+    Dim FocusX As Double
+    Dim FocusZ As Double
+
+    Width = HighX - LowX
+    Depth = HighZ - LowZ
+    FocusX = Clamp((LowX + HighX) * 0.5 - ToDouble(DeltaX) * Width / 256.0,
+        Town.Surface.OriginX, Town.Surface.XEdges[Town.Surface.Columns])
+    FocusZ = Clamp((LowZ + HighZ) * 0.5 + ToDouble(DeltaY) * Depth / 256.0,
+        Town.Surface.OriginZ, Town.Surface.ZEdges[Town.Surface.Rows])
+    LowX = FocusX - Width * 0.5
+    HighX = FocusX + Width * 0.5
+    LowZ = FocusZ - Depth * 0.5
+    HighZ = FocusZ + Depth * 0.5
+    Revision = -1
+
+End Sub
+
 Private Function Inside(Point As P.Vector3) As Boolean
 
     Dim Result As Boolean
@@ -381,8 +402,13 @@ Public Sub Draw(ByRef Town As Document.State, Position As P.Vector3,
     End If
 
     If Revision <> Town.Revision Then
-        Call SetZoom(Town, P.Vector((LowX + HighX) * 0.5, 0.0, (LowZ + HighZ) * 0.5), Max(1, ZoomLevel))
+
+        If Revision >= 0 Then
+            Call SetZoom(Town, P.Vector((LowX + HighX) * 0.5, 0.0, (LowZ + HighZ) * 0.5), Max(1, ZoomLevel))
+        End If
+
         Call Rebuild(Town)
+
     End If
 
     MapLeft = Window_Width() - 276
@@ -411,7 +437,9 @@ Public Sub Draw(ByRef Town As Document.State, Position As P.Vector3,
 
             ColorValue = RGB(35, 77, 37)
 
-            If Kind = 2 Then
+            If Kind = 0 Then
+                ColorValue = RGB(10, 22, 35)
+            Else If Kind = 2 Then
                 ColorValue = RGB(12, 54, 103)
             Else If Kind >= 3 Then
                 ColorValue = RGB(123, 147, 158)
@@ -450,12 +478,17 @@ Public Sub Draw(ByRef Town As Document.State, Position As P.Vector3,
     Call DrawLandmark(Town, MapLeft, Opacity, AirportName, AirportPosition)
     Call DrawRoute(Position, MapLeft)
 
-    X = Coordinate(Position.X, LowX, HighX)
-    Z = Coordinate(Position.Z, LowZ, HighZ)
+    If Inside(Position) Then
 
-    Call Heading.DrawHeading(Headlight, MapLeft + X * 4, 259 + (63 - Z) * 4, Yaw, Opacity)
+        X = Coordinate(Position.X, LowX, HighX)
+        Z = Coordinate(Position.Z, LowZ, HighZ)
 
-    Fill Rectangle MapLeft + X * 4 - 2, 259 + (63 - Z) * 4 - 2, 5, 5, CYAN
+        Call Heading.DrawHeading(Headlight, MapLeft + X * 4, 259 + (63 - Z) * 4, Yaw, Opacity)
+
+        Fill Rectangle MapLeft + X * 4 - 2, 259 + (63 - Z) * 4 - 2, 5, 5, CYAN
+
+    End If
+
     End Clip
 
     Draw Text LeaderName + " X:" + Panel.NumberLabel(ToNumber(Position.X)) + " Y:" + Panel.NumberLabel(ToNumber(Position.Y)) + " Z:" + Panel.NumberLabel(ToNumber(Position.Z)) At MapLeft, 518 Size 11 Color WHITE

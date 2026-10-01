@@ -10,6 +10,28 @@ Public Type State
     Elapsed As Number
 End Type
 
+Public Sub Start(ByRef Value As State)
+
+    Value.Enabled = True
+    Value.Elapsed = 0
+
+End Sub
+
+''' The Demo button owns its toggle; other deliberate input ends the showcase.
+Public Function StopOnInput(ByRef Value As State, Active As Boolean, DemoButton As Boolean) As Boolean
+
+    If (Not Value.Enabled Or
+        Not Active Or
+        DemoButton) Then
+        Return False
+    End If
+
+    Value.Enabled = False
+    Value.Elapsed = 0
+    Return True
+
+End Function
+
 Public Sub Toggle(ByRef Value As State)
 
     Value.Enabled = Not Value.Enabled

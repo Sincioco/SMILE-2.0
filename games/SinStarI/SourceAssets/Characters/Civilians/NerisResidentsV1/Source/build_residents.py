@@ -253,7 +253,8 @@ def human(record):
         f.egg(4,head,(side*.041,1.711,.096),(.027,.005,.009))
         f.egg(1,chest,(side*.060,1.445,.073),(.051,.036,.026))
     f.egg(0,head,(0,1.659,.112),(.019,.036,.028))
-    f.egg(4,head,(0,1.616,.105),(.029,.005,.005))
+    # The chin reaches z=.119 here; keep the mouth visibly in front of its skin.
+    f.egg(4,head,(0,1.616,.121),(.030,.006,.007))
     if gender == 'f':
         f.egg(4,head,(0,1.655,-.109),(.080,.088,.070))
         f.egg(7,head,(0,1.745,.022),(.112,.012,.097))

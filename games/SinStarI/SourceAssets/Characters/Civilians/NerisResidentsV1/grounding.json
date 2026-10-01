@@ -2,7 +2,7 @@
   {
     "name": "Tessa",
     "file": "Models\\Tessa.glb",
-    "sha256": "42afef2f9e31f0479e2e3c4fee56ce37ae428449836e5d3e2d98c41caf9c26e1",
+    "sha256": "0f8049dafc9332bdb537a4a8eff50efbd8b2bbd37b0a52fda0717d8bcf3f5795",
     "paletteSha256": "4cd755cfc94d06eb9da4add003489224b19944ec1c54a759426a02e743818185",
     "triangles": 8704,
     "bindMinimumY": 0.0,
@@ -30,7 +30,7 @@
   {
     "name": "Maren",
     "file": "Models\\Maren.glb",
-    "sha256": "e722736d35a4de464538273bdf8a0c5ed52a01431cdd31899a3f2637f7013f91",
+    "sha256": "2c0ac93cd4ebc51a3f8c3eb0b2ca7eabc5810c86d03f9c41ca6fcbe4d58b0d6f",
     "paletteSha256": "19a54e391d9e6b4148d53306d37abbe834f4d53268e663daa588cfa6595ef51f",
     "triangles": 8704,
     "bindMinimumY": 0.0,
@@ -58,7 +58,7 @@
   {
     "name": "Ilan",
     "file": "Models\\Ilan.glb",
-    "sha256": "53802e4e9e822b3ce91d84ede6fe214933f9b1c71bb839219e5e22202e7d06e9",
+    "sha256": "e22141300c5d99a827fbfad7e19c4b527a8622135b07a17b0c381afb181f3f02",
     "paletteSha256": "852fe14c973d8ef76ac527932f09ad44ac25b35c9a916067430c699edfe136e8",
     "triangles": 7936,
     "bindMinimumY": 0.0,
@@ -86,7 +86,7 @@
   {
     "name": "Bram",
     "file": "Models\\Bram.glb",
-    "sha256": "97a416f70de6343974fc010e10f3a4ebf29ce9391799cd56f24f840a7427ca38",
+    "sha256": "1c5f664e81b9943654027b82ef03b8dfc0bc26d1e8dc87ab88b3c415a850adb5",
     "paletteSha256": "8ba79b4f4f43ee47a2f78e27297089745663e3b7bdde18867f2c40b4cacf9abd",
     "triangles": 8104,
     "bindMinimumY": 0.0,
@@ -114,7 +114,7 @@
   {
     "name": "Sera",
     "file": "Models\\Sera.glb",
-    "sha256": "690a34ec2acea35adf8e8994319adcb28ec5ba2fa82f64682f17258e40daac69",
+    "sha256": "a164c5b122e8d5c2c033985ac919ba4574e4b1c56cf91b60b14b2f71e8929cec",
     "paletteSha256": "40ab27ac531aec6d26893ee9458807cb1c36d0257b416fe93bbae79aad85d12d",
     "triangles": 8704,
     "bindMinimumY": 0.0,
@@ -142,7 +142,7 @@
   {
     "name": "Pip",
     "file": "Models\\Pip.glb",
-    "sha256": "56ffd562514a373e2a4b1c4c21d21214553bce63e61e10b6cfda131f791270a1",
+    "sha256": "cb18d4cba5bb7af92d2f86054aecd101480ab325c7e29d9e177172866aa4272c",
     "paletteSha256": "257f54d4720c56fa3d4da23775c9f43602cfecf5aa91fc43de61d356566164ca",
     "triangles": 7936,
     "bindMinimumY": 0.0,
@@ -170,7 +170,7 @@
   {
     "name": "Nia",
     "file": "Models\\Nia.glb",
-    "sha256": "2b793e9c777a009c1fe8c802ff41be63a98f87f012e2a4665a45af7d03fa8720",
+    "sha256": "a6930f019f4fa7a386693bd02a25f8eb2bbd0802d243272d29a4a52fd46eb764",
     "paletteSha256": "5098f2fd47a4520aa6f08e4b0a84b7bf30d5e8ca2b91ecbc5dcda378e9f1cfdf",
     "triangles": 8704,
     "bindMinimumY": 0.0,
@@ -198,7 +198,7 @@
   {
     "name": "Tobin",
     "file": "Models\\Tobin.glb",
-    "sha256": "8fcda69fa0b138a8d3707cb7f3c278498773077c24dde14b8dcc24558843cf27",
+    "sha256": "47acc568021c72c8759ab78e96e1ddb1e5f46a6fbb951bc4bdfda8a896df99e1",
     "paletteSha256": "6ca909dc6fcffd5ebb853f8414b7a2c5689cb964c536660360591fbdae9ecc35",
     "triangles": 7936,
     "bindMinimumY": 0.0,

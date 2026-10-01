@@ -18,6 +18,17 @@ Public Type State
     Running As Boolean
 End Type
 
+Public Function Facing(FromPoint As P.Vector3, ToPoint As P.Vector3) As Double
+
+    Dim Result As Double
+
+    Result = M.WrapDegrees(M.Degrees(Atan2(ToPoint.X - FromPoint.X,
+        ToPoint.Z - FromPoint.Z)) + 180.0)
+
+    Return Result
+
+End Function
+
 Public Function ClearRoad(Start As P.Vector3, Finish As P.Vector3,
     Optional RequireRoad As Boolean = True) As Boolean
 
@@ -91,8 +102,7 @@ Private Sub Plan(ByRef Value As State)
             Value.Destination = Target
             Value.Moving = True
             Value.Running = Value.Trip Mod 5 = 0
-            Value.Heading = M.WrapDegrees(M.Degrees(Atan2(Target.X - Value.Position.X,
-                Target.Z - Value.Position.Z)) + 180.0)
+            Value.Heading = Facing(Value.Position, Target)
             Return
 
         End If

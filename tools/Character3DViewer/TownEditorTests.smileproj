@@ -58,6 +58,9 @@
     <SmileSource Include="TownGatewayJourney.smile" />
     <SmileSource Include="TownGatewayTests.smile" />
     <SmileSource Include="TownResidents.smile" />
+    <SmileSource Include="TownDemo.smile" />
+    <SmileSource Include="TownMinimapInput.smile" />
+    <SmileSource Include="TownResidentInteraction.smile" />
     <SmileSource Include="TownResidentMovement.smile" />
     <SmileSource Include="TownResidentDialogue.smile" />
     <SmileSource Include="TownResidentTests.smile" />

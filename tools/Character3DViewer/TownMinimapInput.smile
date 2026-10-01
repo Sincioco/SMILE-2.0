@@ -1,0 +1,95 @@
+''' A minimap press becomes either a drag or a destination click on release.
+Module Smile.Tools.TownMinimapInput
+
+Option Explicit
+
+Import Smile.Simple3D.ArenaCamera3D As Motion
+
+Public Type State
+    Button As Number
+    StartX As Number
+    StartY As Number
+    LastX As Number
+    LastY As Number
+    DeltaX As Number
+    DeltaY As Number
+    Dragged As Boolean
+End Type
+
+''' 0 is unhandled, 1 consumes the gesture, 2 selects a destination.
+Public Function Update(ByRef Value As State, Input As Motion.PointerInput,
+    X As Number, Y As Number, Inside As Boolean) As Number
+
+    Dim Held As Boolean
+    Dim Released As Boolean
+
+    Value.DeltaX = 0
+    Value.DeltaY = 0
+
+    If Value.Button = 0 Then
+
+        If Not Inside Then
+            Return 0
+        End If
+
+        If Input.PanPressed Then
+            Value.Button = 1
+        Else If Input.OrbitPressed And Input.PanModifier Then
+            Value.Button = 2
+        Else
+            Return 1
+        End If
+
+        Value.StartX = X
+        Value.StartY = Y
+        Value.LastX = X
+        Value.LastY = Y
+        Value.Dragged = False
+        Return 1
+
+    End If
+
+    Held = Input.PanHeld
+    Released = Input.PanReleased
+
+    If Value.Button = 2 Then
+        Held = Input.OrbitHeld
+        Released = Input.OrbitReleased
+    End If
+
+    If Not Held And Not Released Then
+        Value.Button = 0
+        Return 1
+    End If
+
+    If Abs(X - Value.StartX) + Abs(Y - Value.StartY) >= 4 Then
+        Value.Dragged = True
+    End If
+
+    If Value.Dragged Then
+
+        Value.DeltaX = X - Value.LastX
+        Value.DeltaY = Y - Value.LastY
+        Value.LastX = X
+        Value.LastY = Y
+
+    End If
+
+    If Released Then
+
+        If (Value.Button = 1 And
+            Not Value.Dragged And
+            Inside) Then
+            Value.Button = 0
+            Return 2
+        End If
+
+        Value.Button = 0
+
+    End If
+
+    Return 1
+
+End Function
+
+End Module

@@ -186,6 +186,10 @@ Public Class Session
         Dim WasPlanning As Boolean
         Dim Layout As Hud.Layout
 
+        If Me.SelectedTab = TOWN_TAB Then
+            Call Town.ObserveDemoInput(Me.TownScene, Key)
+        End If
+
         Blocked = Not Me.HeaderHidden And UI.Contains(18, Tabs.RowY(Me.SelectedTab), 980, 26)
 
         Call BattleUi.ObserveActivity(Me.Menus, Key)

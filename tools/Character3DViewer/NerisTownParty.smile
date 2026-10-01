@@ -409,16 +409,36 @@ Private Sub Present(ByRef Value As Member, ByRef Keys As Calibration.State,
 
 End Sub
 
+''' Change only the leader's facing; normal presentation still owns equipment and grounding.
+Public Sub FaceLeader(ByRef Value As State, Target As P.Vector3)
+
+    Dim Delta As P.Vector3
+
+    Delta = M.Subtract(Target, Value.Path.Positions[0])
+
+    If Abs(Delta.X) + Abs(Delta.Z) > 0.001 Then
+        Value.Members[0].Yaw = M.WrapDegrees(M.Degrees(Atan2(Delta.X, Delta.Z)) + 180.0)
+    End If
+
+End Sub
+
 ''' Inspection leaves every route position fixed while idle animation continues.
-Public Sub Stand(ByRef Value As State, Elapsed As Number)
+Public Sub Stand(ByRef Value As State, Elapsed As Number, Optional HideFollowers As Boolean = False)
 
     Dim Index As Number
+    Dim Opacity As Number
 
     For Index = 0 To Value.MemberCount - 1
+
         Value.Path.Moving[Index] = False
+        Opacity = ToNumber(Round(Value.Members[Index].Opacity))
+
+        If HideFollowers And Index > 0 Then
+            Opacity = 0
+        End If
 
         Call Present(Value.Members[Index], Value.Keys, Value.Path.Positions[Index],
-            False, ToNumber(Round(Value.Members[Index].Opacity)), Elapsed, Value.SpeedPercent)
+            False, Opacity, Elapsed, Value.SpeedPercent)
 
         Value.Ready = Value.Ready And Value.Members[Index].Body.Ready
     End For
