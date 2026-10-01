@@ -1,0 +1,200 @@
+''' Immutable collision snapshot usable by gameplay and background save preparation.
+Module Smile.Tools.TownCollisionWorld
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownCatalogData As Catalog
+Import Smile.Tools.TownCatalogFeatures As Features
+Import Smile.Tools.TownGeometry As Geometry
+
+Public Type State
+    Surface As Grid.State
+    Items[1024] As Document.Item
+    Shapes[Catalog.TEMPLATE_COUNT] As Catalog.Template
+    ItemCount As Number
+    LowX[1024] As Double
+    LowZ[1024] As Double
+    HighX[1024] As Double
+    HighZ[1024] As Double
+End Type
+
+Public Sub Build(ByRef Value As State, ByRef Town As Document.State)
+
+    Dim Index As Number
+    Dim Corner As Number
+    Dim LocalPoint As P.Vector3
+    Dim WorldPoint As P.Vector3
+    Dim Shape As Catalog.Template
+
+    Value.Surface = Town.Surface
+    Value.ItemCount = Town.ItemCount
+
+    For Index = 0 To Value.ItemCount - 1
+
+        Value.Items[Index] = Town.Items[Index]
+        Shape = Catalog.TemplateAt(Value.Items[Index].Template)
+        Value.LowX[Index] = 1.0E+20
+        Value.LowZ[Index] = 1.0E+20
+        Value.HighX[Index] = -1.0E+20
+        Value.HighZ[Index] = -1.0E+20
+
+        For Corner = 0 To 3
+
+            LocalPoint = P.Vector(Shape.Low.X - 20.0, 0.0, Shape.Low.Z - 20.0)
+
+            If Corner Mod 2 = 1 Then
+                LocalPoint.X = Shape.High.X + 20.0
+            End If
+
+            If Corner >= 2 Then
+                LocalPoint.Z = Shape.High.Z + 20.0
+            End If
+
+            WorldPoint = Geometry.ToWorld(Value.Items[Index], LocalPoint)
+            Value.LowX[Index] = Min(Value.LowX[Index], WorldPoint.X)
+            Value.LowZ[Index] = Min(Value.LowZ[Index], WorldPoint.Z)
+            Value.HighX[Index] = Max(Value.HighX[Index], WorldPoint.X)
+            Value.HighZ[Index] = Max(Value.HighZ[Index], WorldPoint.Z)
+        End For
+    End For
+
+    For Index = 0 To Catalog.TEMPLATE_COUNT - 1
+        Value.Shapes[Index] = Catalog.TemplateAt(Index)
+    End For
+
+End Sub
+
+Public Function NearWorld(ByRef Value As State, Index As Number, X As Double, Z As Double) As Boolean
+
+    Dim Result As Boolean
+
+    Result = (Value.Items[Index].Active And X >= Value.LowX[Index] And X <= Value.HighX[Index] And
+        Z >= Value.LowZ[Index] And Z <= Value.HighZ[Index])
+
+    Return Result
+
+End Function
+
+Public Function InBox(Box As Features.Box, Point As P.Vector3, Margin As Double) As Boolean
+
+    Dim Result As Boolean
+
+    Result = (Point.X >= Box.X0 - Margin And Point.X <= Box.X1 + Margin And
+        Point.Z >= Box.Z0 - Margin And Point.Z <= Box.Z1 + Margin)
+
+    Return Result
+
+End Function
+
+Public Function NearItem(ByRef Value As State, Index As Number, Point As P.Vector3) As Boolean
+
+    Dim Shape As Catalog.Template
+    Dim Result As Boolean
+
+    Shape = Value.Shapes[Value.Items[Index].Template]
+    Result = (Point.X >= Shape.Low.X - 20.0 And Point.X <= Shape.High.X + 20.0 And
+        Point.Z >= Shape.Low.Z - 20.0 And Point.Z <= Shape.High.Z + 20.0)
+
+    Return Result
+
+End Function
+
+Public Function Approach(Item As Document.Item, Point As P.Vector3, Optional HeightOnly As Boolean = False) As Double
+
+    Dim Index As Number
+    Dim Door As Features.Door
+    Dim Relative As P.Vector3
+    Dim Height As Double
+    Dim Shape As Catalog.Template
+
+    Height = -10000.0
+    Shape = Catalog.TemplateAt(Item.Template)
+
+    For Index = 0 To Shape.DoorCount - 1
+
+        Door = Features.DoorAt(Item.Template, Index)
+        Relative = M.Rotate(M.Subtract(Point, Door.Position), P.Vector(0.0, -Door.Yaw, 0.0))
+
+        If (Abs(Relative.X) < Max(0.1, Door.Width / 2.0 - 3000.0 / Item.Scale.X) And
+            Relative.Z >= -18000.0 / Item.Scale.Z And
+            Relative.Z <= 4000.0 / Item.Scale.Z) Then
+
+            If Not HeightOnly Or Relative.Z >= -1000.0 / Item.Scale.Z Then
+                Height = Max(Height, Door.Position.Y)
+            End If
+
+        End If
+
+    End For
+
+    Return Height
+
+End Function
+
+Public Function CanStand(ByRef Value As State, X As Double, Z As Double) As Boolean
+
+    Dim Index As Number
+    Dim Part As Number
+    Dim Cell As Number
+    Dim Point As P.Vector3
+    Dim Shape As Catalog.Template
+    Dim Blocked As Boolean
+    Dim Supported As Boolean
+    Dim Opening As Boolean
+
+    Cell = Grid.ReadPoint(Value.Surface, X, Z)
+
+    Supported = Cell <> Grid.SURFACE_EMPTY And Cell <> Grid.SURFACE_WATER
+
+    For Index = 0 To Value.ItemCount - 1
+
+        If NearWorld(Value, Index, X, Z) Then
+
+            Point = Geometry.ToLocal(Value.Items[Index], P.Vector(X, Value.Items[Index].Position.Y, Z))
+
+            If NearItem(Value, Index, Point) Then
+
+                Shape = Value.Shapes[Value.Items[Index].Template]
+
+                Opening = Approach(Value.Items[Index], Point) > -9000.0
+
+                For Part = 0 To Shape.FloorCount - 1
+                    Supported = Supported Or InBox(Features.FloorAt(Value.Items[Index].Template, Part), Point, 0.015)
+                End For
+
+                For Part = 0 To Shape.StepCount - 1
+
+                    If InBox(Features.StepAt(Value.Items[Index].Template, Part), Point, 0.015) Then
+                        Supported = True
+                        Opening = True
+                    End If
+
+                End For
+
+                For Part = 0 To Shape.SolidCount - 1
+
+                    If (Not Opening And
+                        InBox(Features.SolidAt(Value.Items[Index].Template, Part), Point,
+                        3000.0 / Max(Value.Items[Index].Scale.X, Value.Items[Index].Scale.Z))) Then
+                        Blocked = True
+                    End If
+
+                End For
+
+            End If
+
+        End If
+
+    End For
+
+    Blocked = Supported And Not Blocked
+
+    Return Blocked
+
+End Function
+
+End Module

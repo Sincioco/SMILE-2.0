@@ -3,6 +3,9 @@
 #include <strsafe.h>
 #include <stdint.h>
 #include <string.h>
+#include <string>
+
+DWORD smile_data_bundle_transfer(bool, const char*, const char*, const WCHAR*, long long, volatile LONG*);
 
 extern "C" {
 const char* smile_text_utf8(void*);
@@ -22,6 +25,8 @@ static struct Transfer {
     volatile LONG progress;
     volatile LONG status; // 0 pending, 1 successful, 2 failed; -1 unknown job.
     HANDLE thread;
+    bool bundle, saving;
+    char key[1025], records[264193];
 } job;
 
 static bool wide(void* text, WCHAR* output, int capacity)
@@ -68,6 +73,11 @@ static DWORD WINAPI transfer(void*)
     DWORD error = ERROR_SUCCESS, count = 0, written = 0;
     LARGE_INTEGER size = {};
     bool ownsTemporary = false;
+    if (job.bundle) {
+        error = smile_data_bundle_transfer(job.saving, job.key, job.records,
+            job.saving ? job.destination : job.source, job.id, &job.progress);
+        goto done;
+    }
     input = CreateFileW(job.source, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_DELETE,
         nullptr, OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
     if (input == INVALID_HANDLE_VALUE) { error = GetLastError(); goto done; }
@@ -115,17 +125,25 @@ done:
     return 0;
 }
 
-extern "C" long long smile_data_file_start(long long saving, void* key, void* path)
+static long long start(long long saving, void* key, void* path, void* records, bool bundle)
 {
     WCHAR stored[2048], selected[4096];
+    std::string keyCopy(smile_text_utf8(key), static_cast<size_t>(smile_text_byte_length(key)));
+    std::string recordCopy;
+    if (records) recordCopy.assign(smile_text_utf8(records), static_cast<size_t>(smile_text_byte_length(records)));
     bool valid = wide(path, selected, 4096) &&
         smile_storage_data_path(smile_text_utf8(key), smile_text_byte_length(key), stored, 2048);
+    valid = valid && keyCopy.size() <= 1024 && recordCopy.size() <= 264192 &&
+        keyCopy.find('\0') == std::string::npos && recordCopy.find('\0') == std::string::npos;
     smile_text_release(key);
     smile_text_release(path);
+    if (records) smile_text_release(records);
     // A caller cannot replace a pending transaction, even when a network is slow.
     if (job.thread && WaitForSingleObject(job.thread, 0) == WAIT_TIMEOUT) return 0;
     if (job.thread) { CloseHandle(job.thread); job.thread = nullptr; }
     ++job.id;
+    job.bundle = bundle;
+    job.saving = saving != 0;
     InterlockedExchange(&job.progress, 0);
     if (!valid || !((selected[0] && selected[1] == L':' && selected[2] == L'\\') ||
         (selected[0] == L'\\' && selected[1] == L'\\')))
@@ -134,6 +152,8 @@ extern "C" long long smile_data_file_start(long long saving, void* key, void* pa
         InterlockedExchange(&job.status, 2);
         return job.id;
     }
+    StringCchCopyA(job.key, 1025, keyCopy.c_str());
+    StringCchCopyA(job.records, 264193, recordCopy.c_str());
     StringCchCopyW(job.source, 4096, saving ? stored : selected);
     StringCchCopyW(job.destination, 4096, saving ? selected : stored);
     StringCchCopyA(job.message, 512, "Saving/opening file...");
@@ -141,6 +161,16 @@ extern "C" long long smile_data_file_start(long long saving, void* key, void* pa
     job.thread = CreateThread(nullptr, 0, transfer, nullptr, 0, nullptr);
     if (!job.thread) { fail(GetLastError()); InterlockedExchange(&job.status, 2); }
     return job.id;
+}
+
+extern "C" long long smile_data_file_start(long long saving, void* key, void* path)
+{
+    return start(saving, key, path, nullptr, false);
+}
+
+extern "C" long long smile_data_bundle_start(long long saving, void* key, void* path, void* records)
+{
+    return start(saving, key, path, records, true);
 }
 
 extern "C" long long smile_data_file_status(long long id)

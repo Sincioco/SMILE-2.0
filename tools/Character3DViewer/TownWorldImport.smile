@@ -8,16 +8,19 @@ Import Smile.Tools.TownDocumentStore As Storage
 Import Smile.Tools.TownLibrary As Library
 Import Smile.Tools.TownTabs As Tabs
 Import Smile.Tools.TownWorldDocument As World
+Import Smile.Tools.TownDerivedCache As Derived
 
 Public Type State
     Job As Number
     Progress As Number
     Message As Text
+    Key As Text
 End Type
 
 Public Sub Choose(ByRef Value As State, ByRef OpenTabs As Tabs.State, ByRef Map As World.State)
 
     Dim Path As Text
+    Dim Sequence As Number
 
     If Value.Job > 0 Then
         Return
@@ -34,7 +37,11 @@ Public Sub Choose(ByRef Value As State, ByRef OpenTabs As Tabs.State, ByRef Map 
         Return
     End If
 
-    Value.Job = Data_FileStart(False, "TownEditor.World.TownImport", Path)
+    Load Sequence From "TownEditor.File.Sequence" Default 0
+    Sequence = Sequence + 1
+    Save Sequence To "TownEditor.File.Sequence"
+    Value.Key = "TownEditor.World.TownImport." + Text_From_Double(ToDouble(Sequence))
+    Value.Job = Data_BundleStart(False, Value.Key, Path, "")
     Value.Progress = 0
     Value.Message = "Opening town..."
 
@@ -72,7 +79,12 @@ Public Function Update(ByRef Value As State, ByRef OpenTabs As Tabs.State,
         Return False
     End If
 
-    Ok = Storage.LoadDocument(Incoming, "TownEditor.World.TownImport")
+    Ok = Storage.LoadDocument(Incoming, Value.Key)
+
+    If Ok Then
+        Ok = Derived.BindBundle(Incoming, Value.Key)
+    End If
+
     Value.Message = "Invalid town file; world and open towns retained."
 
     If Not Ok Then

@@ -14,13 +14,46 @@ def envelope(payload):
 
 
 def unwrap(raw):
-    if len(raw) < 44 or len(raw) > 524332 or raw[:4] != b'SMD4':
+    if len(raw) < 44 or len(raw) > 64 * 1024 * 1024 or raw[:4] != b'SMD4':
         raise ValueError('Invalid document envelope')
     version, size = struct.unpack_from('<II', raw, 4)
-    payload = raw[44:]
-    if version != 1 or size != len(payload) or hashlib.sha256(payload).digest() != raw[12:44]:
+    payload = raw[44:44 + size]
+    if version != 1 or size > 1048576 or size != len(payload) or hashlib.sha256(payload).digest() != raw[12:44]:
         raise ValueError('Document checksum mismatch')
+    if len(raw) > 44 + size:
+        validate_prepared_bundle(raw, 44 + size)
     return payload
+
+
+def validate_prepared_bundle(raw, offset):
+    """Keep Blender/authoring readers compatible with native prepared .town exports."""
+    if len(raw) - offset < 40 or raw[offset:offset + 4] != b'SMB1':
+        raise ValueError('Invalid prepared bundle')
+    if hashlib.sha256(raw[:-32]).digest() != raw[-32:]:
+        raise ValueError('Prepared bundle checksum mismatch')
+    count, = struct.unpack_from('<I', raw, offset + 4)
+    if count > 2048:
+        raise ValueError('Too many prepared records')
+    offset += 8
+    names = set()
+    for _ in range(count):
+        if offset + 8 > len(raw) - 32:
+            raise ValueError('Incomplete prepared record')
+        name_size, data_size = struct.unpack_from('<II', raw, offset)
+        offset += 8
+        if not 1 <= name_size <= 128 or not 44 <= data_size <= 1048620 or offset + name_size + data_size > len(raw) - 32:
+            raise ValueError('Invalid prepared record size')
+        name = raw[offset:offset + name_size].decode('ascii')
+        offset += name_size
+        if name[0] != '.' or any(c not in '._-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz' for c in name) or name in names:
+            raise ValueError('Invalid prepared record name')
+        names.add(name)
+        part = raw[offset:offset + data_size]
+        if part[:4] != b'SMD4' or struct.unpack_from('<II', part, 4) != (1, data_size - 44) or hashlib.sha256(part[44:]).digest() != part[12:44]:
+            raise ValueError('Invalid prepared record checksum')
+        offset += data_size
+    if offset != len(raw) - 32:
+        raise ValueError('Unexpected prepared bundle data')
 
 
 def integer(value):

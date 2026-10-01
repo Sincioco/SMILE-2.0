@@ -15,6 +15,7 @@
     <SmileSource Include="NerisRunwayTraffic.smile" />
     <SmileSource Include="ProximityDrawbridge.smile" />
     <SmileSource Include="TownDocumentNavigation.smile" />
+    <SmileSource Include="TownCollisionWorld.smile" />
     <SmileSource Include="TownDocument.smile" />
     <SmileSource Include="TownCatalogData.smile" />
     <SmileSource Include="TownCatalogFeatures.smile" />

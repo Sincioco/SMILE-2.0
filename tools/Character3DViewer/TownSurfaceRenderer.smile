@@ -14,15 +14,13 @@ Import Smile.Simple3D.SurfaceGrid3D As Grid
 Import Smile.Simple3D.SurfaceContours3D As Contours
 Import Smile.Simple3D.SurfacePaint3D As Paint
 Import Smile.Tools.TownTerrainCache As Cache
+Import Smile.Tools.TownTerrainBuilder As Builder
 Import Smile.Tools.TownDerivedCache As Derived
 
-Private Dim Pending As Grid.State
-Private Dim SourceCurves As Paint.State
-Private Dim Buffer As Cache.Batch
 Private Dim CacheTown As Document.State
 
 Public Type State
-    Openings As Decks.State
+    Recipe As Builder.State
     Objects[64] As Core.Object3D
     NextObjects[64] As Core.Object3D
     Water[4] As Core.RibbonBatch3D
@@ -33,7 +31,6 @@ Public Type State
     LiveRevision As Number
     PendingRevision As Number
     Stage As Number
-    Row As Number
     Kind As Number
     Cursor As Number
     ObjectCount As Number
@@ -100,10 +97,8 @@ Public Sub BeginBuild(ByRef Value As State, ByRef Town As Document.State)
         Call G.DestroyRibbonBatch3D(Value.NextWater[Index])
     End For
 
-    Call Decks.Capture(Value.Openings, Town)
+    Call Builder.Begin(Value.Recipe, Town)
 
-    Pending = Town.Surface
-    SourceCurves = Town.Surface.Curves
     CacheTown = Town
     Value.CacheBatch = 0
     Value.CacheBatches = 0
@@ -121,9 +116,9 @@ Public Sub BeginBuild(ByRef Value As State, ByRef Town As Document.State)
     End If
 
     Value.PendingStyle = Town.TerrainStyle
-    Buffer.PatchCount = 0
+    Value.Recipe.Buffer.PatchCount = 0
     Value.PendingRevision = Town.Surface.Revision
-    Value.Row = 0
+    Value.Recipe.Row = 0
     Value.Kind = 1
     Value.Cursor = 0
     Value.NextCount = 0
@@ -141,10 +136,10 @@ Private Sub ReadCachedBatch(ByRef Value As State)
 
     Dim Index As Number
 
-    If Cache.LoadBatch(Buffer, Value.CacheKey, Value.CacheBatch) Then
+    If Cache.LoadBatch(Value.Recipe.Buffer, Value.CacheKey, Value.CacheBatch) Then
 
         Value.CacheBatch = Value.CacheBatch + 1
-        Value.Row = Pending.Rows
+        Value.Recipe.Row = Value.Recipe.Surface.Rows
         Value.Stage = 2
 
     Else
@@ -165,325 +160,11 @@ Private Sub ReadCachedBatch(ByRef Value As State)
         Value.CacheOk = True
         Value.CacheBatch = 0
         Value.CacheKey = Derived.WriteKey(CacheTown.Name, "Terrain3")
-        Value.Row = 0
-        Buffer.PatchCount = 0
+        Value.Recipe.Row = 0
+        Value.Recipe.Buffer.PatchCount = 0
         Value.Stage = 1
 
     End If
-
-End Sub
-
-Private Sub AddPatch(ByRef Value As State, X0 As Double, Z0 As Double,
-    X1 As Double, Z1 As Double, Kind As Number, Optional Y0 As Double = 0.0,
-    Optional Y1 As Double = 0.0, Optional Plane As Number = 0)
-
-    If Buffer.PatchCount >= 65536 Then
-        Value.Failed = True
-        Return
-    End If
-
-    Buffer.Patches[Buffer.PatchCount].X0 = X0
-    Buffer.Patches[Buffer.PatchCount].Z0 = Z0
-    Buffer.Patches[Buffer.PatchCount].X1 = X1
-    Buffer.Patches[Buffer.PatchCount].Z1 = Z1
-    Buffer.Patches[Buffer.PatchCount].Kind = Kind
-    Buffer.Patches[Buffer.PatchCount].Y0 = Y0
-    Buffer.Patches[Buffer.PatchCount].Y1 = Y1
-    Buffer.Patches[Buffer.PatchCount].Plane = Plane
-    Buffer.PatchCount = Buffer.PatchCount + 1
-
-End Sub
-
-Private Sub CurveTriangle(ByRef Value As State, PointA As P.Vector3, PointB As P.Vector3,
-    PointC As P.Vector3, Base As Number)
-
-    Dim Slice As Contours.Slice
-    Dim Index As Number
-    Dim Face As Contours.Triangle
-
-    Slice = Contours.Split(Pending, PointA, PointB, PointC, Base)
-
-    For Index = 0 To Slice.FaceCount - 1
-
-        Face = Slice.Faces[Index]
-
-        Call AddPatch(Value, Face.PointA.X, Face.PointA.Z, Face.PointB.X, Face.PointB.Z, Face.Kind, 0.0, 0.0, 3)
-
-        If Value.Failed Then
-            Return
-        End If
-
-        Buffer.Patches[Buffer.PatchCount - 1].X2 = Face.PointC.X
-        Buffer.Patches[Buffer.PatchCount - 1].Z2 = Face.PointC.Z
-    End For
-
-    If Slice.Rail Then
-        Call AddPatch(Value, Slice.EdgeA.X, Slice.EdgeA.Z, Slice.EdgeB.X, Slice.EdgeB.Z,
-            4, Layers.RAIL_BASE_Y, Layers.RAIL_TOP_Y, 4)
-    End If
-
-End Sub
-
-Private Sub CurveRow(ByRef Value As State)
-
-    Dim X As Number
-    Dim First As Number
-    Dim Surface As Number
-    Dim PointA As P.Vector3
-    Dim PointB As P.Vector3
-    Dim PointC As P.Vector3
-    Dim PointD As P.Vector3
-    Dim Center As P.Vector3
-    Dim Uniform As Boolean
-    Dim RunKind As Number
-    Dim Base As Number
-    Dim RowCurves As Paint.State
-
-    Call Paint.SelectRegion(SourceCurves, RowCurves, Pending.OriginX - 0.1,
-        Pending.ZEdges[Value.Row] - 0.1, Pending.XEdges[Pending.Columns] + 0.1,
-        Pending.ZEdges[Value.Row + 1] + 0.1)
-
-    ' Continuous water sits below the lawn; legacy cell water keeps its authored height.
-
-    If Value.Row = 0 Then
-        Call AddPatch(Value, Pending.OriginX, Pending.OriginZ,
-            Pending.XEdges[Pending.Columns], Pending.ZEdges[Pending.Rows], 2, Layers.GROUND_Y - 1.0)
-        Call AddPatch(Value, Pending.OriginX, Pending.OriginZ,
-            Pending.XEdges[Pending.Columns], Pending.ZEdges[Pending.Rows], 6, Layers.GROUND_Y - 1.2)
-    End If
-
-    First = -1
-
-    For X = 0 To Pending.Columns - 1
-
-        PointA = P.Vector(Pending.XEdges[X], 0.0, Pending.ZEdges[Value.Row])
-        PointB = P.Vector(PointA.X, 0.0, Pending.ZEdges[Value.Row + 1])
-        PointC = P.Vector(Pending.XEdges[X + 1], 0.0, PointB.Z)
-        PointD = P.Vector(PointC.X, 0.0, PointA.Z)
-        Center = P.Vector((PointA.X + PointC.X) * 0.5, 0.0, (PointA.Z + PointC.Z) * 0.5)
-
-        Call Paint.SelectRegion(RowCurves, Pending.Curves, PointA.X - 0.1,
-            PointA.Z - 0.1, PointC.X + 0.1, PointC.Z + 0.1)
-
-        ' A cell owns its base up to its edge. Do not tessellate a neighboring
-        ' legacy tile into thousands of artificial slivers when adding one curve.
-        Base = Grid.ReadBase(Pending, X, Value.Row)
-        Surface = Min(3, Contours.Kind(Pending, Center, Base))
-        Uniform = (Min(3, Contours.Kind(Pending, PointA, Base)) = Surface And
-            Min(3, Contours.Kind(Pending, PointB, Base)) = Surface And
-            Min(3, Contours.Kind(Pending, PointC, Base)) = Surface And
-            Min(3, Contours.Kind(Pending, PointD, Base)) = Surface)
-
-        If First >= 0 And (Not Uniform Or Surface <> RunKind) Then
-            Call AddPatch(Value, Pending.XEdges[First], PointA.Z, PointA.X, PointC.Z, RunKind)
-
-            First = -1
-        End If
-
-        If Uniform Then
-
-            If (Surface = 1 Or Surface = 3) And First < 0 Then
-                First = X
-                RunKind = Surface
-            End If
-
-        Else
-
-            Call CurveTriangle(Value, PointA, PointB, Center, Base)
-            Call CurveTriangle(Value, PointB, PointC, Center, Base)
-            Call CurveTriangle(Value, PointC, PointD, Center, Base)
-            Call CurveTriangle(Value, PointD, PointA, Center, Base)
-
-        End If
-
-        ' Preserve authored grid-bridge rails when a curve is added elsewhere.
-        ' Generated curved maps use water as their base and get analytic rails above.
-
-        If Base = Grid.SURFACE_BRIDGE And Grid.ReadPoint(Pending, Center.X, Center.Z) = Base Then
-
-            If Grid.ReadPoint(Pending, PointA.X - 0.001, Center.Z) = Grid.SURFACE_WATER Then
-                Call Rail(Value, PointA.X, PointA.Z, PointA.X, PointC.Z, 2)
-            End If
-
-            If Grid.ReadPoint(Pending, PointC.X + 0.001, Center.Z) = Grid.SURFACE_WATER Then
-                Call Rail(Value, PointC.X, PointC.Z, PointC.X, PointA.Z, 2)
-            End If
-
-            If Grid.ReadPoint(Pending, Center.X, PointA.Z - 0.001) = Grid.SURFACE_WATER Then
-                Call Rail(Value, PointC.X, PointA.Z, PointA.X, PointA.Z, 1)
-            End If
-
-            If Grid.ReadPoint(Pending, Center.X, PointC.Z + 0.001) = Grid.SURFACE_WATER Then
-                Call Rail(Value, PointA.X, PointC.Z, PointC.X, PointC.Z, 1)
-            End If
-
-        End If
-
-    End For
-
-    If First >= 0 Then
-        Call AddPatch(Value, Pending.XEdges[First], PointA.Z, PointC.X, PointC.Z, RunKind)
-    End If
-
-    Pending.Curves = SourceCurves
-
-End Sub
-
-''' Rails follow only the bridge/water edge; dry road approaches stay completely open.
-Private Sub RailPiece(ByRef Value As State, X0 As Double, Z0 As Double,
-    X1 As Double, Z1 As Double, Plane As Number)
-
-    Dim Width As Double
-
-    Width = 4.5
-
-    If Plane = 1 Then
-
-        Call AddPatch(Value, X0, Z0 - Width * 0.5, X1, Z0 + Width * 0.5, 5, Layers.RAIL_CAP_Y)
-        Call AddPatch(Value, X0, Z0 - Width * 0.5, X1, Z0 - Width * 0.5, 4, Layers.RAIL_BASE_Y, Layers.RAIL_TOP_Y, 1)
-        Call AddPatch(Value, X0, Z0 + Width * 0.5, X1, Z0 + Width * 0.5, 4, Layers.RAIL_BASE_Y, Layers.RAIL_TOP_Y, 1)
-
-    Else
-
-        Call AddPatch(Value, X0 - Width * 0.5, Z0, X0 + Width * 0.5, Z1, 5, Layers.RAIL_CAP_Y)
-        Call AddPatch(Value, X0 - Width * 0.5, Z0, X0 - Width * 0.5, Z1, 4, Layers.RAIL_BASE_Y, Layers.RAIL_TOP_Y, 2)
-        Call AddPatch(Value, X0 + Width * 0.5, Z0, X0 + Width * 0.5, Z1, 4, Layers.RAIL_BASE_Y, Layers.RAIL_TOP_Y, 2)
-
-    End If
-
-End Sub
-
-Private Sub Rail(ByRef Value As State, X0 As Double, Z0 As Double,
-    X1 As Double, Z1 As Double, Plane As Number)
-
-    Dim Cursor As Double
-    Dim First As Double
-    Dim Last As Double
-
-    Do
-
-        If Not Decks.NextRail(Value.Openings, P.Vector(X0, 0.0, Z0), P.Vector(X1, 0.0, Z1), Cursor, First, Last) Then
-            Exit Do
-        End If
-
-        Call RailPiece(Value, X0 + (X1 - X0) * First, Z0 + (Z1 - Z0) * First,
-            X0 + (X1 - X0) * Last, Z0 + (Z1 - Z0) * Last, Plane)
-
-    Loop
-
-End Sub
-
-''' Close only exposed sides below the surface; never add raised shoreline trim.
-Private Sub Skirt(ByRef Value As State, Surface As Number, Neighbor As Number,
-    X0 As Double, Z0 As Double, X1 As Double, Z1 As Double, Plane As Number)
-
-    Dim Kind As Number
-    Dim Height As Double
-    Dim WaterHeight As Double
-
-    Kind = Min(Surface, Grid.SURFACE_ROAD)
-
-    If Kind = 0 Or Kind <= Min(Neighbor, Grid.SURFACE_ROAD) Then
-        Return
-    End If
-
-    Height = Layers.GROUND_Y
-
-    If Kind = Grid.SURFACE_ROAD Then
-        Height = Layers.ROAD_Y
-    Else If Kind = Grid.SURFACE_WATER Then
-        Height = Layers.WATER_Y
-        Kind = 6
-    End If
-
-    Call AddPatch(Value, X0, Z0, X1, Z1, Kind, Layers.BED_Y, Height, Plane)
-
-End Sub
-
-Private Sub ScanRow(ByRef Value As State)
-
-    Dim X As Number
-    Dim StartX As Number
-    Dim Surface As Number
-    Dim Kind As Number
-    Dim Z As Number
-    Dim X0 As Double
-    Dim X1 As Double
-    Dim Z0 As Double
-    Dim Z1 As Double
-
-    If Pending.Curves.BrushCount > 0 Then
-        Call CurveRow(Value)
-
-        Return
-    End If
-
-    Z = Value.Row
-    Z0 = Pending.ZEdges[Z]
-    Z1 = Pending.ZEdges[Z + 1]
-
-    Do
-        StartX = X
-        Surface = Grid.ReadCell(Pending, X, Z)
-        Kind = Surface
-
-        If Surface = Grid.SURFACE_BRIDGE Then
-            Kind = Grid.SURFACE_ROAD
-        End If
-
-        Do
-            X = X + 1
-
-        Loop Until X >= Pending.Columns Or Grid.ReadCell(Pending, X, Z) <> Surface
-
-        If Kind = Grid.SURFACE_WATER Then
-            ' PointA submerged opaque bed seals the height gap and receives building shadows.
-
-            Call AddPatch(Value, Pending.XEdges[StartX] - 1.0, Z0 - 1.0,
-                Pending.XEdges[X] + 1.0, Z1 + 1.0, 6, Layers.GROUND_Y - 1.2)
-        End If
-
-        If Kind > 0 Then
-            Call AddPatch(Value, Pending.XEdges[StartX], Z0, Pending.XEdges[X], Z1, Kind)
-        End If
-
-    Loop Until X >= Pending.Columns
-
-    For X = 0 To Pending.Columns - 1
-
-        Surface = Grid.ReadCell(Pending, X, Z)
-        X0 = Pending.XEdges[X]
-        X1 = Pending.XEdges[X + 1]
-
-        Call Skirt(Value, Surface, Grid.ReadCell(Pending, X - 1, Z), X0, Z0, X0, Z1, 2)
-        Call Skirt(Value, Surface, Grid.ReadCell(Pending, X + 1, Z), X1, Z1, X1, Z0, 2)
-        Call Skirt(Value, Surface, Grid.ReadCell(Pending, X, Z - 1), X1, Z0, X0, Z0, 1)
-        Call Skirt(Value, Surface, Grid.ReadCell(Pending, X, Z + 1), X0, Z1, X1, Z1, 1)
-
-        If Surface = Grid.SURFACE_BRIDGE Then
-
-            X0 = Pending.XEdges[X]
-            X1 = Pending.XEdges[X + 1]
-
-            If Grid.ReadCell(Pending, X - 1, Z) = Grid.SURFACE_WATER Then
-                Call Rail(Value, X0, Z0, X0, Z1, 2)
-            End If
-
-            If Grid.ReadCell(Pending, X + 1, Z) = Grid.SURFACE_WATER Then
-                Call Rail(Value, X1, Z0, X1, Z1, 2)
-            End If
-
-            If Grid.ReadCell(Pending, X, Z - 1) = Grid.SURFACE_WATER Then
-                Call Rail(Value, X0, Z0, X1, Z0, 1)
-            End If
-
-            If Grid.ReadCell(Pending, X, Z + 1) = Grid.SURFACE_WATER Then
-                Call Rail(Value, X0, Z1, X1, Z1, 1)
-            End If
-
-        End If
-
-    End For
 
 End Sub
 
@@ -524,11 +205,11 @@ Private Sub UploadNext(ByRef Value As State)
 
     Do
 
-        If StopIndex >= Buffer.PatchCount Or Total = 2048 Then
+        If StopIndex >= Value.Recipe.Buffer.PatchCount Or Total = 2048 Then
             Exit Do
         End If
 
-        If Buffer.Patches[StopIndex].Kind = Value.Kind Then
+        If Value.Recipe.Buffer.Patches[StopIndex].Kind = Value.Kind Then
             Total = Total + 1
         End If
 
@@ -570,7 +251,7 @@ Private Sub UploadNext(ByRef Value As State)
 
         For Index = Value.Cursor To StopIndex - 1
 
-            Part = Buffer.Patches[Index]
+            Part = Value.Recipe.Buffer.Patches[Index]
 
             If Part.Kind = Value.Kind Then
 
@@ -672,7 +353,7 @@ Private Sub UploadNext(ByRef Value As State)
     Value.Failed = Not Ok
     Value.Cursor = StopIndex
 
-    If Value.Cursor >= Buffer.PatchCount Then
+    If Value.Cursor >= Value.Recipe.Buffer.PatchCount Then
         Value.Kind = Value.Kind + 1
         Value.Cursor = 0
     End If
@@ -698,18 +379,20 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
 
         For Index = 1 To 12
 
-            Call ScanRow(Value)
+            Call Builder.ScanRow(Value.Recipe)
 
-            Value.Row = Value.Row + 1
+            Value.Failed = Value.Recipe.Failed
+
+            Value.Recipe.Row = Value.Recipe.Row + 1
 
             ' Flush a bounded block before the next row can fill the scratch array.
             ' Uploaded objects remain private until every row has finished.
 
-            If (Buffer.PatchCount >= 32768 Or
-                Value.Row >= Pending.Rows Or
+            If (Value.Recipe.Buffer.PatchCount >= 32768 Or
+                Value.Recipe.Row >= Value.Recipe.Surface.Rows Or
                 Value.Failed) Then
 
-                Value.CacheOk = Cache.SaveBatch(Buffer, Value.CacheKey, Value.CacheBatch) And Value.CacheOk
+                Value.CacheOk = Cache.SaveBatch(Value.Recipe.Buffer, Value.CacheKey, Value.CacheBatch) And Value.CacheOk
                 Value.CacheBatch = Value.CacheBatch + 1
                 Value.Stage = 2
                 Exit For
@@ -739,9 +422,9 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
 
             End If
 
-            If Value.Row < Pending.Rows Then
+            If Value.Recipe.Row < Value.Recipe.Surface.Rows Then
 
-                Buffer.PatchCount = 0
+                Value.Recipe.Buffer.PatchCount = 0
                 Value.Kind = 1
                 Value.Cursor = 0
                 Value.Stage = 1

@@ -51,6 +51,29 @@ Load Data "Opened" Into Bytes Count ByteCount Status Status
 Call Check(Bytes[0] = 17)
 Job = Data_FileStart(True, "Snapshot", "relative.town")
 Call AwaitJob(Job, 2)
+Bytes[0] = 71
+Save Data Bytes Count 2 To "Snapshot.Terrain" Status Status
+Bytes[0] = 82
+Save Data Bytes Count 2 To "Snapshot.Roads" Status Status
+Job = Data_BundleStart(True, "Snapshot", "@CHOSEN@.prepared", ".Terrain|.Roads")
+Call AwaitJob(Job, 1)
+Job = Data_BundleStart(False, "Portable", "@CHOSEN@.prepared", "")
+Call AwaitJob(Job, 1)
+Load Data "Portable" Into Bytes Count ByteCount Status Status
+Call Check(Status = DATA_STATUS_OK And Bytes[0] = 42)
+Load Data "Portable.Terrain" Into Bytes Count ByteCount Status Status
+Call Check(Status = DATA_STATUS_OK And Bytes[0] = 71)
+Load Data "Portable.Roads" Into Bytes Count ByteCount Status Status
+Call Check(Status = DATA_STATUS_OK And Bytes[0] = 82)
+Job = Data_BundleStart(False, "Legacy", "@CHOSEN@", "")
+Call AwaitJob(Job, 1)
+Job = Data_BundleStart(True, "Snapshot", "@CHOSEN@.prepared", ".Missing")
+Call AwaitJob(Job, 2)
+Job = Data_BundleStart(False, "StillPortable", "@CHOSEN@.prepared", "")
+Call AwaitJob(Job, 1)
+Job = Data_BundleStart(True, "Snapshot", "@CHOSEN@.prepared", "../Outside")
+Call AwaitJob(Job, 2)
+Print "PASS Portable Prepared Records; Legacy Import; Failed Bundle Preserves Prior File; Relative Keys Only"
 Print "PASS In-Process Save/Open Without Worker; Unicode; Verified 100%; Atomic Backup; Failed Write; Corrupt Open"
 
 Sub AwaitJob(Job As Number, Expected As Number)

@@ -56,6 +56,7 @@
     <SmileSource Include="TownDocumentMap.smile" />
     <SmileSource Include="TownRoadTravel.smile" />
     <SmileSource Include="TownRoadNetwork.smile" />
+    <SmileSource Include="TownRoadGraph.smile" />
     <SmileSource Include="TownRoadSearch.smile" />
     <SmileSource Include="TownRoadStops.smile" />
     <SmileSource Include="TownWorldDocument.smile" />
@@ -67,6 +68,7 @@
     <SmileSource Include="TownWorldEditor.smile" />
     <SmileSource Include="TownEditorSession.smile" />
     <SmileSource Include="TownFileJobs.smile" />
+    <SmileSource Include="TownSavePreparation.smile" />
     <SmileSource Include="TownFileLocations.smile" />
     <SmileSource Include="TownFileDialog.smile" />
     <SmileSource Include="TownMapLoadTools.smile" />
@@ -91,8 +93,10 @@
     <SmileSource Include="TownDecks.smile" />
     <SmileSource Include="TownSections.smile" />
     <SmileSource Include="TownDocumentNavigation.smile" />
+    <SmileSource Include="TownCollisionWorld.smile" />
     <SmileSource Include="TownCatalogRenderer.smile" />
     <SmileSource Include="TownSurfaceRenderer.smile" />
+    <SmileSource Include="TownTerrainBuilder.smile" />
     <SmileSource Include="TownTerrainCache.smile" />
     <SmileSource Include="TownTerrainStyles.smile" />
     <SmileSource Include="TownLighting.smile" />

@@ -11,6 +11,7 @@ Import Smile.Simple3D.SurfacePaint3D As Paint
 
 Private Dim Saved As Document.State
 Private Dim Metadata[4] As Number
+Private Dim Reference[1024] As Number
 
 Public Function SameSurface(ByRef First As Grid.State, ByRef Second As Grid.State) As Boolean
 
@@ -78,32 +79,109 @@ Public Function ReadKey(ByRef Town As Document.State, Category As Text,
     Dim Generation As Number
     Dim Prefix As Text
     Dim Key As Text
+
+    Prefix = "TownPrepared." + Category + "." + Town.Name
+    Generation = ReadNumber(Prefix)
+
+    If Generation >= 1 And Generation <= 2 Then
+
+        Key = Prefix + "." + Text_From_Code(48 + Generation)
+
+        If Matches(Town, Key, AllItems) Then
+            Return Key
+        End If
+
+    End If
+
+    ' Portable records live under an immutable save/import job key. Later edits
+    ' can rebuild native generations without changing this saved revision.
+    Key = BundleKey(Town.Name)
+
+    If Text_Length(Key) = 0 Then
+        Return ""
+    End If
+
+    If Category = "Terrain3" Then
+        Key = Key + ".Terrain"
+    Else If Category = "Roads1" Then
+        Key = Key + ".Roads"
+    Else
+        Return ""
+    End If
+
+    If Matches(Town, Key, AllItems) Then
+        Return Key
+    End If
+
+    Return ""
+
+End Function
+
+Private Function BundleKey(Name As Text) As Text
+
+    Dim Length As Number
+    Dim Status As Number
+    Dim Index As Number
+    Dim Key As Text
+
+    Load Data "TownPrepared.Bundle." + Name Into Reference Count Length Status Status
+
+    If (Status <> DATA_STATUS_OK Or
+        Length < 1 Or
+        Length > 1024) Then
+        Return ""
+    End If
+
+    Key = ""
+
+    For Index = 0 To Length - 1
+        Key = Key + Text_From_Code(Reference[Index])
+    End For
+
+    If ReadNumber(Key + ".PreparedVersion") <> 3 Then
+        Return ""
+    End If
+
+    Return Key
+
+End Function
+
+Public Sub AliasBundle(ByRef Town As Document.State, OriginalName As Text)
+
+    Dim Key As Text
+    Dim Ok As Boolean
+
+    Key = BundleKey(OriginalName)
+
+    If Text_Length(Key) = 0 Then
+        Return
+    End If
+
+    If Matches(Town, Key + ".Terrain", False) And Matches(Town, Key + ".Roads", True) Then
+        Ok = BindBundle(Town, Key)
+    End If
+
+End Sub
+
+Private Function Matches(ByRef Town As Document.State, Key As Text, AllItems As Boolean) As Boolean
+
     Dim Index As Number
     Dim FirstValue As Document.Item
     Dim SecondValue As Document.Item
     Dim Openings As Decks.State
 
-    Prefix = "TownPrepared." + Category + "." + Town.Name
-    Generation = ReadNumber(Prefix)
-
-    If Generation < 1 Or Generation > 2 Then
-        Return ""
-    End If
-
-    Key = Prefix + "." + Text_From_Code(48 + Generation)
-
     If Not Store.LoadDocument(Saved, Key + ".Input") Then
-        Return ""
+        Return False
     End If
 
     If Not SameSurface(Town.Surface, Saved.Surface) Then
-        Return ""
+        Return False
     End If
 
     If AllItems Then
 
         If Town.ItemCount <> Saved.ItemCount Then
-            Return ""
+            Return False
         End If
 
         For Index = 0 To Town.ItemCount - 1
@@ -120,7 +198,7 @@ Public Function ReadKey(ByRef Town As Document.State, Category As Text,
                 FirstValue.Scale.X <> SecondValue.Scale.X Or
                 FirstValue.Scale.Y <> SecondValue.Scale.Y Or
                 FirstValue.Scale.Z <> SecondValue.Scale.Z) Then
-                Return ""
+                Return False
             End If
 
         End For
@@ -130,12 +208,44 @@ Public Function ReadKey(ByRef Town As Document.State, Category As Text,
         Call Decks.Capture(Openings, Saved)
 
         If Not Decks.Matches(Openings, Town) Then
-            Return ""
+            Return False
         End If
 
     End If
 
-    Return Key
+    Return True
+
+End Function
+
+Public Function BindBundle(ByRef Town As Document.State, Key As Text) As Boolean
+
+    Dim Index As Number
+    Dim Status As Number
+    Dim Ok As Boolean
+
+    If ReadNumber(Key + ".PreparedVersion") <> 3 Then
+        Return True
+    End If
+
+    If Text_Length(Key) > 1024 Then
+        Return False
+    End If
+
+    Ok = Store.SaveDocument(Town, Key + ".Terrain.Input", False)
+    Ok = Store.SaveDocument(Town, Key + ".Roads.Input", False) And Ok
+
+    If Not Ok Then
+        Return False
+    End If
+
+    For Index = 0 To Text_Length(Key) - 1
+        Reference[Index] = Text_Code_At(Key, Index)
+    End For
+
+    Save Data Reference Count Text_Length(Key) To "TownPrepared.Bundle." + Town.Name Status Status
+    Ok = Status = DATA_STATUS_OK
+
+    Return Ok
 
 End Function
 

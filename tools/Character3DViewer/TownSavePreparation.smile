@@ -1,0 +1,112 @@
+''' Prepare the immutable clicked save revision without borrowing live renderer or route state.
+Module Smile.Tools.TownSavePreparation
+
+Option Explicit
+
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownTerrainBuilder As Builder
+Import Smile.Tools.TownTerrainCache As Cache
+Import Smile.Tools.TownRoadGraph As Graph
+Import Smile.Tools.TownDerivedCache As Derived
+
+Public Type State
+    Recipe As Builder.State
+    Roads As Graph.State
+    Key As Text
+    Records As Text
+    BatchCount As Number
+    Stage As Number
+    Progress As Number
+    Failed As Boolean
+End Type
+
+Public Sub Begin(ByRef Value As State, ByRef Town As Document.State, Key As Text, Revision As Number)
+
+    Value.Key = Key
+    Value.BatchCount = 0
+    Value.Stage = 1
+    Value.Progress = 0
+    Value.Failed = False
+    Value.Records = ".PreparedVersion|.Terrain.Batches|.Roads.Connections"
+    Value.Roads.OutputKey = Key + ".Roads"
+
+    Call Builder.Begin(Value.Recipe, Town)
+    Call Graph.Adopt(Value.Roads, Town, Revision)
+
+End Sub
+
+Public Sub Update(ByRef Value As State, ByRef Town As Document.State, Revision As Number)
+
+    Dim Deadline As Number
+    Dim Page As Number
+    Dim Prefix As Text
+    Dim Ok As Boolean
+
+    If Value.Failed Or Value.Stage = 0 Then
+        Return
+    End If
+
+    If Value.Stage = 1 Then
+
+        Deadline = Timer() + 3
+
+        Do
+
+            Call Builder.ScanRow(Value.Recipe)
+
+            Value.Recipe.Row = Value.Recipe.Row + 1
+            Value.Progress = Value.Recipe.Row * 60 / Max(1, Town.Surface.Rows)
+            Value.Failed = Value.Recipe.Failed
+
+            If (Value.Recipe.Buffer.PatchCount >= 32768 Or
+                Value.Recipe.Row >= Town.Surface.Rows Or
+                Value.Failed) Then
+                Value.Stage = 2
+                Exit Do
+            End If
+
+        Loop Until Timer() >= Deadline
+
+    Else If Value.Stage = 2 Then
+
+        Ok = Cache.SaveBatch(Value.Recipe.Buffer, Value.Key + ".Terrain", Value.BatchCount)
+        Value.Failed = Not Ok
+        Prefix = ".Terrain.Batch" + Text_From_Double(ToDouble(Value.BatchCount))
+        Value.Records = Value.Records + "|" + Prefix + ".Count"
+
+        For Page = 0 To (Value.Recipe.Buffer.PatchCount + 4095) / 4096 - 1
+            Value.Records = Value.Records + "|" + Prefix + "." + Text_From_Double(ToDouble(Page))
+        End For
+
+        Value.BatchCount = Value.BatchCount + 1
+        Value.Recipe.Buffer.PatchCount = 0
+        Value.Stage = 1
+
+        If Value.Recipe.Row >= Town.Surface.Rows Then
+            Value.Stage = 3
+        End If
+
+    Else If Value.Stage = 3 Then
+
+        Call Graph.Prepare(Value.Roads, Town, Revision, 3)
+
+        Value.Progress = 60 + Graph.Progress(Value.Roads) * 35 / 100
+
+        If Graph.Progress(Value.Roads) = 100 Then
+
+            Call Graph.Export(Value.Roads, Town, Value.Key + ".Roads")
+
+            Ok = Value.Roads.CacheSaved
+            Ok = Derived.WriteNumber(Value.BatchCount, Value.Key + ".Terrain.Batches") And Ok
+            Ok = Derived.WriteNumber(3, Value.Key + ".PreparedVersion") And Ok
+            Value.Failed = Not Ok
+            Value.Stage = 0
+            Value.Progress = 100
+
+        End If
+
+    End If
+
+End Sub
+
+End Module

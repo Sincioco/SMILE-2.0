@@ -15,9 +15,14 @@ uses a larger wheel step while retaining smooth easing. Demo explicitly displays
 permanent-map chooser includes all fourteen built-in maps. NPC minimap dots show
 people in green and the dog in orange; hovering shows their names.
 
-Portable `.town` preparation bundles and waiting for preparation when saving
-immediately after an edit remain follow-up work. The present prepared files belong
-to the native application's save directory; GPU resources still upload at load.
+Save For Viewer, Save As, Save For Blender and Update Permanent Map now prepare
+the clicked revision before reporting completion. Preparation runs in short slices
+while later edits remain independent. `.town` exports include checked terrain pages
+and road connections, so opening them in another profile needs no rebuild. The
+World Map importer and duplicate tab names retain that preparation too. Older
+single-record files still open and prepare incrementally; resave to make them
+portable prepared maps. GPU uploads and journeys chosen during play remain runtime
+work; they cannot be saved as fixed CPU preparation.
 
 ## October 1 loading correction
 

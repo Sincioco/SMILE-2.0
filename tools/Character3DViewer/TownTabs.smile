@@ -4,6 +4,7 @@ Module Smile.Tools.TownTabs
 Option Explicit
 
 Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownDerivedCache As Derived
 Import Smile.Tools.TownLibrary As Library
 Import Smile.Tools.TownDocumentStore As Storage
 Import Smile.UI.Controls As UI
@@ -205,6 +206,8 @@ Public Function Add(ByRef Value As State, ByRef Town As Document.State,
         End If
 
     Loop Until Not Exists
+
+    Call Derived.AliasBundle(Incoming, Label)
 
     Value.Documents[Value.Active] = Town
     Value.Active = Value.TabCount

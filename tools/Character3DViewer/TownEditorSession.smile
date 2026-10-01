@@ -419,7 +419,7 @@ Public Function Progress() As Number
     Result = Assets.Loaded * 70 / Max(1, Assets.Required)
 
     If Prepared Then
-        Result = 70 + Ground.Row * 20 / Max(1, Town.Surface.Rows)
+        Result = 70 + Ground.Recipe.Row * 20 / Max(1, Town.Surface.Rows)
     End If
 
     If Ground.Stage = 2 Then
@@ -449,6 +449,10 @@ Private Sub FileCommand(Action As Number)
     End If
 
     If (Ground.Stage <> 0 And
+        Action <> 300 And
+        Action <> 301 And
+        Action <> 302 And
+        (Action < 700 Or Action >= 700 + Library.PERMANENT_COUNT) And
         Action <> 309 And
         Action <> 311) Then
         Controls.Ui.Message = "Finishing terrain; try saving when ready."
@@ -519,7 +523,8 @@ Private Sub FileCommand(Action As Number)
             Return
         End If
 
-        Ok = UpdatePermanent(Name)
+        Ok = Files.Queue(Transfers, Town, Files.SAVE_PERMANENT, Name)
+        Controls.Ui.Message = Transfers.Message
 
         Return
 
@@ -851,7 +856,7 @@ Public Sub Update(Leader As P.Vector3, Elapsed As Number)
         Call Terrain.Update(Ground, Elapsed)
 
         Controls.Ui.Busy = True
-        Controls.Ui.ProgressPercent = Ground.Row * 90 / Max(1, Town.Surface.Rows)
+        Controls.Ui.ProgressPercent = Ground.Recipe.Row * 90 / Max(1, Town.Surface.Rows)
 
         If Ground.Failed Then
 
@@ -875,7 +880,7 @@ Public Sub Update(Leader As P.Vector3, Elapsed As Number)
 
     If AppliedRevision <> Town.Revision Then
 
-        If Not Decks.Matches(Ground.Openings, Town) Then
+        If Not Decks.Matches(Ground.Recipe.Openings, Town) Then
             Town.Surface.Revision = Town.Surface.Revision + 1
         End If
 
@@ -910,7 +915,7 @@ Public Sub Update(Leader As P.Vector3, Elapsed As Number)
     End If
 
     If Ground.Stage <> 0 Then
-        Controls.Ui.ProgressPercent = Ground.Row * 90 / Max(1, Town.Surface.Rows)
+        Controls.Ui.ProgressPercent = Ground.Recipe.Row * 90 / Max(1, Town.Surface.Rows)
     End If
 
     If Ground.Failed Then
@@ -994,7 +999,11 @@ Public Sub Update(Leader As P.Vector3, Elapsed As Number)
             Controls.Ui.RecentLabels[Index] = Transfers.RecentLabels[Index]
         End For
 
-        If Ok Then
+        If Ok And Transfers.Operation = Files.SAVE_PERMANENT Then
+
+            Call FinishPermanent()
+
+        Else If Ok Then
 
             Ok = Tabs.Add(OpenTabs, Town, Transfers.Pending)
             TeleportPending = Ok
@@ -1004,6 +1013,43 @@ Public Sub Update(Leader As P.Vector3, Elapsed As Number)
                 Call Editor.ResetDocument(Controls, Town)
             End If
 
+        End If
+
+    End If
+
+End Sub
+
+Private Sub FinishPermanent()
+
+    Dim Active As Number
+    Dim Unchanged As Boolean
+    Dim Ok As Boolean
+
+    Active = OpenTabs.Active
+    Unchanged = Town.Name = Transfers.OriginName And Town.Revision = Transfers.OriginRevision
+    Ok = Tabs.UpdatePermanent(OpenTabs, Transfers.Pending, Transfers.Path)
+    Transfers.Failed = Not Ok
+
+    If Not Ok Then
+        Transfers.Progress = 99
+    End If
+
+    Transfers.Message = OpenTabs.Message
+    Controls.Ui.Message = Transfers.Message
+
+    If Ok And Unchanged Then
+
+        Town = Transfers.Pending
+
+        Call Editor.ResetHistory(Controls, Town)
+
+    Else
+
+        OpenTabs.Active = Active
+        OpenTabs.Documents[Active] = Town
+
+        If Ok Then
+            Transfers.Message = "Prepared permanent snapshot saved. Newer edits retained."
         End If
 
     End If

@@ -1,0 +1,100 @@
+''' Saving an older immutable map must neither borrow nor mutate the live navigation state.
+Module Smile.Tools.TownPreparationTests
+
+Option Explicit
+
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownSavePreparation As Preparation
+Import Smile.Tools.TownDerivedCache As Derived
+Import Smile.Tools.TownTerrainCache As Cache
+Import Smile.Tools.TownDocumentNavigation As Navigation
+Import Smile.Tools.TownRoadNetwork As Network
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+
+Private Dim Snapshot As Document.State
+Private Dim Current As Document.State
+Private Dim Work As Preparation.State
+Private Dim Batch As Cache.Batch
+Private Dim Failures As Number
+
+Private Sub Check(Ok As Boolean, Label As Text)
+
+    If Not Ok Then
+        Failures = Failures + 1
+        Print "FAIL " + Label
+    End If
+
+End Sub
+
+Public Function Run() As Number
+
+    Dim Ok As Boolean
+    Dim Frame As Number
+    Dim Version As Number
+    Dim Key As Text
+
+    Failures = 0
+    Ok = Document.Blank(Snapshot, "Immutable Prepared Save", 12, 12, 30.0)
+
+    Call Grid.PaintLine(Snapshot.Surface, 1, 5, 10, 5, Grid.SURFACE_ROAD)
+    Call Preparation.Begin(Work, Snapshot, "Preparation.Snapshot", 991)
+
+    Current = Snapshot
+
+    Call Grid.PaintRectangle(Current.Surface, 5, 5, 5, 5, Grid.SURFACE_WATER)
+    Call Navigation.Rebuild(Current)
+
+    Version = Navigation.Version()
+
+    For Frame = 0 To 1000
+
+        Call Preparation.Update(Work, Snapshot, 991)
+        Call Network.Prepare(Current)
+
+        If Work.Stage = 0 Or Work.Failed Then
+            Exit For
+        End If
+
+    End For
+
+    Call Check(Ok And Work.Stage = 0 And Not Work.Failed,
+        "Snapshot Terrain And Road Preparation Finish Cooperatively")
+    Call Check(Navigation.Version() = Version,
+        "Save Preparation Does Not Replace Live Navigation")
+    Call Check(Grid.ReadCell(Current.Surface, 5, 5) = Grid.SURFACE_WATER And
+        Grid.ReadCell(Snapshot.Surface, 5, 5) = Grid.SURFACE_ROAD,
+        "Later Edits Stay Separate From The Clicked Save Revision")
+
+    Ok = Derived.BindBundle(Snapshot, "Preparation.Snapshot")
+    Key = Derived.ReadKey(Snapshot, "Terrain3", False)
+
+    Call Check(Ok And Key = "Preparation.Snapshot.Terrain",
+        "Saved Snapshot Resolves Its Immutable Prepared Terrain")
+
+    Ok = Cache.LoadBatch(Batch, Key, 0)
+
+    Call Check(Ok And Batch.PatchCount > 0, "Portable Terrain Recipe Is Readable")
+    Call Navigation.Rebuild(Snapshot)
+    Call Network.Adopt(Snapshot)
+    Call Check(Network.Progress() = 100 And Network.CollisionChecks() = 0,
+        "Opening Prepared Snapshot Requires No Road Collision Preparation")
+    Call Check(Derived.ReadKey(Current, "Terrain3", False) = "",
+        "Newer Edits Cannot Use An Older Snapshot Terrain")
+
+    Snapshot.Name = "Immutable Prepared Save 2"
+
+    Call Derived.AliasBundle(Snapshot, "Immutable Prepared Save")
+    Call Check(Derived.ReadKey(Snapshot, "Terrain3", False) = "Preparation.Snapshot.Terrain",
+        "Renaming An Imported Tab Retains Its Prepared Snapshot")
+
+    Current.Name = "Changed Prepared Save"
+
+    Call Derived.AliasBundle(Current, "Immutable Prepared Save")
+    Call Check(Derived.ReadKey(Current, "Terrain3", False) = "",
+        "Renamed Map With Different Inputs Cannot Adopt The Prepared Snapshot")
+
+    Return Failures
+
+End Function
+
+End Module

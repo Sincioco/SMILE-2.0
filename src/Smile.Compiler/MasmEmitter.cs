@@ -273,7 +273,7 @@ internal sealed class MasmEmitter
         Line("EXTERN smile_file_import:PROC");
         Line("EXTERN smile_text_prompt:PROC");
         Line("EXTERN smile_file_pick:PROC");
-        foreach (var kind in new[] { SyntaxKind.DataFileStartKeyword, SyntaxKind.DataFileStatusKeyword,
+        foreach (var kind in new[] { SyntaxKind.DataFileStartKeyword, SyntaxKind.DataBundleStartKeyword, SyntaxKind.DataFileStatusKeyword,
             SyntaxKind.DataFileMessageKeyword, SyntaxKind.DataFileProgressKeyword, SyntaxKind.LocalTimestampKeyword })
             Line("EXTERN " + DataFileSemantics.NativeName(kind) + ":PROC");
         Line("EXTERN smile_text_from_code:PROC");
@@ -1918,6 +1918,7 @@ internal sealed class MasmEmitter
                 CallAligned("smile_file_reveal");
                 break;
             case SyntaxKind.DataFileStartKeyword:
+            case SyntaxKind.DataBundleStartKeyword:
             case SyntaxKind.DataFileStatusKeyword:
             case SyntaxKind.DataFileMessageKeyword:
             case SyntaxKind.DataFileProgressKeyword:

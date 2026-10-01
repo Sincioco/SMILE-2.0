@@ -13,10 +13,11 @@ public static class DataFileSemantics
     public static IReadOnlyList<string> Parameters(SyntaxKind kind) => kind switch
     {
         SyntaxKind.DataFileStartKeyword => new[] { "saving", "key", "path" },
+        SyntaxKind.DataBundleStartKeyword => new[] { "saving", "key", "path", "records" },
         SyntaxKind.LocalTimestampKeyword => System.Array.Empty<string>(),
         _ => new[] { "job" }
     };
-    public static SmileType ArgumentType(SyntaxKind kind, int index) => kind == SyntaxKind.DataFileStartKeyword
+    public static SmileType ArgumentType(SyntaxKind kind, int index) => kind is SyntaxKind.DataFileStartKeyword or SyntaxKind.DataBundleStartKeyword
         ? (index == 0 ? SmileType.Boolean : SmileType.Text) : SmileType.Number;
     public static string Signature(SyntaxKind kind) => SyntaxFacts.GetText(kind) + "(" +
         string.Join(", ", Parameters(kind).Select((name, index) => char.ToUpperInvariant(name[0]) +
@@ -24,6 +25,7 @@ public static class DataFileSemantics
     public static string NativeName(SyntaxKind kind) => kind switch
     {
         SyntaxKind.DataFileStartKeyword => "smile_data_file_start",
+        SyntaxKind.DataBundleStartKeyword => "smile_data_bundle_start",
         SyntaxKind.DataFileStatusKeyword => "smile_data_file_status",
         SyntaxKind.DataFileMessageKeyword => "smile_data_file_message",
         SyntaxKind.DataFileProgressKeyword => "smile_data_file_progress",

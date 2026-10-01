@@ -1,5 +1,48 @@
 # Character Viewer Architecture
 
+## October 1: immutable save preparation and portable maps
+
+TownSavePreparation owns one clicked revision's cooperative CPU work. It uses a
+caller-owned TownTerrainBuilder state and TownRoadGraph state; neither borrows the
+live renderer or party navigation. TownCollisionWorld owns the immutable collision
+snapshot used by both active navigation and save preparation. TownRoadNetwork is
+the small active-game facade. TownSurfaceRenderer still owns staged GPU resources
+and atomic presentation, delegating CPU recipe rows to TownTerrainBuilder.
+
+TownFileJobs gates verified save completion on preparation and asynchronous file
+transfer. Permanent-map UI updates use the same snapshot pipeline. TownDerivedCache
+binds immutable prepared records to exact document inputs and preserves a valid
+binding when an imported tab is renamed. New edits cannot adopt older preparation.
+No generic shared state bag, reverse dependency into Session, or GPU work was added
+to persistence. The road byte codec uses private fixed scratch storage because
+Save Data requires a standalone array; graph state itself remains caller-owned.
+
+The native Data_BundleStart operation extends the existing checked file-transfer
+job API. A portable map keeps its original SMD4 document followed by an optional
+SMB1 checked companion trailer. Imports validate all records before writing to a
+fresh staging key, with the main document written last. Old files remain readable;
+Python/Blender document readers validate the trailer before extracting the document.
+Native bundles are bounded to 64 MiB and 2,048 relative companion keys, with no new
+renderer or authored-document capacity. The native-only intrinsic does not add Web
+support. The existing data-file runtime owns the worker; no external service is used.
+
+Focused evidence: later live edits remain independent while an earlier save prepares;
+renamed imported tabs retain preparation only for matching inputs; native transfers
+round-trip companions and preserve the previous export on failure. A full Canals
+bundle (2,584,894 bytes) opened in another fresh application identity with every
+terrain page readable and zero road collision checks. Python rejected its damaged
+trailer. GPU upload and query-specific pathfinding still occur at runtime. Unsaved,
+legacy or invalidated input can still require incremental preparation.
+
+Growth review: renderer -317 net lines, active road owner -252, navigation -162;
+Session +46 lines of save lifecycle wiring; FileJobs +127/-28 for its existing job
+pipeline. The four extracted/preparation owners remain under 400 lines each. Native
+bootstrap and ViewerWorkflow are unchanged, with no baseline/exclusion changes.
+The final Foundations, Routes, Rendering and Session checks, 359-asset publication,
+changed-source formatting and diff checks pass. Studio was gracefully restarted;
+its normal Save For Viewer produced a verified prepared Canals bundle and the map
+switch measured 482 ms. Existing user maps and calibration were retained.
+
 ## October 1: persisted map preparation
 
 TownDerivedCache owns exact input validation and two-generation commit points for
@@ -39,10 +82,8 @@ on the session, UI, renderer or bootstrap. No no-growth baseline or exclusion wa
 changed. The live tab-wheel check found and corrected camera-input leakage when
 the editor was closed; tab/header input now blocks scene zoom in either edit state.
 
-Known remaining boundary: prepared files are native save-directory companions.
-Portable export/import bundles and explicit save-completion gating still need work
-to satisfy the full authoring-time preparation request. Do not advertise `.town`
-exports alone as containing all prepared runtime data.
+The subsequent immutable-save section above supersedes this milestone's former
+portable-export limitation; existing legacy exports need to be saved again.
 
 ## October 1: bounded terrain uploads and failed-map recovery
 

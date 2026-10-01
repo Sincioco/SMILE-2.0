@@ -1,0 +1,351 @@
+''' Caller-owned CPU terrain recipes, shared by rendering and immutable save preparation.
+Module Smile.Tools.TownTerrainBuilder
+
+Option Explicit
+
+Import Smile.Tools.TownSurfaceLayers As Layers
+Import Smile.Tools.TownDecks As Decks
+Import Smile.Tools.TownDocument As Document
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.SurfaceContours3D As Contours
+Import Smile.Simple3D.SurfacePaint3D As Paint
+Import Smile.Tools.TownTerrainCache As Cache
+
+Public Type State
+    Surface As Grid.State
+    SourceCurves As Paint.State
+    Openings As Decks.State
+    Buffer As Cache.Batch
+    Row As Number
+    Failed As Boolean
+End Type
+
+Public Sub Begin(ByRef Value As State, ByRef Town As Document.State)
+
+    Value.Surface = Town.Surface
+    Value.SourceCurves = Town.Surface.Curves
+    Value.Buffer.PatchCount = 0
+    Value.Row = 0
+    Value.Failed = False
+
+    Call Decks.Capture(Value.Openings, Town)
+
+End Sub
+
+Private Sub AddPatch(ByRef Value As State, X0 As Double, Z0 As Double,
+    X1 As Double, Z1 As Double, Kind As Number, Optional Y0 As Double = 0.0,
+    Optional Y1 As Double = 0.0, Optional Plane As Number = 0)
+
+    If Value.Buffer.PatchCount >= 65536 Then
+        Value.Failed = True
+        Return
+    End If
+
+    Value.Buffer.Patches[Value.Buffer.PatchCount].X0 = X0
+    Value.Buffer.Patches[Value.Buffer.PatchCount].Z0 = Z0
+    Value.Buffer.Patches[Value.Buffer.PatchCount].X1 = X1
+    Value.Buffer.Patches[Value.Buffer.PatchCount].Z1 = Z1
+    Value.Buffer.Patches[Value.Buffer.PatchCount].Kind = Kind
+    Value.Buffer.Patches[Value.Buffer.PatchCount].Y0 = Y0
+    Value.Buffer.Patches[Value.Buffer.PatchCount].Y1 = Y1
+    Value.Buffer.Patches[Value.Buffer.PatchCount].Plane = Plane
+    Value.Buffer.PatchCount = Value.Buffer.PatchCount + 1
+
+End Sub
+
+Private Sub CurveTriangle(ByRef Value As State, PointA As P.Vector3, PointB As P.Vector3,
+    PointC As P.Vector3, Base As Number)
+
+    Dim Slice As Contours.Slice
+    Dim Index As Number
+    Dim Face As Contours.Triangle
+
+    Slice = Contours.Split(Value.Surface, PointA, PointB, PointC, Base)
+
+    For Index = 0 To Slice.FaceCount - 1
+
+        Face = Slice.Faces[Index]
+
+        Call AddPatch(Value, Face.PointA.X, Face.PointA.Z, Face.PointB.X, Face.PointB.Z, Face.Kind, 0.0, 0.0, 3)
+
+        If Value.Failed Then
+            Return
+        End If
+
+        Value.Buffer.Patches[Value.Buffer.PatchCount - 1].X2 = Face.PointC.X
+        Value.Buffer.Patches[Value.Buffer.PatchCount - 1].Z2 = Face.PointC.Z
+    End For
+
+    If Slice.Rail Then
+        Call AddPatch(Value, Slice.EdgeA.X, Slice.EdgeA.Z, Slice.EdgeB.X, Slice.EdgeB.Z,
+            4, Layers.RAIL_BASE_Y, Layers.RAIL_TOP_Y, 4)
+    End If
+
+End Sub
+
+Private Sub CurveRow(ByRef Value As State)
+
+    Dim X As Number
+    Dim First As Number
+    Dim Surface As Number
+    Dim PointA As P.Vector3
+    Dim PointB As P.Vector3
+    Dim PointC As P.Vector3
+    Dim PointD As P.Vector3
+    Dim Center As P.Vector3
+    Dim Uniform As Boolean
+    Dim RunKind As Number
+    Dim Base As Number
+    Dim RowCurves As Paint.State
+
+    Call Paint.SelectRegion(Value.SourceCurves, RowCurves, Value.Surface.OriginX - 0.1,
+        Value.Surface.ZEdges[Value.Row] - 0.1, Value.Surface.XEdges[Value.Surface.Columns] + 0.1,
+        Value.Surface.ZEdges[Value.Row + 1] + 0.1)
+
+    ' Continuous water sits below the lawn; legacy cell water keeps its authored height.
+
+    If Value.Row = 0 Then
+        Call AddPatch(Value, Value.Surface.OriginX, Value.Surface.OriginZ,
+            Value.Surface.XEdges[Value.Surface.Columns], Value.Surface.ZEdges[Value.Surface.Rows], 2, Layers.GROUND_Y - 1.0)
+        Call AddPatch(Value, Value.Surface.OriginX, Value.Surface.OriginZ,
+            Value.Surface.XEdges[Value.Surface.Columns], Value.Surface.ZEdges[Value.Surface.Rows], 6, Layers.GROUND_Y - 1.2)
+    End If
+
+    First = -1
+
+    For X = 0 To Value.Surface.Columns - 1
+
+        PointA = P.Vector(Value.Surface.XEdges[X], 0.0, Value.Surface.ZEdges[Value.Row])
+        PointB = P.Vector(PointA.X, 0.0, Value.Surface.ZEdges[Value.Row + 1])
+        PointC = P.Vector(Value.Surface.XEdges[X + 1], 0.0, PointB.Z)
+        PointD = P.Vector(PointC.X, 0.0, PointA.Z)
+        Center = P.Vector((PointA.X + PointC.X) * 0.5, 0.0, (PointA.Z + PointC.Z) * 0.5)
+
+        Call Paint.SelectRegion(RowCurves, Value.Surface.Curves, PointA.X - 0.1,
+            PointA.Z - 0.1, PointC.X + 0.1, PointC.Z + 0.1)
+
+        ' A cell owns its base up to its edge. Do not tessellate a neighboring
+        ' legacy tile into thousands of artificial slivers when adding one curve.
+        Base = Grid.ReadBase(Value.Surface, X, Value.Row)
+        Surface = Min(3, Contours.Kind(Value.Surface, Center, Base))
+        Uniform = (Min(3, Contours.Kind(Value.Surface, PointA, Base)) = Surface And
+            Min(3, Contours.Kind(Value.Surface, PointB, Base)) = Surface And
+            Min(3, Contours.Kind(Value.Surface, PointC, Base)) = Surface And
+            Min(3, Contours.Kind(Value.Surface, PointD, Base)) = Surface)
+
+        If First >= 0 And (Not Uniform Or Surface <> RunKind) Then
+            Call AddPatch(Value, Value.Surface.XEdges[First], PointA.Z, PointA.X, PointC.Z, RunKind)
+
+            First = -1
+        End If
+
+        If Uniform Then
+
+            If (Surface = 1 Or Surface = 3) And First < 0 Then
+                First = X
+                RunKind = Surface
+            End If
+
+        Else
+
+            Call CurveTriangle(Value, PointA, PointB, Center, Base)
+            Call CurveTriangle(Value, PointB, PointC, Center, Base)
+            Call CurveTriangle(Value, PointC, PointD, Center, Base)
+            Call CurveTriangle(Value, PointD, PointA, Center, Base)
+
+        End If
+
+        ' Preserve authored grid-bridge rails when a curve is added elsewhere.
+        ' Generated curved maps use water as their base and get analytic rails above.
+
+        If (Base = Grid.SURFACE_BRIDGE And
+            Grid.ReadPoint(Value.Surface, Center.X, Center.Z) = Base) Then
+
+            If Grid.ReadPoint(Value.Surface, PointA.X - 0.001, Center.Z) = Grid.SURFACE_WATER Then
+                Call Rail(Value, PointA.X, PointA.Z, PointA.X, PointC.Z, 2)
+            End If
+
+            If Grid.ReadPoint(Value.Surface, PointC.X + 0.001, Center.Z) = Grid.SURFACE_WATER Then
+                Call Rail(Value, PointC.X, PointC.Z, PointC.X, PointA.Z, 2)
+            End If
+
+            If Grid.ReadPoint(Value.Surface, Center.X, PointA.Z - 0.001) = Grid.SURFACE_WATER Then
+                Call Rail(Value, PointC.X, PointA.Z, PointA.X, PointA.Z, 1)
+            End If
+
+            If Grid.ReadPoint(Value.Surface, Center.X, PointC.Z + 0.001) = Grid.SURFACE_WATER Then
+                Call Rail(Value, PointA.X, PointC.Z, PointC.X, PointC.Z, 1)
+            End If
+
+        End If
+
+    End For
+
+    If First >= 0 Then
+        Call AddPatch(Value, Value.Surface.XEdges[First], PointA.Z, PointC.X, PointC.Z, RunKind)
+    End If
+
+    Value.Surface.Curves = Value.SourceCurves
+
+End Sub
+
+''' Rails follow only the bridge/water edge; dry road approaches stay completely open.
+Private Sub RailPiece(ByRef Value As State, X0 As Double, Z0 As Double,
+    X1 As Double, Z1 As Double, Plane As Number)
+
+    Dim Width As Double
+
+    Width = 4.5
+
+    If Plane = 1 Then
+
+        Call AddPatch(Value, X0, Z0 - Width * 0.5, X1, Z0 + Width * 0.5, 5, Layers.RAIL_CAP_Y)
+        Call AddPatch(Value, X0, Z0 - Width * 0.5, X1, Z0 - Width * 0.5, 4, Layers.RAIL_BASE_Y, Layers.RAIL_TOP_Y, 1)
+        Call AddPatch(Value, X0, Z0 + Width * 0.5, X1, Z0 + Width * 0.5, 4, Layers.RAIL_BASE_Y, Layers.RAIL_TOP_Y, 1)
+
+    Else
+
+        Call AddPatch(Value, X0 - Width * 0.5, Z0, X0 + Width * 0.5, Z1, 5, Layers.RAIL_CAP_Y)
+        Call AddPatch(Value, X0 - Width * 0.5, Z0, X0 - Width * 0.5, Z1, 4, Layers.RAIL_BASE_Y, Layers.RAIL_TOP_Y, 2)
+        Call AddPatch(Value, X0 + Width * 0.5, Z0, X0 + Width * 0.5, Z1, 4, Layers.RAIL_BASE_Y, Layers.RAIL_TOP_Y, 2)
+
+    End If
+
+End Sub
+
+Private Sub Rail(ByRef Value As State, X0 As Double, Z0 As Double,
+    X1 As Double, Z1 As Double, Plane As Number)
+
+    Dim Cursor As Double
+    Dim First As Double
+    Dim Last As Double
+
+    Do
+
+        If Not Decks.NextRail(Value.Openings, P.Vector(X0, 0.0, Z0), P.Vector(X1, 0.0, Z1), Cursor, First, Last) Then
+            Exit Do
+        End If
+
+        Call RailPiece(Value, X0 + (X1 - X0) * First, Z0 + (Z1 - Z0) * First,
+            X0 + (X1 - X0) * Last, Z0 + (Z1 - Z0) * Last, Plane)
+
+    Loop
+
+End Sub
+
+''' Close only exposed sides below the surface; never add raised shoreline trim.
+Private Sub Skirt(ByRef Value As State, Surface As Number, Neighbor As Number,
+    X0 As Double, Z0 As Double, X1 As Double, Z1 As Double, Plane As Number)
+
+    Dim Kind As Number
+    Dim Height As Double
+    Dim WaterHeight As Double
+
+    Kind = Min(Surface, Grid.SURFACE_ROAD)
+
+    If Kind = 0 Or Kind <= Min(Neighbor, Grid.SURFACE_ROAD) Then
+        Return
+    End If
+
+    Height = Layers.GROUND_Y
+
+    If Kind = Grid.SURFACE_ROAD Then
+        Height = Layers.ROAD_Y
+    Else If Kind = Grid.SURFACE_WATER Then
+        Height = Layers.WATER_Y
+        Kind = 6
+    End If
+
+    Call AddPatch(Value, X0, Z0, X1, Z1, Kind, Layers.BED_Y, Height, Plane)
+
+End Sub
+
+Public Sub ScanRow(ByRef Value As State)
+
+    Dim X As Number
+    Dim StartX As Number
+    Dim Surface As Number
+    Dim Kind As Number
+    Dim Z As Number
+    Dim X0 As Double
+    Dim X1 As Double
+    Dim Z0 As Double
+    Dim Z1 As Double
+
+    If Value.Surface.Curves.BrushCount > 0 Then
+        Call CurveRow(Value)
+
+        Return
+    End If
+
+    Z = Value.Row
+    Z0 = Value.Surface.ZEdges[Z]
+    Z1 = Value.Surface.ZEdges[Z + 1]
+
+    Do
+        StartX = X
+        Surface = Grid.ReadCell(Value.Surface, X, Z)
+        Kind = Surface
+
+        If Surface = Grid.SURFACE_BRIDGE Then
+            Kind = Grid.SURFACE_ROAD
+        End If
+
+        Do
+            X = X + 1
+
+        Loop Until X >= Value.Surface.Columns Or Grid.ReadCell(Value.Surface, X, Z) <> Surface
+
+        If Kind = Grid.SURFACE_WATER Then
+            ' PointA submerged opaque bed seals the height gap and receives building shadows.
+
+            Call AddPatch(Value, Value.Surface.XEdges[StartX] - 1.0, Z0 - 1.0,
+                Value.Surface.XEdges[X] + 1.0, Z1 + 1.0, 6, Layers.GROUND_Y - 1.2)
+        End If
+
+        If Kind > 0 Then
+            Call AddPatch(Value, Value.Surface.XEdges[StartX], Z0, Value.Surface.XEdges[X], Z1, Kind)
+        End If
+
+    Loop Until X >= Value.Surface.Columns
+
+    For X = 0 To Value.Surface.Columns - 1
+
+        Surface = Grid.ReadCell(Value.Surface, X, Z)
+        X0 = Value.Surface.XEdges[X]
+        X1 = Value.Surface.XEdges[X + 1]
+
+        Call Skirt(Value, Surface, Grid.ReadCell(Value.Surface, X - 1, Z), X0, Z0, X0, Z1, 2)
+        Call Skirt(Value, Surface, Grid.ReadCell(Value.Surface, X + 1, Z), X1, Z1, X1, Z0, 2)
+        Call Skirt(Value, Surface, Grid.ReadCell(Value.Surface, X, Z - 1), X1, Z0, X0, Z0, 1)
+        Call Skirt(Value, Surface, Grid.ReadCell(Value.Surface, X, Z + 1), X0, Z1, X1, Z1, 1)
+
+        If Surface = Grid.SURFACE_BRIDGE Then
+
+            X0 = Value.Surface.XEdges[X]
+            X1 = Value.Surface.XEdges[X + 1]
+
+            If Grid.ReadCell(Value.Surface, X - 1, Z) = Grid.SURFACE_WATER Then
+                Call Rail(Value, X0, Z0, X0, Z1, 2)
+            End If
+
+            If Grid.ReadCell(Value.Surface, X + 1, Z) = Grid.SURFACE_WATER Then
+                Call Rail(Value, X1, Z0, X1, Z1, 2)
+            End If
+
+            If Grid.ReadCell(Value.Surface, X, Z - 1) = Grid.SURFACE_WATER Then
+                Call Rail(Value, X0, Z0, X1, Z0, 1)
+            End If
+
+            If Grid.ReadCell(Value.Surface, X, Z + 1) = Grid.SURFACE_WATER Then
+                Call Rail(Value, X0, Z1, X1, Z1, 1)
+            End If
+
+        End If
+
+    End For
+
+End Sub
+
+End Module

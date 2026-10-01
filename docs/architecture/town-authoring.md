@@ -1,5 +1,22 @@
 # Native World and Town Authoring
 
+## October 1 prepared save contract
+
+Explicit Viewer/Blender saves and permanent-map UI updates prepare an immutable
+clicked revision before completion. Later edits remain live and unsaved. Terrain
+recipe pages and road connectivity are included in portable `.town` files; no
+GPU handles or journey-specific search state is persisted. Missing preparation in
+legacy files rebuilds incrementally; a new save writes the prepared version.
+
+The native `Data_BundleStart(Saving, Key, Path, Records)` intrinsic uses the same
+status, progress and message queries as `Data_FileStart`. `Records` is a pipe-separated
+list of relative suffixes for checked Save Data companions. Import callers must
+provide a fresh staging key. Whole-file verification precedes any companion writes,
+and the root record is the commit point. Exports atomically replace the destination
+only after verifying a durable temporary file. The optional SMB1 trailer retains
+the original SMD4 root document and checks each companion plus the complete bundle.
+See the Viewer architecture for ownership and fresh-profile validation evidence.
+
 Current September 30 controls and ownership are documented in the Character Viewer
 README and ARCHITECTURE. These supersede the historical milestone descriptions below.
 Guide files now support names, list operations and resize handles; exact orthographic

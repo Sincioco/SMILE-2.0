@@ -1,0 +1,364 @@
+''' Derived road connections for one committed map; no authored document mutations.
+Module Smile.Tools.TownRoadGraph
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownCollisionWorld As Collision
+Import Smile.Tools.TownSurfaceLayers As Layers
+Import Smile.Tools.TownDerivedCache As Derived
+
+Public Type State
+    Surface As Grid.State
+    Generation As Number
+    CellsSeen[262144] As Number
+    Walkable[262144] As Boolean
+    EdgesSeen[524288] As Number
+    EdgesOpen[524288] As Boolean
+    WarmCursor As Number
+    PendingEdge As Number
+    SampleIndex As Number
+    SampleCount As Number
+    SampleStart As P.Vector3
+    SampleDelta As P.Vector3
+    Checks As Number
+    CacheSaved As Boolean
+    OutputKey As Text
+    World As Collision.State
+End Type
+
+Private Dim CacheBytes[786432] As Number
+
+Public Sub Adopt(ByRef Value As State, ByRef Town As Document.State, Version As Number)
+
+    Dim Key As Text
+    Dim Status As Number
+    Dim Length As Number
+    Dim Index As Number
+
+    If Value.Generation = Version And Value.Generation > 0 Then
+        Return
+    End If
+
+    Call Collision.Build(Value.World, Town)
+
+    Value.Surface = Town.Surface
+    Value.Generation = Version
+    Value.WarmCursor = 0
+    Value.PendingEdge = -1
+    Value.Checks = 0
+    Value.CacheSaved = False
+    Key = Derived.ReadKey(Town, "Roads1", True)
+
+    If Text_Length(Key) > 0 Then
+
+        Load Data Key + ".Connections" Into CacheBytes Count Length Status Status
+
+        If Status = DATA_STATUS_OK And Length = Size(Value) * 3 Then
+
+            For Index = 0 To Length - 1
+
+                If CacheBytes[Index] > 1 Then
+                    Return
+                End If
+
+            End For
+
+            For Index = 0 To Size(Value) - 1
+
+                Value.CellsSeen[Index] = Value.Generation
+                Value.Walkable[Index] = CacheBytes[Index * 3] = 1
+                Value.EdgesSeen[Index * 2] = Value.Generation
+                Value.EdgesSeen[Index * 2 + 1] = Value.Generation
+                Value.EdgesOpen[Index * 2] = CacheBytes[Index * 3 + 1] = 1
+                Value.EdgesOpen[Index * 2 + 1] = CacheBytes[Index * 3 + 2] = 1
+            End For
+
+            Value.WarmCursor = Size(Value) * 2
+            Value.CacheSaved = True
+
+        End If
+
+    End If
+
+End Sub
+
+Private Sub SavePrepared(ByRef Value As State, ByRef Town As Document.State)
+
+    Dim Index As Number
+    Dim Key As Text
+    Dim Status As Number
+    Dim Ok As Boolean
+
+    If Value.CacheSaved Then
+        Return
+    End If
+
+    For Index = 0 To Size(Value) - 1
+
+        CacheBytes[Index * 3] = 0
+        CacheBytes[Index * 3 + 1] = 0
+        CacheBytes[Index * 3 + 2] = 0
+
+        If Value.CellsSeen[Index] = Value.Generation And Value.Walkable[Index] Then
+            CacheBytes[Index * 3] = 1
+        End If
+
+        If Value.EdgesSeen[Index * 2] = Value.Generation And Value.EdgesOpen[Index * 2] Then
+            CacheBytes[Index * 3 + 1] = 1
+        End If
+
+        If Value.EdgesSeen[Index * 2 + 1] = Value.Generation And Value.EdgesOpen[Index * 2 + 1] Then
+            CacheBytes[Index * 3 + 2] = 1
+        End If
+
+    End For
+
+    Key = Value.OutputKey
+
+    If Text_Length(Key) = 0 Then
+        Key = Derived.WriteKey(Town.Name, "Roads1")
+    End If
+
+    Save Data CacheBytes Count Size(Value) * 3 To Key + ".Connections" Status Status
+
+    Ok = Status = DATA_STATUS_OK
+
+    If Ok And Text_Length(Value.OutputKey) = 0 Then
+        Ok = Derived.Commit(Town, "Roads1", Key)
+    End If
+
+    Value.CacheSaved = Ok
+
+End Sub
+
+Public Sub Export(ByRef Value As State, ByRef Town As Document.State, Key As Text)
+
+    Value.OutputKey = Key
+    Value.CacheSaved = False
+
+    Call SavePrepared(Value, Town)
+
+End Sub
+
+Public Function Size(ByRef Value As State) As Number
+
+    Dim Result As Number
+
+    Result = Value.Surface.Columns * Value.Surface.Rows
+
+    Return Result
+
+End Function
+
+Public Function Center(ByRef Value As State, Cell As Number) As P.Vector3
+
+    Dim X As Number
+    Dim Z As Number
+    Dim Result As P.Vector3
+
+    X = Cell Mod Value.Surface.Columns
+    Z = Cell / Value.Surface.Columns
+    Result = P.Vector((Value.Surface.XEdges[X] + Value.Surface.XEdges[X + 1]) * 0.5, Layers.ROAD_Y,
+        (Value.Surface.ZEdges[Z] + Value.Surface.ZEdges[Z + 1]) * 0.5)
+
+    Return Result
+
+End Function
+
+Public Function Neighbor(ByRef Value As State, Cell As Number, Side As Number) As Number
+
+    Dim Result As Number
+
+    Result = -1
+
+    If Side = 0 And Cell Mod Value.Surface.Columns > 0 Then
+        Result = Cell - 1
+    Else If Side = 1 And Cell Mod Value.Surface.Columns + 1 < Value.Surface.Columns Then
+        Result = Cell + 1
+    Else If Side = 2 And Cell >= Value.Surface.Columns Then
+        Result = Cell - Value.Surface.Columns
+    Else If Side = 3 And Cell + Value.Surface.Columns < Size(Value) Then
+        Result = Cell + Value.Surface.Columns
+    End If
+
+    Return Result
+
+End Function
+
+Private Function CanUse(ByRef Value As State, Cell As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Kind As Number
+    Dim Point As P.Vector3
+
+    If Value.CellsSeen[Cell] <> Value.Generation Then
+
+        Value.CellsSeen[Cell] = Value.Generation
+        Kind = Grid.ReadCell(Value.Surface, Cell Mod Value.Surface.Columns, Cell / Value.Surface.Columns)
+        Value.Walkable[Cell] = False
+
+        If Kind = Grid.SURFACE_ROAD Or Kind = Grid.SURFACE_BRIDGE Then
+
+            Point = Center(Value, Cell)
+            Value.Walkable[Cell] = Collision.CanStand(Value.World, Point.X, Point.Z)
+            Value.Checks = Value.Checks + 1
+
+        End If
+
+    End If
+
+    ReturnValue = Value.Walkable[Cell]
+
+    Return ReturnValue
+
+End Function
+
+''' 0 yields for more work, 1 is open, 2 is blocked. Only adjacent road centers connect.
+Public Function Connection(ByRef Value As State, Cell As Number, Side As Number, Deadline As Number) As Number
+
+    Dim Other As Number
+    Dim Edge As Number
+    Dim Point As P.Vector3
+    Dim Work As Number
+
+    Other = Neighbor(Value, Cell, Side)
+
+    If Other < 0 Then
+        Return 2
+    End If
+
+    Edge = Min(Cell, Other) * 2
+
+    If Side >= 2 Then
+        Edge = Edge + 1
+    End If
+
+    If Value.EdgesSeen[Edge] = Value.Generation Then
+
+        If Value.EdgesOpen[Edge] Then
+            Return 1
+        Else
+            Return 2
+        End If
+
+    End If
+
+    If Value.PendingEdge <> Edge Then
+
+        If Not CanUse(Value, Cell) Or Not CanUse(Value, Other) Then
+
+            Value.EdgesSeen[Edge] = Value.Generation
+            Value.EdgesOpen[Edge] = False
+            Return 2
+
+        End If
+
+        Value.PendingEdge = Edge
+        Value.SampleStart = Center(Value, Cell)
+        Value.SampleDelta = M.Subtract(Center(Value, Other), Value.SampleStart)
+        Value.SampleCount = Max(1, ToNumber(Floor(M.Length(Value.SampleDelta) / 5.0)) + 1)
+        Value.SampleIndex = 1
+
+    End If
+
+    For Work = 0 To 255
+
+        If Value.SampleIndex >= Value.SampleCount Then
+
+            Value.EdgesSeen[Edge] = Value.Generation
+            Value.EdgesOpen[Edge] = True
+            Value.PendingEdge = -1
+            Return 1
+
+        End If
+
+        If Timer() >= Deadline Then
+            Return 0
+        End If
+
+        Point = M.Add(Value.SampleStart, M.Scale(Value.SampleDelta, ToDouble(Value.SampleIndex) / ToDouble(Value.SampleCount)))
+        Value.Checks = Value.Checks + 1
+
+        If Not Collision.CanStand(Value.World, Point.X, Point.Z) Then
+
+            Value.EdgesSeen[Edge] = Value.Generation
+            Value.EdgesOpen[Edge] = False
+            Value.PendingEdge = -1
+            Return 2
+
+        End If
+
+        Value.SampleIndex = Value.SampleIndex + 1
+    End For
+
+    Return 0
+
+End Function
+
+''' Cooperative preparation continues during editing, without locking any editor input.
+Public Sub Prepare(ByRef Value As State, ByRef Town As Document.State, Version As Number, Optional Budget As Number = 2)
+
+    Dim Deadline As Number
+    Dim Work As Number
+    Dim Side As Number
+    Dim Status As Number
+
+    Call Adopt(Value, Town, Version)
+
+    Deadline = Timer() + Budget
+
+    For Work = 0 To 4095
+
+        If Value.WarmCursor >= Size(Value) * 2 Then
+            Call SavePrepared(Value, Town)
+
+            Return
+        End If
+
+        If Timer() >= Deadline Then
+            Return
+        End If
+
+        Side = 1
+
+        If Value.WarmCursor Mod 2 = 1 Then
+            Side = 3
+        End If
+
+        Status = Connection(Value, Value.WarmCursor / 2, Side, Deadline)
+
+        If Status = 0 Then
+            Return
+        End If
+
+        Value.WarmCursor = Value.WarmCursor + 1
+    End For
+
+End Sub
+
+Public Function Progress(ByRef Value As State) As Number
+
+    Dim Result As Number
+
+    Result = Min(100, Value.WarmCursor * 100 / Max(1, Size(Value) * 2))
+
+    Return Result
+
+End Function
+
+Public Function CollisionChecks(ByRef Value As State) As Number
+
+    Dim ReturnValue As Number
+
+    ReturnValue = Value.Checks
+
+    Return ReturnValue
+
+End Function
+
+End Module

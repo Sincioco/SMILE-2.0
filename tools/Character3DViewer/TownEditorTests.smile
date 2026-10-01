@@ -26,6 +26,7 @@ Import Smile.Tools.TownGuideFiles As GuideFiles
 Import Smile.Tools.TownRoadTravel As Roads
 Import Smile.Tools.TownRoadStops As Stops
 Import Smile.Tools.TownRoadSearchTests As RoadSearchTests
+Import Smile.Tools.TownPreparationTests As PreparationTests
 Import Smile.Tools.TownDocumentNavigation As Navigation
 Import Smile.Tools.TownDecks As Decks
 Import Smile.Tools.TownGeometry As Geometry
@@ -285,6 +286,7 @@ Call CheckPresetsAndGuideFiles()
 Call CheckRoadTrips()
 
 Failures = Failures + RoadSearchTests.Run()
+Failures = Failures + PreparationTests.Run()
 
 Call CheckCastleDecks()
 

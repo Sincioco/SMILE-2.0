@@ -7,14 +7,19 @@ Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownDocumentStore As Storage
 Import Smile.Tools.TownLibrary As Library
 Import Smile.Tools.TownFileLocations As Locations
+Import Smile.Tools.TownSavePreparation As Preparation
+Import Smile.Tools.TownDerivedCache As Derived
 
 Public Const SAVE_VIEWER = 1
 Public Const OPEN_VIEWER = 2
 Public Const SAVE_BLENDER = 3
 Public Const OPEN_BLENDER = 4
 Public Const LIST_VIEWER = 5
+Public Const SAVE_PERMANENT = 6
 
 Public Type State
+    Preparation As Preparation.State
+    Preparing As Boolean
     SaveAsCopy As Boolean
     RequestId As Number
     Operation As Number
@@ -98,8 +103,6 @@ Public Function Queue(ByRef Value As State, ByRef Town As Document.State,
     Operation As Number, Path As Text) As Boolean
 
     Dim Id As Number
-    Dim Index As Number
-    Dim Status As Number
     Dim Ok As Boolean
 
     If (Value.RequestId > 0 Or
@@ -110,7 +113,7 @@ Public Function Queue(ByRef Value As State, ByRef Town As Document.State,
 
     Value.Operation = Operation
     Value.Path = Path
-    Value.DialogVisible = Operation = SAVE_VIEWER Or Operation = SAVE_BLENDER
+    Value.DialogVisible = Operation = SAVE_VIEWER Or Operation = SAVE_BLENDER Or Operation = SAVE_PERMANENT
     Value.Failed = False
     Value.Progress = 0
 
@@ -119,7 +122,8 @@ Public Function Queue(ByRef Value As State, ByRef Town As Document.State,
     Save Id To "TownEditor.File.Sequence"
     Ok = Library.Remember(Town)
 
-    If Ok And (Operation = SAVE_VIEWER Or Operation = SAVE_BLENDER) Then
+    If (Ok And
+        (Operation = SAVE_VIEWER Or Operation = SAVE_BLENDER Or Operation = SAVE_PERMANENT)) Then
         Ok = Storage.SaveDocument(Town, SnapshotKey(Id), False)
     End If
 
@@ -132,37 +136,23 @@ Public Function Queue(ByRef Value As State, ByRef Town As Document.State,
     End If
 
     Value.NativeJob = 0
+    Value.Preparing = False
 
-    If Operation = SAVE_VIEWER Then
+    If (Operation = SAVE_VIEWER Or
+        Operation = SAVE_BLENDER Or
+        Operation = SAVE_PERMANENT) Then
 
-        Value.NativeJob = Data_FileStart(True, SnapshotKey(Id), Path)
+        Value.Preparing = True
 
     Else If Operation = OPEN_VIEWER Then
 
-        Value.NativeJob = Data_FileStart(False, OpenedKey(Id), Path)
+        Value.NativeJob = Data_BundleStart(False, OpenedKey(Id), Path, "")
 
     Else If Operation <> LIST_VIEWER Then
 
-        Offset = 0
+        Ok = SubmitBlender(Operation, Id, Path, Town.Name)
 
-        Call PutInteger(21387092)
-        Call PutInteger(Operation)
-        Call PutInteger(Id)
-        Call PutInteger(Text_Length(Path))
-
-        For Index = 0 To Text_Length(Path) - 1
-            Call PutInteger(Text_Code_At(Path, Index))
-        End For
-
-        Call PutInteger(Text_Length(Town.Name))
-
-        For Index = 0 To Text_Length(Town.Name) - 1
-            Call PutInteger(Text_Code_At(Town.Name, Index))
-        End For
-
-        Save Data Bytes Count Offset To "TownEditor.File.Request" Status Status
-
-        If Status <> DATA_STATUS_OK Then
+        If Not Ok Then
 
             Value.Failed = True
             Value.Message = "Could not start Blender conversion; edits retained."
@@ -172,7 +162,7 @@ Public Function Queue(ByRef Value As State, ByRef Town As Document.State,
 
     End If
 
-    If (Operation = SAVE_VIEWER Or Operation = OPEN_VIEWER) And Value.NativeJob = 0 Then
+    If Operation = OPEN_VIEWER And Value.NativeJob = 0 Then
 
         Value.Failed = True
         Value.Message = "Another native file transfer is still running."
@@ -196,7 +186,59 @@ Public Function Queue(ByRef Value As State, ByRef Town As Document.State,
         Value.Message = "Saving chosen file in background..."
     End If
 
+    If Operation = SAVE_PERMANENT Then
+
+        Value.Pending.Name = Path
+        Ok = Storage.SaveDocument(Value.Pending, SnapshotKey(Id), False)
+
+        If Not Ok Then
+
+            Value.RequestId = 0
+            Value.Failed = True
+            Value.Message = "Could not preserve the permanent snapshot; edits retained."
+            Return False
+
+        End If
+
+    End If
+
+    If Value.Preparing Then
+        Call Preparation.Begin(Value.Preparation, Value.Pending, SnapshotKey(Id), Id)
+
+        Value.Message = "Preparing the saved map revision..."
+    End If
+
     Return True
+
+End Function
+
+Private Function SubmitBlender(Operation As Number, Id As Number, Path As Text, Name As Text) As Boolean
+
+    Dim Index As Number
+    Dim Status As Number
+    Dim Ok As Boolean
+
+    Offset = 0
+
+    Call PutInteger(21387092)
+    Call PutInteger(Operation)
+    Call PutInteger(Id)
+    Call PutInteger(Text_Length(Path))
+
+    For Index = 0 To Text_Length(Path) - 1
+        Call PutInteger(Text_Code_At(Path, Index))
+    End For
+
+    Call PutInteger(Text_Length(Name))
+
+    For Index = 0 To Text_Length(Name) - 1
+        Call PutInteger(Text_Code_At(Name, Index))
+    End For
+
+    Save Data Bytes Count Offset To "TownEditor.File.Request" Status Status
+    Ok = Status = DATA_STATUS_OK
+
+    Return Ok
 
 End Function
 
@@ -255,6 +297,57 @@ Public Function Update(ByRef Value As State, ByRef Town As Document.State, Elaps
     Dim Ok As Boolean
     Dim Opened As Boolean
 
+    If Value.Preparing Then
+
+        Call Preparation.Update(Value.Preparation, Value.Pending, Value.RequestId)
+
+        Value.Progress = Value.Preparation.Progress * 85 / 100
+        Value.Message = "Preparing the saved map revision..."
+        Value.Failed = Value.Preparation.Failed
+
+        If Value.Preparation.Stage = 0 And Not Value.Failed Then
+
+            Ok = Derived.BindBundle(Value.Pending, SnapshotKey(Value.RequestId))
+            Value.Failed = Not Ok
+
+            If Ok Then
+
+                If Value.Operation = SAVE_PERMANENT Then
+
+                    Value.Preparing = False
+                    Value.Progress = 100
+                    Value.RequestId = 0
+                    Return True
+
+                Else If Value.Operation = SAVE_BLENDER Then
+
+                    Value.Failed = Not SubmitBlender(Value.Operation, Value.RequestId, Value.Path, Value.Pending.Name)
+
+                Else
+                    Value.NativeJob = Data_BundleStart(True, SnapshotKey(Value.RequestId),
+                        Value.Path, Value.Preparation.Records)
+                    Value.Failed = Value.NativeJob = 0
+
+                End If
+
+            End If
+
+            Value.Preparing = False
+
+        End If
+
+        If Value.Failed Then
+
+            Value.Message = "Map preparation could not finish; edits retained."
+            Value.Preparing = False
+            Value.RequestId = 0
+
+        End If
+
+        Return False
+
+    End If
+
     Value.WaitingTime = Value.WaitingTime + Elapsed
     Value.Clock = Value.Clock + Elapsed
 
@@ -305,6 +398,11 @@ Public Function Update(ByRef Value As State, ByRef Town As Document.State, Elaps
 
     Value.Message = Status.Message
     Value.Progress = Min(99, Max(0, Status.Progress))
+
+    If Value.Operation = SAVE_VIEWER Then
+        Value.Progress = 85 + Value.Progress * 14 / 100
+    End If
+
     Value.Failed = Status.Status <> 0 And Status.Status <> 1
 
     If Status.Status = 0 Then
@@ -318,7 +416,8 @@ Public Function Update(ByRef Value As State, ByRef Town As Document.State, Elaps
             Ok = Storage.LoadDocument(Value.Pending, OpenedKey(Value.RequestId))
 
             If Ok Then
-                Ok = Library.Remember(Town)
+                Ok = Derived.BindBundle(Value.Pending, OpenedKey(Value.RequestId))
+                Ok = Library.Remember(Town) And Ok
             End If
 
             If Ok Then
