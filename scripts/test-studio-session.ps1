@@ -45,7 +45,7 @@ foreach ($fault in @($false, $true)) {
     $projectPath = Join-Path $testRoot 'SessionTests.smileproj'
     $project.Save($projectPath)
     $identityHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($identity))).ToLowerInvariant()
-    $dataRoot = Join-Path $env:LOCALAPPDATA "SMILE 2.0\Games\$identityHash\Data"
+    $dataRoot = Join-Path (& (Join-Path $PSScriptRoot 'get-smile-data-root.ps1')) "$identityHash\Data"
     foreach ($character in @('Arin', 'Orin')) {
         & (Join-Path $PSScriptRoot 'sync-arin-v5-7-calibration.ps1') -Character $character -Mode Restore -DataRoot $dataRoot
     }

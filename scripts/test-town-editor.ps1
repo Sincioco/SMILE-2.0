@@ -77,7 +77,7 @@ if (-not $SkipRendering) {
         [Text.Encoding]::UTF8.GetBytes('smile.tests.town-render'))).ToLowerInvariant()
     $canalHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData(
         [Text.Encoding]::UTF8.GetBytes('TownRender.Canals'))).ToLowerInvariant()
-    $renderData = Join-Path $env:LOCALAPPDATA "SMILE 2.0\Games\$renderHash\Data"
+    $renderData = Join-Path (& (Join-Path $PSScriptRoot 'get-smile-data-root.ps1')) "$renderHash\Data"
     $null = New-Item -ItemType Directory -Path $renderData -Force
     Copy-Item -LiteralPath (Join-Path $viewer 'Fixtures/DenseCanals.town') `
         -Destination (Join-Path $renderData "$canalHash.bin") -Force
@@ -91,7 +91,7 @@ if (-not $SkipRendering) {
             [Text.Encoding]::UTF8.GetBytes($project.SmileProject.PropertyGroup.ApplicationId))).ToLowerInvariant()
         $keyHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData(
             [Text.Encoding]::UTF8.GetBytes('TownEditor.PermanentNeris'))).ToLowerInvariant()
-        $fixtureData = Join-Path $env:LOCALAPPDATA "SMILE 2.0\Games\$applicationHash\Data"
+        $fixtureData = Join-Path (& (Join-Path $PSScriptRoot 'get-smile-data-root.ps1')) "$applicationHash\Data"
         $null = New-Item -ItemType Directory -Path $fixtureData -Force
         Copy-Item -LiteralPath $SavedTown -Destination (Join-Path $fixtureData "$keyHash.bin")
         if ($AirportTown) {

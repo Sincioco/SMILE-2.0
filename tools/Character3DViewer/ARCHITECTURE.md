@@ -1,5 +1,50 @@
 # Character Viewer Architecture
 
+## October 1 build identity and native save-store repair
+
+Windows inherited packaged-host LocalAppData virtualization split Studio's saves
+between the ordinary desktop and Codex, despite identical executables and logical
+paths. The ordinary desktop recovered four maps; the redirected store recovered
+all fourteen. TownTabs consequently omitted Maps when there was no tab overflow.
+Both legacy stores were backed up, compared by content and retained. The recovered
+Neris layout matches Sin's October 1 11:57 export; canonical Arin and Orin calibration
+exports remain byte-identical. No factory map replacement or asset rollback occurred.
+
+`Smile.NativeRuntime/storage_location.c` owns the shared Saved Games known-folder
+lookup and non-overwriting, missing-save legacy import for scalar and structured
+saves. `scripts/get-smile-data-root.ps1` provides the same lookup to support scripts.
+Application identities, keys, save envelopes and recovery formats stay unchanged.
+Existing native binaries require recompilation. A canonical backup prevents an
+older legacy primary from taking precedence. No routine launch merges conflicts
+by timestamp or deletes old saves.
+
+`Build_Info()` reuses compiler-owned StartupBuildMetadata. StudioBuildStamp owns
+only presentation (22 lines); NativeViewerHost adds one import and one draw call
+(three lines). NativeProgram is unchanged. The native runtime shrinks by eight net
+lines and delegates folder policy to a 46-line helper. CompilerProgress owns phase
+and elapsed-time reporting; CompilerOutput drains both VSIX process pipes as they
+arrive. Existing build cancellation/timeout ownership stays in SmileBuildService.
+No capacity, baseline, architecture exemption or external dependency changes.
+
+Evidence: 329 language/compiler tests, 13 formatter integration checks, native
+save-status, migration/no-overwrite/backup-authority, recovery-export and town-worker
+regressions pass. Installed VSIX 2.0.65 verifies all 36 payload hashes. An ordinary
+desktop process and Codex both read fourteen maps. Visual Studio Release was built
+and launched through its actual UI: Maps, the current East Valley star layout and
+the bottom build stamp were directly observed. Debug was then built and launched
+through the same Visual Studio UI: the full Spaceport, fourteen-map chooser and
+current East Valley were directly observed, with VSIX 2.0.65 and its own compile
+timestamp. Compiler heartbeat lines were visible during the active Debug build.
+The 59 native Viewer hardening checks and surrounding release/preparation gates pass.
+
+Known check failure: repository-wide `format-smile-style.ps1 -Check -FormatLongIf`
+reports 16 pre-existing files outside this fix (SurfaceGrid3D; BattlePlanning,
+BattlePresentation, BattleUi; NerisTownDistricts/EntranceNavigation/Entrances/Layout;
+TownDecks/MapLoads/PartyInset/Selection/TerrainStyles/WorldCanvas/WorldDocument/
+WorldEditor). Focused changed-source checks pass. Evidence is
+`artifacts/build-stamp-style.log`; normalize these files in a separate formatting
+change, then rerun the repository check. This is not a full smoke-suite pass.
+
 ## October 1 spaceport paving
 
 Spaceport r09 removes fine apron grid meshes and bakes retained gold approach

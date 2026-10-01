@@ -59,17 +59,15 @@ function Get-TextSha256([string]$Text) {
     return [Convert]::ToHexString($digest).ToLowerInvariant()
 }
 
-$localAppData = [Environment]::GetFolderPath(
-    [Environment+SpecialFolder]::LocalApplicationData
-)
+$gamesRoot = & (Join-Path $PSScriptRoot 'get-smile-data-root.ps1')
 $applicationHash = Get-TextSha256 $applicationId
 $keyHash = Get-TextSha256 $dataKey
-$livePath = Join-Path $localAppData `
-    "SMILE 2.0\Games\$applicationHash\Data\$keyHash.bin"
+$livePath = Join-Path $gamesRoot `
+    "$applicationHash\Data\$keyHash.bin"
 
 function Assert-ConfinedPath([string]$Path) {
     $resolved = [IO.Path]::GetFullPath($Path)
-    $allowedRoots = @($repositoryRoot, (Join-Path $localAppData 'SMILE 2.0'))
+    $allowedRoots = @($repositoryRoot, $gamesRoot)
     $allowed = $false
     foreach ($root in $allowedRoots) {
         if ($resolved.StartsWith($root.TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar,

@@ -426,12 +426,30 @@ fourteen smaller homes the northeast, and three shops the southeast. House/shop
 fronts face inward; civic landmarks and castles face south. City Hall is 2x and
 the communication tower 4x their original size; military HQ is doubled.
 
-When installing a town snapshot from a packaged automation host, verify the
-physical Windows profile as well as that host's redirected LocalAppData. The same
-displayed path can contain different saves. Back up both locations, close the
-Viewer normally, and validate the five Neris recovery/current keys against the
-intended snapshot before checking a fresh native launch. Do not select a map by
-timestamp alone: launching an old map can give it a newer recovery timestamp.
+Native saves now live under the Windows **Saved Games** known folder:
+`Saved Games/SMILE 2.0/Games/<ApplicationId hash>/Data`. Obtain the actual folder
+with `scripts/get-smile-data-root.ps1`; Saved Games may be relocated by Windows.
+This location is shared by Explorer, Visual Studio and packaged automation hosts.
+The former LocalAppData location was redirected when Studio inherited a packaged
+host's environment: identical executables could see different maps and calibration.
+VSIX 2.0.65 fixes the runtime location, not the map designs or application identity.
+Newly compiled programs import a missing legacy save once, retaining the old files;
+an existing Saved Games primary or backup always wins. Existing executables need
+recompilation to use this fix. Conflicting legacy stores require explicit recovery,
+not timestamp selection: opening an old map can give it a newer timestamp.
+
+The October 1 repair backed up both legacy stores and copied the verified latest
+14-map library and canonical character calibration to Saved Games. The user's
+October 1 11:57 Neris Town export matched the recovered layout. Recovery evidence
+and both complete stores remain in `artifacts/save-store-recovery-20261001-191819`.
+Do not overwrite user maps from generated defaults during build or launch.
+
+Studio's bottom-center label comes from `Build_Info()` and identifies the artifact's
+compilation date/time, explicit UTC offset and authoritative VSIX version. It never
+uses the current runtime clock. Visual Studio streams compiler phases and a
+15-second elapsed-time heartbeat to Output while a long phase is running. The
+compiler still takes roughly three minutes for the full native Studio project;
+the progress display does not claim to accelerate compilation.
 
 The **Kingdom of Neris** arch is just north of the southern crossroad (Blender
 Y=-265). Arin starts 13 m south of it, facing the town. Connected roads and bridges

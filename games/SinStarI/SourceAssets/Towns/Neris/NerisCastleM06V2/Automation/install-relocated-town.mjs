@@ -1,6 +1,11 @@
 // Run only after the native Viewer has closed normally and its working copy is saved.
 import fs from 'node:fs';
 import path from 'node:path';
+import {execFileSync} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
+const saveRoot = execFileSync('pwsh', ['-NoProfile', '-File',
+    fileURLToPath(new URL('../../../../../../../scripts/get-smile-data-root.ps1', import.meta.url))],
+    {encoding:'utf8'}).trim();
 import { createHash } from 'node:crypto';
 const hash = value => createHash('sha256').update(value).digest('hex');
 const root = 'D:/Projects/Sin-Star-I-Assets/Neris-Castle/native-integration';
@@ -10,7 +15,7 @@ const source = root + '/Neris-Town-Royal-Castle-' + revision + '.town';
 const bytes = fs.readFileSync(source);
 if (bytes.toString('ascii', 0, 4) !== 'SMD4' || bytes.readUInt32LE(8) !== bytes.length - 44 ||
     hash(bytes.subarray(44)) !== bytes.subarray(12, 44).toString('hex')) throw Error('Invalid portable document');
-const folder = path.join(process.env.LOCALAPPDATA, 'SMILE 2.0/Games', hash('smile.tools.character3d-viewer'), 'Data');
+const folder = path.join(saveRoot, hash('smile.tools.character3d-viewer'), 'Data');
 if (process.argv[3]) {
   const expected = fs.readFileSync(process.argv[3], 'utf8').trim();
   const current = fs.readFileSync(path.join(folder, hash('TownEditor.PermanentNeris') + '.bin'));

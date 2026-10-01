@@ -15,7 +15,7 @@ from town_document_codec import key_path, unwrap, decode, envelope, integer
 town = ROOT / 'games/SinStarI/SourceAssets/Towns/Neris/NerisTownV1'
 catalog = json.loads((town / 'Authoring/catalog.json').read_text(encoding='utf-8'))
 appid = hashlib.sha256(b'smile.tests.town-editor').hexdigest()
-data = Path(os.environ['LOCALAPPDATA']) / 'SMILE 2.0/Games' / appid / 'Data'
+data = Path(subprocess.check_output(['pwsh', '-NoProfile', '-File', str(Path(__file__).with_name('get-smile-data-root.ps1'))], text=True).strip()) / appid / 'Data'
 source = unwrap(key_path(data, 'TownEditor.Blender.Request').read_bytes())
 document = decode(source, catalog, request=True)
 test_root = ROOT / 'artifacts/tests' / ('town-blender-' + uuid.uuid4().hex[:10])

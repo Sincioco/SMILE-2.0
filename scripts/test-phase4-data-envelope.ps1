@@ -14,7 +14,7 @@ function Get-Sha256Hex([string]$Text) {
     finally { $sha.Dispose() }
 }
 
-$gamesRoot = Join-Path $env:LOCALAPPDATA 'SMILE 2.0\Games'
+$gamesRoot = (& (Join-Path $PSScriptRoot 'get-smile-data-root.ps1'))
 $appRoot = Join-Path $gamesRoot (Get-Sha256Hex 'Phase4HardeningData')
 $dataPath = Join-Path (Join-Path $appRoot 'Data') ((Get-Sha256Hex 'Slot/A') + '.bin')
 if (-not (Test-Path -LiteralPath $dataPath -PathType Leaf)) {

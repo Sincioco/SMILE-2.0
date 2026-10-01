@@ -41,6 +41,15 @@ internal static class SmileBuildService
         return pane ?? throw new InvalidOperationException("Could not create the SMILE 2.0 Output pane.");
     }
 
+    internal static void ReportOutput(IVsOutputWindowPane pane, string text)
+    {
+        ThreadHelper.JoinableTaskFactory.Run(async () =>
+        {
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            pane.OutputStringThreadSafe(text);
+        });
+    }
+
     public static string? FindCompiler(string path)
     {
         var extensionDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
@@ -64,7 +73,7 @@ internal static class SmileBuildService
     public static async Task<CompilerResult> RunAsync(string compilerPath, string sourcePath,
         string? outputPath, SmileGraphicsBackend graphicsBackend = SmileGraphicsBackend.Auto,
         bool vSync = true, bool emitDebugInformation = false, IReadOnlyList<string>? supportSourcePaths = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default, Action<string>? reportOutput = null)
     {
         var arguments = new StringBuilder().Append(Quote(sourcePath));
         AppendSupportSources(arguments, supportSourcePaths);
@@ -75,7 +84,7 @@ internal static class SmileBuildService
         if (emitDebugInformation)
             arguments.Append(" --debug");
 
-        return await RunCompilerAsync(compilerPath, sourcePath, arguments.ToString(), cancellationToken)
+        return await RunCompilerAsync(compilerPath, sourcePath, arguments.ToString(), cancellationToken, reportOutput)
             .ConfigureAwait(false);
     }
 
@@ -91,7 +100,7 @@ internal static class SmileBuildService
     public static Task<CompilerResult> RunProjectAsync(string compilerPath, string projectPath, string target,
         string outputPath, string configuration, SmileGraphicsBackend graphicsBackend = SmileGraphicsBackend.Auto,
         bool vSync = true, bool emitDebugInformation = false, CancellationToken cancellationToken = default,
-        SmileWebQuality webQuality = SmileWebQuality.Full)
+        SmileWebQuality webQuality = SmileWebQuality.Full, Action<string>? reportOutput = null)
     {
         var arguments = new StringBuilder("--project ").Append(Quote(projectPath))
             .Append(" --target ").Append(target)
@@ -110,7 +119,7 @@ internal static class SmileBuildService
             arguments.Append(" --vsync ").Append(vSync ? "true" : "false");
             if (emitDebugInformation) arguments.Append(" --debug");
         }
-        return RunCompilerAsync(compilerPath, projectPath, arguments.ToString(), cancellationToken);
+        return RunCompilerAsync(compilerPath, projectPath, arguments.ToString(), cancellationToken, reportOutput);
     }
 
     internal static string FormatSupportArguments(IReadOnlyList<string>? supportSourcePaths)
@@ -129,7 +138,7 @@ internal static class SmileBuildService
     }
 
     private static async Task<CompilerResult> RunCompilerAsync(string compilerPath, string sourcePath,
-        string arguments, CancellationToken cancellationToken)
+        string arguments, CancellationToken cancellationToken, Action<string>? reportOutput = null)
     {
         var startInfo = new ProcessStartInfo(compilerPath)
         {
@@ -148,15 +157,20 @@ internal static class SmileBuildService
         }
         catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception)
         {
-            return new CompilerResult(2, $"Could not start smilec.exe: {exception.Message}\n");
+            var message = $"Could not start smilec.exe: {exception.Message}\n";
+            reportOutput?.Invoke(NormalizeOutput(message));
+            return new CompilerResult(2, message);
         }
         if (process == null)
+        {
+            reportOutput?.Invoke("Could not start smilec.exe.\r\n");
             return new CompilerResult(2, "Could not start smilec.exe.\n");
+        }
 
         using (process)
         {
-            var standardOutput = process.StandardOutput.ReadToEndAsync();
-            var standardError = process.StandardError.ReadToEndAsync();
+            var standardOutput = CompilerOutput.ReadAsync(process.StandardOutput, reportOutput);
+            var standardError = CompilerOutput.ReadAsync(process.StandardError, reportOutput);
             var exited = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
             process.EnableRaisingEvents = true;
             process.Exited += (_, _) => exited.TrySetResult(true);
@@ -179,8 +193,9 @@ internal static class SmileBuildService
                 var message = wasCancelled
                     ? "Visual Studio canceled the SMILE compiler process."
                     : $"The SMILE compiler process timed out after {CompilerTimeout.TotalMinutes:0} minutes.";
-                return new CompilerResult(wasCancelled ? 125 : 124,
-                    captured + $"{sourcePath}(1,1): error {code}: {message}\n");
+                var diagnostic = $"{sourcePath}(1,1): error {code}: {message}\n";
+                reportOutput?.Invoke(NormalizeOutput(diagnostic));
+                return new CompilerResult(wasCancelled ? 125 : 124, captured + diagnostic);
             }
 
             return new CompilerResult(process.ExitCode,

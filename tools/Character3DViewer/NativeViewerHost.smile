@@ -13,6 +13,7 @@ Import Smile.Tools.ViewerBattleHud As Hud
 Import Smile.Tools.ViewerBattleCinematics As Cinematics
 Import Smile.Tools.NerisTown As Town
 Import Smile.Tools.NativeViewerTabs As Tabs
+Import Smile.Tools.StudioBuildStamp As BuildStamp
 Import Smile.UI.Controls As UI
 Import SinStarI.BattleRules As Rules
 
@@ -444,6 +445,8 @@ Public Class Session
             Call Outcome.Draw(Me.Ending, Me.Encounter)
 
         End If
+
+        Call BuildStamp.Draw()
 
     End Sub
 

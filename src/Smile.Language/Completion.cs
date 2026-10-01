@@ -348,6 +348,7 @@ public static class SmileCompletionService
                     SyntaxKind.TextLengthKeyword => "Text_Length(Value As Text) As Number - Unicode scalar count",
                     SyntaxKind.TextCodeAtKeyword => "Text_Code_At(Value As Text, Index As Number) As Number - zero-based Unicode scalar value",
                     SyntaxKind.TextSliceKeyword => "Text_Slice(Value As Text, Start As Number, Count As Number) As Text - Unicode scalar slice",
+                    SyntaxKind.BuildInfoKeyword => "Build_Info() As Text - artifact compile date, time, UTC offset and VSIX version",
                     _ => $"Built-in function {name}({parameters})"
                 };
                 completions.Add(new SmileCompletion(name, description, SmileCompletionKind.BuiltInFunction));

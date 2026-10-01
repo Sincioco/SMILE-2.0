@@ -26,7 +26,7 @@ function Get-StorageHash([string]$Value) {
 $placementKey = Get-StorageHash '__smile_internal_window_placement_v2'
 $gameIdentity = Get-StorageHash 'smile.game.sin-star-i'
 $testIdentity = Get-StorageHash $project.SmileProject.PropertyGroup.ApplicationId
-$storageRoot = Join-Path $env:LOCALAPPDATA 'SMILE 2.0\Games'
+$storageRoot = (& (Join-Path $PSScriptRoot 'get-smile-data-root.ps1'))
 $placementSource = Join-Path $storageRoot "$gameIdentity\Data\$placementKey.bin"
 if (Test-Path -LiteralPath $placementSource) {
     $testData = Join-Path $storageRoot "$testIdentity\Data"

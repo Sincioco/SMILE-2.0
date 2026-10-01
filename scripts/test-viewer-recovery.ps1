@@ -37,7 +37,7 @@ if ($backup -ne $first) { throw 'Valid backup was not retained or deduplicated.'
 $watchIdentity = "smile.tests.viewer-recovery.$([Guid]::NewGuid().ToString('N'))"
 $appHash = Get-RecoveryHash ([Text.Encoding]::UTF8.GetBytes($watchIdentity))
 $keyHash = Get-RecoveryHash ([Text.Encoding]::UTF8.GetBytes('Viewer.Recovery.v1'))
-$watchData = Join-Path $env:LOCALAPPDATA "SMILE 2.0\Games\$appHash\Data"
+$watchData = Join-Path (& (Join-Path $PSScriptRoot 'get-smile-data-root.ps1')) "$appHash\Data"
 $null = New-Item -ItemType Directory -Path $watchData -Force
 $watchedProcess = Start-Process (Get-Command pwsh.exe).Source `
     -ArgumentList '-NoProfile -Command "Start-Sleep -Seconds 3"' -WindowStyle Hidden -PassThru

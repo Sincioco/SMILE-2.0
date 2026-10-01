@@ -84,6 +84,7 @@
     </ClCompile>
     <ClCompile Include="startup\background_worker.cpp" />
     <ClCompile Include="runtime.c" />
+    <ClCompile Include="storage_location.c" />
     <ClCompile Include="startup\startup.cpp">
       <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>

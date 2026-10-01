@@ -7,6 +7,7 @@ Environment.CurrentDirectory = RepositoryTestContext.FindRepositoryRoot();
 var tests = new TestContext();
 DoubleTests.Register(tests);
 Renderer3DPrecisionTests.Register(tests);
+CompilerOutputTests.Register(tests);
 
 Run("Native path picker has a typed path-only contract", () =>
 {
@@ -807,13 +808,21 @@ Run("Web output writer stamps mandatory branding and artifact metadata", () =>
     try
     {
         var expectedNames = new[] { "index.html", "smile-runtime.js", "game.js", "smile.css", "smile-logo.png" };
-        var analysis = Analyze("Game Window \"Test\"\nShow Screen\nEnd Program\n");
+        var analysis = Analyze("Game Window \"Test\"\nDim Build As Text\nBuild = Build_Info()\nShow Screen\nEnd Program\n");
+        Equal(false, analysis.HasErrors);
+        Equal(false, Analyze("Caption = Build_Info()\nPrint Caption\n").HasErrors);
+        Equal(true, Analyze("Print Build_Info(1)\n").HasErrors);
         var metadata = new StartupBuildMetadata("2.0.61", new DateTimeOffset(2026, 9, 9, 1, 2, 3, TimeSpan.FromHours(8)));
         WebOutputWriter.Write(directory, new WebEmitter(analysis), null, metadata: metadata);
         var firstIndex = File.ReadAllText(Path.Combine(directory, "index.html"));
         WebOutputWriter.Write(directory, new WebEmitter(analysis), null, metadata: metadata);
         Equal(firstIndex, File.ReadAllText(Path.Combine(directory, "index.html")));
         Equal(true, firstIndex.Contains("Compiled 2026-09-09 01:02:03 +08:00 | SMILE 2.0.61", StringComparison.Ordinal));
+        Equal(true, File.ReadAllText(Path.Combine(directory, "game.js"))
+            .Contains(System.Text.Json.JsonSerializer.Serialize(metadata.BuildInfo), StringComparison.Ordinal));
+        var nativeBuild = new MasmEmitter(analysis, SmileGraphicsBackend.Auto, true, false,
+            startupBuild: metadata).Emit();
+        Equal(true, nativeBuild.Contains("lea rcx, smile_build_info", StringComparison.Ordinal));
         Equal(true, File.ReadAllBytes(Path.Combine(directory, "smile-logo.png")).SequenceEqual(
             File.ReadAllBytes("assets/branding/smile-2.0-logo-web.png")));
         var product = XDocument.Load("src/Smile.VisualStudio/source.extension.vsixmanifest")
@@ -5994,14 +6003,14 @@ Run("VSIX templates render localized identity metadata within the aligned header
     foreach (var manifest in new[] { gameManifest, consoleManifest })
     {
         Equal(true, manifest.Contains("SmileProjectTemplateWizard", StringComparison.Ordinal));
-        Equal(true, manifest.Contains("Version=2.0.64.0", StringComparison.Ordinal));
+        Equal(true, manifest.Contains("Version=2.0.65.0", StringComparison.Ordinal));
     }
     foreach (var applicationProject in new[] { gameProject, consoleProject })
         Equal(true, applicationProject.Contains("<ApplicationId>$smileapplicationid$</ApplicationId>", StringComparison.Ordinal));
     Equal(false, libraryProject.Contains("ApplicationId", StringComparison.Ordinal));
     Equal(true, wizard.Contains("\"smile.app.a\" + Guid.NewGuid().ToString(\"N\")", StringComparison.Ordinal));
     Equal(true, wizard.Contains("ToString(\"D\", CultureInfo.CurrentCulture)", StringComparison.Ordinal));
-    Equal(true, project.Contains("<Version>2.0.64</Version>", StringComparison.Ordinal));
+    Equal(true, project.Contains("<Version>2.0.65</Version>", StringComparison.Ordinal));
     Equal(true, vsixManifest.Contains("Type=\"Microsoft.VisualStudio.Assembly\"", StringComparison.Ordinal));
 });
 

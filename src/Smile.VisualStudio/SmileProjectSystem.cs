@@ -240,7 +240,8 @@ internal sealed partial class SmileProject : IVsUIHierarchy, IVsProject3, IVsGet
             Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
             pane.OutputStringThreadSafe($"> \"{compilerPath}\" --project \"{ProjectPath}\" --target library -o \"{outputPath}\" --configuration \"{NormalizeConfiguration(configuration)}\"\r\n");
             result = await SmileBuildService.RunProjectAsync(compilerPath, ProjectPath, "library", outputPath,
-                NormalizeConfiguration(configuration), cancellationToken: cancellationToken);
+                NormalizeConfiguration(configuration), cancellationToken: cancellationToken,
+                reportOutput: line => SmileBuildService.ReportOutput(pane, line));
         }
         else if (IsWeb(platform))
         {
@@ -250,7 +251,8 @@ internal sealed partial class SmileProject : IVsUIHierarchy, IVsProject3, IVsGet
             var qualityArgument = webQuality == SmileWebQuality.Full ? string.Empty : $" --web-quality {webQuality}";
             pane.OutputStringThreadSafe($"> \"{compilerPath}\" --project \"{ProjectPath}\" --target web --output-dir \"{outputDirectory}\" --configuration \"{NormalizeConfiguration(configuration)}\"{qualityArgument}\r\n");
             result = await SmileBuildService.RunProjectAsync(compilerPath, ProjectPath, "web", outputDirectory,
-                NormalizeConfiguration(configuration), cancellationToken: cancellationToken, webQuality: webQuality);
+                NormalizeConfiguration(configuration), cancellationToken: cancellationToken, webQuality: webQuality,
+                reportOutput: line => SmileBuildService.ReportOutput(pane, line));
             outputPath = Path.Combine(outputDirectory, "index.html");
         }
         else
@@ -261,12 +263,10 @@ internal sealed partial class SmileProject : IVsUIHierarchy, IVsProject3, IVsGet
             pane.OutputStringThreadSafe($"> \"{compilerPath}\" --project \"{ProjectPath}\" --target windows-x64 -o \"{outputPath}\" --configuration \"{NormalizeConfiguration(configuration)}\" --graphics {GraphicsBackend} --vsync {VSync.ToString().ToLowerInvariant()}{(emitDebugInformation ? " --debug" : string.Empty)}\r\n");
             result = await SmileBuildService.RunProjectAsync(compilerPath, ProjectPath, "windows-x64", outputPath,
                 NormalizeConfiguration(configuration), GraphicsBackend, VSync, emitDebugInformation,
-                cancellationToken);
+                cancellationToken, reportOutput: line => SmileBuildService.ReportOutput(pane, line));
         }
 
         await _package.JoinableTaskFactory.SwitchToMainThreadAsync();
-        if (!string.IsNullOrEmpty(result.Output))
-            pane.OutputStringThreadSafe(SmileBuildService.NormalizeOutput(result.Output));
         SmileBuildService.ReportDiagnostics(result.Output);
 
         if (result.ExitCode != 0)

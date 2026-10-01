@@ -15,8 +15,8 @@ foreach ($name in @('Read', 'Write')) {
 function Hash-Text([string]$Value) {
     return [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($Value))).ToLowerInvariant()
 }
-$dataRoot = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) `
-    ('SMILE 2.0\Games\' + (Hash-Text $applicationId) + '\Data')
+$dataRoot = Join-Path (& (Join-Path $PSScriptRoot 'get-smile-data-root.ps1')) `
+    ((Hash-Text $applicationId) + '\Data')
 $null = New-Item -ItemType Directory -Path $dataRoot -Force
 $primary = Join-Path $dataRoot ((Hash-Text 'Recovery Probe') + '.bin')
 $backup = $primary + '.bak'

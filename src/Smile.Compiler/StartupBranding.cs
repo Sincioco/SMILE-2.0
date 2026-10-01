@@ -7,6 +7,7 @@ namespace Smile.Compiler;
 internal sealed record StartupBuildMetadata(string Version, DateTimeOffset CompiledAt)
 {
     internal string Display => $"Compiled {CompiledAt.ToString("yyyy-MM-dd HH:mm:ss zzz", CultureInfo.InvariantCulture)} | SMILE {Version}";
+    internal string BuildInfo => $"Compiled {CompiledAt.ToString("yyyy-MM-dd HH:mm:ss zzz", CultureInfo.InvariantCulture)} | VSIX {Version}";
 
     internal static StartupBuildMetadata Create()
     {

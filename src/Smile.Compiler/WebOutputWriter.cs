@@ -17,7 +17,7 @@ internal static class WebOutputWriter
         IReadOnlyDictionary<string, int[]>? optimizedImageSizes = null, StartupBuildMetadata? metadata = null)
     {
         metadata ??= StartupBuildMetadata.Create();
-        var game = emitter.Emit();
+        var game = emitter.Emit(metadata);
         var runtime = RuntimeFor(emitter.ResponsiveWindow);
         if (emitter.HasGameWindow)
             runtime = runtime.Replace("const startupHasWindow = false;", "const startupHasWindow = true;", StringComparison.Ordinal);

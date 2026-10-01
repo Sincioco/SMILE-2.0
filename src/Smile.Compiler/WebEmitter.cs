@@ -26,6 +26,7 @@ internal sealed class WebEmitter
     private RoutineSymbol? _currentRoutine;
     private int _indent;
     private int _temporaryId;
+    private StartupBuildMetadata? _buildMetadata;
 
     public WebEmitter(SmileAnalysisResult analysis, string? appIdentity = null,
         IReadOnlyList<string>? assetPaths = null, bool responsiveWindow = false, string? webLoadingAuthor = null,
@@ -49,8 +50,9 @@ internal sealed class WebEmitter
     public string? WebLoadingAuthor { get; }
     public string? WebLoadingLogo { get; }
 
-    public string Emit()
+    public string Emit(StartupBuildMetadata? metadata = null)
     {
+        _buildMetadata = metadata ?? StartupBuildMetadata.Create();
         Line("\"use strict\";");
         Line();
         EmitCheckedIndexHelper();
@@ -993,6 +995,7 @@ internal sealed class WebEmitter
         return call.Identifier.Kind switch
         {
             SyntaxKind.TimerKeyword => "smile.timer()",
+            SyntaxKind.BuildInfoKeyword => Json(_buildMetadata!.BuildInfo),
             SyntaxKind.AbsKeyword => $"smile.abs({arguments})",
             SyntaxKind.MinKeyword => $"smile.min({arguments})",
             SyntaxKind.MaxKeyword => $"smile.max({arguments})",

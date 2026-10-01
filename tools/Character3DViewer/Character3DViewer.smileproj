@@ -15,6 +15,7 @@
   <ItemGroup>
     <SmileSource Include="NativeProgram.smile" StartupOnly="true" />
     <SmileSource Include="NativeViewerHost.smile" />
+    <SmileSource Include="StudioBuildStamp.smile" />
     <SmileSource Include="NativeViewerTabs.smile" />
     <SmileSource Include="TownPartyInset.smile" />
     <SmileSource Include="NerisTown.smile" />

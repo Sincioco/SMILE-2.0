@@ -60,10 +60,9 @@ internal sealed class BuildSmileFileCommand
         }
 
         pane.OutputStringThreadSafe($"> \"{compilerPath}\" \"{sourcePath}\"\r\n");
-        var result = await SmileBuildService.RunAsync(compilerPath, sourcePath, null);
+        var result = await SmileBuildService.RunAsync(compilerPath, sourcePath, null,
+            reportOutput: line => SmileBuildService.ReportOutput(pane, line));
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-        if (!string.IsNullOrEmpty(result.Output))
-            pane.OutputStringThreadSafe(SmileBuildService.NormalizeOutput(result.Output));
         SmileBuildService.ReportDiagnostics(result.Output);
         pane.OutputStringThreadSafe($"smilec exit code: {result.ExitCode}\r\n");
     }

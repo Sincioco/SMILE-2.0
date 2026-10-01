@@ -20,6 +20,7 @@
 #include "audio/audio_focus_state.h"
 #include "audio/sfx_channels.h"
 #include "startup/startup.h"
+#include "storage_location.h"
 
 #define SMILE_KEY_NONE 0
 #define SMILE_KEY_W 1
@@ -2610,19 +2611,14 @@ static void smile_sanitize(WCHAR* destination, int capacity, const WCHAR* source
 
 static int smile_storage_path(const char* key, long long key_length, WCHAR* path, int capacity)
 {
-    PWSTR local_app_data = 0;
     WCHAR executable[1024];
     WCHAR game_name[256];
     WCHAR key_name[256];
     WCHAR* file_name;
     WCHAR* extension;
     WCHAR* wide_key;
-    HRESULT result = SHGetKnownFolderPath(&FOLDERID_LocalAppData, KF_FLAG_CREATE, 0, &local_app_data);
-    if (FAILED(result) || local_app_data == 0)
+    if (!smile_storage_root(path, capacity))
         return 0;
-    path[0] = 0;
-    smile_append(path, capacity, local_app_data);
-    CoTaskMemFree(local_app_data);
     smile_append(path, capacity, L"\\SMILE 2.0\\Games\\");
     GetModuleFileNameW(0, executable, (DWORD)(sizeof(executable) / sizeof(executable[0])));
     file_name = executable + lstrlenW(executable);
@@ -2644,7 +2640,7 @@ static int smile_storage_path(const char* key, long long key_length, WCHAR* path
     HeapFree(GetProcessHeap(), 0, wide_key);
     smile_append(path, capacity, key_name);
     smile_append(path, capacity, L".txt");
-    return 1;
+    return smile_storage_import_legacy(path);
 }
 
 long long smile_load_value(const char* key, long long key_length, long long default_value)
@@ -2706,7 +2702,6 @@ int smile_storage_data_path(const char* key, long long key_length, WCHAR* path, 
 {
     static const char fallback_identity[] = "Program";
     static const WCHAR hex[] = L"0123456789abcdef";
-    PWSTR local_app_data = 0;
     unsigned char app_digest[32];
     unsigned char key_digest[32];
     WCHAR hash_text[65];
@@ -2714,13 +2709,10 @@ int smile_storage_data_path(const char* key, long long key_length, WCHAR* path, 
     const unsigned char* identity = (const unsigned char*)(smile_app_identity != 0 ? smile_app_identity : fallback_identity);
     SIZE_T identity_length = smile_app_identity != 0 ? (SIZE_T)smile_app_identity_length : sizeof(fallback_identity) - 1;
     if (key == 0 || key_length < 0 || key_length > 1024 * 1024 ||
-        FAILED(SHGetKnownFolderPath(&FOLDERID_LocalAppData, KF_FLAG_CREATE, 0, &local_app_data)) || local_app_data == 0)
+        !smile_storage_root(path, capacity))
         return 0;
     smile_sha_bytes(identity, identity_length, app_digest);
     smile_sha_bytes((const unsigned char*)key, (SIZE_T)key_length, key_digest);
-    path[0] = 0;
-    smile_append(path, capacity, local_app_data);
-    CoTaskMemFree(local_app_data);
     smile_append(path, capacity, L"\\SMILE 2.0\\Games");
     SHCreateDirectoryExW(0, path, 0);
     smile_append(path, capacity, L"\\");
@@ -2743,7 +2735,7 @@ int smile_storage_data_path(const char* key, long long key_length, WCHAR* path, 
     hash_text[64] = 0;
     smile_append(path, capacity, hash_text);
     smile_append(path, capacity, L".bin");
-    return 1;
+    return smile_storage_import_legacy(path);
 }
 
 static uint32_t smile_data_u32(const unsigned char* value)

@@ -31,6 +31,12 @@ No generated program is rewritten and mandatory initial startup is unchanged.
 - `StartupBuildMetadata` reads the compiler's embedded authoritative VSIX manifest
   and captures a compilation timestamp with an explicit UTC offset. Native/Web
   generated output carries that metadata; no runtime-clock substitution.
+- `Build_Info() As Text` exposes the same immutable compilation metadata to any
+  console or window program. It takes no arguments and returns
+  `Compiled yyyy-MM-dd HH:mm:ss zzz | VSIX <version>`. Native emission uses an
+  immutable text literal; Web emission receives the same `StartupBuildMetadata`
+  as the splash. Studio's small `StudioBuildStamp` owner draws this label after
+  its ordinary overlays. The required splash and its minimum duration are unchanged.
 - `MasmEmitter` automatically starts `Smile.NativeRuntime/startup` before user
   code. The independent GDI+ splash thread paints/flushes the embedded approved
   logo, then overlaps preparation. First-frame submission, console input and

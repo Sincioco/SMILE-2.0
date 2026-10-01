@@ -2344,7 +2344,7 @@ internal sealed class SemanticAnalyzer
                 call.Arguments.Count > 0 && InferImplicitGlobalType(call.Arguments[0].Expression) == SmileType.Double:
                 return SmileType.Double;
             case CallExpressionSyntax call when SyntaxFacts.IsBuiltInFunction(call.Identifier.Kind):
-                return call.Identifier.Kind == SyntaxKind.TextSliceKeyword ? SmileType.Text
+                return call.Identifier.Kind is SyntaxKind.TextSliceKeyword or SyntaxKind.BuildInfoKeyword ? SmileType.Text
                     : IsBooleanBuiltIn(call.Identifier.Kind)
                     ? SmileType.Boolean
                     : SmileType.Number;
@@ -4305,7 +4305,7 @@ internal sealed class SemanticAnalyzer
                 RequireType(argument, SmileType.Text, "SML3003", "File_Pick requires Text title, extension and suggested name.");
             return SmileType.Text;
         }
-        if (identifier.Kind == SyntaxKind.FileImportKeyword)
+        if (identifier.Kind is SyntaxKind.FileImportKeyword or SyntaxKind.BuildInfoKeyword)
             return SmileType.Text;
         if (identifier.Kind == SyntaxKind.FileExportKeyword)
         {

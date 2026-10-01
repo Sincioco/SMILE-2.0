@@ -1446,8 +1446,8 @@ try {
 
     $identityHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData(
         [Text.Encoding]::UTF8.GetBytes($applicationId))).ToLowerInvariant()
-    $testDataRoot = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) `
-        "SMILE 2.0\Games\$identityHash\Data"
+    $testDataRoot = Join-Path (& (Join-Path $PSScriptRoot 'get-smile-data-root.ps1')) `
+        "$identityHash\Data"
     $null = New-Item -ItemType Directory -Path $testDataRoot -Force
     $faultMarkerPath = Get-NativeDataPath $testDataRoot 'BeatCamera.Test.HeadFaultFixture'
     $faultObservedPath = Get-NativeDataPath $testDataRoot 'BeatCamera.Test.HeadFaultObserved'

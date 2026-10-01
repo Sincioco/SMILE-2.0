@@ -23,11 +23,14 @@ internal sealed class CompilerDriver
             return 2;
         }
 
+        using var progress = new CompilerProgress();
         try
         {
+            progress.Report("Reading project and source files");
             var input = options.ProjectPath != null ? LoadProject(options) : LoadLoose(options);
             var appIdentity = ResolveApplicationIdentity(input, options);
             var sourcePath = input.DisplayPath;
+            progress.Report($"Analyzing {input.Sources.Count} source files");
             var analysis = SmileLanguage.Analyze(input.Sources, input.CompilationKind, input.DependencyContext);
             foreach (var diagnostic in analysis.Diagnostics)
                 PrintDiagnostic(diagnostic);
@@ -35,6 +38,7 @@ internal sealed class CompilerDriver
             if (analysis.HasErrors)
                 return 1;
 
+            progress.Report("Validating assets and project dependencies");
             input.Project?.ValidateAssetsForBuild();
             if (input.Project != null)
                 BuildProjectDependencies(input.Project.ProjectPath, options.Configuration);
@@ -46,12 +50,14 @@ internal sealed class CompilerDriver
                 var packagePath = options.OutputPath == null
                     ? input.Project.GetLibraryOutputPath(options.Configuration)
                     : Path.GetFullPath(options.OutputPath);
+                progress.Report("Writing library package");
                 SmileLibraryPackage.Write(packagePath, input.Project, analysis);
                 Console.WriteLine($"Compiled {input.Project.ProjectPath} as a SMILE library");
                 Console.WriteLine($"Output: {packagePath}");
                 return 0;
             }
 
+            progress.Report("Preparing project assets");
             var buildAssets = input.Project == null ? null : Model3DAssetBuildPipeline.Prepare(input.Project,
                 includeWebLoadingLogo: options.Target == SmileCompilationTarget.Web);
 
@@ -62,12 +68,14 @@ internal sealed class CompilerDriver
                 if (reservedAsset != null)
                     throw new InvalidDataException($"Web asset '{reservedAsset}' conflicts with a compiler-owned output file. Rename the project asset.");
                 var outputDirectory = Path.GetFullPath(options.OutputDirectory!);
+                progress.Report("Waiting for output access");
                 using var outputLock = OutputPublicationLock.Acquire(outputDirectory,
                     _testHooks?.OutputLockTimeout);
                 var webStagingDirectory = TransactionalOutputPublisher.CreateStagingDirectory(outputDirectory);
                 SmileProjectAssetPublishResult? publication = null;
                 try
                 {
+                    progress.Report("Generating and publishing Web output");
                     var previousPaths = new List<string>(WebOutputWriter.ManagedFileNames);
                     previousPaths.Add(WebImageOptimizer.ManifestName);
                     SmilePublishedAssetSnapshot? previousAssets = null;
@@ -130,6 +138,7 @@ internal sealed class CompilerDriver
                 ? input.DefaultNativeOutputPath
                 : Path.GetFullPath(options.OutputPath);
 
+            progress.Report("Waiting for output access");
             using var nativeOutputLock = OutputPublicationLock.Acquire(outputPath,
                 _testHooks?.OutputLockTimeout);
             Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
@@ -153,6 +162,7 @@ internal sealed class CompilerDriver
             var stagingDirectory = TransactionalOutputPublisher.CreateStagingDirectory(outputPath);
             try
             {
+                progress.Report("Generating native assembly");
                 var stagedOutputPath = Path.Combine(stagingDirectory, Path.GetFileName(outputPath));
                 var emitter = new MasmEmitter(analysis, options.GraphicsBackend, options.VSync,
                     options.EmitDebugInformation, appIdentity,
@@ -171,6 +181,7 @@ internal sealed class CompilerDriver
                     runtimePath, isGame, emitter.UsesMusic,
                     options.EmitDebugInformation ? debugSourcePath : null,
                     options.EmitDebugInformation ? debugObjectPath : null);
+                progress.Report("Assembling and linking native executable");
                 var result = _testHooks?.RunNativeToolchain?.Invoke(invocation) ??
                     new NativeToolchain().AssembleAndLink(invocation.AssemblyPath, invocation.ObjectPath,
                         invocation.OutputPath, invocation.RuntimePath, invocation.IsGame, invocation.UsesMusic,
@@ -196,6 +207,7 @@ internal sealed class CompilerDriver
                 if (options.EmitDebugInformation && !File.Exists(stagedPdbPath))
                     throw new IOException("Native Debug toolchain reported success without producing a PDB.");
 
+                progress.Report("Publishing executable and project assets");
                 var outputRoot = Path.GetDirectoryName(outputPath)!;
                 var currentPaths = new List<string> { Path.GetFileName(outputPath) };
                 var previousPaths = new List<string> { Path.GetFileName(outputPath) };

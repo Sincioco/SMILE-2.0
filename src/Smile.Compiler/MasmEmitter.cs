@@ -372,6 +372,10 @@ internal sealed class MasmEmitter
         EmitBytes(Encoding.UTF8.GetBytes(_startupAuthor ?? string.Empty), terminate: true);
         Line("smile_startup_build LABEL BYTE");
         EmitBytes(Encoding.UTF8.GetBytes(_startupBuild.Display), terminate: true);
+        var buildInfo = Encoding.UTF8.GetBytes(_startupBuild.BuildInfo);
+        Line("ALIGN 8");
+        Line($"smile_build_info QWORD -1, {buildInfo.Length}");
+        EmitBytes(buildInfo, terminate: true);
 
         Line();
         Line(".code");
@@ -1883,6 +1887,10 @@ internal sealed class MasmEmitter
                 break;
             case SyntaxKind.TimerKeyword:
                 CallAligned("smile_timer");
+                break;
+            case SyntaxKind.BuildInfoKeyword:
+                Line("    lea rcx, smile_build_info");
+                CallAligned("smile_text_retain");
                 break;
             case SyntaxKind.GameClosedKeyword:
                 CallAligned("smile_game_closed");

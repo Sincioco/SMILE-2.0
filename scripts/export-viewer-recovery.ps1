@@ -79,7 +79,7 @@ if ($FunctionsOnly) { return }
 
 $appHash = Get-RecoveryHash ([Text.Encoding]::UTF8.GetBytes($ApplicationId))
 $keyHash = Get-RecoveryHash ([Text.Encoding]::UTF8.GetBytes('Viewer.Recovery.v1'))
-$dataPath = Join-Path $env:LOCALAPPDATA "SMILE 2.0\Games\$appHash\Data\$keyHash.bin"
+$dataPath = Join-Path (& (Join-Path $PSScriptRoot 'get-smile-data-root.ps1')) "$appHash\Data\$keyHash.bin"
 $context = $null
 $process = $null
 if ($Mode -eq 'Watch') {

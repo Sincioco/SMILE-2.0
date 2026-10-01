@@ -69,6 +69,7 @@ public enum SyntaxKind
     ExitKeyword,
     ProgramKeyword,
     TimerKeyword,
+    BuildInfoKeyword,
     RgbKeyword,
     AbsKeyword,
     MinKeyword,
@@ -359,6 +360,7 @@ public static class SyntaxFacts
         ["Window_Title"] = SyntaxKind.WindowTitleKeyword,
         ["Window_Activate"] = SyntaxKind.WindowActivateKeyword,
         ["Window_Loading"] = SyntaxKind.WindowLoadingKeyword,
+        ["Build_Info"] = SyntaxKind.BuildInfoKeyword,
         ["Window_DeferClose"] = SyntaxKind.WindowDeferCloseKeyword,
         ["Window_CloseRequested"] = SyntaxKind.WindowCloseRequestedKeyword,
         ["File_Reveal"] = SyntaxKind.FileRevealKeyword,
@@ -582,7 +584,7 @@ public static class SyntaxFacts
         if (DoubleSemantics.IsIntrinsic(kind)) return DoubleSemantics.Parameters(kind);
         return kind switch
         {
-            SyntaxKind.TimerKeyword or SyntaxKind.GameClosedKeyword or SyntaxKind.WindowWidthKeyword or
+            SyntaxKind.TimerKeyword or SyntaxKind.BuildInfoKeyword or SyntaxKind.GameClosedKeyword or SyntaxKind.WindowWidthKeyword or
                 SyntaxKind.WindowHeightKeyword or SyntaxKind.WindowActivateKeyword or SyntaxKind.WindowLoadingKeyword or SyntaxKind.WindowCloseRequestedKeyword or SyntaxKind.PointerXKeyword or
                 SyntaxKind.PointerYKeyword or SyntaxKind.PointerDeltaXKeyword or SyntaxKind.PointerDeltaYKeyword or
                 SyntaxKind.PointerWheelDeltaKeyword or SyntaxKind.PointerWheelRemainderKeyword or

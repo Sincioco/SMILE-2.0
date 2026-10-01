@@ -56,7 +56,7 @@ try {
     # This is the deliberately disposable regression worker, never a user session.
     Stop-Process -Id $first.ProcessId
     Wait-Until { $current = @(Get-Workers); $current.Count -eq 1 -and $current[0].ProcessId -ne $first.ProcessId } 'Exited Worker Restarts Automatically'
-    $folder = Join-Path $env:LOCALAPPDATA ('SMILE 2.0\Games\' + (HashText $application) + '\Data')
+    $folder = Join-Path (& (Join-Path $PSScriptRoot 'get-smile-data-root.ps1')) ((HashText $application) + '\Data')
     $physical = $folder
     Wait-Until { Test-Path (Join-Path $physical ((HashText 'TownEditor.File.Clock') + '.bin')) } 'Worker Uses The Native Applications Actual Save Folder'
     $duplicate = Start-Process pwsh -ArgumentList ('-NoProfile -File "{0}" -ViewerProcessId {1} -DataFolder "{2}"' -f $worker, $fixture.Id, $physical) -WindowStyle Hidden -PassThru

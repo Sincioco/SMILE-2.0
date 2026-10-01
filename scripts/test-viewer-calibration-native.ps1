@@ -146,8 +146,8 @@ if ($project.SmileProject.PropertyGroup.WebLoadingLogo) {
 # a stale Orin runtime fingerprint during the JumpAttack asset migration.
 $nativeIdentityHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData(
     [Text.Encoding]::UTF8.GetBytes($applicationId))).ToLowerInvariant()
-$testDataRoot = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) `
-    "SMILE 2.0\Games\$nativeIdentityHash\Data"
+$testDataRoot = Join-Path (& (Join-Path $PSScriptRoot 'get-smile-data-root.ps1')) `
+    "$nativeIdentityHash\Data"
 # A directory at one disposable probe filename forces a real filesystem write failure.
 $deniedKeyHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData(
     [Text.Encoding]::UTF8.GetBytes('Viewer Denied Storage Probe'))).ToLowerInvariant()
@@ -251,7 +251,7 @@ $nativeIdentityHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::Has
     [Text.Encoding]::UTF8.GetBytes($nativeIdentity))).ToLowerInvariant()
 $nativeKeyHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData(
     [Text.Encoding]::UTF8.GetBytes('CharacterViewerCalibrationKeyframes'))).ToLowerInvariant()
-$nativeDataPath = Join-Path $env:LOCALAPPDATA "SMILE 2.0\Games\$nativeIdentityHash\Data\$nativeKeyHash.bin"
+$nativeDataPath = Join-Path (& (Join-Path $PSScriptRoot 'get-smile-data-root.ps1')) "$nativeIdentityHash\Data\$nativeKeyHash.bin"
 . (Join-Path $PSScriptRoot 'sync-arin-v5-7-calibration.ps1') -FunctionsOnly -DataRoot $testRoot
 foreach ($savedPath in @($nativeDataPath, "$nativeDataPath.bak")) {
     $snapshot = Convert-PayloadToSnapshot (Read-LivePayload $savedPath)
