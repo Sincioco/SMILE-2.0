@@ -18,6 +18,33 @@ catalog and terminal assemblies; no downloaded assets or new dependencies.
 | Neris Waterworks | Five crescent basins and five round gardens around interlaced star service paths |
 | Ancient Relay | Weathered rock spires around concentric service paths |
 | Neris Relief Quarter | Clinic courtyard, modest homes and provision stalls |
+| Willowstep Highlands | Editable 38 m wooded hills, switchback and summit trails, four clearings and a downhill stream |
+| Silverfall Basin | Three 14 m terrain terraces, a 42 m climb, encounter shelves and a cascading stream |
+
+The two terrain journeys are available through **Maps**, with Demo disabled by
+default. Their west/east exits connect to each other and existing locations; the
+older fourteen-map atlas remains unchanged. Their working names do not add story
+canon. Water follows the sculpted bed; there is no vertical free-fall simulation.
+These landscapes reserve room for questing and grinding but do not add quests,
+enemies or combat rules. Willowstep has 156 trees and 13 lamps; Silverfall has
+69 trees and 20 lamps. All props are grounded on authored terrain corners.
+
+`Source/terrain_quests.py --output <new-folder>` authors only these two TWN11 maps
+without overwriting existing output. Use `prepare_maps.py` to bake a separate
+prepared folder, then `validate_terrain_quests.py --maps <prepared-folder>
+--manifest <source-folder>/terrain-manifest.json --work <new-work-folder>` to check
+native prepared import, every prop height, downhill flow and the full 4 m usable
+route corridor in both directions. The October 2 run passes 23 route segments
+sampled at 0.2 m intervals, including the summit spur, spawn connectors and both gate approaches. All 27
+full native journeys finish, including spawn-to-summit and return on each map.
+Logs are `artifacts/terrain-quests-v5-prepare.log` and `terrain-quests-v5-routes.log`.
+
+The existing `install_maps.py --map "Willowstep Highlands" --map "Silverfall Basin"`
+can install just these documents while Studio is closed; supply the usual data
+root and fresh backup directory. It retains newer edited layouts. Initial local
+installation backed up records under `artifacts/tests/terrain-quests-20261002/live-backup`.
+The 16-tab capacity is unchanged; close an unneeded tab before opening another
+copy when all maps are open. Existing maps, castle assets and calibration are untouched.
 
 The first five maps each have west/east pedestrian map tiles leading to Neris
 Spaceport and Horizon Airport. Airport return travel remembers the town of origin.
@@ -203,3 +230,27 @@ The installer preserves current day settings, travel destinations and newer user
 replacing Spaceport's night preset is an explicit installation option. This installation
 backed up all replaced save records. Native preparation and thirteen directed gateway
 routes passed. Crown and Orin were inspected in the current Release application.
+
+## October 2 road-cache repair
+
+The batch preparer formerly reused generation 1 for successive documents, which
+could attach an earlier map's road graph to a later map. Each preparation and
+verification now advances its generation. The new native journey fixture caught
+the error before the two terrain maps were accepted. It also caught a side trail
+interrupted by a gateway bank; Silverfall's junction now stays inside that bank.
+
+`Source/repair_prepared_roads.py` rebuilt all thirteen older authored-map graphs
+with the native collision owner. Eight needed correction. Every authored payload
+and every other prepared record stayed byte-identical. Live older-map bindings
+are version 3, already rejected by the current version-4 terrain runtime; their
+locally rebuilt road caches and all user saves were preserved. Only the two new
+maps were installed, with a backup in `live-backup-v5`. Native repair evidence is
+`artifacts/terrain-existing-road-repair.log`.
+
+Native Release acceptance after installation: Willowstep loaded in 173 ms and
+Silverfall in 152 ms. Actual minimap travel finished at Willowstep X-1320/Y381/Z-405
+and Silverfall X1395/Y443/Z-555. These are observed arrivals, not continuous
+manual motion recordings. Screenshots: artifacts/willowstep-summit-arrival-native.png,
+artifacts/silverfall-basin-native.png and artifacts/silverfall-high-terrace-arrival-native.png.
+The terrain core's loaded four-actor uphill/downhill fixture separately checks
+all followers against the same ground sampler.

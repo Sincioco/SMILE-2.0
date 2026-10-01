@@ -24,6 +24,8 @@ Dim Work As Preparation.State
 Dim Batch As Cache.Batch
 Dim Roads As Graph.State
 Dim Failed As Boolean
+Dim PreparationGeneration As Number
+Dim VerificationGeneration As Number
 
 Game Window "Prepare Saved Towns" Size 400 By 200
 
@@ -70,13 +72,16 @@ Sub Prepare(Input As Text, Output As Text)
     Ok = Store.SaveDocument(Town, "Snapshot", False)
 
     Call Check(Ok, "Snapshot Saved")
-    Call Preparation.Begin(Work, Town, "Snapshot", 1)
+
+    PreparationGeneration = PreparationGeneration + 1
+
+    Call Preparation.Begin(Work, Town, "Snapshot", PreparationGeneration)
 
     Deadline = Timer() + 60000
 
     Do
 
-        Call Preparation.Update(Work, Town, 1)
+        Call Preparation.Update(Work, Town, PreparationGeneration)
 
         Show Screen
 
@@ -122,7 +127,9 @@ Sub Verify(Input As Text)
         Call Check(Ok, "Terrain Page Valid")
     End For
 
-    Call Graph.Adopt(Roads, Town, 1)
+    VerificationGeneration = VerificationGeneration + 1
+
+    Call Graph.Adopt(Roads, Town, VerificationGeneration)
     Call Check(Graph.Progress(Roads) = 100 And Graph.CollisionChecks(Roads) = 0,
         "Roads Need No Preparation")
 

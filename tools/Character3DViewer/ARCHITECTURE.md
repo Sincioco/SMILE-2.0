@@ -3078,3 +3078,35 @@ Normal orbit/framing commands now restore the standard 80-degree upper bound;
 Top Down remains an explicit editor view. The town-session runner uses the prepared
 Release asset mirror, matching the normal native build and Neris scene fixture;
 its obsolete Debug mirror lacked the comparison castle and failed scene loading.
+
+
+## October 2 terrain journey maps and preparation repair
+
+TownLibrary registers Willowstep Highlands and Silverfall Basin using the existing
+sixteen-tab capacity. Authored TWN11 documents remain in StoryTownsV1; its
+terrain_quests.py owns deterministic corner heights, clear routes and prop placement.
+No terrain algorithm, asset ownership or map-specific state moved into startup code.
+
+Actual native inspection found an obstructed default spawn; both maps now have
+clear spawn plazas connected to their roads. Full native travel then exposed the
+batch preparation script reusing generation 1 between documents, retaining the
+previous road graph. prepare_maps.py now advances preparation and verification
+generations. Production TownFileJobs already supplies distinct request IDs.
+validate_terrain_quests.py imports fresh prepared bundles and exercises 27 complete
+journeys, all 23 four-metre route corridors in both directions, every prop height
+and downhill flow. It reproduced the bad cache before the fix and now passes.
+
+repair_prepared_roads.py is a bounded authoring maintenance tool using the existing
+native graph. It corrected eight of thirteen older portable maps; all authored
+payloads and non-road companion records remained byte-identical. Current live
+version-3 bundle bindings are rejected by the terrain runtime, so existing user
+saves and locally rebuilt navigation were untouched. New-map installation backed
+up replaced records and checked for concurrent/newer geometry.
+
+Growth: TownLibrary +4 net lines; two focused Python authoring/acceptance owners
+under 200 lines each, one 100-line cache-repair utility, and generation handling
+in the existing preparer. No bootstrap growth, dependencies, capacities, formats,
+thresholds or exclusions changed. Release and Debug builds pass with 362 assets;
+focused TownLibrary formatting and Python syntax checks pass. Logs use
+artifacts/terrain-quests-v5-* and terrain-existing-road-repair.log. These maps
+reserve encounter spaces but do not add quests, enemies or free-fall water physics.

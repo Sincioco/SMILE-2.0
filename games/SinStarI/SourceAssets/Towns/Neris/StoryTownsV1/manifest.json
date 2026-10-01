@@ -239,5 +239,183 @@
       "Chapter One clinic and relief staging: medical hall, supply stalls and modest homes.",
       "Architecture is draft staging; does not replace accepted character or story canon."
     ]
+  },
+  {
+    "name": "Willowstep Highlands",
+    "file": "Willowstep Highlands.town",
+    "size_m": 384,
+    "items": 169,
+    "trees": 156,
+    "lamps": 13,
+    "houses": 0,
+    "castles": 0,
+    "city_halls": 0,
+    "draw_cost": 663,
+    "local_lights": 17,
+    "water_percent": 2.4,
+    "story_spaces": [
+      "A wooded switchback rises 28 m to three open encounter clearings.",
+      "Flanking hills rise above the trail; a north-to-south stream drains into a low pool.",
+      "Working geographic label; quests and monster spawning are separate gameplay."
+    ],
+    "terrain_height_m": 38.095,
+    "acceptance_paths": [
+      [
+        [
+          -174,
+          144
+        ],
+        [
+          -54,
+          144
+        ],
+        [
+          -54,
+          84
+        ],
+        [
+          -78,
+          24
+        ],
+        [
+          -54,
+          -36
+        ],
+        [
+          -78,
+          -90
+        ],
+        [
+          -54,
+          -144
+        ],
+        [
+          -18,
+          -144
+        ]
+      ],
+      [
+        [
+          -54,
+          144
+        ],
+        [
+          174,
+          144
+        ]
+      ],
+      [
+        [
+          -78,
+          -90
+        ],
+        [
+          -132,
+          -144
+        ],
+        [
+          -132,
+          -45
+        ]
+      ],
+      [
+        [
+          0,
+          0
+        ],
+        [
+          -69,
+          0
+        ]
+      ]
+    ]
+  },
+  {
+    "name": "Silverfall Basin",
+    "file": "Silverfall Basin.town",
+    "size_m": 384,
+    "items": 89,
+    "trees": 69,
+    "lamps": 20,
+    "houses": 0,
+    "castles": 0,
+    "city_halls": 0,
+    "draw_cost": 336,
+    "local_lights": 24,
+    "water_percent": 3.1,
+    "story_spaces": [
+      "Three 14 m terraces form a 42 m climb, with open encounter shelves.",
+      "A broad east-to-west stream descends the terrace slopes into the lower basin.",
+      "Draped cascades, not vertical free-fall water simulation; no enemies are added."
+    ],
+    "terrain_height_m": 42.0,
+    "acceptance_paths": [
+      [
+        [
+          -174,
+          -54
+        ],
+        [
+          -126,
+          -54
+        ],
+        [
+          -90,
+          -84
+        ],
+        [
+          -36,
+          -54
+        ],
+        [
+          0,
+          -84
+        ],
+        [
+          54,
+          -54
+        ],
+        [
+          90,
+          -84
+        ],
+        [
+          144,
+          -54
+        ],
+        [
+          174,
+          -54
+        ]
+      ],
+      [
+        [
+          -144,
+          -54
+        ],
+        [
+          -144,
+          105
+        ],
+        [
+          0,
+          105
+        ],
+        [
+          144,
+          105
+        ]
+      ],
+      [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          -84
+        ]
+      ]
+    ]
   }
 ]

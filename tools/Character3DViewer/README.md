@@ -2,6 +2,11 @@
 
 ## October 2 terrain, ramps and flowing water
 
+**Maps** now includes **Willowstep Highlands** and **Silverfall Basin**, two
+playable terrain landscapes with climbable hill routes, encounter clearings and
+downhill streams. Both are excluded from Demo by default. They use editable
+corner heights and road/water brushes, not prebuilt mountain props.
+
 Open **Edit Town → Terrain**. Raise and Lower drag a circular brush; Radius is in
 metres and Strength is metres per second. Flatten uses the entered elevation
 offset or **Sample Height**. Smooth blends neighbouring corners. **2D Top View**
@@ -154,7 +159,7 @@ The current fourteen saved maps were prepared before installing this update.
 Town tabs accept the mouse wheel while the pointer is over their strip. Map zoom
 uses a larger wheel step while retaining smooth easing. Demo explicitly displays
 **Demo On** or **Demo Off** and can be toggled with the Town Editor open. The
-permanent-map chooser includes all fourteen built-in maps. NPC minimap dots show
+permanent-map chooser includes all sixteen built-in maps. NPC minimap dots show
 people in green and the dog in orange; hovering shows their names.
 
 Save For Viewer, Save As, Save For Blender and Update Permanent Map now prepare

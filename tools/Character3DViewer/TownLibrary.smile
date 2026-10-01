@@ -6,7 +6,7 @@ Option Explicit
 Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownDocumentStore As Storage
 
-Public Const PERMANENT_COUNT = 14
+Public Const PERMANENT_COUNT = 16
 
 Public Function PermanentName(Index As Number) As Text
 
@@ -39,6 +39,10 @@ Public Function PermanentName(Index As Number) As Text
             Return "Ancient Relay"
         Case 13
             Return "Neris Relief Quarter"
+        Case 14
+            Return "Willowstep Highlands"
+        Case 15
+            Return "Silverfall Basin"
     End Select
 
     Return ""
