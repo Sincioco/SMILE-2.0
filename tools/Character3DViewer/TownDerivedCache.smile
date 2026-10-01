@@ -1,0 +1,218 @@
+''' Checked inputs and two-generation commit points for disposable prepared map data.
+Module Smile.Tools.TownDerivedCache
+
+Option Explicit
+
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownDocumentStore As Store
+Import Smile.Tools.TownDecks As Decks
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.SurfacePaint3D As Paint
+
+Private Dim Saved As Document.State
+Private Dim Metadata[4] As Number
+
+Public Function SameSurface(ByRef First As Grid.State, ByRef Second As Grid.State) As Boolean
+
+    Dim Index As Number
+    Dim FirstValue As Paint.Brush
+    Dim SecondValue As Paint.Brush
+
+    If (First.Columns <> Second.Columns Or
+        First.Rows <> Second.Rows Or
+        First.OriginX <> Second.OriginX Or
+        First.OriginZ <> Second.OriginZ Or
+        First.CellSize <> Second.CellSize Or
+        First.Curves.BrushCount <> Second.Curves.BrushCount) Then
+        Return False
+    End If
+
+    For Index = 0 To First.Columns
+
+        If First.XEdges[Index] <> Second.XEdges[Index] Then
+            Return False
+        End If
+
+    End For
+
+    For Index = 0 To First.Rows
+
+        If First.ZEdges[Index] <> Second.ZEdges[Index] Then
+            Return False
+        End If
+
+    End For
+
+    For Index = 0 To (First.Columns * First.Rows + 15) / 16 - 1
+
+        If First.Cells[Index] <> Second.Cells[Index] Then
+            Return False
+        End If
+
+    End For
+
+    For Index = 0 To First.Curves.BrushCount - 1
+
+        FirstValue = First.Curves.Brushes[Index]
+        SecondValue = Second.Curves.Brushes[Index]
+
+        If (FirstValue.Form <> SecondValue.Form Or
+            FirstValue.Surface <> SecondValue.Surface Or
+            FirstValue.X0 <> SecondValue.X0 Or
+            FirstValue.Z0 <> SecondValue.Z0 Or
+            FirstValue.X1 <> SecondValue.X1 Or
+            FirstValue.Z1 <> SecondValue.Z1 Or
+            FirstValue.Width <> SecondValue.Width) Then
+            Return False
+        End If
+
+    End For
+
+    Return True
+
+End Function
+
+Public Function ReadKey(ByRef Town As Document.State, Category As Text,
+    AllItems As Boolean) As Text
+
+    Dim Generation As Number
+    Dim Prefix As Text
+    Dim Key As Text
+    Dim Index As Number
+    Dim FirstValue As Document.Item
+    Dim SecondValue As Document.Item
+    Dim Openings As Decks.State
+
+    Prefix = "TownPrepared." + Category + "." + Town.Name
+    Generation = ReadNumber(Prefix)
+
+    If Generation < 1 Or Generation > 2 Then
+        Return ""
+    End If
+
+    Key = Prefix + "." + Text_From_Code(48 + Generation)
+
+    If Not Store.LoadDocument(Saved, Key + ".Input") Then
+        Return ""
+    End If
+
+    If Not SameSurface(Town.Surface, Saved.Surface) Then
+        Return ""
+    End If
+
+    If AllItems Then
+
+        If Town.ItemCount <> Saved.ItemCount Then
+            Return ""
+        End If
+
+        For Index = 0 To Town.ItemCount - 1
+
+            FirstValue = Town.Items[Index]
+            SecondValue = Saved.Items[Index]
+
+            If (FirstValue.Active <> SecondValue.Active Or
+                FirstValue.Template <> SecondValue.Template Or
+                FirstValue.Yaw <> SecondValue.Yaw Or
+                FirstValue.Position.X <> SecondValue.Position.X Or
+                FirstValue.Position.Y <> SecondValue.Position.Y Or
+                FirstValue.Position.Z <> SecondValue.Position.Z Or
+                FirstValue.Scale.X <> SecondValue.Scale.X Or
+                FirstValue.Scale.Y <> SecondValue.Scale.Y Or
+                FirstValue.Scale.Z <> SecondValue.Scale.Z) Then
+                Return ""
+            End If
+
+        End For
+
+    Else
+
+        Call Decks.Capture(Openings, Saved)
+
+        If Not Decks.Matches(Openings, Town) Then
+            Return ""
+        End If
+
+    End If
+
+    Return Key
+
+End Function
+
+Public Function WriteKey(Name As Text, Category As Text) As Text
+
+    Dim Generation As Number
+    Dim Prefix As Text
+    Dim Result As Text
+
+    Prefix = "TownPrepared." + Category + "." + Name
+    Generation = ReadNumber(Prefix)
+
+    If Generation = 0 Then
+        Generation = 2
+    End If
+
+    Generation = 3 - Max(1, Min(2, Generation))
+    Result = Prefix + "." + Text_From_Code(48 + Generation)
+
+    Return Result
+
+End Function
+
+Public Function Commit(ByRef Town As Document.State, Category As Text, Key As Text) As Boolean
+
+    Dim Generation As Number
+
+    If Not Store.SaveDocument(Town, Key + ".Input", False) Then
+        Return False
+    End If
+
+    Generation = Text_Code_At(Key, Text_Length(Key) - 1) - 48
+    Dim Ok As Boolean
+
+    Ok = WriteNumber(Generation, "TownPrepared." + Category + "." + Town.Name)
+
+    Return Ok
+
+End Function
+
+Public Function ReadNumber(Key As Text) As Number
+
+    Dim Status As Number
+    Dim Length As Number
+    Dim Index As Number
+    Dim Result As Number
+
+    Load Data Key Into Metadata Count Length Status Status
+
+    If Status <> DATA_STATUS_OK Or Length <> 4 Then
+        Return 0
+    End If
+
+    For Index = 0 To 3
+        Result = Result * 256 + Metadata[Index]
+    End For
+
+    Return Result
+
+End Function
+
+Public Function WriteNumber(Value As Number, Key As Text) As Boolean
+
+    Dim Index As Number
+    Dim Status As Number
+    Dim Ok As Boolean
+
+    For Index = 0 To 3
+        Metadata[3 - Index] = Value Mod 256
+        Value = Value / 256
+    End For
+
+    Save Data Metadata Count 4 To Key Status Status
+    Ok = Status = DATA_STATUS_OK
+
+    Return Ok
+
+End Function
+
+End Module

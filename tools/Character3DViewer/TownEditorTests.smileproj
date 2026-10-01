@@ -37,6 +37,7 @@
     <SmileSource Include="TownCatalogData.smile" />
     <SmileSource Include="TownInitialSurface.smile" />
     <SmileSource Include="TownDocumentStore.smile" />
+    <SmileSource Include="TownDerivedCache.smile" />
     <SmileSource Include="TownWorldDocument.smile" />
     <SmileSource Include="TownWorldView.smile" />
     <SmileSource Include="TownWorldPreviews.smile" />

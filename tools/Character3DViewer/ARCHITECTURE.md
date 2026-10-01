@@ -1,5 +1,49 @@
 # Character Viewer Architecture
 
+## October 1: persisted map preparation
+
+TownDerivedCache owns exact input validation and two-generation commit points for
+disposable native prepared data. TownTerrainCache owns bounded, checksummed pages
+of geometry recipes; it owns no GPU resources. TownSurfaceRenderer retains terrain
+generation, staged GPU upload and atomic replacement. TownRoadNetwork persists
+its completed local connection graph and validates the complete surface/placement
+snapshot before adopting it. Editing invalidates affected data; lighting and marker
+changes do not unnecessarily invalidate terrain geometry. Cached recipes preserve
+the authored resolution and use the document's existing millionth-unit precision.
+
+SurfacePaint3D resolves ordered paint from the newest covering brush, retaining the
+underlying water test for bridges. Its region selection eliminates unrelated brushes
+before cell sampling. These reusable surface algorithms remain outside Studio's
+coordinators. No compiler extension, dependency, runtime capacity increase or
+architecture exclusion was introduced. NativeProgram and ViewerWorkflow are unchanged.
+
+Focused native regressions cover saved multi-batch Canal terrain, invalidation after
+painting, ordered region filtering, persisted road reuse and changed-road rejection.
+The normal native Foundations, Routes, Rendering and Session checks pass. An isolated
+fresh-process run of all fourteen current maps read saved terrain successfully and
+performed zero road collision checks. Warm terrain upload/decoding took 9–67 ms and
+road adoption 2–17 ms on this machine; these phase measurements are not full scene
+load times. Full live measurements belong in the task handoff.
+
+Live tab-switch checks in the installed 359-asset Studio measured all thirteen new
+maps at 36–525 ms. The eight reported regressions now read: Spaceport 466, Horizon
+210, Canals 525, Star Lake 307, Crown Isles 362, East Valley 131, Orin 94 and
+Waterworks 138 ms. These are single observed HUD measurements on Sin's machine,
+not a hardware-independent guarantee. The initial original-Neris load after process
+startup measured 2,402 ms; that includes first-use resources and remains distinct
+from these map switches.
+
+Growth review: DerivedCache 218 lines, TerrainCache 229; renderer +90 net lines,
+road-network owner +89, session +8, NerisTown net zero. The new owners do not depend
+on the session, UI, renderer or bootstrap. No no-growth baseline or exclusion was
+changed. The live tab-wheel check found and corrected camera-input leakage when
+the editor was closed; tab/header input now blocks scene zoom in either edit state.
+
+Known remaining boundary: prepared files are native save-directory companions.
+Portable export/import bundles and explicit save-completion gating still need work
+to satisfy the full authoring-time preparation request. Do not advertise `.town`
+exports alone as containing all prepared runtime data.
+
 ## October 1: bounded terrain uploads and failed-map recovery
 
 TownSurfaceRenderer now drains its existing 65,536-patch scratch buffer in blocks

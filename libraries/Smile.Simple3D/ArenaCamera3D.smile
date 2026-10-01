@@ -111,7 +111,7 @@ End Sub
 Public Function UpdatePointer(ByRef Controls As Camera.Controls,
     ByRef Zoom As Camera.ZoomState, Input As PointerInput,
     Optional PanXLimit As Double = 360.0, Optional PanYLimit As Double = 220.0,
-    Optional WorldScale As Double = 1.0) As Boolean
+    Optional WorldScale As Double = 1.0, Optional WheelStep As Number = ZOOM_STEP) As Boolean
 
     Dim OrbitActive As Boolean
     Dim PanActive As Boolean
@@ -132,7 +132,7 @@ Public Function UpdatePointer(ByRef Controls As Camera.Controls,
     Changed = OrbitActive Or PanActive
 
     If Not Input.Blocked And Input.Wheel <> 0 Then
-        Call Camera.AdjustZoomTarget(Zoom, Input.Wheel, ZOOM_STEP)
+        Call Camera.AdjustZoomTarget(Zoom, Input.Wheel, Max(1, WheelStep))
 
         Changed = True
     End If

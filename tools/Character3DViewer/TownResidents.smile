@@ -131,7 +131,9 @@ Public Function Input(ByRef Value As State, Key As Number) As Boolean
 
     If Value.Speaking >= 0 Then
 
-        If Key = KEY_E Or Key = KEY_ENTER Or Key = KEY_ESCAPE Then
+        If (Key = KEY_E Or
+            Key = KEY_ENTER Or
+            Key = KEY_ESCAPE) Then
             Value.Speaking = -1
         End If
 
@@ -200,7 +202,8 @@ Public Sub Update(ByRef Value As State, TownName As Text, Paused As Boolean,
             Distance = M.Distance(Leader, Value.People[Index].Motion.Position)
             Pausing = Distance < 42.0 Or Value.Speaking = Index
 
-            If Distance < Best And Movement.ClearRoad(Leader, Value.People[Index].Motion.Position, False) Then
+            If (Distance < Best And
+                Movement.ClearRoad(Leader, Value.People[Index].Motion.Position, False)) Then
                 Value.Nearest = Index
                 Best = Distance
             End If
@@ -229,7 +232,8 @@ Public Sub Update(ByRef Value As State, TownName As Text, Paused As Boolean,
             Position = Value.People[Index].Motion.Position
 
             If Value.Speaking = Index Then
-                Value.People[Index].Motion.Heading = Atan2(Leader.X - Position.X, Leader.Z - Position.Z) * 180.0 / 3.141592653589793
+                Value.People[Index].Motion.Heading = M.WrapDegrees(M.Degrees(Atan2(Leader.X - Position.X,
+                    Leader.Z - Position.Z)) + 180.0)
             End If
 
             Ok = Character.Update(Value.People[Index].Actor, Elapsed) And Ok

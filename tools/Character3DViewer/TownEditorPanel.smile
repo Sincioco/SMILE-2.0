@@ -4,6 +4,7 @@ Module Smile.Tools.TownEditorPanel
 Option Explicit
 
 Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownLibrary As SavedMaps
 Import Smile.Tools.TownCatalogData As Catalog
 Import Smile.Tools.TownGuides As Guides
 Import Smile.Tools.TownSunControls As Sun
@@ -496,12 +497,12 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State,
         Draw Text "Update Permanent Map" At X, 212 Size 15 Color WHITE
         Draw Text "Use current edits for this startup tab:" At X, 239 Size 12 Color WHITE
 
-        Call Button(Value, 313, X, 264, 283, "Update Neris Town")
-        Call Button(Value, 314, X, 300, 283, "Update Neris Spaceport")
-        Call Button(Value, 315, X, 336, 283, "Update Horizon Airport")
+        For Index = 0 To SavedMaps.PERMANENT_COUNT - 1
+            Call Button(Value, 700 + Index, X, 264 + Index * 29, 283,
+                "Update " + SavedMaps.PermanentName(Index), False, True, 26)
+        End For
 
-        Draw Text "Previous map kept in Open Recovery." At X, 379 Size 12 Color RGB(240, 205, 140)
-        Draw Text "Blender exports stay separate." At X, 399 Size 12 Color WHITE
+        Draw Text "Previous map kept in Open Recovery." At X, 676 Size 12 Color RGB(240, 205, 140)
 
     Else
 

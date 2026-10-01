@@ -57,7 +57,8 @@ Public Function Create(Width As Number, Depth As Number,
 End Function
 
 ''' Host UI blocks only new gestures; an existing drag always receives its release.
-Public Sub Update(ByRef Value As State, Key As Number, Optional Blocked As Boolean = False)
+Public Sub Update(ByRef Value As State, Key As Number, Optional Blocked As Boolean = False,
+    Optional WheelStep As Number = Motion.ZOOM_STEP)
 
     Dim Changed As Boolean
     Dim CurrentTime As Number
@@ -73,7 +74,7 @@ Public Sub Update(ByRef Value As State, Key As Number, Optional Blocked As Boole
     End If
 
     Changed = Motion.UpdatePointer(Value.Controls, Value.Zoom, Motion.ReadPointer(Blocked),
-        Value.PanXLimit, Value.PanYLimit, Value.WorldScale)
+        Value.PanXLimit, Value.PanYLimit, Value.WorldScale, WheelStep)
     CurrentTime = Timer()
 
     Call Motion.Advance(Value.Controls, Value.Zoom, CurrentTime - Value.PreviousTime)

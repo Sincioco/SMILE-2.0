@@ -59,7 +59,34 @@ Private Function Boundary(ByRef Surface As Grid.State, PointA As P.Vector3,
 
         Middle = Blend(PointA, PointB, 0.5)
 
-        If Kind(Surface, Middle, Base) = FirstKind Then
+        If Min(3, Kind(Surface, Middle, Base)) = FirstKind Then
+            PointA = Middle
+        Else
+            PointB = Middle
+        End If
+
+    End For
+
+    Middle = Blend(PointA, PointB, 0.5)
+
+    Return Middle
+
+End Function
+
+''' Find the land/water junction on the already clipped road edge.
+Private Function Junction(ByRef Surface As Grid.State, PointA As P.Vector3,
+    PointB As P.Vector3, RoadPoint As P.Vector3, FirstKind As Number, Base As Number) As P.Vector3
+
+    Dim Index As Number
+    Dim Middle As P.Vector3
+    Dim Outside As P.Vector3
+
+    For Index = 0 To 11
+
+        Middle = Blend(PointA, PointB, 0.5)
+        Outside = Blend(RoadPoint, Middle, 1.002)
+
+        If Min(3, Kind(Surface, Outside, Base)) = FirstKind Then
             PointA = Middle
         Else
             PointB = Middle
@@ -76,7 +103,9 @@ End Function
 Private Sub Face(ByRef Result As Slice, PointA As P.Vector3, PointB As P.Vector3,
     PointC As P.Vector3, Surface As Number)
 
-    If Surface <> 1 And Surface <> 3 And Surface <> 4 Then
+    If (Surface <> 1 And
+        Surface <> 3 And
+        Surface <> 4) Then
         Return
     End If
 
@@ -102,9 +131,9 @@ Public Function Split(ByRef Surface As Grid.State, PointA As P.Vector3,
     Dim Swap As P.Vector3
     Dim SwapKind As Number
 
-    Ka = Kind(Surface, PointA, Base)
-    Kb = Kind(Surface, PointB, Base)
-    Kc = Kind(Surface, PointC, Base)
+    Ka = Min(3, Kind(Surface, PointA, Base))
+    Kb = Min(3, Kind(Surface, PointB, Base))
+    Kc = Min(3, Kind(Surface, PointC, Base))
 
     If Ka = Kb And Ka = Kc Then
         Call Face(Result, PointA, PointB, PointC, Ka)
@@ -112,7 +141,7 @@ Public Function Split(ByRef Surface As Grid.State, PointA As P.Vector3,
         Return Result
     End If
 
-    If Ka = Kb Then
+    If Ka = Kb Or (Ka <> Kb And Ka <> Kc And Kb <> Kc And Kc = 3) Then
 
         Swap = PointA
         PointA = PointC
@@ -122,7 +151,7 @@ Public Function Split(ByRef Surface As Grid.State, PointA As P.Vector3,
         Ka = Kc
         Kc = SwapKind
 
-    Else If Ka = Kc Then
+    Else If Ka = Kc Or (Ka <> Kb And Ka <> Kc And Kb <> Kc And Kb = 3) Then
 
         Swap = PointA
         PointA = PointB
@@ -143,22 +172,42 @@ Public Function Split(ByRef Surface As Grid.State, PointA As P.Vector3,
         Call Face(Result, Ab, PointB, PointC, Kb)
         Call Face(Result, Ab, PointC, Ca, Kb)
 
-        Result.Rail = (Ka = 4 And Kb = 2) Or (Ka = 2 And Kb = 4)
+        Result.Rail = (Ka = 3 And Kb = 2) Or (Ka = 2 And Kb = 3)
         Result.EdgeA = Ab
         Result.EdgeB = Ca
 
     Else
 
         Bc = Boundary(Surface, PointB, PointC, Kb, Base)
-        Center = P.Vector((Ab.X + Bc.X + Ca.X) / 3.0, 0.0,
-            (Ab.Z + Bc.Z + Ca.Z) / 3.0)
 
-        Call Face(Result, PointA, Ab, Center, Ka)
-        Call Face(Result, PointA, Center, Ca, Ka)
+        If Ka = 3 Then
+
+            Center = Junction(Surface, Ab, Ca, PointA, Kb, Base)
+
+            Call Face(Result, PointA, Ab, Ca, Ka)
+
+        Else
+
+            Center = P.Vector((Ab.X + Bc.X + Ca.X) / 3.0, 0.0,
+                (Ab.Z + Bc.Z + Ca.Z) / 3.0)
+
+            Call Face(Result, PointA, Ab, Center, Ka)
+            Call Face(Result, PointA, Center, Ca, Ka)
+
+        End If
+
         Call Face(Result, PointB, Bc, Center, Kb)
         Call Face(Result, PointB, Center, Ab, Kb)
         Call Face(Result, PointC, Ca, Center, Kc)
         Call Face(Result, PointC, Center, Bc, Kc)
+
+        Result.Rail = Ka = 3 And (Kb = 2 Or Kc = 2)
+        Result.EdgeA = Center
+        Result.EdgeB = Ca
+
+        If Kb = 2 Then
+            Result.EdgeB = Ab
+        End If
 
     End If
 

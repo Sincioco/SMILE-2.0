@@ -4,6 +4,7 @@ Module Smile.Tools.TownGatewayJourney
 Option Explicit
 
 Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
 Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownDocumentNavigation As Navigation
 Import Smile.Tools.TownMapLoads As Tiles
@@ -36,7 +37,8 @@ End Sub
 Public Function Resolve(ByRef Value As State, Current As Text, ByRef Destination As Text,
     ByRef Position As P.Vector3) As Boolean
 
-    If (Current <> Value.Gateway Or Destination <> "Neris Town" Or
+    If (Current <> Value.Gateway Or
+        Destination <> "Neris Town" Or
         Text_Length(Value.Origin) = 0) Then
         Return False
     End If
@@ -69,89 +71,145 @@ Public Function ResolveTile(ByRef Value As State, ByRef Town As Document.State,
 
 End Function
 
-''' Place the leader off the matching gate on a connected, unobstructed road cell.
+''' Walk in from the gate, then require a clear marker-free stretch ahead.
+Private Function Approach(ByRef Town As Document.State, Gate As P.Vector3,
+    Direction As P.Vector3, ByRef Position As P.Vector3, ByRef ClearLength As Double) As Boolean
+
+    Dim Step As Number
+    Dim ClearSteps As Number
+    Dim Point As P.Vector3
+
+    For Step = 0 To 80
+
+        Point = M.Add(Gate, M.Scale(Direction, ToDouble(Step) * 10.0))
+
+        If Not Navigation.IsRoad(Point) Then
+            Return False
+        End If
+
+        If Text_Length(Tiles.DestinationAt(Town, Point.X, Point.Z)) = 0 Then
+            ClearSteps = ClearSteps + 1
+        Else
+            ClearSteps = 0
+        End If
+
+        If ClearSteps >= 3 Then
+            Exit For
+        End If
+
+    End For
+
+    If ClearSteps < 3 Then
+        Return False
+    End If
+
+    Position = Point
+    ClearLength = 0.0
+
+    For Step = 1 To 24
+
+        Point = M.Add(Position, M.Scale(Direction, ToDouble(Step) * 10.0))
+
+        If Text_Length(Tiles.DestinationAt(Town, Point.X, Point.Z)) > 0 Then
+            Return False
+        End If
+
+        If Not Navigation.IsRoad(Point) Then
+            Exit For
+        End If
+
+        ClearLength = ToDouble(Step) * 10.0
+    End For
+
+    If ClearLength < 80.0 Then
+        Return False
+    End If
+
+    Return True
+
+End Function
+
+''' Prefer the town-facing side, with enough clear road to start walking inward.
 Public Function Arrival(ByRef Town As Document.State, Origin As Text,
-    ByRef Position As P.Vector3) As Boolean
+    ByRef Position As P.Vector3, ByRef Heading As Double) As Boolean
 
     Dim Index As Number
-    Dim Radius As Number
-    Dim Dx As Number
-    Dim Dz As Number
+    Dim Bearing As Number
     Dim X As Number
     Dim Z As Number
-    Dim Step As Number
     Dim Gate As P.Vector3
+    Dim Center As P.Vector3
+    Dim Inward As P.Vector3
+    Dim Direction As P.Vector3
     Dim Candidate As P.Vector3
-    Dim CanArrive As Boolean
+    Dim ClearLength As Double
+    Dim Score As Double
+    Dim Best As Double
+    Dim Alignment As Double
+    Dim Found As Boolean
 
     If Text_Length(Origin) = 0 Then
         Return False
     End If
 
-    For Radius = 1 To 8
+    Center = P.Vector((Town.Surface.OriginX + Town.Surface.XEdges[Town.Surface.Columns]) * 0.5,
+        0.0, (Town.Surface.OriginZ + Town.Surface.ZEdges[Town.Surface.Rows]) * 0.5)
+    Best = -1.0
 
-        For Index = 0 To Town.MapTileCount - 1
+    For Index = 0 To Town.MapTileCount - 1
 
-            If Town.MapTiles[Index].Destination = Origin Then
+        If Town.MapTiles[Index].Destination = Origin Then
 
-                X = Town.MapTiles[Index].X
-                Z = Town.MapTiles[Index].Z
-                Gate = P.Vector((Town.Surface.XEdges[X] + Town.Surface.XEdges[X + 1]) * 0.5,
-                    0.0, (Town.Surface.ZEdges[Z] + Town.Surface.ZEdges[Z + 1]) * 0.5)
+            X = Town.MapTiles[Index].X
+            Z = Town.MapTiles[Index].Z
+            Gate = P.Vector((Town.Surface.XEdges[X] + Town.Surface.XEdges[X + 1]) * 0.5,
+                0.0, (Town.Surface.ZEdges[Z] + Town.Surface.ZEdges[Z + 1]) * 0.5)
+            Inward = M.Subtract(Center, Gate)
+            Inward = M.Scale(Inward, 1.0 / Max(1.0, M.Length(Inward)))
 
-                For Dz = -Radius To Radius
+            For Bearing = 0 To 7
 
-                    For Dx = -Radius To Radius
+                Direction = P.Vector(Sin(M.Radians(ToDouble(Bearing) * 45.0)), 0.0,
+                    Cos(M.Radians(ToDouble(Bearing) * 45.0)))
+                Alignment = M.Dot(Direction, Inward)
 
-                        X = Town.MapTiles[Index].X + Dx
-                        Z = Town.MapTiles[Index].Z + Dz
+                If Alignment > 0.05 Then
 
-                        If (Max(Abs(Dx), Abs(Dz)) = Radius And X >= 0 And Z >= 0 And
-                            X < Town.Surface.Columns And Z < Town.Surface.Rows) Then
+                    If Approach(Town, Gate, Direction, Candidate, ClearLength) Then
 
-                            Candidate = P.Vector((Town.Surface.XEdges[X] + Town.Surface.XEdges[X + 1]) * 0.5,
-                                0.0, (Town.Surface.ZEdges[Z] + Town.Surface.ZEdges[Z + 1]) * 0.5)
-                            CanArrive = (Grid.ReadCell(Town.Surface, X, Z) >= Grid.SURFACE_ROAD And
-                                Tiles.Find(Town, X, Z) < 0)
+                        Score = Alignment + ClearLength / 240.0
 
-                            For Step = 0 To 8
+                        If Score > Best Then
 
-                                If CanArrive Then
-                                    CanArrive = Navigation.CanStand(Gate.X + (Candidate.X - Gate.X) * ToDouble(Step) / 8.0,
-                                        Gate.Z + (Candidate.Z - Gate.Z) * ToDouble(Step) / 8.0)
-                                End If
-
-                            End For
-
-                            If CanArrive Then
-
-                                Position = Candidate
-                                Position.Y = Navigation.GroundHeight(Position.X, Position.Z)
-                                Return True
-
-                            End If
+                            Best = Score
+                            Position = Candidate
+                            Position.Y = Navigation.GroundHeight(Position.X, Position.Z)
+                            Heading = M.WrapDegrees(ToDouble(Bearing) * 45.0 + 180.0)
+                            Found = True
 
                         End If
 
-                    End For
-                End For
+                    End If
 
-            End If
+                End If
 
-        End For
+            End For
+
+        End If
+
     End For
 
-    Return False
+    Return Found
 
 End Function
 
 Public Function TakeArrival(ByRef Value As State, ByRef Town As Document.State,
-    ByRef Position As P.Vector3) As Boolean
+    ByRef Position As P.Vector3, ByRef Heading As Double) As Boolean
 
     Dim Result As Boolean
 
     If Town.Name = Value.ArrivalTown Then
-        Result = Arrival(Town, Value.ArrivalOrigin, Position)
+        Result = Arrival(Town, Value.ArrivalOrigin, Position, Heading)
     End If
 
     Value.ArrivalOrigin = ""

@@ -86,25 +86,111 @@ Public Function Resolve(ByRef Value As State, X As Double, Z As Double, Base As 
 
     Dim Index As Number
     Dim Surface As Number
+    Dim Road As Boolean
+    Dim Offset As Number
 
-    For Index = 0 To Value.BrushCount - 1
+    ' The last covering brush wins. A road also needs the underlying water flag.
+
+    For Offset = 0 To Value.BrushCount - 1
+
+        Index = Value.BrushCount - Offset - 1
 
         If Contains(Value.Brushes[Index], X, Z) Then
 
             Surface = Value.Brushes[Index].Surface
 
-            If Surface = 3 And (Base = 2 Or Base = 4) Then
-                Surface = 4
-            End If
+            If Surface = 3 Then
 
-            Base = Surface
+                Road = True
+
+            Else
+
+                If Road Then
+
+                    If Surface = 2 Or Surface = 4 Then
+                        Surface = 4
+                    Else
+                        Surface = 3
+                    End If
+
+                End If
+
+                Return Surface
+
+            End If
 
         End If
 
     End For
 
+    If Road Then
+
+        If Base = 2 Or Base = 4 Then
+            Base = 4
+        Else
+            Base = 3
+        End If
+
+    End If
+
     Return Base
 
 End Function
+
+''' Retain ordered brushes that can affect this sampling rectangle.
+Public Sub SelectRegion(ByRef Source As State, ByRef Selected As State,
+    X0 As Double, Z0 As Double, X1 As Double, Z1 As Double)
+
+    Dim Index As Number
+    Dim Value As Brush
+    Dim Radius As Double
+    Dim MinX As Double
+    Dim MaxX As Double
+    Dim Top As Double
+    Dim Bottom As Double
+
+    Selected.BrushCount = 0
+
+    For Index = 0 To Source.BrushCount - 1
+
+        Value = Source.Brushes[Index]
+        Radius = Value.Width * 0.5
+        MinX = Min(Value.X0, Value.X1) - Radius
+        MaxX = Max(Value.X0, Value.X1) + Radius
+        Top = Min(Value.Z0, Value.Z1) - Radius
+        Bottom = Max(Value.Z0, Value.Z1) + Radius
+
+        If Value.Form = FORM_RECTANGLE Then
+
+            MinX = Value.X0
+            MaxX = Value.X1
+            Top = Value.Z0
+            Bottom = Value.Z1
+
+        Else If Value.Form = FORM_CIRCLE Or Value.Form = FORM_RING Then
+
+            If Value.Form = FORM_CIRCLE Then
+                Radius = 0.0
+            End If
+
+            Radius = Radius + Value.X1
+            MinX = Value.X0 - Radius
+            MaxX = Value.X0 + Radius
+            Top = Value.Z0 - Radius
+            Bottom = Value.Z0 + Radius
+
+        End If
+
+        If (MaxX >= X0 And
+            MinX <= X1 And
+            Bottom >= Z0 And
+            Top <= Z1) Then
+            Selected.Brushes[Selected.BrushCount] = Value
+            Selected.BrushCount = Selected.BrushCount + 1
+        End If
+
+    End For
+
+End Sub
 
 End Module

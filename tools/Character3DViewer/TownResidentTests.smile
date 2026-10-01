@@ -19,6 +19,8 @@ Public Function Run() As Number
     Dim People As Residents.State
     Dim Point As P.Vector3
     Dim Initial As P.Vector3
+    Dim Forward As P.Vector3
+    Dim Delta As P.Vector3
     Dim Index As Number
     Dim Failures As Number
     Dim Ok As Boolean
@@ -33,7 +35,24 @@ Public Function Run() As Number
     Call Movement.Start(Errand, Initial, 0)
 
     For Index = 0 To 250
+
+        Point = Errand.Position
+
         Call Movement.Update(Errand, False, 100)
+
+        Delta = M.Subtract(Errand.Position, Point)
+
+        If M.Length(Delta) > 0.001 Then
+
+            Forward = M.Rotate(P.Vector(0.0, 0.0, -1.0), P.Vector(0.0, Errand.Heading, 0.0))
+
+            If M.Dot(Forward, Delta) <= 0.0 Then
+                Print "FAIL Resident Must Face The Direction Of Travel"
+                Failures = Failures + 1
+            End If
+
+        End If
+
     End For
 
     If M.Distance(Errand.Position, Initial) < 10.0 Or Not Navigation.IsRoad(Errand.Position) Then
@@ -68,7 +87,9 @@ Public Function Run() As Number
     People.Speaking = -1
     Ok = Residents.Input(People, KEY_E)
 
-    If Not Ok Or Not Residents.Talking(People) Or Dialogue.Greeting(2) <> "Hi, my name is Ilan." Then
+    If (Not Ok Or
+        Not Residents.Talking(People) Or
+        Dialogue.Greeting(2) <> "Hi, my name is Ilan.") Then
         Print "FAIL Nearest Resident Greeting"
         Failures = Failures + 1
     End If

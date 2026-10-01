@@ -91,7 +91,8 @@ Private Sub Plan(ByRef Value As State)
             Value.Destination = Target
             Value.Moving = True
             Value.Running = Value.Trip Mod 5 = 0
-            Value.Heading = Atan2(Target.X - Value.Position.X, Target.Z - Value.Position.Z) * 180.0 / 3.141592653589793
+            Value.Heading = M.WrapDegrees(M.Degrees(Atan2(Target.X - Value.Position.X,
+                Target.Z - Value.Position.Z)) + 180.0)
             Return
 
         End If

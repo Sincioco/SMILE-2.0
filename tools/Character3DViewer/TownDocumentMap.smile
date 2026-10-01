@@ -12,6 +12,8 @@ Import Smile.Tools.TownEditorPanel As Panel
 Import Smile.Tools.NerisTownMap As Heading
 Import Smile.Tools.TownRoadTravel As Travel
 Import Smile.Tools.TownRoadStops As Stops
+Import Smile.Tools.TownResidents As Residents
+Import Smile.Tools.TownResidentDialogue As Dialogue
 
 Private Dim Cells[64, 64] As Number
 Private Dim Revision As Number
@@ -133,6 +135,64 @@ Public Function Pick(ByRef Town As Document.State, X As Number, Y As Number) As 
     Return Result
 
 End Function
+
+Public Sub DrawResidents(ByRef Value As Residents.State, Opacity As Number)
+
+    Dim Index As Number
+    Dim ColorValue As Number
+
+    If Not Value.Enabled Or Opacity <= 0 Then
+        Return
+    End If
+
+    Draw Text "NPCs" At Window_Width() - 156, 243 Size 11 Color RGB(110, 255, 155)
+
+    For Index = 0 To Value.Loaded - 1
+
+        If Value.People[Index].Ready Then
+
+            ColorValue = RGB(110, 255, 155)
+
+            If Index = 8 Then
+                ColorValue = RGB(255, 181, 80)
+            End If
+
+            Call DrawResident(Value.People[Index].Motion.Position, Dialogue.NameAt(Index), ColorValue, Opacity)
+
+        End If
+
+    End For
+
+End Sub
+
+Private Sub DrawResident(Position As P.Vector3, Name As Text, ColorValue As Number, Opacity As Number)
+
+    Dim X As Number
+    Dim Y As Number
+    Dim LabelX As Number
+
+    If Not Inside(Position) Or Opacity <= 0 Then
+        Return
+    End If
+
+    X = Window_Width() - 276 + ToNumber((Position.X - LowX) * 255.0 / (HighX - LowX))
+    Y = 514 - ToNumber((Position.Z - LowZ) * 255.0 / (HighZ - LowZ))
+
+    Clip Rectangle Window_Width() - 276, 259, 256, 256
+    Fill Circle X, Y, 4, BLACK
+    Fill Circle X, Y, 3, ColorValue
+
+    If Abs(Pointer_X() - X) <= 6 And Abs(Pointer_Y() - Y) <= 6 Then
+
+        LabelX = Min(X + 8, Window_Width() - 80)
+        Fill Rectangle LabelX - 2, Y - 17, 60, 16, RGB(10, 22, 35)
+        Draw Text Name At LabelX, Y - 16 Size 12 Color WHITE
+
+    End If
+
+    End Clip
+
+End Sub
 
 Public Sub DrawDestination(ByRef Town As Document.State, Destination As P.Vector3,
     Active As Boolean, Message As Text, Optional StatusY As Number = 533)

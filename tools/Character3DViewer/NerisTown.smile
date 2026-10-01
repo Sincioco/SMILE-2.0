@@ -40,6 +40,7 @@ Import Smile.Tools.TownWorldPreviews As WorldPreviews
 Import Smile.Tools.TownDocumentNavigation As DocumentNavigation
 Import Smile.Tools.TownRoadTravel As RoadTravel
 Import Smile.Tools.TownResidents As Residents
+Import Smile.Tools.TownDocumentMap As DocumentMap
 
 Public Type State
     Residents As Residents.State
@@ -598,7 +599,7 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
 
     End If
 
-    Call Arena.Update(Value.View, ArenaKey, Blocked)
+    Call Arena.Update(Value.View, ArenaKey, Blocked, 24)
 
 End Sub
 
@@ -1088,9 +1089,7 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
 
         End If
 
-        If Authoring.TakeSpawn(Leader, TabOverview) Then
-
-            ArrivalHeading = Connections.ArrivalHeading(Authoring.TownName(), Leader)
+        If Authoring.TakeSpawn(Leader, TabOverview, ArrivalHeading) Then
 
             Call RoadTravel.Cancel()
             Call Party.Teleport(Value.People, Leader, ArrivalHeading)
@@ -1351,6 +1350,7 @@ Public Sub Overlay(ByRef Value As State)
                         CastleRoute.MapLabel(), P.Vector(CastleRoute.CenterX(), CastleRoute.DECK_Y, CastleRoute.CenterZ()),
                         Landmarks.AirportMapLabel(), Landmarks.AirportMapPosition(),
                         Value.Map.Headlight, Value.People.Members[0].Yaw, MapStatusY)
+                    Call DocumentMap.DrawResidents(Value.Residents, ToNumber(Value.Map.Opacity))
                 End If
 
             Else

@@ -33,6 +33,10 @@ Public Function Run() As Number
     Dim Ok As Boolean
     Dim Failures As Number
     Dim Radius As Double
+    Dim FaceIndex As Number
+    Dim RoadArea As Double
+    Dim Face As Contours.Triangle
+    Dim SelectedCurves As Paint.State
 
     Ok = Document.Blank(Town, "Smooth Circle Regression", 40, 40, 10.0)
 
@@ -120,6 +124,54 @@ Public Function Run() As Number
         "Legacy Tile Owns Its Edge Without Artificial Curve Slivers", Failures)
 
     Call Check(Loaded.TerrainStyle = 3, "Terrain Style Survives Save And Reopen", Failures)
+
+    Ok = Grid.Initialize(Town.Surface, 4, 4, -20.0, -20.0, 10.0, Grid.SURFACE_WATER)
+    Brush.Form = Paint.FORM_RECTANGLE
+    Brush.Surface = Grid.SURFACE_GROUND
+    Brush.X0 = -20.0
+    Brush.X1 = 20.0
+    Brush.Z0 = -20.0
+    Brush.Z1 = 0.0
+    Ok = Grid.PaintBrush(Town.Surface, Brush)
+    Brush.Surface = Grid.SURFACE_ROAD
+    Brush.X0 = 0.0
+    Brush.Z1 = 20.0
+    Ok = Grid.PaintBrush(Town.Surface, Brush)
+    Slice = Contours.Split(Town.Surface, P.Vector(10.0, 0.0, 0.0),
+        P.Vector(-10.0, 0.0, 10.0), P.Vector(-10.0, 0.0, -10.0))
+
+    For FaceIndex = 0 To Slice.FaceCount - 1
+
+        Face = Slice.Faces[FaceIndex]
+
+        If Face.Kind = Grid.SURFACE_ROAD Then
+            RoadArea = RoadArea + Abs((Face.PointB.X - Face.PointA.X) * (Face.PointC.Z - Face.PointA.Z) -
+                (Face.PointB.Z - Face.PointA.Z) * (Face.PointC.X - Face.PointA.X)) * 0.5
+        End If
+
+    End For
+
+    Call Check(Abs(RoadArea - 50.0) < 0.1 And Slice.Rail,
+        "Waterworks Three Surface Join Keeps The Straight Road Edge Without Wedges", Failures)
+
+    Call Paint.SelectRegion(Town.Surface.Curves, SelectedCurves, -1.0, -1.0, 1.0, 1.0)
+    Call Check(Paint.Resolve(SelectedCurves, 0.5, 0.5, Grid.SURFACE_WATER) = Grid.SURFACE_BRIDGE And
+        Paint.Resolve(SelectedCurves, 0.5, -0.5, Grid.SURFACE_WATER) = Grid.SURFACE_ROAD,
+        "Region Filtering Preserves Ordered Road And Underlying Water Painting", Failures)
+
+    Brush.Form = Paint.FORM_CIRCLE
+    Brush.Surface = Grid.SURFACE_GROUND
+    Brush.X0 = 0.0
+    Brush.Z0 = 0.0
+    Brush.X1 = 1.0
+    Ok = Grid.PaintBrush(Town.Surface, Brush)
+
+    Call Paint.SelectRegion(Town.Surface.Curves, SelectedCurves, -1.0, -1.0, 1.0, 1.0)
+    Call Check(Paint.Resolve(SelectedCurves, 0.0, 0.0, Grid.SURFACE_WATER) = Grid.SURFACE_GROUND,
+        "A Later Ground Brush Still Erases Earlier Road Painting", Failures)
+    Call Paint.SelectRegion(Town.Surface.Curves, SelectedCurves, 100.0, 100.0, 101.0, 101.0)
+    Call Check(SelectedCurves.BrushCount = 0,
+        "Distant Brushes Are Excluded From Terrain Sampling", Failures)
 
     Return Failures
 

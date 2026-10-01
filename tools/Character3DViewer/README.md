@@ -1,5 +1,24 @@
 # SMILE 2.0 - Sin Star I - Game Engine and Studio
 
+## October 1 prepared map loading
+
+Terrain mesh recipes and completed road connections now persist beside native map
+saves. Opening an unchanged map reads those results; it does not rescan curved
+terrain or repeat road collision preparation. Exact surface and relevant placement
+checks reject stale results after an edit. Missing or invalid prepared data rebuilds
+incrementally without replacing the currently displayed terrain with a partial mesh.
+The current fourteen saved maps were prepared before installing this update.
+
+Town tabs accept the mouse wheel while the pointer is over their strip. Map zoom
+uses a larger wheel step while retaining smooth easing. Demo explicitly displays
+**Demo On** or **Demo Off** and can be toggled with the Town Editor open. The
+permanent-map chooser includes all fourteen built-in maps. NPC minimap dots show
+people in green and the dog in orange; hovering shows their names.
+
+Portable `.town` preparation bundles and waiting for preparation when saving
+immediately after an edit remain follow-up work. The present prepared files belong
+to the native application's save directory; GPU resources still upload at load.
+
 ## October 1 loading correction
 
 Large curved towns now upload terrain in bounded blocks while retaining the previous
@@ -117,9 +136,11 @@ Road connections prepare automatically after loading or committing map edits,
 including while the Town Editor stays interactive. The Files tab shows **Road
 Preparation** progress. Preparation uses roughly 2 ms work slices, foreground
 search roughly 3 ms, and unfinished work resumes next frame. Movement starts only
-once a connected route is confirmed. The in-memory cache stores local connections,
-not every possible origin/destination pair, and rebuilds after navigation changes
-or relaunch. It does not change `.town` files or add a slow saving step.
+once a connected route is confirmed. The prepared data stores local connections,
+not every possible origin/destination pair. Completed connections persist across
+relaunch and are checked against the map's surface and placements before reuse.
+Relevant edits invalidate them; ordinary route searches still run when the player
+chooses a new destination.
 
 ## Safe native builds and launch
 

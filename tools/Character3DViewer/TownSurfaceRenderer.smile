@@ -12,23 +12,14 @@ Import Smile.Simple3D.Graphics3D As G
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.SurfaceGrid3D As Grid
 Import Smile.Simple3D.SurfaceContours3D As Contours
-
-Private Type Patch
-    X0 As Double
-    Z0 As Double
-    X1 As Double
-    Z1 As Double
-    Kind As Number
-    Y0 As Double
-    Y1 As Double
-    Plane As Number
-    X2 As Double
-    Z2 As Double
-End Type
+Import Smile.Simple3D.SurfacePaint3D As Paint
+Import Smile.Tools.TownTerrainCache As Cache
+Import Smile.Tools.TownDerivedCache As Derived
 
 Private Dim Pending As Grid.State
-Private Dim Patches[65536] As Patch
-Private Dim PatchCount As Number
+Private Dim SourceCurves As Paint.State
+Private Dim Buffer As Cache.Batch
+Private Dim CacheTown As Document.State
 
 Public Type State
     Openings As Decks.State
@@ -51,6 +42,11 @@ Public Type State
     NextWaterCount As Number
     Failed As Boolean
     Time As Number
+    CacheKey As Text
+    CacheRead As Boolean
+    CacheOk As Boolean
+    CacheBatch As Number
+    CacheBatches As Number
 End Type
 
 Public Function Create(ByRef Value As State) As Boolean
@@ -107,8 +103,25 @@ Public Sub BeginBuild(ByRef Value As State, ByRef Town As Document.State)
     Call Decks.Capture(Value.Openings, Town)
 
     Pending = Town.Surface
+    SourceCurves = Town.Surface.Curves
+    CacheTown = Town
+    Value.CacheBatch = 0
+    Value.CacheBatches = 0
+    Value.CacheKey = Derived.ReadKey(Town, "Terrain3", False)
+    Value.CacheRead = Text_Length(Value.CacheKey) > 0
+    Value.CacheOk = True
+
+    If Value.CacheRead Then
+        Value.CacheBatches = Derived.ReadNumber(Value.CacheKey + ".Batches")
+        Value.CacheRead = Value.CacheBatches > 0 And Value.CacheBatches <= 64
+    End If
+
+    If Not Value.CacheRead Then
+        Value.CacheKey = Derived.WriteKey(Town.Name, "Terrain3")
+    End If
+
     Value.PendingStyle = Town.TerrainStyle
-    PatchCount = 0
+    Buffer.PatchCount = 0
     Value.PendingRevision = Town.Surface.Revision
     Value.Row = 0
     Value.Kind = 1
@@ -118,26 +131,66 @@ Public Sub BeginBuild(ByRef Value As State, ByRef Town As Document.State)
     Value.Failed = False
     Value.Stage = 1
 
+    If Value.CacheRead Then
+        Call ReadCachedBatch(Value)
+    End If
+
+End Sub
+
+Private Sub ReadCachedBatch(ByRef Value As State)
+
+    Dim Index As Number
+
+    If Cache.LoadBatch(Buffer, Value.CacheKey, Value.CacheBatch) Then
+
+        Value.CacheBatch = Value.CacheBatch + 1
+        Value.Row = Pending.Rows
+        Value.Stage = 2
+
+    Else
+
+        ' A missing/corrupt derived page never replaces the previous live terrain.
+
+        For Index = 0 To Value.NextCount - 1
+            Call G.DestroyObject3D(Value.NextObjects[Index])
+        End For
+
+        For Index = 0 To Value.NextWaterCount - 1
+            Call G.DestroyRibbonBatch3D(Value.NextWater[Index])
+        End For
+
+        Value.NextCount = 0
+        Value.NextWaterCount = 0
+        Value.CacheRead = False
+        Value.CacheOk = True
+        Value.CacheBatch = 0
+        Value.CacheKey = Derived.WriteKey(CacheTown.Name, "Terrain3")
+        Value.Row = 0
+        Buffer.PatchCount = 0
+        Value.Stage = 1
+
+    End If
+
 End Sub
 
 Private Sub AddPatch(ByRef Value As State, X0 As Double, Z0 As Double,
     X1 As Double, Z1 As Double, Kind As Number, Optional Y0 As Double = 0.0,
     Optional Y1 As Double = 0.0, Optional Plane As Number = 0)
 
-    If PatchCount >= 65536 Then
+    If Buffer.PatchCount >= 65536 Then
         Value.Failed = True
         Return
     End If
 
-    Patches[PatchCount].X0 = X0
-    Patches[PatchCount].Z0 = Z0
-    Patches[PatchCount].X1 = X1
-    Patches[PatchCount].Z1 = Z1
-    Patches[PatchCount].Kind = Kind
-    Patches[PatchCount].Y0 = Y0
-    Patches[PatchCount].Y1 = Y1
-    Patches[PatchCount].Plane = Plane
-    PatchCount = PatchCount + 1
+    Buffer.Patches[Buffer.PatchCount].X0 = X0
+    Buffer.Patches[Buffer.PatchCount].Z0 = Z0
+    Buffer.Patches[Buffer.PatchCount].X1 = X1
+    Buffer.Patches[Buffer.PatchCount].Z1 = Z1
+    Buffer.Patches[Buffer.PatchCount].Kind = Kind
+    Buffer.Patches[Buffer.PatchCount].Y0 = Y0
+    Buffer.Patches[Buffer.PatchCount].Y1 = Y1
+    Buffer.Patches[Buffer.PatchCount].Plane = Plane
+    Buffer.PatchCount = Buffer.PatchCount + 1
 
 End Sub
 
@@ -160,8 +213,8 @@ Private Sub CurveTriangle(ByRef Value As State, PointA As P.Vector3, PointB As P
             Return
         End If
 
-        Patches[PatchCount - 1].X2 = Face.PointC.X
-        Patches[PatchCount - 1].Z2 = Face.PointC.Z
+        Buffer.Patches[Buffer.PatchCount - 1].X2 = Face.PointC.X
+        Buffer.Patches[Buffer.PatchCount - 1].Z2 = Face.PointC.Z
     End For
 
     If Slice.Rail Then
@@ -184,6 +237,11 @@ Private Sub CurveRow(ByRef Value As State)
     Dim Uniform As Boolean
     Dim RunKind As Number
     Dim Base As Number
+    Dim RowCurves As Paint.State
+
+    Call Paint.SelectRegion(SourceCurves, RowCurves, Pending.OriginX - 0.1,
+        Pending.ZEdges[Value.Row] - 0.1, Pending.XEdges[Pending.Columns] + 0.1,
+        Pending.ZEdges[Value.Row + 1] + 0.1)
 
     ' Continuous water sits below the lawn; legacy cell water keeps its authored height.
 
@@ -203,6 +261,10 @@ Private Sub CurveRow(ByRef Value As State)
         PointC = P.Vector(Pending.XEdges[X + 1], 0.0, PointB.Z)
         PointD = P.Vector(PointC.X, 0.0, PointA.Z)
         Center = P.Vector((PointA.X + PointC.X) * 0.5, 0.0, (PointA.Z + PointC.Z) * 0.5)
+
+        Call Paint.SelectRegion(RowCurves, Pending.Curves, PointA.X - 0.1,
+            PointA.Z - 0.1, PointC.X + 0.1, PointC.Z + 0.1)
+
         ' A cell owns its base up to its edge. Do not tessellate a neighboring
         ' legacy tile into thousands of artificial slivers when adding one curve.
         Base = Grid.ReadBase(Pending, X, Value.Row)
@@ -262,6 +324,8 @@ Private Sub CurveRow(ByRef Value As State)
     If First >= 0 Then
         Call AddPatch(Value, Pending.XEdges[First], PointA.Z, PointC.X, PointC.Z, RunKind)
     End If
+
+    Pending.Curves = SourceCurves
 
 End Sub
 
@@ -451,7 +515,7 @@ Private Sub UploadNext(ByRef Value As State)
     Dim Total As Number
     Dim Mesh As Number
     Dim Point As Number
-    Dim Part As Patch
+    Dim Part As Cache.Patch
     Dim Height As Double
     Dim WaterHeight As Double
     Dim Ok As Boolean
@@ -460,11 +524,11 @@ Private Sub UploadNext(ByRef Value As State)
 
     Do
 
-        If StopIndex >= PatchCount Or Total = 2048 Then
+        If StopIndex >= Buffer.PatchCount Or Total = 2048 Then
             Exit Do
         End If
 
-        If Patches[StopIndex].Kind = Value.Kind Then
+        If Buffer.Patches[StopIndex].Kind = Value.Kind Then
             Total = Total + 1
         End If
 
@@ -506,7 +570,7 @@ Private Sub UploadNext(ByRef Value As State)
 
         For Index = Value.Cursor To StopIndex - 1
 
-            Part = Patches[Index]
+            Part = Buffer.Patches[Index]
 
             If Part.Kind = Value.Kind Then
 
@@ -608,7 +672,7 @@ Private Sub UploadNext(ByRef Value As State)
     Value.Failed = Not Ok
     Value.Cursor = StopIndex
 
-    If Value.Cursor >= PatchCount Then
+    If Value.Cursor >= Buffer.PatchCount Then
         Value.Kind = Value.Kind + 1
         Value.Cursor = 0
     End If
@@ -641,11 +705,15 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
             ' Flush a bounded block before the next row can fill the scratch array.
             ' Uploaded objects remain private until every row has finished.
 
-            If (PatchCount >= 32768 Or
+            If (Buffer.PatchCount >= 32768 Or
                 Value.Row >= Pending.Rows Or
                 Value.Failed) Then
+
+                Value.CacheOk = Cache.SaveBatch(Buffer, Value.CacheKey, Value.CacheBatch) And Value.CacheOk
+                Value.CacheBatch = Value.CacheBatch + 1
                 Value.Stage = 2
                 Exit For
+
             End If
 
             If Timer() >= Deadline Then
@@ -660,9 +728,20 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
 
         If Value.Kind > 6 And Not Value.Failed Then
 
+            If Value.CacheRead And Value.CacheBatch < Value.CacheBatches Then
+
+                Value.Kind = 1
+                Value.Cursor = 0
+
+                Call ReadCachedBatch(Value)
+
+                Return
+
+            End If
+
             If Value.Row < Pending.Rows Then
 
-                PatchCount = 0
+                Buffer.PatchCount = 0
                 Value.Kind = 1
                 Value.Cursor = 0
                 Value.Stage = 1
@@ -689,6 +768,17 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
             Value.WaterCount = Value.NextWaterCount
             Value.NextCount = 0
             Value.NextWaterCount = 0
+
+            If Not Value.CacheRead And Value.CacheOk Then
+
+                Ok = Derived.WriteNumber(Value.CacheBatch, Value.CacheKey + ".Batches")
+
+                If Ok Then
+                    Ok = Derived.Commit(CacheTown, "Terrain3", Value.CacheKey)
+                End If
+
+            End If
+
             Value.LiveRevision = Value.PendingRevision
             Value.Stage = 0
 

@@ -104,6 +104,15 @@ Public Function Run() As Number
         Network.CollisionChecks() = ChecksBefore And Abs(Search.RouteLength() - 120.0) < 0.001,
         "Prepared Reverse Route Reuses Collision Checks And Exact Travel Costs")
 
+    Call Network.Prepare(Town)
+    Call Navigation.Rebuild(Town)
+
+    Status = Solve(14, 20)
+
+    Call Check(Network.Progress() = 100 And Network.CollisionChecks() = 0 And
+        Status = 2 And Abs(Search.RouteLength() - 120.0) < 0.001,
+        "Saved Road Connections Reload Without Repeating Collision Preparation")
+
     ' Same name and document revision, different committed surface: cached edges must expire.
 
     Call Grid.PaintRectangle(Town.Surface, 3, 5, 3, 5, Grid.SURFACE_WATER)

@@ -9,6 +9,7 @@ Import Smile.Simple3D.SurfaceGrid3D As Grid
 Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownDocumentNavigation As Navigation
 Import Smile.Tools.TownSurfaceLayers As Layers
+Import Smile.Tools.TownDerivedCache As Derived
 
 Private Dim Surface As Grid.State
 Private Dim Generation As Number
@@ -23,8 +24,15 @@ Private Dim SampleCount As Number
 Private Dim SampleStart As P.Vector3
 Private Dim SampleDelta As P.Vector3
 Private Dim Checks As Number
+Private Dim CacheBytes[786432] As Number
+Private Dim CacheSaved As Boolean
 
 Public Sub Adopt(ByRef Town As Document.State)
+
+    Dim Key As Text
+    Dim Status As Number
+    Dim Length As Number
+    Dim Index As Number
 
     If Generation = Navigation.Version() And Generation > 0 Then
         Return
@@ -35,6 +43,81 @@ Public Sub Adopt(ByRef Town As Document.State)
     WarmCursor = 0
     PendingEdge = -1
     Checks = 0
+    CacheSaved = False
+    Key = Derived.ReadKey(Town, "Roads1", True)
+
+    If Text_Length(Key) > 0 Then
+
+        Load Data Key + ".Connections" Into CacheBytes Count Length Status Status
+
+        If Status = DATA_STATUS_OK And Length = Size() * 3 Then
+
+            For Index = 0 To Length - 1
+
+                If CacheBytes[Index] > 1 Then
+                    Return
+                End If
+
+            End For
+
+            For Index = 0 To Size() - 1
+
+                CellsSeen[Index] = Generation
+                Walkable[Index] = CacheBytes[Index * 3] = 1
+                EdgesSeen[Index * 2] = Generation
+                EdgesSeen[Index * 2 + 1] = Generation
+                EdgesOpen[Index * 2] = CacheBytes[Index * 3 + 1] = 1
+                EdgesOpen[Index * 2 + 1] = CacheBytes[Index * 3 + 2] = 1
+            End For
+
+            WarmCursor = Size() * 2
+            CacheSaved = True
+
+        End If
+
+    End If
+
+End Sub
+
+Private Sub SavePrepared(ByRef Town As Document.State)
+
+    Dim Index As Number
+    Dim Key As Text
+    Dim Status As Number
+    Dim Ok As Boolean
+
+    If CacheSaved Then
+        Return
+    End If
+
+    For Index = 0 To Size() - 1
+
+        CacheBytes[Index * 3] = 0
+        CacheBytes[Index * 3 + 1] = 0
+        CacheBytes[Index * 3 + 2] = 0
+
+        If CellsSeen[Index] = Generation And Walkable[Index] Then
+            CacheBytes[Index * 3] = 1
+        End If
+
+        If EdgesSeen[Index * 2] = Generation And EdgesOpen[Index * 2] Then
+            CacheBytes[Index * 3 + 1] = 1
+        End If
+
+        If EdgesSeen[Index * 2 + 1] = Generation And EdgesOpen[Index * 2 + 1] Then
+            CacheBytes[Index * 3 + 2] = 1
+        End If
+
+    End For
+
+    Key = Derived.WriteKey(Town.Name, "Roads1")
+    Save Data CacheBytes Count Size() * 3 To Key + ".Connections" Status Status
+
+    If Status = DATA_STATUS_OK Then
+        Ok = Derived.Commit(Town, "Roads1", Key)
+    End If
+
+    CacheSaved = Ok
 
 End Sub
 
@@ -208,7 +291,13 @@ Public Sub Prepare(ByRef Town As Document.State, Optional Budget As Number = 2)
 
     For Work = 0 To 4095
 
-        If WarmCursor >= Size() * 2 Or Timer() >= Deadline Then
+        If WarmCursor >= Size() * 2 Then
+            Call SavePrepared(Town)
+
+            Return
+        End If
+
+        If Timer() >= Deadline Then
             Return
         End If
 

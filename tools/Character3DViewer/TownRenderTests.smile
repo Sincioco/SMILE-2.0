@@ -343,6 +343,28 @@ Loop Until Ground.Stage = 0 Or Ground.Failed Or Frames >= 1500
 
 Call Check(Not Ground.Failed And Ground.Stage = 0 And Ground.ObjectCount > 32,
     "Canal Terrain Streams Beyond One Scratch Buffer Within Existing Object Limits")
+
+Before = Ground.ObjectCount
+
+Call Terrain.BeginBuild(Ground, CanalTown)
+Call Check(Ground.CacheRead, "Saved Canal Mesh Recipe Skips Surface Scanning")
+
+Frames = 0
+
+Do
+
+    Call Terrain.Update(Ground, 16)
+
+    Frames = Frames + 1
+
+Loop Until Ground.Stage = 0 Or Ground.Failed Or Frames >= 1500
+
+Call Check(Not Ground.Failed And Ground.Stage = 0 And Ground.ObjectCount = Before,
+    "Saved Multi Batch Canal Terrain Reloads Completely")
+
+Call Grid.PaintRectangle(CanalTown.Surface, 0, 0, 0, 0, Grid.SURFACE_ROAD)
+Call Terrain.BeginBuild(Ground, CanalTown)
+Call Check(Not Ground.CacheRead, "Terrain Edit Rejects The Previous Saved Mesh Recipe")
 Call Attachments.Destroy(Doors)
 Call Terrain.Destroy(Ground)
 

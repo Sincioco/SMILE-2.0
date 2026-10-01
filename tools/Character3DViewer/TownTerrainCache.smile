@@ -1,0 +1,229 @@
+''' Bounded portable mesh recipes. GPU resources stay in TownSurfaceRenderer.
+Module Smile.Tools.TownTerrainCache
+
+Option Explicit
+
+Import Smile.Tools.TownDerivedCache As Derived
+
+Public Type Patch
+    X0 As Double
+    Z0 As Double
+    X1 As Double
+    Z1 As Double
+    Kind As Number
+    Y0 As Double
+    Y1 As Double
+    Plane As Number
+    X2 As Double
+    Z2 As Double
+End Type
+
+Public Type Batch
+    Patches[65536] As Patch
+    PatchCount As Number
+End Type
+
+Private Dim Bytes[524288] As Number
+Private Dim Offset As Number
+Private Dim Length As Number
+Private Dim Valid As Boolean
+
+Private Sub Write(Value As Number)
+
+    Dim Encoded As Number
+    Dim Digit As Number
+
+    Encoded = Value * 2
+
+    If Value < 0 Then
+        Encoded = -Value * 2 - 1
+    End If
+
+    Do
+        Digit = Encoded Mod 128
+        Encoded = Encoded / 128
+
+        If Encoded > 0 Then
+            Digit = Digit + 128
+        End If
+
+        If Offset >= 524288 Then
+            Valid = False
+            Return
+        End If
+
+        Bytes[Offset] = Digit
+        Offset = Offset + 1
+
+    Loop Until Encoded = 0
+
+End Sub
+
+Private Function Read() As Number
+
+    Dim Encoded As Number
+    Dim Factor As Number
+    Dim Digit As Number
+    Dim Index As Number
+    Dim Result As Number
+
+    Factor = 1
+
+    For Index = 0 To 7
+
+        If Offset >= Length Then
+            Valid = False
+            Return 0
+        End If
+
+        Digit = Bytes[Offset]
+        Offset = Offset + 1
+        Encoded = Encoded + (Digit Mod 128) * Factor
+
+        If Digit < 128 Then
+
+            Result = Encoded / 2
+
+            If Encoded Mod 2 > 0 Then
+                Result = -Result - 1
+            End If
+
+            Return Result
+
+        End If
+
+        Factor = Factor * 128
+    End For
+
+    Valid = False
+
+    Return 0
+
+End Function
+
+Public Function SaveBatch(ByRef Value As Batch, Key As Text, BatchIndex As Number) As Boolean
+
+    Dim Page As Number
+    Dim First As Number
+    Dim Finish As Number
+    Dim Index As Number
+    Dim Status As Number
+    Dim Prefix As Text
+    Dim Part As Patch
+
+    Prefix = Key + ".Batch" + Text_From_Double(ToDouble(BatchIndex))
+
+    For Page = 0 To (Value.PatchCount + 4095) / 4096 - 1
+
+        Offset = 0
+        Valid = True
+        First = Page * 4096
+        Finish = Min(Value.PatchCount, First + 4096)
+
+        Call Write(Finish - First)
+
+        For Index = First To Finish - 1
+
+            Part = Value.Patches[Index]
+
+            Call Write(ToNumber(Round(Part.X0 * 1000000.0)))
+            Call Write(ToNumber(Round(Part.Z0 * 1000000.0)))
+            Call Write(ToNumber(Round(Part.X1 * 1000000.0)))
+            Call Write(ToNumber(Round(Part.Z1 * 1000000.0)))
+            Call Write(ToNumber(Round(Part.Y0 * 1000000.0)))
+            Call Write(ToNumber(Round(Part.Y1 * 1000000.0)))
+            Call Write(ToNumber(Round(Part.X2 * 1000000.0)))
+            Call Write(ToNumber(Round(Part.Z2 * 1000000.0)))
+            Call Write(Part.Kind)
+            Call Write(Part.Plane)
+        End For
+
+        If Not Valid Then
+            Return False
+        End If
+
+        Save Data Bytes Count Offset To Prefix + "." + Text_From_Double(ToDouble(Page)) Status Status
+
+        If Status <> DATA_STATUS_OK Then
+            Return False
+        End If
+
+    End For
+
+    Valid = Derived.WriteNumber(Value.PatchCount + 1, Prefix + ".Count")
+
+    Return Valid
+
+End Function
+
+Public Function LoadBatch(ByRef Value As Batch, Key As Text, BatchIndex As Number) As Boolean
+
+    Dim Page As Number
+    Dim First As Number
+    Dim Finish As Number
+    Dim Index As Number
+    Dim ItemCount As Number
+    Dim Status As Number
+    Dim Prefix As Text
+    Dim Part As Patch
+
+    Prefix = Key + ".Batch" + Text_From_Double(ToDouble(BatchIndex))
+    ItemCount = Derived.ReadNumber(Prefix + ".Count") - 1
+
+    If ItemCount < 0 Or ItemCount > 65536 Then
+        Return False
+    End If
+
+    For Page = 0 To (ItemCount + 4095) / 4096 - 1
+
+        Load Data Prefix + "." + Text_From_Double(ToDouble(Page)) Into Bytes Count Length Status Status
+
+        If Status <> DATA_STATUS_OK Then
+            Return False
+        End If
+
+        Offset = 0
+        Valid = True
+        First = Page * 4096
+        Finish = Min(ItemCount, First + 4096)
+
+        If Read() <> Finish - First Then
+            Return False
+        End If
+
+        For Index = First To Finish - 1
+
+            Part.X0 = ToDouble(Read()) / 1000000.0
+            Part.Z0 = ToDouble(Read()) / 1000000.0
+            Part.X1 = ToDouble(Read()) / 1000000.0
+            Part.Z1 = ToDouble(Read()) / 1000000.0
+            Part.Y0 = ToDouble(Read()) / 1000000.0
+            Part.Y1 = ToDouble(Read()) / 1000000.0
+            Part.X2 = ToDouble(Read()) / 1000000.0
+            Part.Z2 = ToDouble(Read()) / 1000000.0
+            Part.Kind = Read()
+            Part.Plane = Read()
+
+            If (Part.Kind < 1 Or
+                Part.Kind > 6 Or
+                Part.Plane < 0 Or
+                Part.Plane > 4) Then
+                Valid = False
+            End If
+
+            Value.Patches[Index] = Part
+        End For
+
+        If Not Valid Or Offset <> Length Then
+            Return False
+        End If
+
+    End For
+
+    Value.PatchCount = ItemCount
+
+    Return True
+
+End Function
+
+End Module

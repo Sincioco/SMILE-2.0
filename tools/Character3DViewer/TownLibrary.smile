@@ -6,17 +6,62 @@ Option Explicit
 Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownDocumentStore As Storage
 
+Public Const PERMANENT_COUNT = 14
+
+Public Function PermanentName(Index As Number) As Text
+
+    Select Case Index
+        Case 0
+            Return "Neris Town"
+        Case 1
+            Return "Neris Spaceport"
+        Case 2
+            Return "Horizon Airport"
+        Case 3
+            Return "Neris Canals"
+        Case 4
+            Return "Neris Star Lake"
+        Case 5
+            Return "Neris Crown Isles"
+        Case 6
+            Return "East Valley"
+        Case 7
+            Return "Orin's Village"
+        Case 8
+            Return "Neris Waterworks"
+        Case 9
+            Return "Verdant Reach"
+        Case 10
+            Return "Greyglass Pass"
+        Case 11
+            Return "Sunglass Expanse"
+        Case 12
+            Return "Ancient Relay"
+        Case 13
+            Return "Neris Relief Quarter"
+    End Select
+
+    Return ""
+
+End Function
+
 Public Function PermanentKey(Name As Text) As Text
 
     Dim Key As Text
+    Dim Index As Number
 
     If Name = "Neris Town" Then
         Return "TownEditor.PermanentNeris"
     End If
 
-    If Name = "Neris Spaceport" Or Name = "Horizon Airport" Then
-        Key = "TownEditor.Permanent." + Name
-    End If
+    For Index = 1 To PERMANENT_COUNT - 1
+
+        If Name = PermanentName(Index) Then
+            Key = "TownEditor.Permanent." + Name
+            Exit For
+        End If
+
+    End For
 
     Return Key
 

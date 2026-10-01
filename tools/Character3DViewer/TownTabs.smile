@@ -26,6 +26,7 @@ End Type
 Public Sub Ensure(ByRef Value As State, ByRef Town As Document.State)
 
     Dim Ok As Boolean
+    Dim Index As Number
 
     If Value.TabCount = 0 Then
 
@@ -37,17 +38,15 @@ Public Sub Ensure(ByRef Value As State, ByRef Town As Document.State)
             Return
         End If
 
-        Ok = Library.RecoverNamed(Value.Documents[1], "Neris Spaceport")
+        For Index = 1 To Library.PERMANENT_COUNT - 1
 
-        If Ok Then
-            Value.TabCount = 2
-        End If
+            Ok = Library.RecoverNamed(Value.Documents[Value.TabCount], Library.PermanentName(Index))
 
-        Ok = Library.RecoverNamed(Value.Documents[Value.TabCount], "Horizon Airport")
+            If Ok Then
+                Value.TabCount = Value.TabCount + 1
+            End If
 
-        If Ok Then
-            Value.TabCount = Value.TabCount + 1
-        End If
+        End For
 
     End If
 
@@ -64,7 +63,7 @@ Public Function UpdatePermanent(ByRef Value As State, ByRef Town As Document.Sta
     Dim Ok As Boolean
 
     If Text_Length(Library.PermanentKey(Name)) = 0 Then
-        Value.Message = "Choose one of the three permanent maps."
+        Value.Message = "Choose a permanent Luma map."
         Return False
     End If
 
@@ -344,6 +343,11 @@ Public Function Input(ByRef Value As State, ByRef Town As Document.State, Option
     Visible = VisibleCount(Value)
     Width = Min(180, Max(1, Window_Width() - 630) / Visible)
 
+    If Pointer_X() >= 10 And Pointer_X() < 62 + Visible * Width Then
+        Value.First = Max(0, Min(Value.TabCount - Visible,
+            Value.First - Pointer_Wheel_Delta()))
+    End If
+
     If Pointer_Pressed(POINTER_PRIMARY) Then
 
         If Pointer_X() >= 10 + Visible * Width And Pointer_X() < 62 + Visible * Width Then
@@ -359,7 +363,8 @@ Public Function Input(ByRef Value As State, ByRef Town As Document.State, Option
 
     Index = Value.First + (Pointer_X() - 10) / Width
 
-    If (Pointer_X() >= 10 And Pointer_X() < 10 + Visible * Width And
+    If (Pointer_X() >= 10 And
+        Pointer_X() < 10 + Visible * Width And
         (Pointer_Pressed(POINTER_PRIMARY) Or Pointer_Pressed(POINTER_SECONDARY))) Then
         Changed = SelectTab(Value, Town, Index, Pointer_Pressed(POINTER_SECONDARY))
     End If

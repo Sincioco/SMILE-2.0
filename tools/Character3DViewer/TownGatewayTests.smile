@@ -21,6 +21,7 @@ Public Function Run() As Number
     Dim Failures As Number
     Dim Index As Number
     Dim Clicked As P.Vector3
+    Dim Heading As Double
 
     Ok = Document.Blank(Town, "Destination", 12, 12, 30.0)
 
@@ -33,16 +34,18 @@ Public Function Run() As Number
     Call Navigation.Rebuild(Town)
     Call Journey.Remember(Trip, "Origin", "Destination", P.Vector(900.0, 0.0, 900.0))
 
-    Ok = Journey.TakeArrival(Trip, Town, Position)
+    Ok = Journey.TakeArrival(Trip, Town, Position, Heading)
 
-    If (Not Ok Or Not Navigation.CanStand(Position.X, Position.Z) Or
+    If (Not Ok Or
+        Not Navigation.CanStand(Position.X, Position.Z) Or
         Text_Length(Tiles.DestinationAt(Town, Position.X, Position.Z)) > 0 Or
-        Abs(Position.X - (Town.Surface.XEdges[2] + 15.0)) > 31.0) Then
+        Position.X <= Town.Surface.XEdges[3] Or
+        Heading <> 270.0) Then
         Print "FAIL Reciprocal Gateway Arrival"
         Failures = Failures + 1
     End If
 
-    Ok = Journey.TakeArrival(Trip, Town, Position)
+    Ok = Journey.TakeArrival(Trip, Town, Position, Heading)
 
     If Ok Then
         Print "FAIL Gateway Arrival Must Be Consumed Once"
@@ -53,7 +56,7 @@ Public Function Run() As Number
     Call Grid.PaintRectangle(Town.Surface, 3, 6, 3, 6, Grid.SURFACE_WATER)
     Call Navigation.Rebuild(Town)
 
-    Ok = Journey.Arrival(Town, "Origin", Position)
+    Ok = Journey.Arrival(Town, "Origin", Position, Heading)
 
     If Ok Then
         Print "FAIL Gateway Arrival Cannot Jump Across Water"

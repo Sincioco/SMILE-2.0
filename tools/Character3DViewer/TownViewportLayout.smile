@@ -36,6 +36,8 @@ Public Function Width(Index As Number) As Number
 
     If Index = 1 Then
         Result = 38
+    Else If Index = 6 Then
+        Result = Text_Width("Demo Off", 11) + 20
     End If
 
     Return Result
@@ -86,7 +88,21 @@ End Function
 
 Public Sub DrawButton(Index As Number, Selected As Boolean)
 
-    Call UI.DrawButton(ButtonLeft(Index), Window_Height() - 38, Width(Index), 26, Label(Index), Selected)
+    Dim Caption As Text
+
+    Caption = Label(Index)
+
+    If Index = 6 Then
+
+        Caption = "Demo Off"
+
+        If Selected Then
+            Caption = "Demo On"
+        End If
+
+    End If
+
+    Call UI.DrawButton(ButtonLeft(Index), Window_Height() - 38, Width(Index), 26, Caption, Selected)
 
 End Sub
 

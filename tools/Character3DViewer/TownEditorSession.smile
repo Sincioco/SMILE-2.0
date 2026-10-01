@@ -223,7 +223,8 @@ Public Function CameraBlocked(Optional CameraControl As Boolean = False) As Bool
     Dim Result As Boolean
 
     Result = (OpenTabs.Menu.Visible Or OpenTabs.Menu.Consumed Or Files.BlocksEditing(Transfers) Or World.Active() Or Controls.Ui.SunSlider.DragOwner > 0 Or
-        (Controls.Enabled And (Panel.Hovered() Or GuideList.Hovered(Controls.GuideBrowser) Or (Pointer_Y() < 126 And Not CameraControl) Or
+        (Pointer_Y() < 126 And Not CameraControl) Or
+        (Controls.Enabled And (Panel.Hovered() Or GuideList.Hovered(Controls.GuideBrowser) Or
         (Not CameraControl And ((Editor.CapturesMap(Controls) And Not Key_Held(KEY_SHIFT) And
         Pointer_Held(POINTER_PRIMARY)) Or GestureActive())))))
 
@@ -235,8 +236,10 @@ Public Function LoadNext() As Boolean
 
     Dim Ok As Boolean
 
-    If (Ready And AppliedRevision = Town.Revision And
-        Ground.LiveRevision = Town.Surface.Revision And Not Assets.Failed) Then
+    If (Ready And
+        AppliedRevision = Town.Revision And
+        Ground.LiveRevision = Town.Surface.Revision And
+        Not Assets.Failed) Then
         Return True
     End If
 
@@ -507,15 +510,9 @@ Private Sub FileCommand(Action As Number)
 
         Controls.Ui.Section = 5
 
-    Else If Action >= 313 And Action <= 315 Then
+    Else If Action >= 700 And Action < 700 + Library.PERMANENT_COUNT Then
 
-        Name = "Neris Town"
-
-        If Action = 314 Then
-            Name = "Neris Spaceport"
-        Else If Action = 315 Then
-            Name = "Horizon Airport"
-        End If
+        Name = Library.PermanentName(Action - 700)
 
         If Not Panel.ConfirmPermanent(Town.Name, Name) Then
             Controls.Ui.Message = "Permanent update canceled; both maps retained."
@@ -655,7 +652,9 @@ Public Sub Input(View As P.Camera3D, Key As Number, Blocked As Boolean)
         Name = World.Input(Key, OpenTabs)
         Controls.Ui.Message = World.LastMessage()
 
-        If Name = "" And Ready And Ground.LiveRevision = Town.Surface.Revision Then
+        If (Name = "" And
+            Ready And
+            Ground.LiveRevision = Town.Surface.Revision) Then
             Name = World.PreviewRequest(Town.Name)
         End If
 
@@ -696,7 +695,7 @@ Public Sub Input(View As P.Camera3D, Key As Number, Blocked As Boolean)
 
     End If
 
-    If Not Controls.Enabled And Toolbar.Clicked(6) Then
+    If Toolbar.Clicked(6) Then
 
         Call Demo.Toggle(Showcase)
 
@@ -801,6 +800,7 @@ Public Sub Input(View As P.Camera3D, Key As Number, Blocked As Boolean)
 
     Else If (Action >= 300 And
         Action <= 315 Or
+        (Action >= 700 And Action < 700 + Library.PERMANENT_COUNT) Or
         (Action >= 500 And Action < 510)) Then
 
         Call FileCommand(Action)
@@ -1068,7 +1068,8 @@ Public Sub Overlay(View As P.Camera3D, Optional Loading As Boolean = False)
 
 End Sub
 
-Public Function TakeSpawn(ByRef Position As P.Vector3, ByRef Overview As Boolean) As Boolean
+Public Function TakeSpawn(ByRef Position As P.Vector3, ByRef Overview As Boolean,
+    ByRef Heading As Double) As Boolean
 
     Dim X As Number
     Dim Z As Number
@@ -1082,13 +1083,14 @@ Public Function TakeSpawn(ByRef Position As P.Vector3, ByRef Overview As Boolean
     Overview = TabOverviewPending
     TabOverviewPending = False
 
-    Found = Journey.TakeArrival(GatewayJourney, Town, Position)
+    Found = Journey.TakeArrival(GatewayJourney, Town, Position, Heading)
 
     If TravelPending Then
 
         Position = TravelArrival
         TravelPending = False
         Position.Y = Navigation.GroundHeight(Position.X, Position.Z)
+        Heading = Connections.ArrivalHeading(Town.Name, Position)
         Return True
 
     End If
@@ -1098,8 +1100,11 @@ Public Function TakeSpawn(ByRef Position As P.Vector3, ByRef Overview As Boolean
     End If
 
     If Town.Name = "Neris Spaceport" Or Town.Name = "Horizon Airport" Then
+
         Position = Connections.Arrival(Town.Name)
+        Heading = Connections.ArrivalHeading(Town.Name, Position)
         Return True
+
     End If
 
     Position = P.Vector(0.0, 23.12, 0.0)
@@ -1140,6 +1145,7 @@ Public Function TakeSpawn(ByRef Position As P.Vector3, ByRef Overview As Boolean
     End If
 
     Position.Y = Navigation.GroundHeight(Position.X, Position.Z)
+    Heading = Connections.ArrivalHeading(Town.Name, Position)
 
     Return True
 
@@ -1262,8 +1268,10 @@ Public Function BeginWorldPhotograph() As Boolean
 
     Dim Result As Boolean
 
-    If (Ready And AppliedRevision = Town.Revision And
-        Ground.LiveRevision = Town.Surface.Revision And Not Controls.Ui.Busy) Then
+    If (Ready And
+        AppliedRevision = Town.Revision And
+        Ground.LiveRevision = Town.Surface.Revision And
+        Not Controls.Ui.Busy) Then
         Result = Previews.Begin(Town)
     End If
 

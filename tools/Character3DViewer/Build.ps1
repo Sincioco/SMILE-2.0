@@ -121,6 +121,8 @@ $nativeBattleSources = @(
     'TownDocumentNavigation.smile',
     'TownCatalogRenderer.smile',
     'TownSurfaceRenderer.smile',
+    'TownTerrainCache.smile',
+    'TownDerivedCache.smile',
     'TownTerrainStyles.smile',
     'TownLighting.smile',
     'TownAttachments.smile',
