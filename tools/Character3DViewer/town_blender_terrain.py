@@ -11,7 +11,7 @@ def read_prepared(read):
         return int.from_bytes(data, 'big')
 
     version = number('.PreparedVersion')
-    if version not in (3, 4):
+    if version not in (3, 4, 5):
         raise ValueError('Unsupported terrain recipe; save the map in the current Studio first.')
     batches = number('.Terrain.Batches')
     if not 1 <= batches <= 256:

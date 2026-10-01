@@ -143,12 +143,17 @@ Dim Town As Document.State''') + CHECKS
     calls = []
     for record in json.loads(args.manifest.read_text()):
         calls += [f'Call Verify("{args.maps.resolve()/record["file"]}")', 'Call CheckTerrain()']
-        summit = (-132, -45) if record['name'] == 'Willowstep Highlands' else (144, -54)
+        summit = record.get('acceptance_goal', (-132, -45) if record['name'] == 'Willowstep Highlands' else (144, -54))
         x, z = summit
-        calls += [f'Call CheckJourney(0.0, 0.0, {x*10}.0, {z*10}.0)',
-                  f'Call CheckJourney({x*10}.0, {z*10}.0, 0.0, 0.0)']
+        sx,sz = record.get('acceptance_spawn', (0,0))
+        calls += [f'Call CheckJourney({sx*10:.6f}, {sz*10:.6f}, {x*10:.6f}, {z*10:.6f})',
+                  f'Call CheckJourney({x*10:.6f}, {z*10:.6f}, {sx*10:.6f}, {sz*10:.6f})']
+        for x,z in record.get('acceptance_gates', []):
+            calls.append(f'Call CheckJourney({sx*10:.6f}, {sz*10:.6f}, {x*10:.6f}, {z*10:.6f})')
         for route in record['acceptance_paths']:
             for (x0, z0), (x1, z1) in zip(route, route[1:]):
-                calls.append(f'Call CheckSegment({x0*10}.0, {z0*10}.0, {x1*10}.0, {z1*10}.0)')
-                calls.append(f'Call CheckJourney({x0*10}.0, {z0*10}.0, {x1*10}.0, {z1*10}.0)')
+                calls.append(f'Call CheckSegment({x0*10:.6f}, {z0*10:.6f}, {x1*10:.6f}, {z1*10:.6f})')
+            x0,z0 = route[0]
+            x1,z1 = route[-1]
+            calls.append(f'Call CheckJourney({x0*10:.6f}, {z0*10:.6f}, {x1*10:.6f}, {z1*10:.6f})')
     prepare_maps.run_native('QuestTerrainRoutes', calls, args.work.resolve())

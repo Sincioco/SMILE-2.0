@@ -41,6 +41,7 @@ Public Function Run() As Number
     Dim BaseY As Double
     Dim RoadCount As Number
     Dim GroundCount As Number
+    Dim CurbArea As Double
 
     Ok = Grid.Initialize(Town.Surface, 1, 1, 0.0, 0.0, 1.0, Grid.SURFACE_GROUND)
     Snapshot = Town.Surface
@@ -88,11 +89,11 @@ Public Function Run() As Number
     Town.Surface = Snapshot
     Brush.Form = Paint.FORM_LINE
     Brush.Surface = Grid.SURFACE_ROAD
-    Brush.X0 = 0.5
-    Brush.Z0 = 0.0
-    Brush.X1 = 0.5
-    Brush.Z1 = 1.0
-    Brush.Width = 0.45
+    Brush.X0 = 1.0
+    Brush.Z0 = -1.0
+    Brush.X1 = 1.0
+    Brush.Z1 = 2.0
+    Brush.Width = 1.0
     Ok = Grid.PaintBrush(Town.Surface, Brush)
 
     Call Builder.Begin(Recipe, Town)
@@ -103,6 +104,20 @@ Public Function Run() As Number
     For Index = 0 To Recipe.Buffer.PatchCount - 1
 
         Part = Recipe.Buffer.Patches[Index]
+        ' The clipped road is raised above grass. Its interior boundary
+        ' must contain vertical faces, otherwise a low camera sees the backdrop.
+
+        If (Part.Kind = Grid.SURFACE_ROAD And
+            Part.X0 > 0.001 And
+            Part.X0 < 0.999 And
+            Abs(Part.X0 - Part.X1) < 0.001 And
+            Abs(Part.X0 - Part.X2) < 0.001 And
+            Abs((Part.X1 - Part.X0) * (Part.Z2 - Part.Z0) -
+                (Part.X2 - Part.X0) * (Part.Z1 - Part.Z0)) < 0.000000000001) Then
+            CurbArea = CurbArea + Abs((Part.Z1 - Part.Z0) * (Part.Y2 - Part.Y0) -
+                (Part.Z2 - Part.Z0) * (Part.Y1 - Part.Y0)) * 0.5
+        End If
+
         BaseY = Layers.GROUND_Y
 
         If Part.Kind = Grid.SURFACE_ROAD Then
@@ -126,6 +141,8 @@ Public Function Run() As Number
     End For
 
     Call Check(RoadCount > 0 And GroundCount > 0, "Road And Ground Both Conform", Failures)
+    Call Check(Abs(CurbArea - (Layers.ROAD_Y - Layers.GROUND_Y)) < 0.000001,
+        "Raised Road Boundaries Are Sealed To Ground", Failures)
 
     Town.Name = "Terrain Round Trip"
     Town.Revision = 4

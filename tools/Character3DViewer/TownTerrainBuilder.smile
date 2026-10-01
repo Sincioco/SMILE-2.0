@@ -77,6 +77,69 @@ Private Sub TrianglePatch(ByRef Value As State, PointA As P.Vector3,
 
 End Sub
 
+''' A clipped ground edge may be only part of a road edge at a three-material junction.
+Private Function ContainsEdge(First As P.Vector3, Last As P.Vector3,
+    PointA As P.Vector3, PointB As P.Vector3) As Boolean
+
+    Dim Delta As P.Vector3
+    Dim LengthSquared As Double
+    Dim AlongA As Double
+    Dim AlongB As Double
+    Dim Result As Boolean
+
+    Delta = P.Vector(Last.X - First.X, 0.0, Last.Z - First.Z)
+    LengthSquared = Delta.X * Delta.X + Delta.Z * Delta.Z
+
+    If LengthSquared <= 0.000000000001 Then
+        Return False
+    End If
+
+    AlongA = (PointA.X - First.X) * Delta.X + (PointA.Z - First.Z) * Delta.Z
+    AlongB = (PointB.X - First.X) * Delta.X + (PointB.Z - First.Z) * Delta.Z
+    Result = (AlongA >= -0.000001 And AlongA <= LengthSquared + 0.000001 And
+        AlongB >= -0.000001 And AlongB <= LengthSquared + 0.000001 And
+        Abs((PointA.X - First.X) * Delta.Z - (PointA.Z - First.Z) * Delta.X) <= 0.000001 And
+        Abs((PointB.X - First.X) * Delta.Z - (PointB.Z - First.Z) * Delta.X) <= 0.000001)
+
+    Return Result
+
+End Function
+
+''' Join the actual clipped faces, not an analytic midpoint that can miss a curved chord.
+Private Sub SealRoadEdge(ByRef Value As State, ByRef Slice As Contours.Slice,
+    PointA As P.Vector3, PointB As P.Vector3)
+
+    Dim Index As Number
+    Dim Face As Contours.Triangle
+    Dim TopA As P.Vector3
+    Dim TopB As P.Vector3
+
+    For Index = 0 To Slice.FaceCount - 1
+
+        Face = Slice.Faces[Index]
+
+        If Face.Kind = Grid.SURFACE_ROAD Then
+
+            If (ContainsEdge(Face.PointA, Face.PointB, PointA, PointB) Or
+                ContainsEdge(Face.PointB, Face.PointC, PointA, PointB) Or
+                ContainsEdge(Face.PointC, Face.PointA, PointA, PointB)) Then
+
+                TopA = P.Vector(PointA.X, PointA.Y + Layers.ROAD_Y - Layers.GROUND_Y, PointA.Z)
+                TopB = P.Vector(PointB.X, PointB.Y + Layers.ROAD_Y - Layers.GROUND_Y, PointB.Z)
+
+                Call TrianglePatch(Value, PointA, TopA, TopB, Grid.SURFACE_ROAD)
+                Call TrianglePatch(Value, PointA, TopB, PointB, Grid.SURFACE_ROAD)
+
+                Return
+
+            End If
+
+        End If
+
+    End For
+
+End Sub
+
 ''' Seal exposed displaced edges; neighboring terrain triangles share their exact vertices.
 Private Sub ElevatedEdge(ByRef Value As State, PointA As P.Vector3,
     PointB As P.Vector3, Kind As Number)
@@ -202,6 +265,14 @@ Private Sub CurveTriangle(ByRef Value As State, PointA As P.Vector3, PointB As P
                 Call ElevatedEdge(Value, Face.PointA, Face.PointB, Face.Kind)
                 Call ElevatedEdge(Value, Face.PointB, Face.PointC, Face.Kind)
                 Call ElevatedEdge(Value, Face.PointC, Face.PointA, Face.Kind)
+
+                If Face.Kind = Grid.SURFACE_GROUND Then
+
+                    Call SealRoadEdge(Value, Slice, Face.PointA, Face.PointB)
+                    Call SealRoadEdge(Value, Slice, Face.PointB, Face.PointC)
+                    Call SealRoadEdge(Value, Slice, Face.PointC, Face.PointA)
+
+                End If
 
             End If
 

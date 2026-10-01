@@ -1,5 +1,32 @@
 # Character Viewer Architecture
 
+## October 2 wilderness refinement ownership
+
+`TownTerrainBuilder` now closes actual clipped ground/road boundaries with
+vertical faces, including split edges at material junctions. Ground and roads
+remain at their established levels. `TownElevationTests` measures the exposed
+curb area; the test failed before the fix and passes afterward. No shared runtime
+or shader changed. `TownSurfaceRenderer` disables directed-water crest foam and
+uses a less saturated blue-green tint with subtle existing normal animation.
+
+Terrain recipes use the `Terrain5` namespace and prepared bundle version 5,
+so pre-fix cached geometry is rebuilt. Binary recipes and TWN11 authored format
+are unchanged. Old terrain Blender export remains explicitly rejected.
+
+Authoring helpers own broad quadratic trail turns and exact prop grounding.
+Five wilderness maps use those turns; town streets are unchanged. Existing atlas
+triggers are retained. The selective installer preserves user lighting and
+terrain-style changes and rejects unrelated layout differences. Greyglass's ramp
+shoulder was widened after a four-metre corridor test failed. Five prepared maps
+now pass native round trips, sampled corridors, complete journeys, and routes
+from spawn to retained travel triggers. Native overview acceptance follows.
+
+Evidence: artifacts/terrain-refinement-native-tests.log (four native groups),
+terrain-refinement-prepare-v9.log, terrain-refinement-routes-v9.log,
+road-seams-before.log / road-seams-after.log, terrain-water-natural-native.png.
+Water remains draped downhill geometry, not vertical free-fall simulation.
+No architecture limits or capacities were raised.
+
 ## October 2 terrain ownership and acceptance
 
 `TownDocument.Surface` owns immutable shared-corner elevations and authored water

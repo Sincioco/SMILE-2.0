@@ -20,6 +20,19 @@ DAY = [255, 237, 214, 260, 38, 207.0, 54.0, 1, 65]
 NIGHT = [135, 170, 255, 18, 14, 215.0, 32.0, 0, 45]
 
 
+def terrain_offset(doc, x, z):
+    """Authoring counterpart of the native 00-to-11 triangular ground sampler."""
+    col = max(0, min(doc['columns']-1, bisect.bisect_right(doc['xs'], x)-1))
+    row = max(0, min(doc['rows']-1, bisect.bisect_right(doc['zs'], z)-1))
+    u = (x-doc['xs'][col])/(doc['xs'][col+1]-doc['xs'][col])
+    v = (z-doc['zs'][row])/(doc['zs'][row+1]-doc['zs'][row])
+    first = row*(doc['columns']+1)+col
+    h00, h10 = doc['heights'][first:first+2]
+    h01, h11 = doc['heights'][first+doc['columns']+1:first+doc['columns']+3]
+    return h00 + ((h11-h01)*u+(h01-h00)*v if v >= u else
+                  (h10-h00)*u+(h11-h10)*v)
+
+
 class Town:
     def __init__(self, name, size=720, step=3, smooth=False):
         self.name, self.size, self.step = name, size, step
@@ -33,6 +46,8 @@ class Town:
         self.night_preset = NIGHT.copy()
         self.symmetric = True
         self.destinations = ('Neris Spaceport', 'Horizon Airport')
+        self.height = None
+        self.wilderness = False
 
     def brush(self, form, kind, x0, z0, x1, z1, width=0):
         if self.smooth:
@@ -74,6 +89,8 @@ class Town:
         self.shape(8,points,width,kind)
 
     def path(self, points, width=12):
+        if self.wilderness and len(points) > 2:
+            return self.trail(points, width)
         for (x0, z0), (x1, z1) in zip(points, points[1:]):
             self.brush(4, ROAD, x0, z0, x1, z1, width)
             dx, dz = x1-x0, z1-z0
@@ -81,6 +98,26 @@ class Town:
                 t = max(0, min(1, ((x-x0)*dx+(z-z0)*dz)/(dx*dx+dz*dz)))
                 return (x-x0-t*dx)**2 + (z-z0-t*dz)**2 <= (width/2)**2
             self.paint(hit, ROAD)
+        return points
+
+    def trail(self, points, width):
+        """Broad editable Bezier turns, with a sampled centreline for native route checks."""
+        result = [points[0]]
+        for first, corner, last in zip(points, points[1:], points[2:]):
+            before, after = math.dist(first, corner), math.dist(corner, last)
+            trim = min(max(24, width*2.5), before*.35, after*.35)
+            entry = tuple(b+(a-b)*trim/before for a,b in zip(first, corner))
+            exit = tuple(b+(c-b)*trim/after for b,c in zip(corner, last))
+            self.path([result[-1], entry], width)
+            self.curve([entry, corner, exit], width, ROAD)
+            result.append(entry)
+            for step in range(1, 9):
+                t = step/8
+                result.append(tuple((1-t)**2*a+2*t*(1-t)*b+t*t*c
+                                    for a,b,c in zip(entry, corner, exit)))
+        self.path([result[-1], points[-1]], width)
+        result.append(points[-1])
+        return result
 
     def place(self, template, x, z, scale=1, yaw=0):
         self.items.append(dict(identity=len(self.items)+1, template=template, source=-1,
@@ -148,6 +185,12 @@ class Town:
                 if b[0] in (7, 8):
                     b[7] += ox*10
                     b[8] += oz*10
+        if self.height is not None:
+            doc['heights'] = [round(self.height(x/10, z/10)*1000)/100
+                              for z in doc['zs'] for x in doc['xs']]
+            doc['items'] = [dict(item, position=[item['position'][0],
+                23 + terrain_offset(doc, item['position'][0], item['position'][2]),
+                item['position'][2]]) for item in doc['items']]
         return doc
 
     def save(self, folder):

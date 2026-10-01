@@ -25,15 +25,57 @@ def distance(x,z,points):
     return best
 
 
+def smooth(value):
+    value = max(0, min(1, value))
+    return value*value*(3-2*value)
+
+
+def forest_height(x, z):
+    height = sum(peak*smooth(1-math.hypot((x-cx)/rx, (z-cz)/rz))
+                 for cx, cz, rx, rz, peak in
+                 [(-225, 170, 150, 135, 32), (145, 190, 170, 155, 38),
+                  (-25, -25, 185, 145, 19), (260, -245, 135, 110, 24)])
+    # Both lake basins meet level water; the forest slopes roll up from their shores.
+    for cx, cz, radius in [(-110, -155, 61), (185, -175, 48)]:
+        height *= smooth((math.hypot(x-cx, z-cz)-radius)/55)
+    # Keep the existing hut's footprint level, with a gentle surrounding transition.
+    height *= smooth((math.hypot(x+105, z-121)-18)/35)
+    return height
+
+
+MOUNTAIN_RAMPS = [([(-140, -100), (-140, 110), (-185, 220)], 54),
+                  ([(115, -90), (185, -165), (205, -265)], 38)]
+
+
+def mountain_height(x, z):
+    hills = [(-185, 220, 122, 108, 54), (205, -265, 106, 91, 38),
+             (235, 235, 128, 105, 68), (-285, -260, 95, 110, 31)]
+    height = max(peak*smooth((1-math.hypot((x-cx)/rx, (z-cz)/rz))/.55)
+                 for cx, cz, rx, rz, peak in hills)
+    # Carve broad, steady-grade approaches into the mountain field. Each ends
+    # inside a genuinely flat summit; the native validator checks a 4 m corridor.
+    for points, peak in MOUNTAIN_RAMPS:
+        lengths = [math.dist(a,b) for a,b in zip(points, points[1:])]
+        total, travelled = sum(lengths), 0
+        best = (1e9, 0)
+        for ((ax,az),(bx,bz)), length in zip(zip(points, points[1:]), lengths):
+            t = max(0, min(1, ((x-ax)*(bx-ax)+(z-az)*(bz-az))/length**2))
+            d = math.hypot(x-ax-t*(bx-ax), z-az-t*(bz-az))
+            if d < best[0]:
+                best = (d, peak*(travelled+t*length)/total)
+            travelled += length
+        blend = 1-smooth((best[0]-11)/40)
+        height += (best[1]-height)*blend
+    return height
+
+
 def forest():
     t=base('Verdant Reach')
+    t.wilderness=True
     path=[(-348,0),(-260,0),(-175,75),(-80,75),(0,-30),(100,-30),(190,80),(270,0),(348,0)]
-    t.path(path,16)
-    # Three connected battle clearings have open sight lines; the route winds between them.
-    for x,z in ((-175,75),(0,-30),(190,80)):
-        t.disk(x,z,38,ROAD)
-    t.disk(-110,-155,45,WATER)
-    t.disk(185,-175,32,WATER)
+    path=t.path(path,16)
+    t.curve([(-136,-159),(-93,-188),(-97,-139)],52,WATER)
+    t.curve([(169,-187),(206,-187),(195,-157)],34,WATER)
     rng=random.Random(1811)
     for row in range(23):
         for col in range(23):
@@ -47,42 +89,48 @@ def forest():
     t.place(5,-105,121,1.4,180)
     t.lamps([(-242,26),(-193,116),(-10,8),(212,115)],1.7)
     t.gates(destinations=('Neris Waterworks','Greyglass Pass'))
+    t.height=forest_height
+    t.acceptance_paths=[path,[(0,0),(0,-30)]]
+    t.path(t.acceptance_paths[-1],12)
     t.notes=['A wooded journey from the waterworks toward the eastern settlements.',
-             'Three clearings reserved for encounters; monster spawning is separate gameplay.']
+             'Rolling hills and two smooth, irregular lake basins; the winding trail remains walkable.']
     return t
 
 
 def mountains():
     t=base('Greyglass Pass',800,2)
+    t.wilderness=True
     path=[(-388,0),(-300,0),(-240,-100),(-140,-100),(-75,55),(30,55),(115,-90),(225,-90),(300,0),(388,0)]
-    t.path(path,18)
-    for x,z in ((-185,-100),(0,55),(220,-90)):
-        t.disk(x,z,31,ROAD)
-    rng=random.Random(2480)
-    for x in range(-320,321,80):
-        for z in (-285,-200,200,285):
-            t.place(35,x+rng.uniform(-12,12),z,rng.uniform(1.8,2.7),rng.uniform(0,360))
-    for x,z in ((-330,115),(-195,25),(-35,-105),(135,100),(305,-125)):
-        t.place(35,x,z,1.15,60)
+    path=t.path(path,18)
+    # Four different terrain masses replace the repeated wall of identical props.
+    for x,z,scale,yaw in [(-325,190,.65,20),(-265,285,.8,120),(-35,250,.55,210),
+                           (305,155,.9,65),(300,-270,.6,175),(-275,-285,.75,285)]:
+        t.place(35,x,z,scale,yaw)
+    ramps=[t.path(points,12) for points,_ in MOUNTAIN_RAMPS]
     for x,z in ((-290,45),(-120,-155),(30,110),(240,-145),(320,45)):
         t.grove(x,z,2,2,11,2.5)
     t.place(38,40,137,.7,40)
     t.place(5,-240,-150,1.25,180)
     t.lamps([(-305,22),(-190,-74),(2,85),(221,-58),(320,25)],1.5)
     t.gates(destinations=('Verdant Reach','East Valley'))
+    t.height=mountain_height
+    t.acceptance_paths=[path]+ramps+[[(0,0),(0,55)]]
+    t.path(t.acceptance_paths[-1],12)
     t.notes=['Rocky switchback route linking the forest to East Valley.',
-             'Mountains are solid scenery; walking paths remain level and collision tested.']
+             'Varied terrain mountains include flat 54 m and 38 m summits reached by broad ramps.']
     return t
 
 
 def desert():
     t=base('Sunglass Expanse',720,3)
+    t.wilderness=True
     path=[(-348,0),(-260,0),(-175,-95),(-40,-95),(80,-90),(190,50),(270,0),(348,0)]
-    t.path(path,17)
+    path=t.path(path,17)
+    t.acceptance_paths=[path]
     t.disk(0,30,40,WATER)
     t.ring(0,30,65,15)
     t.path([(-40,-95),(-40,-30)],15)
-    for x,z in ((-260,210),(-80,265),(170,260),(275,195),(-250,-245),(5,-265),(250,-220)):
+    for x,z in ((-260,210),(-80,265),(170,260),(275,195),(-250,-245),(5,-260),(250,-220)):
         t.place(37,x,z,1.4,(x+z)%360)
     for x,z in ((-305,130),(155,-200),(300,120),(-85,-185)):
         t.place(36,x,z,1.1,(x-z)%360)

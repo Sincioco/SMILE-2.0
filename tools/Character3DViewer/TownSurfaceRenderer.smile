@@ -114,8 +114,8 @@ Public Sub BeginBuild(ByRef Value As State, ByRef Town As Document.State)
         If Index < Value.Recipe.Flows.GroupCount Then
 
             Value.NextFlowMaterials[Index] = G.CreateEffectMaterial3D(EmptyTexture, G.MATERIAL_ALPHA_BLEND, 100)
-            Ok = G.SetEffectMaterial3D(Value.NextFlowMaterials[Index], G.MATERIAL_ALPHA_BLEND, 30, 100, 240, 100, 100) And Ok
-            Ok = G.SetEffectMaterialWater3D(Value.NextFlowMaterials[Index], True, 45, 65, 0, 25) And Ok
+            Ok = G.SetEffectMaterial3D(Value.NextFlowMaterials[Index], G.MATERIAL_ALPHA_BLEND, 30, 100, 140, 100, 100) And Ok
+            Ok = G.SetEffectMaterialWater3D(Value.NextFlowMaterials[Index], True, 30, 0, 0, 12) And Ok
             Ok = G.SetEffectMaterialWaterFlow3D(Value.NextFlowMaterials[Index], True,
                 ToNumber(Value.Recipe.Flows.Direction[Index].X * 1000.0),
                 ToNumber(Value.Recipe.Flows.Direction[Index].Z * 1000.0), Value.Recipe.Flows.Speed[Index]) And Ok
@@ -127,7 +127,7 @@ Public Sub BeginBuild(ByRef Value As State, ByRef Town As Document.State)
     CacheTown = Town
     Value.CacheBatch = 0
     Value.CacheBatches = 0
-    Value.CacheKey = Derived.ReadKey(Town, "Terrain4", False)
+    Value.CacheKey = Derived.ReadKey(Town, "Terrain5", False)
     Value.CacheRead = Text_Length(Value.CacheKey) > 0
     Value.CacheOk = True
 
@@ -137,7 +137,7 @@ Public Sub BeginBuild(ByRef Value As State, ByRef Town As Document.State)
     End If
 
     If Not Value.CacheRead Then
-        Value.CacheKey = Derived.WriteKey(Town.Name, "Terrain4")
+        Value.CacheKey = Derived.WriteKey(Town.Name, "Terrain5")
     End If
 
     Value.PendingStyle = Town.TerrainStyle
@@ -185,7 +185,7 @@ Private Sub ReadCachedBatch(ByRef Value As State)
         Value.CacheRead = False
         Value.CacheOk = True
         Value.CacheBatch = 0
-        Value.CacheKey = Derived.WriteKey(CacheTown.Name, "Terrain4")
+        Value.CacheKey = Derived.WriteKey(CacheTown.Name, "Terrain5")
         Value.Recipe.Row = 0
         Value.Recipe.Buffer.PatchCount = 0
         Value.Stage = 1
@@ -451,11 +451,11 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
     For Index = 0 To 2
 
         If Value.FlowMaterials[Index].Handle <> 0 Then
-            Ok = G.SetEffectMaterialWater3D(Value.FlowMaterials[Index], True, 45, 65, Value.Time, 25) And Ok
+            Ok = G.SetEffectMaterialWater3D(Value.FlowMaterials[Index], True, 30, 0, Value.Time, 12) And Ok
         End If
 
         If Value.NextFlowMaterials[Index].Handle <> 0 Then
-            Ok = G.SetEffectMaterialWater3D(Value.NextFlowMaterials[Index], True, 45, 65, Value.Time, 25) And Ok
+            Ok = G.SetEffectMaterialWater3D(Value.NextFlowMaterials[Index], True, 30, 0, Value.Time, 12) And Ok
         End If
 
     End For
@@ -555,7 +555,7 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
                 Ok = Derived.WriteNumber(Value.CacheBatch, Value.CacheKey + ".Batches")
 
                 If Ok Then
-                    Ok = Derived.Commit(CacheTown, "Terrain4", Value.CacheKey)
+                    Ok = Derived.Commit(CacheTown, "Terrain5", Value.CacheKey)
                 End If
 
             End If

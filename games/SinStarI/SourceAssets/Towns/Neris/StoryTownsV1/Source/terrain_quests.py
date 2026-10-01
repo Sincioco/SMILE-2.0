@@ -1,4 +1,4 @@
-"""Two editable terrain journey maps; no existing town or live save is overwritten.
+"""Editable wilderness maps; no existing town or live save is overwritten.
 
 Coordinates are metres. Heights are authored corner samples, not another runtime
 sampler. Every prop is on a grid corner; native acceptance checks its final height.
@@ -10,9 +10,9 @@ import json
 import math
 from pathlib import Path
 import random
-from town_design import Town, CATALOG, GROUND, WATER, ROAD, atomic_write, encode, decode, unwrap
-from town_access import outline, surface
-from journey_layouts import distance
+from town_design import Town, CATALOG, GROUND, WATER, ROAD, atomic_write, encode, decode, unwrap, terrain_offset
+from town_access import outline, surface, prepare
+from journey_layouts import distance, forest, mountains, desert
 
 
 def smooth(value):
@@ -29,7 +29,8 @@ def highlands_height(x, z):
 
 def basin_height(x, z):
     # Three broad 14 m terraces; each transition remains below 30 degrees.
-    return sum(14 * smooth((x - start) / 54) for start in (-132, -42, 48))
+    height = sum(14 * smooth((x - start) / 54) for start in (-132, -42, 48))
+    return height * smooth((math.hypot(x+126, z-24)-44)/30)
 
 
 def start(name, style):
@@ -37,6 +38,7 @@ def start(name, style):
     town.symmetric = False
     town.night = False
     town.terrain_style = style
+    town.wilderness = True
     town.rect(-192, -192, 192, 192)
     return town
 
@@ -64,7 +66,11 @@ def decorate(town, height, paths, clearings, seed, wooded=True):
                 town.items.pop()
     # Mark the clear routes without covering the playable clearings.
     for path in paths:
+        previous = path[0]
         for x, z in path[1:-1]:
+            if math.dist(previous, (x,z)) < 45:
+                continue
+            previous = (x,z)
             for dx in (-9, 9):
                 town.place(15, x+dx, z+12, 1.6)
                 if any(surface(document, px*10, pz*10) != GROUND
@@ -87,13 +93,10 @@ def highlands():
     clearings = [(-54, 84), (-54, -36), (-54, -144), (-132, -45)]
     flow = stream(town, (36, -150), (36, 138))
     town.disk(36, 150, 24, WATER)
-    town.path(route, 7)
-    town.path(exit_route, 8)
-    town.path(summit_route, 7)
-    town.path(spawn_route, 7)
-    town.disk(0, 0, 12, ROAD)
-    for x, z in clearings:
-        town.disk(x, z, 15, ROAD)
+    route = town.path(route, 7)
+    exit_route = town.path(exit_route, 8)
+    summit_route = town.path(summit_route, 7)
+    spawn_route = town.path(spawn_route, 7)
     town.gates(144, ('Neris Relief Quarter', 'Silverfall Basin'), join_x=156, width=8)
     paths = [route, exit_route, summit_route, spawn_route]
     decorate(town, highlands_height, paths, clearings + [(0, 0)], 5127)
@@ -104,25 +107,22 @@ def highlands():
 
 
 def basin():
-    town = start('Silverfall Basin', 2)
+    town = start('Silverfall Basin', 0)
     route = [(-174, -54), (-126, -54), (-90, -84), (-36, -54),
              (0, -84), (54, -54), (90, -84), (144, -54), (174, -54)]
-    side_route = [(-144, -54), (-144, 105), (0, 105), (144, 105)]
+    side_route = [(-174, -54), (-174, 105), (0, 105), (144, 105)]
     spawn_route = [(0, 0), (0, -84)]
     clearings = [(-90, -84), (0, -84), (90, -84)]
-    flow = stream(town, (150, 24), (-150, 24), 9)
-    town.disk(-159, 24, 18, WATER)
-    town.path(route, 8)
-    town.path(side_route, 7)
-    town.path(spawn_route, 7)
-    town.disk(0, 0, 12, ROAD)
-    for x, z in clearings:
-        town.disk(x, z, 17, ROAD)
+    flow = stream(town, (150, 24), (-102, 24), 24)
+    town.disk(-126, 24, 42, WATER)
     town.gates(-54, ('Willowstep Highlands', 'Greyglass Pass'), join_x=156, width=8)
+    route = town.path(route, 8)
+    side_route = town.path(side_route, 7)
+    spawn_route = town.path(spawn_route, 7)
     paths = [route, side_route, spawn_route]
-    decorate(town, basin_height, paths, clearings + [(0, 0)], 6103, False)
+    decorate(town, basin_height, paths, clearings + [(0, 0)], 6103, True)
     town.notes = ['Three 14 m terraces form a 42 m climb, with open encounter shelves.',
-                  'A broad east-to-west stream descends the terrace slopes into the lower basin.',
+                  'A 24 m stream descends grassy terraces into an 84 m lake, surrounded by woodland.',
                   'Draped cascades, not vertical free-fall water simulation; no enemies are added.']
     return town, basin_height, flow, paths
 
@@ -130,28 +130,45 @@ def basin():
 def save(design, folder):
     town, height, flow, paths = design
     doc = town.document()
+    existing = Path(__file__).resolve().parent.parent / 'Towns' / (town.name + '.town')
+    if existing.exists():
+        previous = decode(unwrap(existing.read_bytes()), CATALOG)
+        assert previous['xs'] == doc['xs'] and previous['zs'] == doc['zs']
+        # The atlas owns destinations; a landscape refresh must retain its links.
+        doc['map_tiles'] = previous['map_tiles']
     doc['heights'] = [round(height(x/10, z/10)*1000)/100
                       for z in doc['zs'] for x in doc['xs']]
     doc['flows'] = [[0, 0, 0] for _ in doc['curves']]
-    doc['flows'][flow] = [1, 1, 100]
+    if flow is not None:
+        doc['flows'][flow] = [1, 1, 100]
+    for item in doc['items']:
+        item['position'][1] = 23 + terrain_offset(doc, item['position'][0], item['position'][2])
+    doc['items'] = [item for item in doc['items'] if item['template'] not in (18, 19) or
+                    all(surface(doc, x*10, z*10) == GROUND for x, z in outline(item))]
+    town.items = doc['items']
     payload = encode(doc, CATALOG)
     path = folder / (town.name + '.town')
     if path.exists():
         raise ValueError('Output already exists; choose a new folder: ' + str(path))
     atomic_write(path, payload)
     restored = decode(unwrap(path.read_bytes()), CATALOG)
-    assert restored['heights'] == doc['heights'] and restored['flows'] == doc['flows']
+    assert restored.get('heights', [0]*len(doc['heights'])) == doc['heights']
+    assert restored.get('flows', [[0,0,0] for _ in doc['curves']]) == doc['flows']
     for item in doc['items']:
-        assert all(surface(doc, x*10, z*10) == GROUND for x, z in outline(item))
+        assert all(surface(doc, x*10, z*10) not in (0, WATER) for x, z in outline(item)), (town.name, item['template'], item['position'])
     count = Counter(item['template'] for item in doc['items'])
     cost = sum(len(CATALOG['templates'][item['template']]['parts']) for item in doc['items'])
     assert len(town.items) < 1024 and cost < 3500 and count[15] + 4 <= 128
-    record = dict(name=town.name, file=path.name, size_m=384, items=len(town.items),
-        trees=count[18]+count[19], lamps=count[15], houses=0, castles=0, city_halls=0,
+    record = dict(name=town.name, file=path.name, size_m=(doc['xs'][-1]-doc['xs'][0])/10, items=len(town.items),
+        trees=count[18]+count[19], lamps=count[15], houses=sum(count[i] for i in range(6)), castles=0, city_halls=0,
         draw_cost=cost, local_lights=count[15]+4,
         water_percent=round(100*sum(c in (2, 4) for c in doc['cells'])/len(doc['cells']), 1),
         story_spaces=town.notes, terrain_height_m=max(doc['heights'])/10,
-        acceptance_paths=paths)
+        acceptance_paths=paths, acceptance_goal=paths[0][-1],
+        acceptance_gates=[[(doc['xs'][t['x']]+doc['xs'][t['x']+1])/20,
+                           (doc['zs'][t['z']]+doc['zs'][t['z']+1])/20]
+                          for t in doc['map_tiles']],
+        acceptance_spawn=(-40,-95) if town.name == 'Sunglass Expanse' else (0,0))
     print(town.name, len(payload), 'authored bytes;', record['trees'], 'trees;',
           record['lamps'], 'lamps;', record['terrain_height_m'], 'm high', flush=True)
     return record
@@ -162,5 +179,10 @@ if __name__ == '__main__':
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
-    records = [save(factory(), args.output) for factory in (highlands, basin)]
+    designs = [highlands(), basin()]
+    for factory in (forest, mountains, desert):
+        town = factory()
+        prepare(town)
+        designs.append((town, town.height or (lambda x,z: 0), None, town.acceptance_paths))
+    records = [save(design, args.output) for design in designs]
     (args.output/'terrain-manifest.json').write_text(json.dumps(records, indent=2)+'\n')

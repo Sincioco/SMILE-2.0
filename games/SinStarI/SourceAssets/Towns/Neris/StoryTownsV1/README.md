@@ -254,3 +254,22 @@ manual motion recordings. Screenshots: artifacts/willowstep-summit-arrival-nativ
 artifacts/silverfall-basin-native.png and artifacts/silverfall-high-terrace-arrival-native.png.
 The terrain core's loaded four-actor uphill/downhill fixture separately checks
 all followers against the same ground sampler.
+
+## October 2 wilderness landscape refinement
+
+Verdant Reach, Greyglass Pass, Willowstep Highlands, Silverfall Basin and Sunglass
+Expanse use broad Bezier trail bends. The first four no longer have large circular
+road clearings. Verdant has irregular curved lakes and rounded hills; Greyglass
+has varied terrain plateaus with graded paths to 54 m and 38 m summits, plus a few
+smaller rock formations. Silverfall uses meadow ground, 180 trees, a 24 m-wide
+terraced stream and an 84 m-wide receiving lake. The stream follows the terrain;
+it is not a free-falling waterfall simulation.
+
+The selective v9 installation backs up every replaced record and preserves newer
+lighting/terrain-style choices. Atlas destinations and trigger coordinates are
+retained. Both castles and every other map are untouched. Native preparation,
+round trips, complete routes, four-metre trail corridors, grounded props and
+spawn-to-gateway routes passed; logs are terrain-refinement-prepare-v9.log and
+terrain-refinement-routes-v9.log. The generator uses a fresh output folder and
+never overwrites its previous output. Source/terrain_quests.py now rebuilds these
+five outdoor landscapes. New recipes require prepared bundle version 5.

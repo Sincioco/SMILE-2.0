@@ -8,7 +8,7 @@ from town_document_codec import key_path, prepared_records
 
 
 def same_layout(first, second):
-    ignored = {'payload', 'dirty', 'sun', 'presets', 'map_tiles'}
+    ignored = {'payload', 'dirty', 'sun', 'presets', 'map_tiles', 'terrain_style'}
     return {k: v for k, v in first.items() if k not in ignored} == {
         k: v for k, v in second.items() if k not in ignored}
 
@@ -23,7 +23,7 @@ def plan_town(data, path, baseline, changes, replace_night=False):
     incoming = decode(payload, CATALOG)
     name = incoming['name']
     records = prepared_records(raw)
-    if records.get('.PreparedVersion') not in (bytes([0, 0, 0, 3]), bytes([0, 0, 0, 4])):
+    if records.get('.PreparedVersion') not in (bytes([0, 0, 0, 3]), bytes([0, 0, 0, 4]), bytes([0, 0, 0, 5])):
         raise ValueError('Map must be prepared before installation: ' + name)
     original = name == 'Neris Town'
     old = incoming if original else decode(unwrap((baseline / path.name).read_bytes()), CATALOG)
@@ -55,6 +55,8 @@ def plan_town(data, path, baseline, changes, replace_night=False):
             if current_links != incoming_links and not added_original_link:
                 raise ValueError('Retaining changed travel destinations; merge required: ' + key)
             doc['sun'] = current['sun']
+            if current.get('terrain_style', 0) != old.get('terrain_style', 0):
+                doc['terrain_style'] = current['terrain_style']
             if 'presets' in current:
                 doc['presets'] = current['presets']
             if replace_night:

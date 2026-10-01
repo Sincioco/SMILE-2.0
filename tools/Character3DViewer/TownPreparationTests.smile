@@ -66,7 +66,7 @@ Public Function Run() As Number
         "Later Edits Stay Separate From The Clicked Save Revision")
 
     Ok = Derived.BindBundle(Snapshot, "Preparation.Snapshot")
-    Key = Derived.ReadKey(Snapshot, "Terrain4", False)
+    Key = Derived.ReadKey(Snapshot, "Terrain5", False)
 
     Call Check(Ok And Key = "Preparation.Snapshot.Terrain",
         "Saved Snapshot Resolves Its Immutable Prepared Terrain")
@@ -78,19 +78,19 @@ Public Function Run() As Number
     Call Network.Adopt(Snapshot)
     Call Check(Network.Progress() = 100 And Network.CollisionChecks() = 0,
         "Opening Prepared Snapshot Requires No Road Collision Preparation")
-    Call Check(Derived.ReadKey(Current, "Terrain4", False) = "",
+    Call Check(Derived.ReadKey(Current, "Terrain5", False) = "",
         "Newer Edits Cannot Use An Older Snapshot Terrain")
 
     Snapshot.Name = "Immutable Prepared Save 2"
 
     Call Derived.AliasBundle(Snapshot, "Immutable Prepared Save")
-    Call Check(Derived.ReadKey(Snapshot, "Terrain4", False) = "Preparation.Snapshot.Terrain",
+    Call Check(Derived.ReadKey(Snapshot, "Terrain5", False) = "Preparation.Snapshot.Terrain",
         "Renaming An Imported Tab Retains Its Prepared Snapshot")
 
     Current.Name = "Changed Prepared Save"
 
     Call Derived.AliasBundle(Current, "Immutable Prepared Save")
-    Call Check(Derived.ReadKey(Current, "Terrain4", False) = "",
+    Call Check(Derived.ReadKey(Current, "Terrain5", False) = "",
         "Renamed Map With Different Inputs Cannot Adopt The Prepared Snapshot")
 
     Return Failures
