@@ -1,4 +1,4 @@
-"""Author editable Studio towns with the TWN6 codec and existing catalog assets.
+"""Author editable Studio towns with the TWN9 codec and existing catalog assets.
 
 Design coordinates are metres; the native document uses ten world units/metre.
 No Blender, renderer extensions or new asset dependencies are required.
@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[7]
 sys.path.insert(0, str(ROOT / 'tools/Character3DViewer'))
-from town_document_codec import atomic_write, decode, encode, unwrap, raster_curves
+from town_document_codec import atomic_write, decode, encode, unwrap, raster_curves, curve_contains
 
 CATALOG = json.loads((ROOT / 'games/SinStarI/SourceAssets/Towns/Neris/NerisTownV1/Authoring/catalog.json').read_text(encoding='utf-8'))
 GROUND, WATER, ROAD, BRIDGE = 1, 2, 3, 4
@@ -58,6 +58,19 @@ class Town:
     def ring(self, x, z, radius, width, kind=ROAD):
         self.brush(3, kind, x, z, radius, 0, width)
         self.paint(lambda a, b: abs(math.hypot(a-x, b-z)-radius) <= width/2, kind)
+
+    def shape(self, form, points, width, kind):
+        (x0,z0),(x1,z1),(x2,z2) = points
+        brush = [form,kind,x0*10,z0*10,x1*10,z1*10,width*10,x2*10,z2*10]
+        assert self.smooth, 'Editable shapes require continuous surfaces'
+        self.curves.append(brush)
+        self.paint(lambda x,z: curve_contains(brush,x*10,z*10),kind)
+
+    def triangle(self, points, kind=GROUND):
+        self.shape(7,points,0,kind)
+
+    def curve(self, points, width, kind=GROUND):
+        self.shape(8,points,width,kind)
 
     def path(self, points, width=12):
         for (x0, z0), (x1, z1) in zip(points, points[1:]):
@@ -125,9 +138,12 @@ class Town:
             for b in doc['curves']:
                 b[2] += ox*10
                 b[3] += oz*10
-                if b[0] in (1, 4):
+                if b[0] in (1, 4, 5, 7, 8):
                     b[4] += ox*10
                     b[5] += oz*10
+                if b[0] in (7, 8):
+                    b[7] += ox*10
+                    b[8] += oz*10
         return doc
 
     def save(self, folder):

@@ -1,0 +1,104 @@
+''' Continuous triangle and quadratic Bezier geometry for painted terrain.
+Module Smile.Simple3D.SurfacePath3D
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+
+Public Function PointAt(FirstPoint As P.Vector3, ControlPoint As P.Vector3,
+    LastPoint As P.Vector3, Amount As Double) As P.Vector3
+
+    Dim Result As P.Vector3
+    Dim Remaining As Double
+
+    Remaining = 1.0 - Amount
+    Result = P.Vector(Remaining * Remaining * FirstPoint.X + 2.0 * Remaining * Amount * ControlPoint.X + Amount * Amount * LastPoint.X, 0.0,
+        Remaining * Remaining * FirstPoint.Z + 2.0 * Remaining * Amount * ControlPoint.Z + Amount * Amount * LastPoint.Z)
+
+    Return Result
+
+End Function
+
+Public Function Segments(FirstPoint As P.Vector3, ControlPoint As P.Vector3, LastPoint As P.Vector3) As Number
+
+    Dim Bend As Double
+    Dim Result As Number
+
+    Bend = M.Length(M.Add(M.Subtract(FirstPoint, M.Scale(ControlPoint, 2.0)), LastPoint))
+    ' Target 0.25 native-unit chord error; cap work for exceptionally large paths.
+    Result = Max(1, Min(256, ToNumber(Sqrt(Bend)) + 1))
+
+    Return Result
+
+End Function
+
+Public Function TriangleContains(FirstPoint As P.Vector3, ControlPoint As P.Vector3,
+    LastPoint As P.Vector3, X As Double, Z As Double) As Boolean
+
+    Dim First As Double
+    Dim Second As Double
+    Dim Third As Double
+    Dim Result As Boolean
+
+    First = (ControlPoint.X - FirstPoint.X) * (Z - FirstPoint.Z) - (ControlPoint.Z - FirstPoint.Z) * (X - FirstPoint.X)
+    Second = (LastPoint.X - ControlPoint.X) * (Z - ControlPoint.Z) - (LastPoint.Z - ControlPoint.Z) * (X - ControlPoint.X)
+    Third = (FirstPoint.X - LastPoint.X) * (Z - LastPoint.Z) - (FirstPoint.Z - LastPoint.Z) * (X - LastPoint.X)
+    Result = ((First >= 0.0 And Second >= 0.0 And Third >= 0.0) Or
+        (First <= 0.0 And Second <= 0.0 And Third <= 0.0))
+
+    Return Result
+
+End Function
+
+Public Function StrokeContains(FirstPoint As P.Vector3, ControlPoint As P.Vector3, LastPoint As P.Vector3,
+    Width As Double, X As Double, Z As Double) As Boolean
+
+    Dim Index As Number
+    Dim SegmentCount As Number
+    Dim Previous As P.Vector3
+    Dim Current As P.Vector3
+    Dim Delta As P.Vector3
+    Dim Amount As Double
+    Dim Radius As Double
+
+    Radius = Width * 0.5
+
+    If (X < Min(FirstPoint.X, Min(ControlPoint.X, LastPoint.X)) - Radius Or
+        X > Max(FirstPoint.X, Max(ControlPoint.X, LastPoint.X)) + Radius Or
+        Z < Min(FirstPoint.Z, Min(ControlPoint.Z, LastPoint.Z)) - Radius Or
+        Z > Max(FirstPoint.Z, Max(ControlPoint.Z, LastPoint.Z)) + Radius) Then
+        Return False
+    End If
+
+    SegmentCount = Segments(FirstPoint, ControlPoint, LastPoint)
+    Previous = FirstPoint
+
+    For Index = 1 To SegmentCount
+
+        Current = PointAt(FirstPoint, ControlPoint, LastPoint, ToDouble(Index) / ToDouble(SegmentCount))
+
+        If (X >= Min(Previous.X, Current.X) - Radius And
+            X <= Max(Previous.X, Current.X) + Radius And
+            Z >= Min(Previous.Z, Current.Z) - Radius And
+            Z <= Max(Previous.Z, Current.Z) + Radius) Then
+
+            Delta = M.Subtract(Current, Previous)
+            Amount = Clamp(((X - Previous.X) * Delta.X + (Z - Previous.Z) * Delta.Z) /
+                Max(0.000001, Delta.X * Delta.X + Delta.Z * Delta.Z), 0.0, 1.0)
+            Delta = M.Subtract(P.Vector(X, 0.0, Z), M.Add(Previous, M.Scale(Delta, Amount)))
+
+            If Delta.X * Delta.X + Delta.Z * Delta.Z <= Radius * Radius Then
+                Return True
+            End If
+
+        End If
+
+        Previous = Current
+    End For
+
+    Return False
+
+End Function
+
+End Module

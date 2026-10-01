@@ -6,6 +6,7 @@ Option Explicit
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PrecisionCamera3D As Camera
 Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.SurfacePaint3D As SurfacePaint
 Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownSelection As Selection
 Import Smile.Tools.TownCatalogData As Catalog
@@ -37,6 +38,7 @@ Public Type State
     SectionGesture As SectionTools.State
     CourtGesture As CourtTools.State
     MapGesture As MapLoadTools.State
+    SurfaceGesture As SurfaceTools.State
     HistoryState As History.State
     Enabled As Boolean
     Anchored As Boolean
@@ -98,6 +100,7 @@ Public Sub Cancel(ByRef Value As State, ByRef Town As Document.State)
     Call MarkerTools.Cancel(Value.MarkerGesture, Value.Guide)
     Call SectionTools.Cancel(Value.SectionGesture)
     Call CourtTools.Cancel(Value.CourtGesture, Town)
+    Call SurfaceTools.Cancel(Value.SurfaceGesture)
 
     Value.Rubber = False
     Value.Anchored = False
@@ -304,6 +307,17 @@ Public Function Command(ByRef Value As State, ByRef Town As Document.State, Acti
 
         Value.Ui.Tool = Action
         Value.Ui.Message = "Click the center, then the circle edge."
+
+    Else If Action >= 410 And Action <= 412 Then
+
+        Value.Ui.Tool = Action
+        Value.Ui.Message = "Triangle: click three corners."
+
+        If Action = 411 Then
+            Value.Ui.Message = "Curve: click start, bend, then end."
+        Else If Action = 412 Then
+            Value.Ui.Message = "Drag a triangle or curve control point."
+        End If
 
     Else If Action = 49 Then
 
@@ -705,6 +719,36 @@ Public Function Input(ByRef Value As State, ByRef Town As Document.State,
         Value.Current = RawPoint
     End If
 
+    If Value.Ui.Tool >= 410 And Value.Ui.Tool <= 412 Then
+
+        If Value.Ui.Tool = 412 Then
+            Ok = SurfaceTools.EditPoint(Value.SurfaceGesture, Town.Surface, Value.Current, Radius,
+                OnGround And Not Blocked And Not Panel.Hovered() And Not Key_Held(KEY_SHIFT),
+                Pointer_Pressed(POINTER_PRIMARY), Pointer_Held(POINTER_PRIMARY))
+        Else If (OnGround And
+            Not Blocked And
+            Not Panel.Hovered() And
+            Not Key_Held(KEY_SHIFT) And
+            Pointer_Pressed(POINTER_PRIMARY)) Then
+            Ok = SurfaceTools.AddPoint(Value.SurfaceGesture, Town.Surface, Value.Current,
+                SurfacePaint.FORM_TRIANGLE + Value.Ui.Tool - 410, Value.Ui.Surface,
+                ToDouble(Value.Ui.Width * 20))
+        End If
+
+        If Ok Then
+            Town.Revision = Town.Revision + 1
+
+            Call History.Record(Value.HistoryState, Town, Value.Guide.Ink)
+        End If
+
+        If Text_Length(Value.SurfaceGesture.Message) > 0 Then
+            Value.Ui.Message = Value.SurfaceGesture.Message
+        End If
+
+        Return Action
+
+    End If
+
     If Value.Ui.Tool = 70 Or Value.MarkerGesture.Dragging Then
 
         If Value.Ui.HideGuides Then
@@ -897,6 +941,17 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State, View As P.Ca
     Call MapLoadTools.DrawPreview(Value.MapGesture, View)
     Call SectionTools.Draw(Value.SectionGesture, Town, View)
     Call CourtTools.Draw(Value.CourtGesture, Town, View)
+
+    If Value.Ui.Tool >= 410 And Value.Ui.Tool <= 412 Then
+
+        Clip Rectangle 0, 128, Panel.LeftEdge(), Window_Height() - 178
+
+        Call SurfaceTools.DrawShape(Value.SurfaceGesture, Town.Surface, Value.Current,
+            View, Value.Ui.Tool = 412)
+
+        End Clip
+
+    End If
 
     For Index = 0 To Town.ItemCount - 1
 

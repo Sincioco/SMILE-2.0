@@ -306,6 +306,27 @@ Private Function ReadSun(Version As Number) As Document.Sun
 
 End Function
 
+Private Function DocumentVersion(ByRef Value As Document.State) As Number
+
+    Dim Index As Number
+    Dim Version As Number
+
+    Version = 7
+
+    For Index = 0 To Value.Surface.Curves.BrushCount - 1
+
+        If Value.Surface.Curves.Brushes[Index].Form >= Paint.FORM_TRIANGLE Then
+            Return 9
+        Else If Value.Surface.Curves.Brushes[Index].Form >= Paint.FORM_FILLET Then
+            Version = 8
+        End If
+
+    End For
+
+    Return Version
+
+End Function
+
 Private Sub Encode(ByRef Value As Document.State, MarkSaved As Boolean)
 
     Dim Index As Number
@@ -318,7 +339,7 @@ Private Sub Encode(ByRef Value As Document.State, MarkSaved As Boolean)
     Call WriteByte(84)
     Call WriteByte(87)
     Call WriteByte(78)
-    Call WriteByte(7)
+    Call WriteByte(DocumentVersion(Value))
     Call WriteName(Catalog.FINGERPRINT)
     Call WriteName(Value.Name)
 
@@ -420,6 +441,12 @@ Private Sub Encode(ByRef Value As Document.State, MarkSaved As Boolean)
             Call WritePrecise(Brush.X1)
             Call WritePrecise(Brush.Z1)
             Call WritePrecise(Brush.Width)
+
+            If Brush.Form >= Paint.FORM_TRIANGLE Then
+                Call WritePrecise(Brush.X2)
+                Call WritePrecise(Brush.Z2)
+            End If
+
         End For
 
     End If
@@ -453,7 +480,7 @@ Private Function Decode() As Boolean
 
     Version = ReadByte()
 
-    If Version < 1 Or Version > 7 Then
+    If Version < 1 Or Version > 9 Then
         Return False
     End If
 
@@ -625,7 +652,8 @@ Private Function Decode() As Boolean
 
         Candidate.Surface.Curves.BrushCount = ReadInteger()
 
-        If Candidate.Surface.Curves.BrushCount < 0 Or Candidate.Surface.Curves.BrushCount > Paint.MAX_BRUSHES Then
+        If (Candidate.Surface.Curves.BrushCount < 0 Or
+            Candidate.Surface.Curves.BrushCount > Paint.MAX_BRUSHES) Then
             Return False
         End If
 
@@ -640,8 +668,18 @@ Private Function Decode() As Boolean
                 Candidate.Surface.Curves.Brushes[Index].X1 = ReadPrecise()
                 Candidate.Surface.Curves.Brushes[Index].Z1 = ReadPrecise()
                 Candidate.Surface.Curves.Brushes[Index].Width = ReadPrecise()
+                Candidate.Surface.Curves.Brushes[Index].X2 = 0.0
+                Candidate.Surface.Curves.Brushes[Index].Z2 = 0.0
 
-                If Not Paint.Valid(Candidate.Surface.Curves.Brushes[Index]) Then
+                If (Version >= 9 And
+                    Candidate.Surface.Curves.Brushes[Index].Form >= Paint.FORM_TRIANGLE) Then
+                    Candidate.Surface.Curves.Brushes[Index].X2 = ReadPrecise()
+                    Candidate.Surface.Curves.Brushes[Index].Z2 = ReadPrecise()
+                End If
+
+                If (Not Paint.Valid(Candidate.Surface.Curves.Brushes[Index]) Or
+                    (Version < 9 And Candidate.Surface.Curves.Brushes[Index].Form >= Paint.FORM_TRIANGLE) Or
+                    (Version < 8 And Candidate.Surface.Curves.Brushes[Index].Form >= Paint.FORM_FILLET)) Then
                     Return False
                 End If
 

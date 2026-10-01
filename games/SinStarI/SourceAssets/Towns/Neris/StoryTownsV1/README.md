@@ -5,9 +5,9 @@ catalog and terminal assemblies; no downloaded assets or new dependencies.
 
 | Map | Design |
 | --- | --- |
-| Neris Canals | Symmetrical cross-canals, royal avenue, market streets and orchards |
+| Neris Canals | Four-point Neris star, triangular residential quays and bridge approaches |
 | Neris Star Lake | Circular reservoir, eight bridge spokes, enlarged royal island and inward-facing homes |
-| Neris Crown Isles | Nine garden islands with illuminated connections |
+| Neris Crown Isles | Seven paired palm branches inside an open circular perimeter |
 | East Valley | Small castle-free relief village, City Hall, memorial gardens and orchards |
 | Orin's Village | Small castle-free home village, City Hall, twin lakes and repair stalls |
 | Neris Spaceport | Circular arrival landscape, eight approach bridges, embassy gardens and water pavilions |
@@ -29,7 +29,9 @@ It does not overwrite Sin's `Luma.world`. Graph connections visualize the networ
 actual scene transitions use the destination tiles in each town document.
 Open the atlas through **Edit Town → Files → Open World**. Missing images are
 prepared by visiting saved maps, which also opens their tabs. **Demo** cycles the
-open tabs once per minute and immediately starts orbit; click it again to stop.
+enabled maps every 30 seconds and immediately starts orbit; click it again to stop.
+Each thumbnail has a saved Demo toggle. Only Neris Town, Neris Spaceport, Horizon
+Airport and Neris Star Lake participate by default.
 **Maps** displays the open tabs as a four-column gallery with perspective thumbnails.
 The bottom **World Map** button reopens the atlas; double-click a card to enter.
 
@@ -52,9 +54,9 @@ residents; the generated alternatives do not yet have inhabitants.
 The atlas is not a claim that every Sin Star I location has been implemented.
 
 All 25 atlas connections have reciprocal road markers. The original Neris receives
-only two additional marker pads; its edited buildings, terrain and existing markers
-are retained. Arrival uses the matching entrance and a collision-checked adjacent
-road cell outside the trigger. Explicit airport destinations retain their names;
+only marker metadata updates; its edited buildings and terrain remain intact.
+Triggers sit on final road cells, side by side when sharing an exit. Arrival uses
+the matching entrance and a clear inward route outside every trigger. Explicit airport destinations retain their names;
 legacy shared-airport exits still remember their origin. The native route check
 covers all 50 directed entrances.
 
@@ -64,7 +66,7 @@ covers all 50 directed entrances.
 and full scenery-footprint clearance. It considers rotated model bounds and whole
 tree clusters. Small paths join the existing street network without passing through
 another building. `validate_access.py` protects the reported blocked-road and
-missing-entrance defects; it checks all thirteen generated maps and 161 entrances.
+missing-entrance defects; it checks all thirteen generated maps and 146 entrances.
 The user-approved center tower in Ancient Relay and Waterworks pump platforms have
 explicit exceptions. Castles and airport terminals retain their authored approaches.
 
@@ -105,7 +107,10 @@ terrain, assembly, lighting or existing marker differs, and backs up the old sav
 
 ## Curved terrain
 
-These maps use TWN6 analytic circles, rings and paths. Base grid cells remain the
+These maps use TWN9 analytic circles, rings, paths, rounded junctions, triangles
+and quadratic Bezier strokes. The editor exposes Triangle, Curve and Edit Shape
+Points with a thickness setting. Three clicks create a shape; dragging a saved
+handle changes it on release. Curves preserve continuous geometry on save. Base grid cells remain the
 navigation broad phase; exact point tests resolve authored curves. Surface meshes
 follow interpolated boundaries instead of exposing the navigation stair steps.
 Building rotations retain decimal degrees. The existing Blender snapshot preserves
@@ -132,3 +137,14 @@ terrain-style persistence, the standard native rendering fixture, a desert/landf
 Blender export/reopen, and expanded World coordinates save/reopen. New maps are
 visually checked in Studio before release; screenshots are progress evidence, not
 evidence that combat or encounters exist.
+
+## Prepared installation
+
+Run `Source/prepare_maps.py` against a separate authored-map directory. It invokes
+the native save-preparation owner, exports portable bundles, then verifies every
+terrain page and road graph in a fresh native import. `Source/install_maps.py`
+requires these bundles and a baseline directory when replacing an older revision.
+Close Studio first. A dry run checks for newer user geometry before any write;
+the real install backs up every replaced key and retains per-map lighting.
+The shipped Towns directory contains prepared files. Original Neris remains the
+live PermanentNeris save; it is never regenerated from the alternative layouts.

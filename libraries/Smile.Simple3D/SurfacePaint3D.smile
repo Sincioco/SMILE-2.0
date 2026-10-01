@@ -3,11 +3,18 @@ Module Smile.Simple3D.SurfacePaint3D
 
 Option Explicit
 
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.SurfacePath3D As Paths
+
 Public Const MAX_BRUSHES = 256
 Public Const FORM_RECTANGLE = 1
 Public Const FORM_CIRCLE = 2
 Public Const FORM_RING = 3
 Public Const FORM_LINE = 4
+Public Const FORM_FILLET = 5
+Public Const FORM_JUNCTION = 6
+Public Const FORM_TRIANGLE = 7
+Public Const FORM_CURVE = 8
 
 Public Type Brush
     Form As Number
@@ -17,6 +24,8 @@ Public Type Brush
     X1 As Double
     Z1 As Double
     Width As Double
+    X2 As Double
+    Z2 As Double
 End Type
 
 Public Type State
@@ -28,14 +37,32 @@ Public Function Valid(Value As Brush) As Boolean
 
     Dim Result As Boolean
 
-    Result = (Value.Form >= FORM_RECTANGLE And Value.Form <= FORM_LINE And
+    Result = (Value.Form >= FORM_RECTANGLE And Value.Form <= FORM_CURVE And
         Value.Surface >= 0 And Value.Surface <= 4 And
         Abs(Value.X0) <= 1000000000.0 And Abs(Value.Z0) <= 1000000000.0 And
         Abs(Value.X1) <= 1000000000.0 And Abs(Value.Z1) <= 1000000000.0 And
+        Abs(Value.X2) <= 1000000000.0 And Abs(Value.Z2) <= 1000000000.0 And
         Value.Width >= 0.0 And Value.Width <= 1000000000.0)
 
     If Value.Form = FORM_CIRCLE Or Value.Form = FORM_RING Then
         Result = Result And Value.X1 > 0.0
+    End If
+
+    If Value.Form = FORM_FILLET Then
+        Result = (Result And Value.Width > 0.0 And
+            (Value.X1 - Value.X0) * (Value.X1 - Value.X0) +
+            (Value.Z1 - Value.Z0) * (Value.Z1 - Value.Z0) > Value.Width * Value.Width)
+    End If
+
+    If Value.Form = FORM_JUNCTION Then
+        Result = Result And Value.X1 > 0.0 And Value.Z1 > 0.0 And Value.Width > 0.0
+    End If
+
+    If Value.Form = FORM_TRIANGLE Then
+        Result = Result And Abs((Value.X1 - Value.X0) * (Value.Z2 - Value.Z0) -
+            (Value.Z1 - Value.Z0) * (Value.X2 - Value.X0)) > 0.000001
+    Else If Value.Form = FORM_CURVE Then
+        Result = Result And Value.Width > 0.0
     End If
 
     Return Result
@@ -48,7 +75,22 @@ Public Function Contains(Value As Brush, X As Double, Z As Double) As Boolean
     Dim Amount As Double
     Dim DeltaX As Double
     Dim DeltaZ As Double
+    Dim AxisX As Double
+    Dim AxisZ As Double
+    Dim Along As Double
+    Dim Across As Double
+    Dim RadiusSquared As Double
     Dim Result As Boolean
+
+    If Value.Form = FORM_TRIANGLE Then
+        Result = Paths.TriangleContains(P.Vector(Value.X0, 0.0, Value.Z0),
+            P.Vector(Value.X1, 0.0, Value.Z1), P.Vector(Value.X2, 0.0, Value.Z2), X, Z)
+        Return Result
+    Else If Value.Form = FORM_CURVE Then
+        Result = Paths.StrokeContains(P.Vector(Value.X0, 0.0, Value.Z0),
+            P.Vector(Value.X1, 0.0, Value.Z1), P.Vector(Value.X2, 0.0, Value.Z2), Value.Width, X, Z)
+        Return Result
+    End If
 
     If Value.Form = FORM_RECTANGLE Then
         Result = X >= Value.X0 And X <= Value.X1 And Z >= Value.Z0 And Z <= Value.Z1
@@ -57,6 +99,39 @@ Public Function Contains(Value As Brush, X As Double, Z As Double) As Boolean
 
     DeltaX = X - Value.X0
     DeltaZ = Z - Value.Z0
+
+    ' Four-way axis-aligned crossing: X1/Z1 are road half-widths, Width is radius.
+
+    If Value.Form = FORM_JUNCTION Then
+
+        DeltaX = Abs(DeltaX)
+        DeltaZ = Abs(DeltaZ)
+        Result = (DeltaX <= Value.X1 + Value.Width And DeltaZ <= Value.Z1 + Value.Width And
+            (DeltaX <= Value.X1 Or DeltaZ <= Value.Z1 Or
+            (DeltaX - Value.X1 - Value.Width) * (DeltaX - Value.X1 - Value.Width) +
+            (DeltaZ - Value.Z1 - Value.Width) * (DeltaZ - Value.Z1 - Value.Width) >= Value.Width * Value.Width))
+        Return Result
+
+    End If
+
+    ' A fillet fills the tangent triangle from corner X1/Z1 to circle X0/Z0,
+    ' excluding that circle. Width is its radius. Squared projections avoid roots.
+
+    If Value.Form = FORM_FILLET Then
+
+        AxisX = Value.X1 - Value.X0
+        AxisZ = Value.Z1 - Value.Z0
+        Distance = AxisX * AxisX + AxisZ * AxisZ
+        RadiusSquared = Value.Width * Value.Width
+        Along = DeltaX * AxisX + DeltaZ * AxisZ
+        Across = DeltaX * AxisZ - DeltaZ * AxisX
+        Result = (Along >= RadiusSquared And Along <= Distance And
+            DeltaX * DeltaX + DeltaZ * DeltaZ >= RadiusSquared And
+            Across * Across * (Distance - RadiusSquared) <=
+            RadiusSquared * (Distance - Along) * (Distance - Along))
+        Return Result
+
+    End If
 
     If Value.Form = FORM_LINE Then
 
@@ -178,6 +253,33 @@ Public Sub SelectRegion(ByRef Source As State, ByRef Selected As State,
             MaxX = Value.X0 + Radius
             Top = Value.Z0 - Radius
             Bottom = Value.Z0 + Radius
+
+        Else If Value.Form = FORM_FILLET Then
+
+            MinX = Min(Value.X0 - Value.Width, Value.X1)
+            MaxX = Max(Value.X0 + Value.Width, Value.X1)
+            Top = Min(Value.Z0 - Value.Width, Value.Z1)
+            Bottom = Max(Value.Z0 + Value.Width, Value.Z1)
+
+        Else If Value.Form = FORM_TRIANGLE Or Value.Form = FORM_CURVE Then
+
+            Radius = 0.0
+
+            If Value.Form = FORM_CURVE Then
+                Radius = Value.Width * 0.5
+            End If
+
+            MinX = Min(Value.X0, Min(Value.X1, Value.X2)) - Radius
+            MaxX = Max(Value.X0, Max(Value.X1, Value.X2)) + Radius
+            Top = Min(Value.Z0, Min(Value.Z1, Value.Z2)) - Radius
+            Bottom = Max(Value.Z0, Max(Value.Z1, Value.Z2)) + Radius
+
+        Else If Value.Form = FORM_JUNCTION Then
+
+            MinX = Value.X0 - Value.X1 - Value.Width
+            MaxX = Value.X0 + Value.X1 + Value.Width
+            Top = Value.Z0 - Value.Z1 - Value.Width
+            Bottom = Value.Z0 + Value.Z1 + Value.Width
 
         End If
 

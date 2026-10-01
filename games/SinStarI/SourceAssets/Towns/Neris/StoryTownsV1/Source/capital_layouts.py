@@ -5,60 +5,42 @@ from town_design import Town, GROUND, WATER, ROAD
 
 def canals():
     t = Town('Neris Canals', smooth=True)
-    t.rect(-320,-330,320,330)
+    # Four long points repeat the Neris emblem. Separate triangular quays leave
+    # open canals between the central star and the residential districts.
+    t.rect(-62,-62,62,62)
     for side in (-1,1):
-        t.rect(side*80-12,-300,side*80+12,210,WATER)
-    for z in (-180,-60,90,210):
-        t.rect(-300,z-10,300,z+10,WATER)
-    t.rect(-85,150,85,325)
-    for start,end in ((-330,-148),(-92,24),(96,178)):
-        t.path([(0,start),(0,end)],18)
-    for x in (-305,-180,180,305):
-        t.path([(x,-315),(x,315)],12)
-    for z in (-315,-240,-120,0,150,315):
-        if z == -120:
-            t.path([(-345,z),(-28,z)],12)
-            t.path([(28,z),(345,z)],12)
-        else:
-            t.path([(-345,z),(345,z)],12 if z else 20)
-    # Detours around civic and relay landmarks keep the ceremonial avenue walkable.
-    t.ring(0,60,36,12)
-    t.ring(0,-120,28,12)
-    t.place(13,0,255,1.7)
-    t.place(9,0,60,1.6)
-    t.place(10,0,-120,1.5)
+        t.triangle([(-62,side*62),(0,side*336),(62,side*62)])
+        t.triangle([(side*62,-62),(side*336,0),(side*62,62)])
+        for bank in (-1,1):
+            t.triangle([(side*91,bank*91),(side*291,bank*91),(side*91,bank*291)])
+    t.path([(-345,0),(345,0)],16)
+    t.path([(0,-322),(0,322)],14)
     for side in (-1,1):
-        t.homes(side*146,(-282,-207,-165,-87,-32,45,108,186),side)
-        t.homes(side*218,(-282,-207,-165,-87,-32,45,108,186),-side,3)
-        t.place(3,side*215,270,1.8,side*90)
-        for z in (-280,-208,-85,65,180,280):
-            t.grove(side*276,z,3,3,10,1.8)
-        for z in range(-300,146,30):
-            if z in (-180,-60,90):
-                continue
-            if abs(z+120)>22 and abs(z-60)>35 and abs(z)<18:
-                continue
-            t.place(19,side*46,z,2.0,side*25)
-        t.grove(side*118,265,2,4,12,2.2)
-        for template,z in ((8,-275),(11,-210),(12,-150)):
-            t.place(template,side*40,z,1.3,side*90)
-        for z in (-30,130):
-            t.disk(side*42,z,13,ROAD)
-            t.path([(0,z),(side*42,z)],8)
-            t.place(20,side*42,z,1.5)
-            t.place(14,side*59,z,1.4,-side*90)
-        for z in (-300,-255,-195,-150,-90,-30,15,105,150):
-            t.place(15,side*17,z,1.8)
-        for z in (-300,-220,-150,-75,30,100,180,275):
-            t.place(15,side*190,z,1.6)
-        for z in (-290,-200,-100,45,170,290):
-            t.place(15,side*315,z,1.7)
-        for z in (-285,-165,-30,125,190,300):
-            t.place(16,side*99,z,1.8)
+        for bank in (-1,1):
+            # One bridge reaches each quay. Its compact street triangle is well
+            # inside the shoreline, leaving clear plots beside the pavement.
+            t.path([(side*120,0),(side*120,bank*220),(side*220,bank*120),
+                    (side*120,bank*120)],10)
+            t.place(9 if bank==1 else 3,side*153,bank*153,1.35,0 if bank==1 else 180)
+            for x,z in ((151,106),(196,106),(106,174),(106,226)):
+                t.place(4,side*x,bank*z,1.05)
+            for x,z in ((170,192),(212,147),(96,258)):
+                t.place(19,side*x,bank*z,1.65)
+            t.place(20,side*101,bank*101,1.4)
+            t.lamps([(side*132,bank*110),(side*110,bank*190),
+                     (side*188,bank*142)],1.8)
+        for z in (-220,-150,-78,78,150,220):
+            t.place(19,side*20,z,1.8)
+        for z in (-260,-180,-100,100,180,260):
+            t.place(15,side*12,z,1.8)
+        t.place(10,side*40,35,1.4,0)
+        t.place(8,side*40,-35,1.3,180)
+        for x in (85,170,250):
+            t.lamps([(side*x,-13),(side*x,13)],1.8)
     t.gates()
-    t.notes=['Ceremonial castle approach and four cross-canals',
-        'Public water gardens beside the relay tower',
-        'Paired repair-market streets and quiet residential banks']
+    t.notes=['Four-point Neris star with long ceremonial avenues',
+        'Triangular residential quays separated by open canals',
+        'Four short bridge approaches and clear waterfront streets']
     return t
 
 
@@ -135,65 +117,53 @@ def star_lake():
 
 def crown_isles():
     t=Town('Neris Crown Isles',780,smooth=True)
-    centers=[(x,z) for x in (-228,0,228) for z in (-228,0,228)]
-    for x,z in centers:
-        t.disk(x,z,100)
-    t.rect(-99,130,99,325)
-    for x,z in centers:
-        if (x,z) != (0,228):
-            t.ring(x,z,69,12)
-    t.path([(-84,145),(-84,310),(84,310),(84,145),(-84,145)],14)
-    for x in (-228,0,228):
-        if x == 0:
-            t.path([(x,-330),(x,-69)],16)
-            t.path([(x,69),(x,145)],16)
-        else:
-            t.path([(x,-330),(x,159)],16)
-            t.path([(x,297),(x,310)],16)
-    for z in (-228,0,228):
-        if z == 228:
-            for x0,x1 in ((-365,-297),(-159,-84),(84,159),(297,365)):
-                t.path([(x0,z),(x1,z)],16)
-        else:
-            t.path([(-365,z),(365,z)],16)
-    t.place(13,0,242,1.5)
-    t.place(9,0,37,1.65)
-    t.place(10,0,-38,1.55,180)
-    for side in (-1,1):
-        t.place(7,side*228,228,1.1,0)
-        t.path([(side*228,159),(side*228,187)],8)
-        # Twin northern academies/garrisons frame the single palace.
-        for z in (160,195,285):
-            t.grove(side*288,z,2,2,10,2.2)
-        for z in (175,295):
-            t.grove(side*168,z,2,2,10,2.0)
-        for template,z in ((8,-29),(11,18),(12,29)):
-            x=315 if template==11 else 257
-            t.place(template,side*x,z,1.0,side*90)
-            t.place(17,side*201,z if template!=11 else -16,1.6,-side*90)
-        t.place(20,side*33,18,1.5)
-        t.grove(side*34,-43,2,2,10,1.8)
-        t.grove(side*34,43,2,2,10,1.8)
-    for x in (-228,0,228):
+    # Seven tangent arcs form an almost circular breakwater with a southern
+    # opening. The independent palm trunk enters through that open water.
+    arcs=[]
+    for index in range(7):
+        angle=-157.5+index*45
+        arcs.append([polar(340,angle),polar(340/math.cos(math.pi/8),angle+22.5),
+                     polar(340,angle+45)])
+    for points in arcs:
+        t.curve(points,46)
+    t.curve([(0,-365),(0,-40),(0,252)],56)
+    fronds=[]
+    for z,extent,end_z in ((-224,208,-163),(-162,255,-95),(-100,284,-16),
+                           (-38,283,67),(24,250,145),(86,198,211),(148,128,260)):
         for side in (-1,1):
-            for dz in (-28,28):
-                t.place(3,x+side*31,-228+dz,1.15,side*90)
-            t.place(4,x+side*87,-210,1.15,side*90)
-            for dz in (-66,66):
-                t.grove(x+side*37,-228+dz,3,1,10,1.9)
-    for x,z in centers:
-        for dx,dz in ((-82,-32),(82,-32),(-82,32),(82,32)):
-            t.place(19,x+dx,z+dz,2.0)
-        for dx,dz in ((-61,-61),(61,-61),(-61,61),(61,61)):
-            t.place(15,x+dx,z+dz,2.2)
-    for side in (-1,1):
-        for x,z in ((114,0),(114,-228),(114,228),(228,-114),(228,114)):
-            for off in (-12,12):
-                px,pz=(side*x+off,z) if x==228 else (side*x,z+off)
-                t.disk(px,pz,4)
-                t.place(15,px,pz,2.2)
-    t.gates()
-    t.notes=['Nine garden islands separated by deep, clear waterways',
-        'Long illuminated processional bridges',
-        'Royal island, market quays and southern residential villages']
+            points=[(0,z),(side*extent*.76,z),(side*extent,end_z)]
+            fronds.append(points)
+            t.curve(points,37)
+    # Roads follow the same smooth center curves. The east/west gate bridges
+    # cross the open water once, between the trunk and the perimeter promenade.
+    for points in arcs:
+        t.curve(points,10,ROAD)
+    t.path([(0,-370),(0,224)],12)
+    t.path([(-378,-38),(378,-38)],12)
+    for points in fronds:
+        t.curve(points,8,ROAD)
+        (ax,az),(bx,bz),(cx,cz)=points
+        for index,amount in enumerate((.48,.77)):
+            u=1-amount
+            x,z=u*u*ax+2*u*amount*bx+amount*amount*cx,u*u*az+2*u*amount*bz+amount*amount*cz
+            dx,dz=2*(u*(bx-ax)+amount*(cx-bx)),2*(u*(bz-az)+amount*(cz-bz))
+            length=math.hypot(dx,dz)
+            # Mirror the homes on the upper bank, safely between road and shore.
+            side=1 if cx>0 else -1
+            nx,nz=-dz/length*side,dx/length*side
+            t.place(0 if index else 5,x+nx*11,z+nz*11,.9,
+                    math.degrees(math.atan2(nx,nz))%360)
+            t.place(19,x-nx*11,z-nz*11,1.3)
+    t.place(9,0,246,1.35)
+    for z in (-290,-240,-175,-110,20,90,165):
+        t.lamps([(-10,z),(10,z)],1.8)
+    for angle in range(-140,141,20):
+        x,z=polar(353,angle)
+        t.place(19,x,z,1.7)
+        x,z=polar(331,angle)
+        t.place(15,x,z,1.8)
+    t.gates(z=-38)
+    t.notes=['Smooth palm fronds inside an open circular breakwater',
+        'Water channels between seven paired residential branches',
+        'A central civic approach and linked outer promenade']
     return t

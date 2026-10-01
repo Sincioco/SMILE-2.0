@@ -1,5 +1,36 @@
 # Character Viewer Architecture
 
+## October 1 landscape authoring and map revision
+
+SurfacePath3D owns triangle containment and adaptive quadratic Bezier evaluation.
+SurfacePaint3D keeps these as forms 7/8 alongside the rounded fillet/crossing forms
+5/6. SurfaceGrid3D and the terrain builder continue resolving the same brush stack;
+no alternate navigation or rendering authority was introduced. TWN9 stores the
+third point only for forms 7/8. TownDerivedCache compares it before adopting saved
+preparation. Existing document versions retain their record layout.
+
+TownSurfaceTools owns in-progress points, handle selection and previews. The editor
+delegates three-click creation and release-time commits, records one undo revision,
+and cancels unfinished gestures on tool changes. TownEditorPanel owns compact
+controls that preserve the existing projection commands. SurfacePath3D is 104
+lines; SurfaceTools grows by 271, Editor by 55, Store by 38 and Panel by three net
+lines. All growth remains within these existing responsibilities; bootstrap,
+resource budgets, dependencies and architecture exclusions are unchanged.
+
+Authoring scripts keep plot/access, junction geometry, road-end triggers, portable
+preparation and installation separate. Installation preflights every map before
+writing, backs up replaced keys and preserves live lighting. Original Neris keeps
+its user-authored geometry. Only missing approved atlas links and trigger locations
+change there; newer generated-map user edits require a merge instead of overwrite.
+
+Native Foundations, Routes, Rendering and Session checks cover shape persistence,
+control gestures and stale preparation. Fourteen saved map bundles freshly import
+with valid terrain pages and zero road preparation collision checks. All 50 directed
+connections pass, including 24 inward steps clear of triggers. Authoring checks
+verify 146 entrances, scenery clearance, symmetry and connected paving. Native
+hardening and focused formatting pass. Authored top-down previews were inspected;
+live mouse/visual acceptance remains pending after desktop control's interruption.
+
 ## October 1: map showcase selection and viewport layout
 
 TownDemo owns the 30-second clock and saved participation keyed by map name.

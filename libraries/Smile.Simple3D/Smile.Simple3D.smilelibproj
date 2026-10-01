@@ -41,6 +41,7 @@
     <SmileSource Include="CameraClearance3D.smile" />
     <SmileSource Include="FollowCamera3D.smile" />
     <SmileSource Include="FreeCamera3D.smile" />
+    <SmileSource Include="SurfacePath3D.smile" />
     <SmileSource Include="SurfacePaint3D.smile" />
     <SmileSource Include="SurfaceContours3D.smile" />
     <SmileSource Include="SurfaceGrid3D.smile" />

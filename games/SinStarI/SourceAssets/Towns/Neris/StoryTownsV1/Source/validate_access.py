@@ -2,7 +2,7 @@
 from pathlib import Path
 import sys
 from town_design import CATALOG,decode,unwrap
-from town_access import outline,world,surface
+from town_access import outline,surface,roadside_access,entrance_ground
 
 
 def validate(doc):
@@ -13,13 +13,13 @@ def validate(doc):
         scenery=template in range(14,35) or template==38
         if doc['name']=='Ancient Relay' and template==10: continue
         if doc['name']=='Neris Waterworks' and template==27: continue
-        if building or scenery:
+        if building:
+            assert entrance_ground(doc,item), (doc['name'],item['identity'],'body overlaps road/water')
+        elif scenery:
             assert all(surface(doc,x*10,z*10)==1 for x,z in outline(item)), (
                 doc['name'],item['identity'],'footprint overlaps road/water')
         if building:
-            low,_=CATALOG['templates'][template]['bounds']
-            x,z=world(item,0,low[1]-.75/(item['scale'][2]/1000))
-            assert surface(doc,x*10,z*10) in (3,4), (
+            assert roadside_access(doc,item), (
                 doc['name'],item['identity'],'front stair has no path')
             entrances+=1
     for tile in doc['map_tiles']:

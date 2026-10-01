@@ -189,6 +189,7 @@ End Function
 
 Private Sub Library(ByRef Value As State, X As Number)
 
+    Dim StepY As Number
     Dim Index As Number
     Dim Row As Number
     Dim Matching As Number
@@ -238,42 +239,44 @@ Private Sub Library(ByRef Value As State, X As Number)
 
     Else If Value.Category = 2 Then
 
-        Call Button(Value, 40, X, 240, 91, "Ground", Value.Surface = 1)
-        Call Button(Value, 41, X + 96, 240, 91, "Road", Value.Surface = 3)
-        Call Button(Value, 42, X + 192, 240, 91, "Water", Value.Surface = 2)
+        StepY = Min(36, Max(20, (Window_Height() - 570) / 7))
 
-        Fill Rectangle X + 5, 270, 81, 18, RGB(69, 112, 38)
-        Fill Rectangle X + 101, 270, 81, 18, RGB(144, 162, 171)
-        Fill Rectangle X + 197, 270, 81, 18, RGB(18, 57, 126)
+        Call Button(Value, 40, X, 240, 91, "Ground", Value.Surface = 1, True, StepY - 3)
+        Call Button(Value, 41, X + 96, 240, 91, "Road", Value.Surface = 3, True, StepY - 3)
+        Call Button(Value, 42, X + 192, 240, 91, "Water", Value.Surface = 2, True, StepY - 3)
 
-        Call Button(Value, 46, X, 295, 283, "Map Load (Yellow Border)", Value.Surface = 5)
+        Call Button(Value, 46, X, 240 + StepY, 283, "Map Load (Yellow Border)", Value.Surface = 5, True, StepY - 3)
 
         If Value.Surface = 5 Then
 
-            Call Button(Value, 17, X, 331, 91, "Draw Area", Value.Tool = 17)
-            Call Button(Value, 18, X + 96, 331, 91, "Reassign", Value.Tool = 18)
-            Call Button(Value, 19, X + 192, 331, 91, "Delete", Value.Tool = 19)
+            Call Button(Value, 17, X, 240 + StepY * 2, 91, "Draw Area", Value.Tool = 17, True, StepY - 3)
+            Call Button(Value, 18, X + 96, 240 + StepY * 2, 91, "Reassign", Value.Tool = 18, True, StepY - 3)
+            Call Button(Value, 19, X + 192, 240 + StepY * 2, 91, "Delete", Value.Tool = 19, True, StepY - 3)
 
-            Draw Text "Draw area, then choose a map." At X, 375 Size 13 Color WHITE
-            Draw Text "Delete/Reassign affects the whole area." At X, 397 Size 12 Color WHITE
+            Draw Text "Draw area, then choose a map." At X, 244 + StepY * 3 Size 12 Color WHITE
+            Draw Text "Delete/Reassign affects the whole area." At X, 244 + StepY * 4 Size 12 Color WHITE
 
         Else
 
-            Call Button(Value, 12, X, 331, 91, "Line", Value.Tool = 12)
-            Call Button(Value, 13, X + 96, 331, 91, "Rectangle", Value.Tool = 13)
-            Call Button(Value, 14, X + 192, 331, 91, "Erase", Value.Tool = 14)
-            Call Button(Value, 44, X, 367, 34, "-")
-            Call Button(Value, 45, X + 248, 367, 34, "+")
+            Call Button(Value, 12, X, 240 + StepY * 2, 91, "Line", Value.Tool = 12, True, StepY - 3)
+            Call Button(Value, 13, X + 96, 240 + StepY * 2, 91, "Rectangle", Value.Tool = 13, True, StepY - 3)
+            Call Button(Value, 14, X + 192, 240 + StepY * 2, 91, "Erase", Value.Tool = 14, True, StepY - 3)
+            Call Button(Value, 44, X, 240 + StepY * 3, 34, "-", False, True, StepY - 3)
+            Call Button(Value, 45, X + 248, 240 + StepY * 3, 34, "+", False, True, StepY - 3)
 
-            Draw Text "Road / Ring: " + NumberLabel(Value.Width * 2) + " m" At X + 45, 372 Size 14 Color WHITE
+            Draw Text "Thickness: " + NumberLabel(Value.Width * 2) + " m" At X + 45, 243 + StepY * 3 Size 12 Color WHITE
 
-            Call Button(Value, 47, X, 403, 139, "Circle / Ring", Value.Tool = 47)
-            Call Button(Value, 48, X + 144, 403, 139, "Filled Circle", Value.Tool = 48)
+            Call Button(Value, 47, X, 240 + StepY * 4, 139, "Circle / Ring", Value.Tool = 47, True, StepY - 3)
+            Call Button(Value, 48, X + 144, 240 + StepY * 4, 139, "Filled Circle", Value.Tool = 48, True, StepY - 3)
 
-            Draw Text "Circle: click center, then edge." At X, 441 Size 13 Color WHITE
-            Draw Text "Esc cancels. Erase restores ground." At X, 463 Size 12 Color WHITE
+            Call Button(Value, 410, X, 240 + StepY * 5, 139, "Triangle", Value.Tool = 410, True, StepY - 3)
+            Call Button(Value, 411, X + 144, 240 + StepY * 5, 139, "Curve", Value.Tool = 411, True, StepY - 3)
+            Call Button(Value, 412, X, 240 + StepY * 6, 139, "Edit Shape Points", Value.Tool = 412, True, StepY - 3)
 
-            Call Button(Value, 49, X, 494, 283, "Terrain: " + Styles.Label(Value.TerrainStyle))
+            Draw Text "Triangle: three corners. Curve: start," At X, 244 + StepY * 7 Size 11 Color WHITE
+            Draw Text "bend, end. Esc cancels. Ctrl+Z undoes." At X, 258 + StepY * 7 Size 11 Color WHITE
+
+            Call Button(Value, 49, X + 144, 240 + StepY * 6, 139, Styles.Label(Value.TerrainStyle), False, True, StepY - 3)
 
         End If
 

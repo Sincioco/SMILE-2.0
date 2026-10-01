@@ -12,6 +12,7 @@ Import Smile.Tools.TownDocumentStore As Storage
 Import Smile.Tools.TownDocumentNavigation As Navigation
 Import Smile.Tools.TownCatalogData As Catalog
 Import Smile.Tools.TownSelection As Selection
+Import Smile.Tools.TownDerivedCache As Derived
 
 Private Dim Town As Document.State
 Private Dim Loaded As Document.State
@@ -172,6 +173,104 @@ Public Function Run() As Number
     Call Paint.SelectRegion(Town.Surface.Curves, SelectedCurves, 100.0, 100.0, 101.0, 101.0)
     Call Check(SelectedCurves.BrushCount = 0,
         "Distant Brushes Are Excluded From Terrain Sampling", Failures)
+
+    Ok = Document.Blank(Town, "Rounded Junction Regression", 20, 20, 10.0)
+    Brush.Form = Paint.FORM_FILLET
+    Brush.Surface = Grid.SURFACE_ROAD
+    Brush.X0 = 20.0
+    Brush.Z0 = 20.0
+    Brush.X1 = 0.0
+    Brush.Z1 = 0.0
+    Brush.Width = 20.0
+    Ok = Grid.PaintBrush(Town.Surface, Brush) And Ok
+
+    Call Check(Ok And Paint.Contains(Brush, 5.0, 5.0) And
+        Not Paint.Contains(Brush, 6.0, 6.0) And Not Paint.Contains(Brush, -1.0, 1.0),
+        "Junction Fillet Fills Only The Corner Outside Its Tangent Circle", Failures)
+    Call Paint.SelectRegion(Town.Surface.Curves, SelectedCurves, 0.0, 0.0, 10.0, 10.0)
+    Call Check(SelectedCurves.BrushCount = 1 And
+        Paint.Resolve(SelectedCurves, 5.0, 5.0, Grid.SURFACE_GROUND) = Grid.SURFACE_ROAD,
+        "Region Filtering Retains The Complete Junction Corner", Failures)
+
+    Ok = Storage.SaveDocument(Town, "TownEditor.FilletRegression")
+    Ok = Storage.LoadDocument(Loaded, "TownEditor.FilletRegression") And Ok
+
+    Call Check(Ok And Loaded.Surface.Curves.Brushes[0].Form = Paint.FORM_FILLET And
+        Grid.ReadPoint(Loaded.Surface, 5.0, 5.0) = Grid.SURFACE_ROAD And
+        Grid.ReadPoint(Loaded.Surface, 6.0, 6.0) = Grid.SURFACE_GROUND,
+        "TWN8 Preserves The Rounded Junction After Save And Reopen", Failures)
+
+    Brush.X1 = Brush.X0
+    Brush.Z1 = Brush.Z0
+
+    Call Check(Not Paint.Valid(Brush), "Degenerate Junction Brush Is Rejected", Failures)
+
+    Brush.Form = Paint.FORM_JUNCTION
+    Brush.X0 = 0.0
+    Brush.Z0 = 0.0
+    Brush.X1 = 10.0
+    Brush.Z1 = 10.0
+    Brush.Width = 20.0
+    Ok = Grid.PaintBrush(Town.Surface, Brush)
+
+    Call Check(Ok And Paint.Contains(Brush, 15.0, 15.0) And
+        Paint.Contains(Brush, -15.0, -15.0) And Not Paint.Contains(Brush, 16.0, 16.0) And
+        Not Paint.Contains(Brush, 35.0, 0.0),
+        "Compact Crossing Rounds Four Corners Without Extending The Road Arms", Failures)
+
+    Ok = Storage.SaveDocument(Town, "TownEditor.FilletRegression")
+    Ok = Storage.LoadDocument(Loaded, "TownEditor.FilletRegression") And Ok
+
+    Call Check(Ok And Loaded.Surface.Curves.Brushes[1].Form = Paint.FORM_JUNCTION,
+        "Compact Crossing Survives Save And Reopen", Failures)
+
+    Ok = Document.Blank(Town, "Triangle And Curve Regression", 40, 40, 10.0)
+    Brush.Form = Paint.FORM_TRIANGLE
+    Brush.Surface = Grid.SURFACE_WATER
+    Brush.X0 = -100.0
+    Brush.Z0 = -100.0
+    Brush.X1 = -40.0
+    Brush.Z1 = -40.0
+    Brush.X2 = 0.0
+    Brush.Z2 = -100.0
+    Ok = Grid.PaintBrush(Town.Surface, Brush) And Ok
+
+    Call Check(Ok And Grid.ReadPoint(Town.Surface, -50.0, -70.0) = Grid.SURFACE_WATER And
+        Grid.ReadPoint(Town.Surface, -50.0, -30.0) = Grid.SURFACE_GROUND,
+        "Three Corner Water Shape Preserves Its Pointed Outline", Failures)
+
+    Brush.Form = Paint.FORM_CURVE
+    Brush.Surface = Grid.SURFACE_ROAD
+    Brush.X0 = -100.0
+    Brush.Z0 = 0.0
+    Brush.X1 = 0.0
+    Brush.Z1 = 160.0
+    Brush.X2 = 100.0
+    Brush.Z2 = 0.0
+    Brush.Width = 20.0
+    Ok = Grid.PaintBrush(Town.Surface, Brush)
+
+    Call Check(Ok And Grid.ReadPoint(Town.Surface, 0.0, 80.0) = Grid.SURFACE_ROAD And
+        Grid.ReadPoint(Town.Surface, 0.0, 100.0) = Grid.SURFACE_GROUND And
+        Grid.ReadPoint(Town.Surface, 100.0, 0.0) = Grid.SURFACE_ROAD,
+        "Curve Uses Its Bend Control And Thickness With Round Ends", Failures)
+    Call Paint.SelectRegion(Town.Surface.Curves, SelectedCurves, 95.0, -5.0, 105.0, 5.0)
+    Call Check(SelectedCurves.BrushCount = 1 And
+        Paint.Resolve(SelectedCurves, 100.0, 0.0, Grid.SURFACE_GROUND) = Grid.SURFACE_ROAD,
+        "Sampling Bounds Include The Third Control Point", Failures)
+
+    Ok = Storage.SaveDocument(Town, "TownEditor.ShapeRegression")
+    Ok = Storage.LoadDocument(Loaded, "TownEditor.ShapeRegression") And Ok
+
+    Call Check(Ok And Derived.SameSurface(Town.Surface, Loaded.Surface) And
+        Loaded.Surface.Curves.Brushes[1].X2 = 100.0 And
+        Grid.ReadPoint(Loaded.Surface, 0.0, 80.0) = Grid.SURFACE_ROAD,
+        "TWN9 Preserves Triangle And Curve Control Points", Failures)
+
+    Loaded.Surface.Curves.Brushes[1].X2 = 101.0
+
+    Call Check(Not Derived.SameSurface(Town.Surface, Loaded.Surface),
+        "Moving The Third Point Rejects Stale Saved Preparation", Failures)
 
     Return Failures
 

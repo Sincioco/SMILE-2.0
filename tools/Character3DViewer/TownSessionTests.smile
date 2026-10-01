@@ -5,6 +5,9 @@ Option Explicit
 Import Smile.Tools.NerisTown As Town
 Import Smile.Tools.TownResidents As Residents
 Import Smile.Tools.TownDemo As Demo
+Import Smile.Tools.TownSurfaceTools As SurfaceTools
+Import Smile.Simple3D.SurfacePaint3D As Paint
+Import Smile.Simple3D.SurfaceGrid3D As Grid
 Import Smile.Tools.TownMapPicker As MapPicker
 Import Smile.Tools.TownViewportLayout As Toolbar
 Import Smile.Tools.TownResidentInteraction As Conversation
@@ -79,6 +82,7 @@ Shape = Catalog.TemplateAt(Controls.Ui.Template)
 Call Check(Shape.Category = 3, "Changing Category Selects A Matching Placement Template")
 Call CheckDecorPalette()
 Call CheckDemoChoices()
+Call CheckShapeGestures()
 
 Action = Commands.Command(Controls, Draft, 3)
 
@@ -898,6 +902,60 @@ Sub CheckResidentConversation(ByRef Value As Town.State)
     End If
 
     Call Party.Teleport(Value.People, Saved)
+
+End Sub
+
+Sub CheckShapeGestures()
+
+    Dim Gesture As SurfaceTools.State
+    Dim Ok As Boolean
+    Dim Revision As Number
+
+    Ok = Document.Blank(Draft, "Shape Gesture", 40, 40, 10.0)
+    Revision = Draft.Surface.Revision
+    Ok = SurfaceTools.AddPoint(Gesture, Draft.Surface, P.Vector(-100.0, 0.0, 0.0),
+        Paint.FORM_CURVE, Grid.SURFACE_GROUND, 40.0)
+    Ok = SurfaceTools.AddPoint(Gesture, Draft.Surface, P.Vector(0.0, 0.0, 100.0),
+        Paint.FORM_CURVE, Grid.SURFACE_GROUND, 40.0) Or Ok
+
+    Call Check(Not Ok And Draft.Surface.Revision = Revision And Gesture.Stage = 2,
+        "Curve Preview Does Not Rebuild Terrain Before The Third Point")
+
+    Ok = SurfaceTools.AddPoint(Gesture, Draft.Surface, P.Vector(100.0, 0.0, 0.0),
+        Paint.FORM_CURVE, Grid.SURFACE_GROUND, 40.0)
+
+    Call Check(Ok And Gesture.Stage = 0 And Draft.Surface.Curves.BrushCount = 1,
+        "Three Clicks Commit One Curve With The Selected Thickness")
+
+    Revision = Draft.Surface.Revision
+    Ok = SurfaceTools.EditPoint(Gesture, Draft.Surface, P.Vector(0.0, 0.0, 100.0),
+        10.0, True, True, True)
+    Ok = SurfaceTools.EditPoint(Gesture, Draft.Surface, P.Vector(0.0, 0.0, 150.0),
+        10.0, True, False, True) Or Ok
+
+    Call Check(Not Ok And Gesture.Dragging And Draft.Surface.Revision = Revision,
+        "Dragging A Saved Control Point Only Changes Its Preview")
+
+    Ok = SurfaceTools.EditPoint(Gesture, Draft.Surface, P.Vector(0.0, 0.0, 150.0),
+        10.0, True, False, False)
+
+    Call Check(Ok And Draft.Surface.Revision = Revision + 1 And
+        Draft.Surface.Curves.Brushes[0].Z1 = 150.0,
+        "Releasing A Curve Handle Commits One Terrain Revision")
+    Call SurfaceTools.Cancel(Gesture)
+
+    Action = Commands.Command(Controls, Draft, 2)
+    Action = Commands.Command(Controls, Draft, 411)
+
+    Call Check(Controls.Ui.Tool = 411, "Curve Tool Has An Independent Command")
+
+    Action = Commands.Command(Controls, Draft, 98)
+
+    Call Check(Controls.ViewRequest = 1, "Curve Tool Preserves The Existing Top View Command")
+
+    Controls.ViewRequest = 0
+    Controls.Ui.Category = 3
+    Controls.Ui.Tool = 10
 
 End Sub
 

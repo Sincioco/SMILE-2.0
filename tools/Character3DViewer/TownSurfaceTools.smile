@@ -1,4 +1,4 @@
-''' Circular terrain gestures: precise brushes and their world-space construction preview.
+''' Precise terrain gestures, control-point editing and world-space previews.
 Module Smile.Tools.TownSurfaceTools
 
 Option Explicit
@@ -8,6 +8,17 @@ Import Smile.Simple3D.SurfacePaint3D As Paint
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PrecisionMath3D As M
 Import Smile.Tools.TownGuides As Guides
+Import Smile.Simple3D.SurfacePath3D As Paths
+Import Smile.Simple3D.PrecisionCamera3D As Camera
+
+Public Type State
+    Stage As Number
+    Draft As Paint.Brush
+    SelectedIndex As Number
+    Handle As Number
+    Dragging As Boolean
+    Message As Text
+End Type
 
 Public Function Apply(ByRef Surface As Grid.State, Center As P.Vector3,
     Edge As P.Vector3, Kind As Number, Width As Double, Filled As Boolean) As Boolean
@@ -68,6 +79,266 @@ Public Sub Preview(Center As P.Vector3, Edge As P.Vector3, Width As Double,
             Call Guides.DrawMarker(Line, Camera, RGB(70, 230, 215))
         End For
     End For
+
+End Sub
+
+Public Sub Cancel(ByRef Value As State)
+
+    Value.Stage = 0
+    Value.Dragging = False
+    Value.SelectedIndex = 0
+    Value.Message = ""
+
+End Sub
+
+Public Function ControlPoint(Brush As Paint.Brush, Index As Number) As P.Vector3
+
+    Dim Point As P.Vector3
+
+    Point = P.Vector(Brush.X0, 28.0, Brush.Z0)
+
+    If Index = 1 Then
+        Point = P.Vector(Brush.X1, 28.0, Brush.Z1)
+    Else If Index = 2 Then
+        Point = P.Vector(Brush.X2, 28.0, Brush.Z2)
+    End If
+
+    Return Point
+
+End Function
+
+Private Sub SetPoint(ByRef Brush As Paint.Brush, Index As Number, Point As P.Vector3)
+
+    If Index = 0 Then
+        Brush.X0 = Point.X
+        Brush.Z0 = Point.Z
+    Else If Index = 1 Then
+        Brush.X1 = Point.X
+        Brush.Z1 = Point.Z
+    Else
+        Brush.X2 = Point.X
+        Brush.Z2 = Point.Z
+    End If
+
+End Sub
+
+''' Add precise control points without touching terrain until the shape is complete.
+Public Function AddPoint(ByRef Value As State, ByRef Surface As Grid.State,
+    Point As P.Vector3, Form As Number, Kind As Number, Width As Double) As Boolean
+
+    Dim Ok As Boolean
+
+    If Value.Stage = 0 Then
+
+        Value.Draft.Form = Form
+        Value.Draft.Surface = Kind
+        Value.Draft.Width = Width
+
+    End If
+
+    Call SetPoint(Value.Draft, Value.Stage, Point)
+
+    Value.Stage = Value.Stage + 1
+    Value.Message = "Click the next corner."
+
+    If Form = Paint.FORM_CURVE Then
+        Value.Message = "Click the bend control point."
+    End If
+
+    If Value.Stage = 2 Then
+        Value.Message = "Click the final point."
+    End If
+
+    If Value.Stage < 3 Then
+        Return False
+    End If
+
+    Ok = Grid.PaintBrush(Surface, Value.Draft)
+    Value.Stage = 0
+    Value.Message = "Shape added. Ctrl+Z undoes it."
+
+    If Not Ok Then
+        Value.Message = "Use distinct corners; limit 256 shapes."
+    End If
+
+    Return Ok
+
+End Function
+
+''' Drag a saved point; only release commits a terrain revision.
+Public Function EditPoint(ByRef Value As State, ByRef Surface As Grid.State,
+    Point As P.Vector3, Radius As Double, Allowed As Boolean,
+    Pressed As Boolean, Held As Boolean) As Boolean
+
+    Dim Index As Number
+    Dim HandleIndex As Number
+    Dim Distance As Double
+    Dim Best As Double
+
+    If Value.Dragging Then
+
+        If Allowed Then
+            Call SetPoint(Value.Draft, Value.Handle, Point)
+        End If
+
+        If Held Then
+            Return False
+        End If
+
+        Value.Dragging = False
+
+        If Paint.Valid(Value.Draft) And Value.SelectedIndex <= Surface.Curves.BrushCount Then
+
+            Surface.Curves.Brushes[Value.SelectedIndex - 1] = Value.Draft
+            Surface.Revision = Surface.Revision + 1
+            Value.Message = "Shape point moved. Ctrl+Z undoes it."
+            Return True
+
+        End If
+
+        Value.Message = "That change would collapse the triangle."
+        Return False
+
+    End If
+
+    If Not Pressed Or Not Allowed Then
+        Return False
+    End If
+
+    Best = Radius
+    Value.SelectedIndex = 0
+
+    For Index = 0 To Surface.Curves.BrushCount - 1
+
+        If Surface.Curves.Brushes[Index].Form >= Paint.FORM_TRIANGLE Then
+
+            For HandleIndex = 0 To 2
+
+                Distance = M.Distance(ControlPoint(Surface.Curves.Brushes[Index], HandleIndex),
+                    P.Vector(Point.X, 28.0, Point.Z))
+
+                If Distance <= Best Then
+
+                    Best = Distance
+                    Value.SelectedIndex = Index + 1
+                    Value.Handle = HandleIndex
+
+                End If
+
+            End For
+
+        End If
+
+    End For
+
+    If Value.SelectedIndex > 0 Then
+
+        Value.Draft = Surface.Curves.Brushes[Value.SelectedIndex - 1]
+        Value.Dragging = True
+        Value.Message = "Drag this point; release to apply."
+
+    End If
+
+    Return False
+
+End Function
+
+Private Sub ShapeOutline(Brush As Paint.Brush, View As P.Camera3D)
+
+    Dim Line As Guides.Marker
+    Dim Index As Number
+    Dim Side As Number
+    Dim SegmentCount As Number
+    Dim NextPoint As P.Vector3
+    Dim Previous As P.Vector3
+    Dim Normal As P.Vector3
+    Dim Delta As P.Vector3
+    Dim Pixel As Camera.ProjectedPoint
+
+    If Brush.Form = Paint.FORM_TRIANGLE Then
+
+        For Index = 0 To 2
+            Line.First = ControlPoint(Brush, Index)
+            Line.Last = ControlPoint(Brush, (Index + 1) Mod 3)
+
+            Call Guides.DrawMarker(Line, View, CYAN)
+        End For
+
+    Else
+
+        SegmentCount = Max(8, Paths.Segments(ControlPoint(Brush, 0), ControlPoint(Brush, 1), ControlPoint(Brush, 2)))
+        Previous = ControlPoint(Brush, 0)
+
+        For Index = 1 To SegmentCount
+
+            NextPoint = Paths.PointAt(ControlPoint(Brush, 0), ControlPoint(Brush, 1),
+                ControlPoint(Brush, 2), ToDouble(Index) / ToDouble(SegmentCount))
+            NextPoint.Y = 28.0
+            Delta = M.Subtract(NextPoint, Previous)
+            Normal = M.Scale(P.Vector(-Delta.Z, 0.0, Delta.X),
+                Brush.Width * 0.5 / Max(0.001, M.Length(Delta)))
+
+            For Side = -1 To 1
+                Line.First = M.Add(Previous, M.Scale(Normal, ToDouble(Side)))
+                Line.Last = M.Add(NextPoint, M.Scale(Normal, ToDouble(Side)))
+
+                Call Guides.DrawMarker(Line, View, CYAN)
+            End For
+
+            Previous = NextPoint
+        End For
+
+    End If
+
+    For Index = 0 To 2
+
+        Pixel = Camera.ProjectViewerPoint(ControlPoint(Brush, Index), View, Window_Width(), Window_Height())
+
+        If Pixel.Visible Then
+            Fill Rectangle ToNumber(Pixel.X) - 4, ToNumber(Pixel.Y) - 4, 8, 8, CYAN
+        End If
+
+    End For
+
+End Sub
+
+Public Sub DrawShape(ByRef Value As State, ByRef Surface As Grid.State,
+    Point As P.Vector3, View As P.Camera3D, Editing As Boolean)
+
+    Dim Index As Number
+    Dim Brush As Paint.Brush
+
+    If Editing Then
+
+        For Index = 0 To Surface.Curves.BrushCount - 1
+
+            Brush = Surface.Curves.Brushes[Index]
+
+            If Brush.Form >= Paint.FORM_TRIANGLE Then
+
+                If Value.Dragging And Value.SelectedIndex = Index + 1 Then
+                    Brush = Value.Draft
+                End If
+
+                Call ShapeOutline(Brush, View)
+
+            End If
+
+        End For
+
+    Else If Value.Stage > 0 Then
+
+        Brush = Value.Draft
+
+        Call SetPoint(Brush, Value.Stage, Point)
+
+        If Value.Stage = 1 Then
+            Call SetPoint(Brush, 2, Point)
+        End If
+
+        Call ShapeOutline(Brush, View)
+
+    End If
 
 End Sub
 

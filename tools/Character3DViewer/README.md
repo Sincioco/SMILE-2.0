@@ -1,5 +1,24 @@
 # SMILE 2.0 - Sin Star I - Game Engine and Studio
 
+## October 1 editable landscape shapes
+
+**Edit Town → Items → Surfaces** now includes **Triangle**, **Curve**, and
+**Edit Shape Points**. Choose Ground, Road or Water and the thickness first.
+A triangle uses three corners; a curve uses a start, bend control point and end.
+The cyan preview shows the stroke width. Terrain changes once the third point is
+clicked, or once an existing handle is released. Ctrl+Z undoes the whole change;
+Esc cancels the unfinished gesture. True 2D and guide snapping remain available.
+
+Neris Canals now follows the four-point Neris emblem with triangular quays.
+Neris Crown Isles uses seven pairs of curved palm branches inside an open perimeter
+ring. Generated-map entrance paths meet their front steps, and concave road
+junctions are rounded without protruding caps on the outside of ring roads.
+Travel markers occupy final road cells; arrival faces a clear inward route.
+
+Saved TWN9 maps retain editable points and prepared terrain/road data. Older maps
+remain readable. CPU preparation happens during saving; unchanged gameplay loads
+adopt it. GPU resource upload still happens when a map enters the renderer.
+
 ## October 1 resident interaction
 
 Click a resident's body to walk up along the road and begin a conversation.

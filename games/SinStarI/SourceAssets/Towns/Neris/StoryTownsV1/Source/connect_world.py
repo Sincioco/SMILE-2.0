@@ -4,6 +4,7 @@ import json
 import math
 from pathlib import Path
 from town_design import CATALOG, atomic_write, decode, encode, unwrap
+from road_end_markers import relocate
 
 FOLDER = Path(__file__).resolve().parent.parent
 
@@ -31,9 +32,10 @@ def blocked_bounds(doc):
 
 
 def connect(doc, destinations, origin, nodes):
-    """Keep existing markers; add one road pad per missing destination."""
+    """Preserve destinations and put every trigger on its final road cell."""
     missing = sorted(set(destinations)-{t['destination'] for t in doc['map_tiles']})
     if not missing:
+        relocate(doc)
         return []
     before = {k: v for k, v in doc.items() if k != 'map_tiles'}
     occupied = {(t['x'], t['z']) for t in doc['map_tiles']}
@@ -74,6 +76,7 @@ def connect(doc, destinations, origin, nodes):
                 doc['map_tiles'].append(dict(x=a,z=b,destination=destination))
                 occupied.add((a,b))
         added.append(dict(destination=destination, center=[px,pz]))
+    relocate(doc)
     assert before == {k:v for k,v in doc.items() if k != 'map_tiles'}
     assert len(doc['map_tiles']) <= 4096
     return added

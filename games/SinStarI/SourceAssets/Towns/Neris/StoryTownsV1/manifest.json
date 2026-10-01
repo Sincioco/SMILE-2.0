@@ -3,19 +3,19 @@
     "name": "Neris Canals",
     "file": "Neris Canals.town",
     "size_m": 720,
-    "items": 263,
-    "trees": 146,
-    "lamps": 54,
-    "houses": 34,
-    "castles": 1,
-    "city_halls": 1,
-    "draw_cost": 1896,
-    "local_lights": 64,
-    "water_percent": 29.3,
+    "items": 96,
+    "trees": 24,
+    "lamps": 44,
+    "houses": 18,
+    "castles": 0,
+    "city_halls": 2,
+    "draw_cost": 838,
+    "local_lights": 56,
+    "water_percent": 67.3,
     "story_spaces": [
-      "Ceremonial castle approach and four cross-canals",
-      "Public water gardens beside the relay tower",
-      "Paired repair-market streets and quiet residential banks"
+      "Four-point Neris star with long ceremonial avenues",
+      "Triangular residential quays separated by open canals",
+      "Four short bridge approaches and clear waterfront streets"
     ]
   },
   {
@@ -41,19 +41,19 @@
     "name": "Neris Crown Isles",
     "file": "Neris Crown Isles.town",
     "size_m": 780,
-    "items": 229,
-    "trees": 128,
-    "lamps": 64,
-    "houses": 18,
-    "castles": 1,
+    "items": 109,
+    "trees": 43,
+    "lamps": 37,
+    "houses": 28,
+    "castles": 0,
     "city_halls": 1,
-    "draw_cost": 1484,
-    "local_lights": 78,
-    "water_percent": 51.6,
+    "draw_cost": 822,
+    "local_lights": 43,
+    "water_percent": 58.1,
     "story_spaces": [
-      "Nine garden islands separated by deep, clear waterways",
-      "Long illuminated processional bridges",
-      "Royal island, market quays and southern residential villages"
+      "Smooth palm fronds inside an open circular breakwater",
+      "Water channels between seven paired residential branches",
+      "A central civic approach and linked outer promenade"
     ]
   },
   {

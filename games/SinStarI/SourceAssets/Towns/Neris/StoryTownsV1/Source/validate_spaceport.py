@@ -10,7 +10,8 @@ def validate(doc):
     for item in doc['items']:
         if item['template'] < 6:
             assert all(surface(doc,x*10,z*10)==1 for x,z in outline(item)), ('Building crosses road/water',item['identity'])
-    for form,kind,x0,z0,x1,z1,width in doc['curves']:
+    for brush in doc['curves']:
+        form,kind,x0,z0,x1,z1,width = brush[:7]
         if form == 4 and kind == 3:
             steps=max(1,math.ceil(math.hypot(x1-x0,z1-z0)/10))
             for i in range(steps+1):

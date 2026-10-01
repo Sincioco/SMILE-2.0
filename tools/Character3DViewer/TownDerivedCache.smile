@@ -67,6 +67,11 @@ Public Function SameSurface(ByRef First As Grid.State, ByRef Second As Grid.Stat
             Return False
         End If
 
+        If (FirstValue.Form >= Paint.FORM_TRIANGLE And
+            (FirstValue.X2 <> SecondValue.X2 Or FirstValue.Z2 <> SecondValue.Z2)) Then
+            Return False
+        End If
+
     End For
 
     Return True

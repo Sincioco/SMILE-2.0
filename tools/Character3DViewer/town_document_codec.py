@@ -1,4 +1,6 @@
-"""Bounded TWN1–TWN7 codec shared by the existing Blender document worker."""
+"""Bounded TWN1–TWN9 codec shared by the existing Blender document worker."""
+import math
+from functools import lru_cache
 import hashlib
 import json
 import struct
@@ -35,7 +37,7 @@ def validate_prepared_bundle(raw, offset):
     if count > 2048:
         raise ValueError('Too many prepared records')
     offset += 8
-    names = set()
+    records = {}
     for _ in range(count):
         if offset + 8 > len(raw) - 32:
             raise ValueError('Incomplete prepared record')
@@ -45,15 +47,23 @@ def validate_prepared_bundle(raw, offset):
             raise ValueError('Invalid prepared record size')
         name = raw[offset:offset + name_size].decode('ascii')
         offset += name_size
-        if name[0] != '.' or any(c not in '._-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz' for c in name) or name in names:
+        if name[0] != '.' or any(c not in '._-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz' for c in name) or name in records:
             raise ValueError('Invalid prepared record name')
-        names.add(name)
         part = raw[offset:offset + data_size]
         if part[:4] != b'SMD4' or struct.unpack_from('<II', part, 4) != (1, data_size - 44) or hashlib.sha256(part[44:]).digest() != part[12:44]:
             raise ValueError('Invalid prepared record checksum')
+        records[name] = part[44:]
         offset += data_size
     if offset != len(raw) - 32:
         raise ValueError('Unexpected prepared bundle data')
+    return records
+
+
+def prepared_records(raw):
+    """Read verified companion payloads without discarding native save preparation."""
+    payload = unwrap(raw)
+    offset = 44 + len(payload)
+    return validate_prepared_bundle(raw, offset) if len(raw) > offset else {}
 
 
 def integer(value):
@@ -135,7 +145,7 @@ def decode(payload, catalog, request=False):
     if bytes(r.byte() for _ in range(3)) != b'TWN':
         raise ValueError('Unsupported town format')
     version = r.byte()
-    if version not in (1, 2, 3, 4, 5, 6, 7):
+    if version not in (1, 2, 3, 4, 5, 6, 7, 8, 9):
         raise ValueError('Unsupported town format')
     fingerprint = catalog.get('document_fingerprint') or hashlib.sha256(json.dumps(catalog, sort_keys=True).encode()).hexdigest()
     if r.name() != fingerprint:
@@ -206,8 +216,17 @@ def decode(payload, catalog, request=False):
             for _ in range(count):
                 brush = [r.integer(), r.integer()] + [r.precise() for _ in range(5)]
                 form, kind, x0, z0, x1, z1, width = brush
-                if not (1 <= form <= 4 and 0 <= kind <= 4 and width >= 0
-                        and (form not in (2, 3) or x1 > 0)):
+                if not 1 <= form <= (8 if version >= 9 else 6 if version >= 8 else 4):
+                    raise ValueError('Invalid curved surface brush')
+                if version >= 9 and form >= 7:
+                    brush += [r.precise(), r.precise()]
+                x2, z2 = brush[7:] if form >= 7 else (0, 0)
+                if not (1 <= form <= (8 if version >= 9 else 6 if version >= 8 else 4) and 0 <= kind <= 4 and width >= 0
+                        and (form not in (2, 3) or x1 > 0)
+                        and (form != 5 or (width > 0 and (x1-x0)**2+(z1-z0)**2 > width**2))
+                        and (form != 6 or (x1 > 0 and z1 > 0 and width > 0))
+                        and (form != 7 or abs((x1-x0)*(z2-z0)-(z1-z0)*(x2-x0)) > .000001)
+                        and (form != 8 or width > 0)):
                     raise ValueError('Invalid curved surface brush')
                 brushes.append(brush)
             result['curves'] = brushes
@@ -226,34 +245,95 @@ def decode(payload, catalog, request=False):
     return result
 
 
+@lru_cache(maxsize=512)
+def bezier_segments(brush):
+    x0,z0,x1,z1 = brush[2:6]
+    x2,z2 = brush[7:]
+    bend = math.hypot(x0-2*x1+x2,z0-2*z1+z2)
+    count = max(1,min(256,int(math.sqrt(bend))+1))
+    previous, result = (x0,z0), []
+    for index in range(1,count+1):
+        t = index/count
+        u = 1-t
+        current = (u*u*x0+2*u*t*x1+t*t*x2,u*u*z0+2*u*t*z1+t*t*z2)
+        result.append((*previous,*current))
+        previous = current
+    return tuple(result)
+
+
+def curve_contains(brush, x, z):
+    """Same analytic predicates as SurfacePaint3D; also used by authoring checks."""
+    form, _, x0, z0, x1, z1, width = brush[:7]
+    dx, dz = x-x0, z-z0
+    if form == 7:
+        x2, z2 = brush[7:]
+        signs = ((x1-x0)*(z-z0)-(z1-z0)*(x-x0),
+                 (x2-x1)*(z-z1)-(z2-z1)*(x-x1),
+                 (x0-x2)*(z-z2)-(z0-z2)*(x-x2))
+        return min(signs) >= 0 or max(signs) <= 0
+    if form == 8:
+        low_x, high_x, low_z, high_z = curve_bounds(brush)
+        if not (low_x <= x <= high_x and low_z <= z <= high_z):
+            return False
+        for ax, az, bx, bz in bezier_segments(tuple(brush)):
+            if not (min(ax,bx)-width/2 <= x <= max(ax,bx)+width/2 and
+                    min(az,bz)-width/2 <= z <= max(az,bz)+width/2):
+                continue
+            dx, dz = bx-ax, bz-az
+            t = max(0,min(1,((x-ax)*dx+(z-az)*dz)/max(.000001,dx*dx+dz*dz)))
+            if (x-ax-t*dx)**2+(z-az-t*dz)**2 <= width*width/4:
+                return True
+        return False
+    if form == 1:
+        return x0 <= x <= x1 and z0 <= z <= z1
+    if form == 2:
+        return dx*dx+dz*dz <= x1*x1
+    if form == 3:
+        return max(0,x1-width/2)**2 <= dx*dx+dz*dz <= (x1+width/2)**2
+    if form == 5:
+        ax, az = x1-x0, z1-z0
+        distance, radius = ax*ax+az*az, width*width
+        along, across = dx*ax+dz*az, dx*az-dz*ax
+        return (radius <= along <= distance and dx*dx+dz*dz >= radius
+                and across*across*(distance-radius) <= radius*(distance-along)**2)
+    if form == 6:
+        dx,dz = abs(dx),abs(dz)
+        return (dx <= x1+width and dz <= z1+width and
+                (dx <= x1 or dz <= z1 or (dx-x1-width)**2+(dz-z1-width)**2 >= width**2))
+    t = max(0,min(1,(dx*(x1-x0)+dz*(z1-z0))/max(.000001,(x1-x0)**2+(z1-z0)**2)))
+    return (dx-t*(x1-x0))**2+(dz-t*(z1-z0))**2 <= width*width/4
+
+
+def curve_bounds(brush):
+    form, _, x0, z0, x1, z1, width = brush[:7]
+    if form in (7,8):
+        x2, z2 = brush[7:]
+        radius = width/2 if form == 8 else 0
+        return min(x0,x1,x2)-radius, max(x0,x1,x2)+radius, min(z0,z1,z2)-radius, max(z0,z1,z2)+radius
+    if form in (2, 3):
+        extent = x1 + (width / 2 if form == 3 else 0)
+        return x0-extent, x0+extent, z0-extent, z0+extent
+    if form == 5:
+        return min(x0-width,x1), max(x0+width,x1), min(z0-width,z1), max(z0+width,z1)
+    if form == 6:
+        return x0-x1-width, x0+x1+width, z0-z1-width, z0+z1+width
+    extent = width / 2 if form == 4 else 0
+    return min(x0,x1)-extent, max(x0,x1)+extent, min(z0,z1)-extent, max(z0,z1)+extent
+
+
 def raster_curves(document):
     """Derived cells for legacy consumers; the exact brush stack stays authoritative."""
     import bisect
     cells = document['base_cells'][:]
     xs, zs, columns = document['xs'], document['zs'], document['columns']
-    for form, kind, x0, z0, x1, z1, width in document['curves']:
-        if form in (2, 3):
-            extent = x1 + (width / 2 if form == 3 else 0)
-            low_x, high_x, low_z, high_z = x0-extent, x0+extent, z0-extent, z0+extent
-        else:
-            extent = width / 2 if form == 4 else 0
-            low_x, high_x = min(x0, x1)-extent, max(x0, x1)+extent
-            low_z, high_z = min(z0, z1)-extent, max(z0, z1)+extent
+    for brush in document['curves']:
+        kind = brush[1]
+        low_x, high_x, low_z, high_z = curve_bounds(brush)
         for row in range(max(0,bisect.bisect_right(zs,low_z)-1), min(len(zs)-1,bisect.bisect_right(zs,high_z))):
             z = (zs[row]+zs[row+1]) / 2
             for col in range(max(0,bisect.bisect_right(xs,low_x)-1), min(len(xs)-1,bisect.bisect_right(xs,high_x))):
                 x = (xs[col]+xs[col+1]) / 2
-                dx, dz = x-x0, z-z0
-                if form == 1:
-                    hit = x0 <= x <= x1 and z0 <= z <= z1
-                elif form == 2:
-                    hit = dx*dx+dz*dz <= x1*x1
-                elif form == 3:
-                    hit = max(0,x1-width/2)**2 <= dx*dx+dz*dz <= (x1+width/2)**2
-                else:
-                    t = max(0,min(1,(dx*(x1-x0)+dz*(z1-z0))/max(.000001,(x1-x0)**2+(z1-z0)**2)))
-                    hit = (dx-t*(x1-x0))**2+(dz-t*(z1-z0))**2 <= width*width/4
-                if hit:
+                if curve_contains(brush, x, z):
                     index = row*columns+col
                     cells[index] = 4 if kind == 3 and cells[index] in (2,4) else kind
     return cells
@@ -264,6 +344,10 @@ def encode(document, catalog):
     # Eight-value legacy snapshots must retain their checksum when opened.
     version = (7 if 'terrain_style' in document else 6 if document.get('curves') else 5 if 'court_placed' in document else 4 if 'presets' in document else 3 if 'map_tiles' in document
                else 2 if len(document['sun']) == 9 else 1)
+    if any(brush[0] >= 5 for brush in document.get('curves', [])):
+        version = 8
+    if any(brush[0] >= 7 for brush in document.get('curves', [])):
+        version = 9
     result = bytearray(b'TWN') + bytes([version]) + name(fingerprint) + name(document['name']) + b'\0'
     precise = lambda value: integer(round(value * 1000000))
     result += integer(document['columns']) + integer(document['rows']) + precise(document['cell_size'])
@@ -305,7 +389,7 @@ def encode(document, catalog):
             result += integer(brush[0]) + integer(brush[1])
             result += b''.join(precise(value) for value in brush[2:])
     if version >= 7:
-        result += bytes([document['terrain_style']])
+        result += bytes([document.get('terrain_style', 0)])
     decode(result, catalog)  # Same format/range checks apply in both directions.
     return bytes(result)
 
