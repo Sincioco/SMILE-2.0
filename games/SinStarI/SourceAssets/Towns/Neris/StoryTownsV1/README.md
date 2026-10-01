@@ -66,7 +66,7 @@ covers all 50 directed entrances.
 and full scenery-footprint clearance. It considers rotated model bounds and whole
 tree clusters. Small paths join the existing street network without passing through
 another building. `validate_access.py` protects the reported blocked-road and
-missing-entrance defects; it checks all thirteen generated maps and 146 entrances.
+missing-entrance defects; it checks all thirteen generated maps and 160 entrances.
 The user-approved center tower in Ancient Relay and Waterworks pump platforms have
 explicit exceptions. Castles and airport terminals retain their authored approaches.
 
@@ -148,3 +148,11 @@ Close Studio first. A dry run checks for newer user geometry before any write;
 the real install backs up every replaced key and retains per-map lighting.
 The shipped Towns directory contains prepared files. Original Neris remains the
 live PermanentNeris save; it is never regenerated from the alternative layouts.
+
+### Crown Isles palm refinement
+
+The transverse road through the palm is removed. Two short curved bridges near
+the trunk base connect the perimeter, preserving every leaf-shaped branch.
+The current map has 42 homes (previously 28), 96 trees (43), and 65 lamps (37).
+All 43 building entrances reach pavement, and the full travel network remains
+connected. Lamps follow the branches as well as the trunk and outer promenade.

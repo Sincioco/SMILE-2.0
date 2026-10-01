@@ -264,7 +264,7 @@ Public Sub MapStatistics(ByRef Value As State, ByRef View As Arena.State,
     LengthMeters = ToDouble(View.Floor.Depth) / 10.0
     Labels[0] = "Map Polygons (Triangles)"
     Labels[1] = "Map Vertices"
-    Labels[2] = "Map Area (m²)"
+    Labels[2] = "Map Area (mÂ²)"
     Labels[3] = "Map Length (m)"
     Labels[4] = "Map Width (m)"
     Labels[5] = "Map Load Time (ms)"

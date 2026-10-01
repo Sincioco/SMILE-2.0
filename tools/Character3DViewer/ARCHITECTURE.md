@@ -1,5 +1,14 @@
 # Character Viewer Architecture
 
+## October 1 Crown Isles palm refinement
+
+The capital layout author owns the road removal, two curved base bridges and
+increased houses/trees/lamps. The canonical portable map is prepared again through
+the existing native save owner. All 43 entrances and all 50 directed atlas links
+pass; fresh import adopts prepared terrain and roads. No runtime behavior or
+resource limits change. NerisTownCameraPanel is normalized to UTF-8 so the square
+metre label no longer becomes a replacement glyph during compilation.
+
 ## October 1 landscape authoring and map revision
 
 SurfacePath3D owns triangle containment and adaptive quadratic Bezier evaluation.

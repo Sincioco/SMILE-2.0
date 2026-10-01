@@ -134,16 +134,17 @@ def crown_isles():
             points=[(0,z),(side*extent*.76,z),(side*extent,end_z)]
             fronds.append(points)
             t.curve(points,37)
-    # Roads follow the same smooth center curves. The east/west gate bridges
-    # cross the open water once, between the trunk and the perimeter promenade.
+    # Roads follow the same smooth center curves. Two short curved bridges at
+    # the trunk base connect the perimeter without cutting through any frond.
     for points in arcs:
         t.curve(points,10,ROAD)
     t.path([(0,-370),(0,224)],12)
-    t.path([(-378,-38),(378,-38)],12)
+    for side in (-1,1):
+        t.curve([polar(340,side*157.5),(side*75,-356),(0,-335)],10,ROAD)
     for points in fronds:
         t.curve(points,8,ROAD)
         (ax,az),(bx,bz),(cx,cz)=points
-        for index,amount in enumerate((.48,.77)):
+        for index,amount in enumerate((.38,.60,.81)):
             u=1-amount
             x,z=u*u*ax+2*u*amount*bx+amount*amount*cx,u*u*az+2*u*amount*bz+amount*amount*cz
             dx,dz=2*(u*(bx-ax)+amount*(cx-bx)),2*(u*(bz-az)+amount*(cz-bz))
@@ -151,17 +152,30 @@ def crown_isles():
             # Mirror the homes on the upper bank, safely between road and shore.
             side=1 if cx>0 else -1
             nx,nz=-dz/length*side,dx/length*side
-            t.place(0 if index else 5,x+nx*11,z+nz*11,.9,
+            t.place((5,0,4)[index],x+nx*11,z+nz*11,.9,
                     math.degrees(math.atan2(nx,nz))%360)
             t.place(19,x-nx*11,z-nz*11,1.3)
+        for amount in (.52,.90):
+            u=1-amount
+            x,z=u*u*ax+2*u*amount*bx+amount*amount*cx,u*u*az+2*u*amount*bz+amount*amount*cz
+            dx,dz=2*(u*(bx-ax)+amount*(cx-bx)),2*(u*(bz-az)+amount*(cz-bz))
+            length=math.hypot(dx,dz)
+            side=1 if cx>0 else -1
+            t.place(15,x+dz/length*side*8,z-dx/length*side*8,1.8)
     t.place(9,0,246,1.35)
     for z in (-290,-240,-175,-110,20,90,165):
         t.lamps([(-10,z),(10,z)],1.8)
+    for z in (-310,-265,-200,-140,-75,-10,55,120,195):
+        for side in (-1,1):
+            t.place(18,side*21,z,1.5)
     for angle in range(-140,141,20):
         x,z=polar(353,angle)
         t.place(19,x,z,1.7)
         x,z=polar(331,angle)
         t.place(15,x,z,1.8)
+    for angle in range(-150,151,15):
+        x,z=polar(326,angle)
+        t.place(18,x,z,1.6)
     t.gates(z=-38)
     t.notes=['Smooth palm fronds inside an open circular breakwater',
         'Water channels between seven paired residential branches',
