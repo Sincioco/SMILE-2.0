@@ -383,15 +383,23 @@ Public Function PreparePicker(ByRef Value As State, ByRef Town As Document.State
     Dim Index As Number
     Dim Changed As Boolean
 
-    If Not Value.Menu.Visible Or Not Previews.Has(Town.Name) Then
+    If Not Value.Menu.Visible Then
+        Return False
+    End If
+
+    If Not Previews.Check(Town) Then
         Return False
     End If
 
     For Index = 0 To Value.TabCount - 1
 
-        If Not Previews.Has(Value.Documents[Index].Name) Then
-            Changed = SelectTab(Value, Town, Index, False)
-            Return Changed
+        If Index <> Value.Active Then
+
+            If Not Previews.Check(Value.Documents[Index]) Then
+                Changed = SelectTab(Value, Town, Index, False)
+                Return Changed
+            End If
+
         End If
 
     End For

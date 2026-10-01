@@ -1,5 +1,86 @@
 # Character Viewer Architecture
 
+## October 1 Demo lighting and portable terrain repair
+
+TownDemo owns the 10/20-second phase calculation using its existing 30-second clock.
+TownLighting selects an alternate Sun without changing the document, saved presets,
+revision or thumbnail identity. TownEditorSession applies directional light on phase
+changes and supplies the same intensity to local lights. Ending Demo restores the
+authored light. A manual day/night click still changes the authored preset and leaves
+Demo running. Thumbnail capture waits until the authored-light phase. Countdown
+presentation remains in TownViewportLayout: large digits only below the upper-right
+camera panel. NerisTownTour continues the current bearing when easing into Demo.
+
+TownDocument owns stable airport assembly identity. TWN10 adds that byte only where
+the name no longer implies it; TWN1-9 remain readable and ordinary saves retain their
+existing encoding/cache identity. Numeric legacy airport copies recover their known
+assembly. Native landmark lifecycle, initial framing, spawn, protected-area queries
+and Blender assembly selection consume the identity rather than the tab's title.
+
+TownFileJobs retains a pending request after a delayed Blender startup, accepting the
+worker's eventual verified success or failure instead of discarding it at 15 seconds.
+The background worker's actual saved-file verification remains the success authority.
+town_blender_terrain reads the immutable native prepared mesh recipe. Blender receives
+the same contour triangles and walls instead of rebuilding curves as square grid cells.
+Missing or unsupported curve recipes fail explicitly; they are never silently flattened.
+
+Validation: all four native town groups pass, including exact Demo phase boundaries,
+authored-light preservation, delayed Blender success, stable landmark round trips,
+beacon timing and resource cleanup. The first new file-job fixture exceeded the native
+stack with a large local state; that test-owned state now lives at fixture scope.
+Its runner now reports an empty-output process failure without a secondary null error.
+Actual Blender exports/reopens of Spaceport, Canals and the user's 21:59 Horizon copy
+match every prepared vertex/material, retain lighting and preserve renamed assemblies.
+Spaceport's smooth rings were also inspected in the Blender viewport. The normal Release
+build (22:45:20 +08:00, VSIX 2.0.66) showed Canals at night with 19 seconds remaining
+and restored daylight with 9 remaining, with orbit active in both captures. A real
+Save For Blender of Star Lake completed at 100%; the worker saved and reopened request
+90 successfully. Crown's inward road stubs are trimmed, and Orin has four center ponds
+with east/west roads joining the outside of the round neighborhoods. Both were viewed
+in native Studio. Three refined maps also passed thirteen directed gateway routes.
+
+Release and Debug builds publish 362 assets each. All 21 changed SMILE files pass the
+formatter check; thirteen formatter integration checks pass. The whole-repository
+format check still reports the sixteen previously recorded unrelated files. No full
+smoke-suite success is claimed. Changed owners grow within their existing responsibilities:
+TownDemo +11, TownLighting +39, Session +30, FileJobs -4, Document +60, Store +48,
+Landmarks +5, SpaceportGlow +135, ViewportLayout +3, and the new Python recipe adapter
+is 64 lines. NativeProgram/NativeViewerHost and ViewerWorkflow have no growth.
+
+Ownership remains within the existing feature owners; no bootstrap growth, new package,
+capacity increase, guardrail exception or architecture baseline change is required.
+
+Additional native acceptance: the user's 21:59 Horizon Airport file opens as
+Horizon Airport 2 with its terminal, runway, aircraft and edited lighting intact.
+Spaceport's Demo night phase visibly lights the pads and aprons. Manual day/night
+clicks preserve Demo and orbit; captures show the countdown continuing. The red
+beacon's phase is covered by the native timing fixture; a controlled visual blink
+pair has not been captured.
+
+## October 1 persistent thumbnail ownership
+
+TownWorldPreviews owns live photograph handles, per-revision validation and the
+two-generation disk cache. TownDocumentStore compares exact serialized inputs
+using one bounded reusable scratch buffer; document formats remain unchanged.
+TownTabs checks inactive document caches before selecting a map for generation.
+TownMapPicker owns Refresh/Refresh All hit targets, missing-image status and the
+opaque backdrop. NerisTown suppresses ordinary loading imagery behind a modal.
+NativeProgram and NativeViewerHost remain unchanged.
+
+Graphics3D's two native capture save/load delegates use text opcodes 13/14. The
+existing viewport owner admits/restores handles in its unchanged 32-slot registry.
+viewport_capture_storage.cpp owns BGRA8 GPU readback/recreation and the bounded
+SVP1 payload inside ordinary checksummed, atomic Save Data records. The payload
+fits the existing one-MiB save limit; unsupported dimensions/backends fail without
+changing the previous published cache. No external dependency or capacity growth.
+
+Native renderer tests save a photograph, release its handle and reload/draw it
+without another scene; missing and invalid handles return failure. Document tests
+check exact matching plus lighting/layout invalidation. Picker tests distinguish
+Refresh from Demo and map-open actions. Sin verified cached reopening and Refresh All.
+Native relaunch reuse, single-card refresh and lighting-edit invalidation were checked;
+the single-card action changed only that map's cached generation.
+
 ## October 1 Demo timing, camera and footer
 
 TownDemo derives whole seconds remaining from its existing 30-second clock; it

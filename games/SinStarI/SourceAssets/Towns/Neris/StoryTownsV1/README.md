@@ -191,3 +191,15 @@ Native Studio screenshots were inspected on October 1: Orin's Village loaded in
 pump platforms and bridges were directly inspected in the native application.
 These are observed map switches, not cold-start benchmarks on other
 hardware. Other authored maps and both Neris castles are intact.
+# October 1 evening refinements
+
+Crown Isles retains its leaf pattern and now trims the inward east/west road stubs
+to the perimeter. Orin's Village has a small central pond in each of its four round
+neighborhoods; east/west exits meet the outside ring instead of crossing the centers.
+Spaceport's authored night preset is brighter. Studio additionally supplies its blinking
+red antenna beacon, pad rim lights and apron lighting.
+
+The installer preserves current day settings, travel destinations and newer user layouts;
+replacing Spaceport's night preset is an explicit installation option. This installation
+backed up all replaced save records. Native preparation and thirteen directed gateway
+routes passed. Crown and Orin were inspected in the current Release application.

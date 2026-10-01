@@ -74,7 +74,7 @@ def populate_items(document, catalog):
     bpy.data.batch_remove(ids=list(originals.values()))
 
 
-def terrain(document, catalog=None):
+def terrain(document, catalog=None, patches=None):
     decks = footprints(document, catalog) if catalog else []
     for obj in list(bpy.context.scene.objects):
         root = obj
@@ -131,35 +131,41 @@ def terrain(document, catalog=None):
         faces.append((base, base+1, base+2, base+3))
         materials.append(0 if kind == 1 else 5 if kind == 2 else 2)
 
-    for z in range(rows):
-        x = 0
-        while x < cols:
-            start, kind = x, cell(x, z)
-            x += 1
-            while x < cols and cell(x, z) == kind:
+    if patches is not None:
+        from town_blender_terrain import mesh_data
+        vertices, faces, materials = mesh_data(patches)
+    elif document.get('curves'):
+        raise ValueError('Curved terrain needs its prepared Studio geometry; export canceled.')
+    else:
+        for z in range(rows):
+            x = 0
+            while x < cols:
+                start, kind = x, cell(x, z)
                 x += 1
-            if kind:
-                material = 0 if kind == 1 else 1 if kind == 2 else 2
-                # Keep the authored lawn below the castle/HQ floors, not coplanar.
-                height = elevation('GROUND_Y' if kind == 1 else 'WATER_Y' if kind == 2 else 'ROAD_Y')
-                quad(xs[start], zs[z], xs[x], zs[z+1], height, material)
-                if kind == 2:
-                    quad(xs[start]-1, zs[z]-1, xs[x]+1, zs[z+1]+1, elevation('BED_Y'), 5)
-        for x in range(cols):
-            kind = cell(x, z)
-            skirt(kind, cell(x-1, z), xs[x], zs[z], xs[x], zs[z+1])
-            skirt(kind, cell(x+1, z), xs[x+1], zs[z+1], xs[x+1], zs[z])
-            skirt(kind, cell(x, z-1), xs[x+1], zs[z], xs[x], zs[z])
-            skirt(kind, cell(x, z+1), xs[x], zs[z+1], xs[x+1], zs[z+1])
-            if cell(x, z) == 4:
-                if cell(x-1, z) == 2:
-                    rail(xs[x]-2.25, zs[z], xs[x]+2.25, zs[z+1])
-                if cell(x+1, z) == 2:
-                    rail(xs[x+1]-2.25, zs[z], xs[x+1]+2.25, zs[z+1])
-                if cell(x, z-1) == 2:
-                    rail(xs[x], zs[z]-2.25, xs[x+1], zs[z]+2.25)
-                if cell(x, z+1) == 2:
-                    rail(xs[x], zs[z+1]-2.25, xs[x+1], zs[z+1]+2.25)
+                while x < cols and cell(x, z) == kind:
+                    x += 1
+                if kind:
+                    material = 0 if kind == 1 else 1 if kind == 2 else 2
+                    # Keep the authored lawn below the castle/HQ floors, not coplanar.
+                    height = elevation('GROUND_Y' if kind == 1 else 'WATER_Y' if kind == 2 else 'ROAD_Y')
+                    quad(xs[start], zs[z], xs[x], zs[z+1], height, material)
+                    if kind == 2:
+                        quad(xs[start]-1, zs[z]-1, xs[x]+1, zs[z+1]+1, elevation('BED_Y'), 5)
+            for x in range(cols):
+                kind = cell(x, z)
+                skirt(kind, cell(x-1, z), xs[x], zs[z], xs[x], zs[z+1])
+                skirt(kind, cell(x+1, z), xs[x+1], zs[z+1], xs[x+1], zs[z])
+                skirt(kind, cell(x, z-1), xs[x+1], zs[z], xs[x], zs[z])
+                skirt(kind, cell(x, z+1), xs[x], zs[z+1], xs[x+1], zs[z+1])
+                if cell(x, z) == 4:
+                    if cell(x-1, z) == 2:
+                        rail(xs[x]-2.25, zs[z], xs[x]+2.25, zs[z+1])
+                    if cell(x+1, z) == 2:
+                        rail(xs[x+1]-2.25, zs[z], xs[x+1]+2.25, zs[z+1])
+                    if cell(x, z-1) == 2:
+                        rail(xs[x], zs[z]-2.25, xs[x+1], zs[z]+2.25)
+                    if cell(x, z+1) == 2:
+                        rail(xs[x], zs[z+1]-2.25, xs[x+1], zs[z+1]+2.25)
     mesh = bpy.data.meshes.new('Town Editable Surface')
     mesh.from_pydata(vertices, [], faces)
     bed = bpy.data.materials.new('Town Submerged Water Bed')

@@ -26,7 +26,7 @@ Public Function Frame(ByRef Town As Document.State) As P.Camera3D
 
         Call Tour.TownOverview(Camera, Center)
 
-    Else If Town.Name = "Horizon Airport" Then
+    Else If Town.Landmark = Document.LANDMARK_HORIZON Then
 
         Center.Y = 0.0
 
@@ -36,7 +36,7 @@ Public Function Frame(ByRef Town As Document.State) As P.Camera3D
             Call Tour.Frame(Camera, Center, Span * 1.7, -98.0, 37.0)
         End If
 
-    Else If Town.Name = "Neris Spaceport" Then
+    Else If Town.Landmark = Document.LANDMARK_SPACEPORT Then
 
         Center.Y = 1044.0
 

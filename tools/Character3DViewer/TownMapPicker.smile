@@ -86,7 +86,8 @@ Public Function Pick(Px As Number, Py As Number, PanelX As Number, EntryCount As
 End Function
 
 Public Function DemoHit(Px As Number, Py As Number, PanelX As Number, EntryCount As Number,
-    Optional Width As Number = 960, Optional Pitch As Number = 150) As Number
+    Optional Width As Number = 960, Optional Pitch As Number = 150,
+    Optional RefreshButton As Boolean = False) As Number
 
     Dim ReturnValue As Number
 
@@ -94,6 +95,7 @@ Public Function DemoHit(Px As Number, Py As Number, PanelX As Number, EntryCount
     Dim ButtonX As Number
     Dim Top As Number
     Dim PitchX As Number
+    Dim ButtonWidth As Number
 
     Index = Pick(Px, Py, PanelX, EntryCount, Width, Pitch)
 
@@ -104,11 +106,17 @@ Public Function DemoHit(Px As Number, Py As Number, PanelX As Number, EntryCount
     End If
 
     PitchX = (Width - 24) / 4
-    ButtonX = PanelX + 16 + (Index Mod 4) * PitchX + (PitchX - 78) / 2
+    ButtonWidth = Min(70, (PitchX - 24) / 2)
+    ButtonX = PanelX + 16 + (Index Mod 4) * PitchX + (PitchX - 16) / 2 - ButtonWidth
+
+    If RefreshButton Then
+        ButtonX = ButtonX + ButtonWidth + 8
+    End If
+
     Top = 222 + (Index / 4) * Pitch + Pitch - 31
 
     If (Px >= ButtonX And
-        Px < ButtonX + 70 And
+        Px < ButtonX + ButtonWidth And
         Py >= Top And
         Py < Top + 20) Then
         Return Index
@@ -122,12 +130,15 @@ End Function
 
 Public Function Input(ByRef Value As State, Key As Number) As Number
 
+    Dim ReturnValue3 As Number
+
     Dim ReturnValue2 As Number
 
     Dim ReturnValue As Number
 
     Dim Result As Number
     Dim Ok As Boolean
+    Dim Index As Number
 
     Value.Consumed = Value.Visible
 
@@ -150,6 +161,30 @@ Public Function Input(ByRef Value As State, Key As Number) As Number
         ReturnValue = -1
 
         Return ReturnValue
+    End If
+
+    Result = DemoHit(Pointer_X(), Pointer_Y(), LeftEdge(), Value.EntryCount, PanelWidth(), RowPitch(), True)
+
+    If Result >= 0 Then
+
+        Call Previews.Refresh(Value.Names[Result])
+
+        ReturnValue3 = -1
+
+        Return ReturnValue3
+
+    End If
+
+    If UI.Contains(LeftEdge() + PanelWidth() - 126, 228 + RowPitch() * 4, 110, 24) Then
+
+        For Index = 0 To Value.EntryCount - 1
+            Call Previews.Refresh(Value.Names[Index])
+        End For
+
+        ReturnValue3 = -1
+
+        Return ReturnValue3
+
     End If
 
     Result = DemoHit(Pointer_X(), Pointer_Y(), LeftEdge(), Value.EntryCount, PanelWidth(), RowPitch())
@@ -190,6 +225,8 @@ Public Sub Draw(ByRef Value As State)
     Dim PitchY As Number
     Dim PictureWidth As Number
     Dim Included As Boolean
+    Dim ButtonWidth As Number
+    Dim Missing As Number
     Dim Label As Text
 
     If Not Value.Visible Then
@@ -200,7 +237,8 @@ Public Sub Draw(ByRef Value As State)
     PitchX = (PanelWidth() - 24) / 4
     PitchY = RowPitch()
     PictureWidth = Min(PitchX - 18, (PitchY - 65) * 8 / 5)
-    Fill Rectangle 0, 126, Window_Width(), Window_Height() - 126, BLACK Opacity 55
+    ButtonWidth = Min(70, (PitchX - 24) / 2)
+    Fill Rectangle 0, 0, Window_Width(), Window_Height(), RGB(6, 12, 18)
     Fill Rectangle PanelX, 158, PanelWidth(), 100 + PitchY * 4, RGB(12, 23, 36)
     Draw Text "Choose A Map" At PanelX + 16, 177 Size 22 Color WHITE
 
@@ -225,8 +263,22 @@ Public Sub Draw(ByRef Value As State)
             Label = "Demo On"
         End If
 
-        Call UI.DrawButton(CardX + (PitchX - 78) / 2, CardY + PitchY - 31, 70, 20, Label, Included)
+        Call UI.DrawButton(CardX + (PitchX - 16) / 2 - ButtonWidth, CardY + PitchY - 31,
+            ButtonWidth, 20, Label, Included)
+        Call UI.DrawButton(CardX + PitchX / 2, CardY + PitchY - 31,
+            ButtonWidth, 20, "Refresh", False)
+
+        If Not Previews.Has(Value.Names[Index]) Then
+            Missing = Missing + 1
+        End If
+
     End For
+
+    If Missing > 0 Then
+        Draw Text "Generating Maps Thumbnail." At Window_Width() / 2, 124 Size 24 Color CYAN Centered
+    End If
+
+    Call UI.DrawButton(PanelX + PanelWidth() - 126, 228 + PitchY * 4, 110, 24, "Refresh All", False)
 
     Label = "Choose a map. Demo On includes it in the 30-second cycle."
 

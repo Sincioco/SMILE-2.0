@@ -30,6 +30,7 @@ class Town:
         self.center = (0, 0)
         self.terrain_style = 0
         self.night = True
+        self.night_preset = NIGHT.copy()
         self.symmetric = True
         self.destinations = ('Neris Spaceport', 'Horizon Airport')
 
@@ -100,29 +101,32 @@ class Town:
         for i, z in enumerate(zs):
             self.place(template, x, z, 1.25, 90*side)
 
-    def gates(self, z=0, destinations=('Neris Spaceport', 'Horizon Airport')):
+    def gates(self, z=0, destinations=('Neris Spaceport', 'Horizon Airport'),
+              join_x=None, width=18):
         """West/east pedestrian causeways; markers stay clear of railings/props."""
         end = self.size/2-12
         self.destinations = destinations
         for side, destination in zip((-1, 1), destinations):
             x = side*(end-12)
-            self.rect(min(side*(end-45), side*(end+4)), z-24,
-                      max(side*(end-45), side*(end+4)), z+24)
-            self.path([(side*(end-60), z), (side*end, z)], 18)
+            bank_start = end-45 if join_x is None else join_x
+            road_start = end-60 if join_x is None else join_x
+            self.rect(min(side*bank_start, side*(end+4)), z-width*4/3,
+                      max(side*bank_start, side*(end+4)), z+width*4/3)
+            self.path([(side*road_start, z), (side*end, z)], width)
             self.lamps([(x-12,z-14),(x-12,z+14),(x+12,z-14),(x+12,z+14)], 2.0)
             for row in range(self.n):
                 pz = -self.size/2+(row+.5)*self.step
                 for col in range(self.n):
                     px = -self.size/2+(col+.5)*self.step
-                    if abs(px-x) <= 4.5 and abs(pz-z) <= 8:
+                    if abs(px-x) <= 4.5 and abs(pz-z) <= min(8, width/2):
                         self.tiles.append(dict(x=col, z=row, destination=destination))
 
     def document(self):
         edges = [(-self.size/2+i*self.step)*10 for i in range(self.n+1)]
         doc = dict(name=self.name, columns=self.n, rows=self.n, cell_size=self.step*10,
             xs=edges, zs=edges, cells=self.cells, items=self.items, map_tiles=self.tiles,
-            sun=(NIGHT if self.night else DAY).copy(), terrain_style=self.terrain_style,
-            presets=dict(night_active=self.night, day=DAY.copy(), night=NIGHT.copy()),
+            sun=(self.night_preset if self.night else DAY).copy(), terrain_style=self.terrain_style,
+            presets=dict(night_active=self.night, day=DAY.copy(), night=self.night_preset.copy()),
             court_offset=[0,0], court_placed=False)
         if self.smooth:
             doc.update(curves=self.curves, base_cells=[WATER]*len(self.cells))

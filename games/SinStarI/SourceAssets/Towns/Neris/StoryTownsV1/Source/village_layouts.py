@@ -77,6 +77,7 @@ def home_village():
     for angle in range(0,360,90):
         x,z=turn(0,146,angle)
         t.disk(x,z,40)
+        t.disk(x,z,5.5,WATER)
         t.curve([turn(0,72,angle),turn(0,105,angle),turn(0,120,angle)],18)
         for side in (-1,1):
             x,z=turn(side*61,130,angle)
@@ -113,7 +114,8 @@ def home_village():
         x,z=turn(0,62,angle)
         t.place(15,x,z,1.45)
     t.place(9,0,0,1.05)
-    t.gates()
+    # Outside-only exits preserve all four residential loops and their ponds.
+    t.gates(join_x=177,width=8)
     t.notes=["Working label for Orin's unnamed home village; not a new canon proper name",
         'Central circular civic island and four round residential neighborhoods',
         'Eight satellite fountain gardens with smooth curved banks and lantern-lit paths']

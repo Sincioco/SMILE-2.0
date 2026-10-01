@@ -111,14 +111,17 @@ End Sub
 Public Sub DrawCountdown(Seconds As Number)
 
     Dim X As Number
-    Dim Y As Number
+    Dim Caption As Text
 
-    X = ButtonLeft(6) + Width(6) / 2 - 58
-    Y = Window_Height() - 61
-    Fill Rectangle X, Y, 116, 19, RGB(12, 23, 36) Opacity 88
-    Draw Text "Next Map:" At X + 7, Y + 2 Size 11 Color LIGHT_GRAY
-    Draw Number Seconds At X + 79, Y + 2 Size 11 Color CYAN
-    Draw Text "s" At X + 98, Y + 2 Size 11 Color CYAN
+    Caption = Text_From_Code(48 + Seconds Mod 10)
+
+    If Seconds >= 10 Then
+        Caption = Text_From_Code(48 + Seconds / 10) + Caption
+    End If
+
+    X = Window_Width() - 76
+    Draw Text Caption At X + 2, 132 Size 80 Color BLACK Centered
+    Draw Text Caption At X, 130 Size 80 Color CYAN Centered
 
 End Sub
 

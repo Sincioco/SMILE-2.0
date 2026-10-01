@@ -1,9 +1,10 @@
-"""Bounded TWN1–TWN9 codec shared by the existing Blender document worker."""
+"""Bounded TWN1–TWN10 codec shared by the existing Blender document worker."""
 import math
 from functools import lru_cache
 import hashlib
 import json
 import struct
+import re
 from pathlib import Path
 
 
@@ -140,12 +141,23 @@ class Reader:
         return bool(flag)
 
 
+def legacy_landmark(label):
+    for kind, original in enumerate(('Neris Spaceport', 'Horizon Airport'), 1):
+        if label == original or re.fullmatch(re.escape(original) + r' [0-9]+', label):
+            return kind
+    return 0
+
+
+def landmark(document):
+    return document.get('landmark', legacy_landmark(document['name']))
+
+
 def decode(payload, catalog, request=False):
     r = Reader(payload)
     if bytes(r.byte() for _ in range(3)) != b'TWN':
         raise ValueError('Unsupported town format')
     version = r.byte()
-    if version not in (1, 2, 3, 4, 5, 6, 7, 8, 9):
+    if not 1 <= version <= 10:
         raise ValueError('Unsupported town format')
     fingerprint = catalog.get('document_fingerprint') or hashlib.sha256(json.dumps(catalog, sort_keys=True).encode()).hexdigest()
     if r.name() != fingerprint:
@@ -235,6 +247,10 @@ def decode(payload, catalog, request=False):
         result['terrain_style'] = r.byte()
         if result['terrain_style'] > 3:
             raise ValueError('Invalid terrain style')
+    if version >= 10:
+        result['landmark'] = r.byte()
+        if not 0 <= result['landmark'] <= 2:
+            raise ValueError('Invalid landmark identity')
     result['payload'] = payload[:r.offset]
     if request:
         result['mode'], result['request_id'] = r.integer(), r.integer()
@@ -348,6 +364,11 @@ def encode(document, catalog):
         version = 8
     if any(brush[0] >= 7 for brush in document.get('curves', [])):
         version = 9
+    if 'landmark' in document:
+        if not 0 <= document['landmark'] <= 2:
+            raise ValueError('Invalid landmark identity')
+        if document['landmark'] != legacy_landmark(document['name']):
+            version = 10
     result = bytearray(b'TWN') + bytes([version]) + name(fingerprint) + name(document['name']) + b'\0'
     precise = lambda value: integer(round(value * 1000000))
     result += integer(document['columns']) + integer(document['rows']) + precise(document['cell_size'])
@@ -390,6 +411,8 @@ def encode(document, catalog):
             result += b''.join(precise(value) for value in brush[2:])
     if version >= 7:
         result += bytes([document.get('terrain_style', 0)])
+    if version >= 10:
+        result += bytes([document['landmark']])
     decode(result, catalog)  # Same format/range checks apply in both directions.
     return bytes(result)
 

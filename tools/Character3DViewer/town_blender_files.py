@@ -11,7 +11,8 @@ from mathutils import Matrix
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from town_blender_save import TOWN, populate_items, terrain, lighting
-from town_document_codec import decode, encode, unwrap, respond, key_path, atomic_write
+from town_document_codec import decode, encode, unwrap, respond, key_path, atomic_write, landmark
+from town_blender_terrain import read_prepared
 
 
 def matrix_close(a, b):
@@ -75,18 +76,19 @@ def import_document(path, catalog):
         # Entire deleted assemblies are still recoverable without guessing part transforms.
         present = {o['town_identity'] for o in bpy.context.scene.objects if 'town_identity' in o}
         document['items'] = [i for i in document['items'] if i['identity'] in present]
+    document['landmark'] = landmark(document)
     document['name'] = path.stem[:80]
     return encode(document, catalog)
 
 
-def export_document(document, catalog, target, request_id, status):
+def export_document(document, catalog, target, request_id, status, patches=None):
     source = TOWN / catalog.get('blend_source', 'Authoring/Catalog.blend')
     if hashlib.sha256(source.read_bytes()).hexdigest() != catalog['source_sha256']:
         raise ValueError('Immutable template scene checksum differs.')
     bpy.ops.wm.open_mainfile(filepath=str(source), use_scripts=False)
     populate_items(document, catalog)
     status(35, 'Rebuilding town surfaces and lighting...')
-    terrain(document, catalog)
+    terrain(document, catalog, patches)
     lighting(document)
     from town_blender_landmarks import populate
     populate(document)
@@ -123,7 +125,12 @@ def main():
         status(10, 'Opening Blender in background...')
         if mode == 3:
             payload = unwrap(key_path(folder, 'TownEditor.File.Snapshot.%d' % request_id).read_bytes())
-            export_document(decode(payload, catalog), catalog, path, request_id, status)
+            document = decode(payload, catalog)
+            patches = None
+            if document.get('curves'):
+                patches = read_prepared(lambda suffix: unwrap(key_path(
+                    folder, 'TownEditor.File.Snapshot.%d%s' % (request_id, suffix)).read_bytes()))
+            export_document(document, catalog, path, request_id, status, patches)
         elif mode == 4:
             payload = import_document(path, catalog)
             atomic_write(key_path(folder, 'TownEditor.File.Opened.%d' % request_id), payload)

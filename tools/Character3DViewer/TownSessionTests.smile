@@ -21,6 +21,8 @@ Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownTabs As Tabs
 Import Smile.Tools.TownLibrary As Library
 Import Smile.Tools.TownDocumentStore As Storage
+Import Smile.Tools.TownFileJobs As Files
+Import Smile.Tools.TownLighting As Lighting
 Import Smile.Tools.TownMapLoadTools As MapLoadTools
 Import Smile.Tools.TownMapLoads As MapLoads
 Import Smile.Tools.TownDocumentMap As DocumentMap
@@ -39,6 +41,7 @@ Import Smile.Tools.NerisCastlePreview As CourtPreview
 Import Smile.Tools.NerisCastleFountain As CourtWater
 Import Smile.Tools.NerisSpaceportRoute As Spaceport
 Import Smile.Tools.NerisSpaceportPreview As Harbor
+Import Smile.Tools.NerisSpaceportGlow As HarborGlow
 Import Smile.Tools.NerisAlienFleet As Visitors
 Import Smile.Tools.NerisOrbitalFleet As Orbital
 Import Smile.Tools.NerisOrbitalFlight As OrbitalFlight
@@ -73,6 +76,8 @@ Dim DustFlights As Traffic.State
 Dim MapGesture As MapLoadTools.State
 Dim BeforeSaveCamera As P.Camera3D
 Dim BeforeSaveLeader As P.Vector3
+Dim DelayedJob As Files.State
+Dim DemoLightingDocument As Document.State
 
 Game Window "Town Editor Session Check" Size 1100 By 720
 
@@ -85,6 +90,8 @@ Call Check(Shape.Category = 3, "Changing Category Selects A Matching Placement T
 Call CheckDecorPalette()
 Call CheckDemoChoices()
 Call CheckShapeGestures()
+Call CheckLateBlenderResponse()
+Call CheckDemoLighting()
 
 Action = Commands.Command(Controls, Draft, 3)
 
@@ -434,6 +441,76 @@ Sub CheckPermanentUpdates()
 
 End Sub
 
+Sub CheckDemoLighting()
+
+    Dim Light As Document.Sun
+    Dim Revision As Number
+
+    DemoLightingDocument.Presets.HasDay = True
+    DemoLightingDocument.Presets.HasNight = True
+    DemoLightingDocument.Presets.Day.Intensity = 210
+    DemoLightingDocument.Presets.Night.Intensity = 34
+    DemoLightingDocument.Presets.NightActive = False
+    DemoLightingDocument.Light = DemoLightingDocument.Presets.Day
+    Revision = DemoLightingDocument.Revision
+    Light = Lighting.DisplayedSun(DemoLightingDocument, True)
+
+    Call Check(Light.Intensity = 34 And DemoLightingDocument.Light.Intensity = 210 And
+        DemoLightingDocument.Revision = Revision And Not DemoLightingDocument.Presets.NightActive,
+        "Demo Uses Saved Night Preset Without Editing The Map")
+
+    DemoLightingDocument.Presets.NightActive = True
+    DemoLightingDocument.Light = DemoLightingDocument.Presets.Night
+    Light = Lighting.DisplayedSun(DemoLightingDocument, True)
+
+    Call Check(Light.Intensity = 210 And DemoLightingDocument.Light.Intensity = 34 And
+        DemoLightingDocument.Revision = Revision And DemoLightingDocument.Presets.NightActive,
+        "Demo Starting At Night Shows Day Without Editing The Map")
+
+    Light = Lighting.DisplayedSun(DemoLightingDocument, False)
+
+    Call Check(Light.Intensity = 34, "Demo Restores The Original Lighting After The Alternate Phase")
+
+End Sub
+
+Sub CheckLateBlenderResponse()
+
+    Dim Map As Document.State
+    Dim Bytes[11] As Number
+    Dim Status As Number
+    Dim Changed As Boolean
+    Dim Saved As Boolean
+
+    Saved = Document.Blank(Map, "Delayed Blender Fixture", 4, 4, 20.0)
+    Map.Light.Ambient = 62
+    DelayedJob.RequestId = 31
+    DelayedJob.Operation = Files.OPEN_BLENDER
+    Changed = Files.Update(DelayedJob, Map, 16000)
+
+    Call Check(Not Changed And Not DelayedJob.Failed And DelayedJob.RequestId = 31,
+        "Slow Blender Startup Keeps The Request Pending After Fifteen Seconds")
+
+    Bytes[0] = 84
+    Bytes[1] = 87
+    Bytes[2] = 82
+    Bytes[3] = 1
+    Bytes[4] = 62
+    Bytes[5] = 2
+    Bytes[6] = 200
+    Bytes[7] = 1
+    Bytes[8] = 2
+    Bytes[9] = 130
+    Bytes[10] = 1
+    Saved = Storage.SaveDocument(Map, Files.OpenedKey(31)) And Saved
+    Save Data Bytes Count 11 To "TownEditor.File.Response" Status Status
+    Changed = Files.Update(DelayedJob, Map, 100)
+
+    Call Check(Saved And Status = DATA_STATUS_OK And Changed And Not DelayedJob.Failed And
+        DelayedJob.RequestId = 0 And DelayedJob.Pending.Light.Ambient = 62,
+        "Late Blender Success Is Accepted And Preserves The Opened Document")
+
+End Sub
+
 Sub CheckGuideAndMapControls()
 
     Dim Chosen As Boolean
@@ -722,6 +799,11 @@ Sub CheckWalkingConnection(ByRef Value As Town.State)
         "West Map Loads Only The Original Spaceport")
     Call Check(Value.Harbor.Doors.Ready And Value.Harbor.Light.Ready, "Original Doors And Crystals Remain Ready")
     Call Check(Value.Harbor.ObjectCount = 22, "Revised Paving Loads All Spaceport Static Parts")
+    Call Check(HarborGlow.PARTICLE_COUNT = 102 And Value.Harbor.Light.Ready,
+        "Spaceport Loads Beacon And Eighty Eight Pad Guidance Lights")
+    Call Check(HarborGlow.BeaconOn(0) And Not HarborGlow.BeaconOn(240) And
+        Not HarborGlow.BeaconOn(1199) And HarborGlow.BeaconOn(1200),
+        "Spaceport Red Antenna Beacon Has A Brief Flash And A Clear Dark Interval")
     Call CheckAlienVisitors(Value)
     Call CheckOrbitalCraft(Value)
     Call Inspection.MapOrbit(Value, Failures)
@@ -976,6 +1058,10 @@ Sub CheckDemoTransition()
     Dim Displayed As P.Camera3D
     Dim Halfway As P.Vector3
     Dim Tick As Number
+    Dim Offset As P.Vector3
+    Dim InitialHeading As Double
+    Dim NextHeading As Double
+    Dim NightBefore As Boolean
 
     Call Town.Update(Value, 0)
     Call Town.FocusParty(Value)
@@ -983,6 +1069,8 @@ Sub CheckDemoTransition()
     Call Town.Update(Value, 0)
 
     Displayed = Value.View.LiveCamera
+    Offset = M.Subtract(Displayed.Position, Displayed.Target)
+    InitialHeading = M.Degrees(Atan2(Offset.X, Offset.Z))
 
     Call Editor.ToggleDemo(Displayed)
     Call Town.Update(Value, 0)
@@ -990,19 +1078,37 @@ Sub CheckDemoTransition()
         M.Distance(Value.View.LiveCamera.Position, Displayed.Position) < 0.01,
         "Demo On Keeps The Displayed Camera At Transition Start")
     Call Arena.AdvanceTransition(Value.View, 500)
-    Call Town.Update(Value, 0)
+    Call Town.Update(Value, 500)
 
     Halfway = Value.View.LiveCamera.Position
+    Offset = M.Subtract(Value.View.LiveCamera.Position, Value.View.LiveCamera.Target)
+    NextHeading = M.Degrees(Atan2(Offset.X, Offset.Z))
 
+    Call Check(Camera.NormalizeAngle(NextHeading - InitialHeading) < 0.0 And
+        Camera.NormalizeAngle(NextHeading - InitialHeading) > -1.3,
+        "Demo Eases Forward From The Current Bearing Without Rewinding")
     Call Check(M.Distance(Halfway, Displayed.Position) > 1.0 And
         M.Distance(Halfway, Value.BaseCamera.Position) > 1.0,
         "Demo Camera Eases Through An Intermediate Position")
     Call Arena.AdvanceTransition(Value.View, 500)
-    Call Town.Update(Value, 0)
+    Call Town.Update(Value, 500)
+
+    Offset = M.Subtract(Value.View.LiveCamera.Position, Value.View.LiveCamera.Target)
+    NextHeading = M.Degrees(Atan2(Offset.X, Offset.Z))
+
     Call Check(Value.Cinematic And Value.OverviewOrbit And Not Value.OrbitPaused And
         Value.View.TransitionDuration = 0 And
-        M.Distance(Value.View.LiveCamera.Position, Value.BaseCamera.Position) < 0.01,
-        "Demo Reaches Its Starting Overview And Retains Orbit")
+        Abs(Camera.NormalizeAngle(NextHeading - InitialHeading) + 2.5) < 0.01,
+        "Demo Reaches The Next Orbit Position Instead Of The Initial Map Bearing")
+
+    NightBefore = Editor.IsNight()
+
+    Call Editor.ToggleDayNight()
+    Call Town.Update(Value, 16)
+    Call Check(Editor.DemoActive() And Editor.IsNight() <> NightBefore And
+        Value.Cinematic And Not Value.OrbitPaused,
+        "Changing Day Night Preserves Demo And Its Orbit")
+    Call Editor.ToggleDayNight()
     Call Town.ObserveDemoInput(Value, KEY_E)
     Call Check(Not Editor.DemoActive() And Value.View.TransitionDuration = 0,
         "Deliberate Input Still Cancels Demo")
@@ -1052,6 +1158,9 @@ Sub CheckDemoChoices()
     Call Check(MapPicker.DemoHit(110, 345, 0, 14) = 0 And
         MapPicker.DemoHit(110, 260, 0, 14) = -1,
         "Demo Button Hit Is Separate From The Thumbnail")
+    Call Check(MapPicker.DemoHit(155, 345, 0, 14, 960, 150, True) = 0 And
+        MapPicker.DemoHit(155, 345, 0, 14) = -1,
+        "Thumbnail Refresh Cannot Toggle Demo Or Open The Map")
     Call Check(Toolbar.ButtonLeft(2) + Toolbar.Width(2) = Window_Width() - 18,
         "Edit Town Ends The Toolbar At The Right Margin")
 

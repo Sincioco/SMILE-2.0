@@ -163,7 +163,7 @@ Public Sub LoadNext(ByRef Value As State)
 
     If Value.Edited Then
 
-        Ok = Landmarks.LoadNext(Value.Landmarks, Authoring.TownName(),
+        Ok = Landmarks.LoadNext(Value.Landmarks, Authoring.TownName(), Authoring.LandmarkKind(),
             Authoring.CourtExists(),
             Value.Comparison, Value.Harbor, Value.Horizon)
         Value.Failed = Value.Landmarks.Failed
@@ -907,6 +907,10 @@ Public Sub ResetOverview(ByRef Value As State, Optional Harbor As Boolean = Fals
         Call Tour.TownOverview(Value.BaseCamera, Authoring.MapCenter())
     End If
 
+    If TransitionMilliseconds > 0 Then
+        Call Tour.ContinueOrbit(Value.BaseCamera, Value.View.LiveCamera)
+    End If
+
     Call Arena.BeginTransition(Value.View, TransitionMilliseconds)
     Call Motion.Reset(Value.View.Controls, Value.View.Zoom)
     Call Arena.ComposeCamera(Value.View, Value.BaseCamera)
@@ -1293,6 +1297,11 @@ Public Sub Draw(ByRef Value As State)
 
     If Not Value.Ready Then
 
+        If Authoring.PreviewActive() Then
+            Clear RGB(12, 23, 36)
+            Return
+        End If
+
         If Value.View.Ready Then
 
             Ok = Arena.BeginFrame(Value.View, Value.BaseCamera, True, False)
@@ -1476,6 +1485,10 @@ Public Sub Overlay(ByRef Value As State)
 
     If Value.Edited And Value.Ready Then
         Call Authoring.Overlay(Value.View.LiveCamera)
+    End If
+
+    If Authoring.PreviewActive() Then
+        Return
     End If
 
     Call CameraPanel.Draw(Value.Panel, Value.View, Value.Cinematic,

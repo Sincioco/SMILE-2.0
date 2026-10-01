@@ -11,6 +11,8 @@ Public Const MAX_MAP_TILES = 4096
 Public Const CATEGORY_BUILDINGS = 1
 Public Const CATEGORY_SURFACES = 2
 Public Const CATEGORY_DECORATIONS = 3
+Public Const LANDMARK_SPACEPORT = 1
+Public Const LANDMARK_HORIZON = 2
 
 Public Type Item
     Identity As Number
@@ -50,6 +52,7 @@ Public Type SunPresets
 End Type
 
 Public Type State
+    Landmark As Number
     TerrainStyle As Number
     CourtOffsetX As Double
     CourtOffsetZ As Double
@@ -66,6 +69,62 @@ Public Type State
     Revision As Number
     SavedRevision As Number
 End Type
+
+''' Migrate original map names and automatically numbered copies from TWN1-9.
+Public Function LegacyLandmark(Name As Text) As Number
+
+    Dim Kind As Number
+    Dim Label As Text
+    Dim Index As Number
+    Dim Letter As Number
+
+    For Kind = LANDMARK_SPACEPORT To LANDMARK_HORIZON
+
+        Label = "Neris Spaceport"
+
+        If Kind = LANDMARK_HORIZON Then
+            Label = "Horizon Airport"
+        End If
+
+        If Name = Label Then
+            Return Kind
+        End If
+
+        If Text_Slice(Name, 0, Text_Length(Label) + 1) = Label + " " Then
+
+            For Index = Text_Length(Label) + 1 To Text_Length(Name) - 1
+
+                Letter = Text_Code_At(Name, Index)
+
+                If Letter < 48 Or Letter > 57 Then
+                    Exit For
+                End If
+
+            End For
+
+            If Index = Text_Length(Name) And Index > Text_Length(Label) + 1 Then
+                Return Kind
+            End If
+
+        End If
+
+    End For
+
+    Return 0
+
+End Function
+
+Public Function LandmarkName(ByRef Value As State) As Text
+
+    If Value.Landmark = LANDMARK_SPACEPORT Then
+        Return "Neris Spaceport"
+    Else If Value.Landmark = LANDMARK_HORIZON Then
+        Return "Horizon Airport"
+    End If
+
+    Return ""
+
+End Function
 
 Public Sub DefaultSun(ByRef Value As Sun)
 
@@ -189,6 +248,7 @@ Public Function Blank(ByRef Value As State, Name As Text, Columns As Number,
     Value.CourtPlaced = False
     Value.TerrainStyle = 0
     Value.Name = Name
+    Value.Landmark = LegacyLandmark(Name)
     Value.ItemCount = 0
     Value.NextIdentity = 1
     Value.Revision = Value.Revision + 1

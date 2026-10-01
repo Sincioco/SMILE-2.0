@@ -10,6 +10,7 @@ Import Smile.Tools.TownCatalogData As Catalog
 
 Private Const CAPACITY = 524288
 Private Dim Bytes[524288] As Number
+Private Dim Comparison[524288] As Number
 Private Dim Offset As Number
 Private Dim ByteCount As Number
 Private Dim Valid As Boolean
@@ -313,6 +314,10 @@ Private Function DocumentVersion(ByRef Value As Document.State) As Number
 
     Version = 7
 
+    If Value.Landmark <> Document.LegacyLandmark(Value.Name) Then
+        Return 10
+    End If
+
     For Index = 0 To Value.Surface.Curves.BrushCount - 1
 
         If Value.Surface.Curves.Brushes[Index].Form >= Paint.FORM_TRIANGLE Then
@@ -455,6 +460,12 @@ Private Sub Encode(ByRef Value As Document.State, MarkSaved As Boolean)
 
     Call WriteByte(Value.TerrainStyle)
 
+    Valid = Valid And Value.Landmark >= 0 And Value.Landmark <= Document.LANDMARK_HORIZON
+
+    If DocumentVersion(Value) >= 10 Then
+        Call WriteByte(Value.Landmark)
+    End If
+
     ByteCount = Offset
 
 End Sub
@@ -480,7 +491,7 @@ Private Function Decode() As Boolean
 
     Version = ReadByte()
 
-    If Version < 1 Or Version > 9 Then
+    If Version < 1 Or Version > 10 Then
         Return False
     End If
 
@@ -489,6 +500,7 @@ Private Function Decode() As Boolean
     End If
 
     Candidate.Name = ReadName()
+    Candidate.Landmark = Document.LegacyLandmark(Candidate.Name)
     Candidate.SavedRevision = ReadByte()
 
     If Candidate.SavedRevision < 0 Or Candidate.SavedRevision > 1 Then
@@ -696,6 +708,11 @@ Private Function Decode() As Boolean
         Valid = Valid And Candidate.TerrainStyle <= 3
     End If
 
+    If Version >= 10 Then
+        Candidate.Landmark = ReadByte()
+        Valid = Valid And Candidate.Landmark <= Document.LANDMARK_HORIZON
+    End If
+
     If Offset <> ByteCount Then
         Return False
     End If
@@ -724,6 +741,37 @@ Public Function SaveDocument(ByRef Value As Document.State, Key As Text,
     If MarkSaved Then
         Value.SavedRevision = Value.Revision
     End If
+
+    Return True
+
+End Function
+
+''' Exact serialized content check for disposable caches; revisions are not persisted.
+Public Function MatchesDocument(ByRef Value As Document.State, Key As Text) As Boolean
+
+    Dim Status As Number
+    Dim Length As Number
+    Dim Index As Number
+
+    Call Encode(Value, False)
+
+    If Not Valid Then
+        Return False
+    End If
+
+    Load Data Key Into Comparison Count Length Status Status
+
+    If Status <> DATA_STATUS_OK Or Length <> ByteCount Then
+        Return False
+    End If
+
+    For Index = 0 To ByteCount - 1
+
+        If Bytes[Index] <> Comparison[Index] Then
+            Return False
+        End If
+
+    End For
 
     Return True
 

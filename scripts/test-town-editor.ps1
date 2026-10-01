@@ -23,7 +23,7 @@ function Invoke-Check([string]$Project, [string]$Executable, [string]$Expected) 
         -WindowStyle Hidden -RedirectStandardOutput "$Executable.log" -RedirectStandardError "$Executable.errors.log" -PassThru
     if (-not $process.WaitForExit(45000)) { throw "Town fixture did not finish: $Executable (PID $($process.Id))" }
     $text = [string](Get-Content "$Executable.log" -Raw)
-    Write-Host $text.Trim()
+    if ($text) { Write-Host $text.Trim() }
     if ($process.ExitCode -ne 0 -or $text -match 'FAIL' -or $text -notmatch $Expected) { throw "Town fixture failed: $Executable (exit $($process.ExitCode))" }
 }
 

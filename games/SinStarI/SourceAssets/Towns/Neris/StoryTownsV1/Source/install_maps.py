@@ -17,7 +17,7 @@ def destinations(doc):
     return {tile['destination'] for tile in doc.get('map_tiles', [])}
 
 
-def plan_town(data, path, baseline, changes):
+def plan_town(data, path, baseline, changes, replace_night=False):
     raw = path.read_bytes()
     payload = unwrap(raw)
     incoming = decode(payload, CATALOG)
@@ -57,13 +57,18 @@ def plan_town(data, path, baseline, changes):
             doc['sun'] = current['sun']
             if 'presets' in current:
                 doc['presets'] = current['presets']
+            if replace_night:
+                doc['presets']['night'] = incoming['presets']['night']
+                if doc['presets']['night_active']:
+                    doc['sun'] = doc['presets']['night'].copy()
         changes[key] = encode(doc, CATALOG)
     # Pointer is installed after its immutable companions and the map revisions.
     changes['TownPrepared.Bundle.' + name] = reference.encode('ascii')
     return name
 
 
-def install(data, backup, original=None, source=None, baseline=None, dry_run=False, maps=None):
+def install(data, backup, original=None, source=None, baseline=None, dry_run=False, maps=None,
+            night_presets=()):
     folder = Path(__file__).resolve().parent.parent
     source = source or folder / 'Towns'
     baseline = baseline or source
@@ -76,7 +81,7 @@ def install(data, backup, original=None, source=None, baseline=None, dry_run=Fal
     changes, names = {}, []
     for record in manifest:
         path = source / record['file']
-        name = plan_town(data, path, baseline, changes)
+        name = plan_town(data, path, baseline, changes, record['name'] in night_presets)
         if name != record['name']:
             raise ValueError('Map name differs from manifest: ' + str(path))
         names.append(name)
@@ -121,5 +126,8 @@ if __name__ == '__main__':
     parser.add_argument('--original', type=Path, help='Prepared original Neris with relocated travel markers only')
     parser.add_argument('--dry-run', action='store_true')
     parser.add_argument('--map', action='append', dest='maps', help='Install only this generated map; may repeat')
+    parser.add_argument('--night-preset', action='append', default=[],
+                        help='Explicitly replace only this map night preset; keep its day settings')
     args = parser.parse_args()
-    install(args.data, args.backup, args.original, args.source, args.baseline, args.dry_run, args.maps)
+    install(args.data, args.backup, args.original, args.source, args.baseline, args.dry_run,
+            args.maps, args.night_preset)

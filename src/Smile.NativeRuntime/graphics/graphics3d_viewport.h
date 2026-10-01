@@ -36,6 +36,28 @@ static void* smile_viewport_captures3d[32];
 static long long smile_viewport_capture_ids3d[32];
 static long long smile_viewport_next_capture3d = 1;
 
+extern "C" int smile_viewport_snapshot_save(void*, const char*, long long);
+extern "C" void* smile_viewport_snapshot_load(const char*, long long);
+
+static long long smile_3d_capture_storage(long long command, const char* key,
+    long long length, long long handle) {
+    if (command == SMILE_3D_TEXT_SAVE_VIEWPORT_CAPTURE) {
+        for (int i = 0; i < 32; ++i)
+            if (handle > 0 && smile_viewport_capture_ids3d[i] == handle)
+                return smile_viewport_snapshot_save(smile_viewport_captures3d[i], key, length);
+        return 0;
+    }
+    for (int i = 0; i < 32; ++i) {
+        if (smile_viewport_captures3d[i]) continue;
+        void* bitmap = smile_viewport_snapshot_load(key, length);
+        if (!bitmap) return 0;
+        smile_viewport_captures3d[i] = bitmap;
+        smile_viewport_capture_ids3d[i] = smile_viewport_next_capture3d++;
+        return smile_viewport_capture_ids3d[i];
+    }
+    return 0;
+}
+
 static void smile_3d_viewport_release() {
     for (int i = 0; i < 32; ++i) {
         smile_graphics_directx_release_snapshot(smile_viewport_captures3d[i]);

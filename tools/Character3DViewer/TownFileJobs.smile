@@ -385,11 +385,7 @@ Public Function Update(ByRef Value As State, ByRef Town As Document.State, Elaps
         Value.Message = "Starting Blender conversion..."
 
         If Value.WaitingTime > 15000 Then
-
-            Value.Failed = True
-            Value.Message = "Blender conversion did not respond; edits retained. Try Save For Viewer."
-            Value.RequestId = 0
-
+            Value.Message = "Waiting for Blender to respond. You can continue editing."
         End If
 
         Return False
@@ -399,7 +395,7 @@ Public Function Update(ByRef Value As State, ByRef Town As Document.State, Elaps
     Value.Message = Status.Message
     Value.Progress = Min(99, Max(0, Status.Progress))
 
-    If Value.Operation = SAVE_VIEWER Then
+    If Value.Operation = SAVE_VIEWER Or Value.Operation = SAVE_BLENDER Then
         Value.Progress = 85 + Value.Progress * 14 / 100
     End If
 

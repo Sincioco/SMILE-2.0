@@ -51,6 +51,7 @@ Private Dim MapLoadOccupied As Boolean
 Private Dim MapLoadCooldown As Number
 Private Dim GatewayJourney As Journey.State
 Private Dim Showcase As Demo.State
+Private Dim DemoLightingAlternate As Boolean
 Private Dim DemoCameraPending As Boolean
 Private Dim DemoCameraFrom As P.Camera3D
 Private Dim OpenTabs As Tabs.State
@@ -310,7 +311,7 @@ Public Function LoadNext() As Boolean
 
         Ok = Terrain.Create(Ground)
         Ok = Attachments.Create(Details) And Ok
-        Ok = Lighting.Apply(Town.Light) And Ok
+        Ok = ApplyDisplayedLighting() And Ok
         Assets.Failed = Assets.Failed Or Not Ok
         Prepared = True
 
@@ -363,7 +364,7 @@ Public Function IsNight() As Boolean
 
     Dim Result As Boolean
 
-    Result = Town.Presets.NightActive
+    Result = Town.Presets.NightActive <> Demo.AlternateLighting(Showcase)
 
     Return Result
 
@@ -376,7 +377,7 @@ Public Sub ToggleDayNight()
 
     Action = 222
 
-    If IsNight() Then
+    If Town.Presets.NightActive Then
         Action = 221
     End If
 
@@ -708,14 +709,15 @@ End Function
 Public Function StopDemoOnInput(Key As Number) As Boolean
 
     Dim Active As Boolean
-    Dim DemoButton As Boolean
+    Dim PreserveDemo As Boolean
     Dim Result As Boolean
 
     Active = (Key <> KEY_NONE Or Pointer_Pressed(POINTER_PRIMARY) Or
         Pointer_Pressed(POINTER_SECONDARY) Or Pointer_Pressed(POINTER_MIDDLE))
-    DemoButton = (Pointer_Pressed(POINTER_PRIMARY) And Toolbar.Hovered(6) And
+    PreserveDemo = (Pointer_Pressed(POINTER_PRIMARY) And
+        (Toolbar.Hovered(1) Or Toolbar.Hovered(6)) And
         Not World.Active() And Not OpenTabs.Menu.Visible)
-    Result = Demo.StopOnInput(Showcase, Active, DemoButton)
+    Result = Demo.StopOnInput(Showcase, Active, PreserveDemo)
 
     If Result Then
         DemoCameraPending = False
@@ -1027,7 +1029,7 @@ Public Sub Update(Leader As P.Vector3, Elapsed As Number)
 
         Call Renderer.SyncDocument(Assets, Town)
 
-        Ok = Lighting.Apply(Town.Light)
+        Ok = ApplyDisplayedLighting()
 
         If Ground.LiveRevision = Town.Surface.Revision And Controls.Ui.SunSlider.DragOwner = 0 Then
             Call Navigation.Rebuild(Town)
@@ -1113,6 +1115,10 @@ Public Sub Update(Leader As P.Vector3, Elapsed As Number)
 
         End If
 
+    End If
+
+    If DemoLightingAlternate <> Demo.AlternateLighting(Showcase) Then
+        Ok = ApplyDisplayedLighting()
     End If
 
     If RecoveryRevision <> Town.Revision And RecoveryClock >= 1500 Then
@@ -1219,11 +1225,24 @@ Public Function Draw() As Boolean
 
 End Function
 
-Public Function ApplyLocalLighting() As Boolean
+Private Function ApplyDisplayedLighting() As Boolean
 
     Dim Ok As Boolean
 
-    Ok = Lighting.ApplyLocal(Town)
+    DemoLightingAlternate = Demo.AlternateLighting(Showcase)
+    Ok = Lighting.Apply(Lighting.DisplayedSun(Town, DemoLightingAlternate))
+
+    Return Ok
+
+End Function
+
+Public Function ApplyLocalLighting() As Boolean
+
+    Dim Ok As Boolean
+    Dim Light As Document.Sun
+
+    Light = Lighting.DisplayedSun(Town, Demo.AlternateLighting(Showcase))
+    Ok = Lighting.ApplyLocal(Town, Light.Intensity)
 
     If Not Ok Then
         Controls.Ui.Message = "Night-light capacity reached; some lights are unavailable."
@@ -1290,10 +1309,10 @@ Public Function TakeSpawn(ByRef Position As P.Vector3, ByRef Overview As Boolean
         Return True
     End If
 
-    If Town.Name = "Neris Spaceport" Or Town.Name = "Horizon Airport" Then
+    If Town.Landmark > 0 Then
 
-        Position = Connections.Arrival(Town.Name)
-        Heading = Connections.ArrivalHeading(Town.Name, Position)
+        Position = Connections.Arrival(Document.LandmarkName(Town))
+        Heading = Connections.ArrivalHeading(Document.LandmarkName(Town), Position)
         Return True
 
     End If
@@ -1456,6 +1475,16 @@ Public Function TownName() As Text
 
 End Function
 
+Public Function LandmarkKind() As Number
+
+    Dim Result As Number
+
+    Result = Town.Landmark
+
+    Return Result
+
+End Function
+
 Public Function BeginWorldPhotograph() As Boolean
 
     Dim Result As Boolean
@@ -1463,6 +1492,7 @@ Public Function BeginWorldPhotograph() As Boolean
     If (Ready And
         AppliedRevision = Town.Revision And
         Ground.LiveRevision = Town.Surface.Revision And
+        Not Demo.AlternateLighting(Showcase) And
         Not Controls.Ui.Busy) Then
         Result = Previews.Begin(Town)
     End If

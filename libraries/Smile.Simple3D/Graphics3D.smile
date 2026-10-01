@@ -229,6 +229,8 @@ Private Const TEXT_COMMAND_TAKE_MODEL_ANIMATOR_EVENT = 9
 Private Const TEXT_COMMAND_MODEL_CLIP_NAME = 10
 Private Const TEXT_COMMAND_MODEL_SOCKET_NAME = 11
 Private Const TEXT_COMMAND_MODEL_EVENT_NAME = 12
+Private Const TEXT_COMMAND_SAVE_VIEWPORT_CAPTURE = 13
+Private Const TEXT_COMMAND_LOAD_VIEWPORT_CAPTURE = 14
 
 Public Const PRIMITIVE_CUBE = 1
 Public Const PRIMITIVE_PLANE = 2
@@ -4248,6 +4250,28 @@ Public Function DrawViewportCapture3D(Handle As Number, X As Number, Y As Number
 
     Result = Dispatch(COMMAND_DRAW_VIEWPORT_CAPTURE, Handle, X, Y, Width, Height,
         0, 0, 0, 0, 0) <> 0
+
+    Return Result
+
+End Function
+
+''' Native checked save block; False leaves the previous saved capture intact.
+Public Function SaveViewportCapture3D(Handle As Number, Key As Text) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Renderer3DText(TEXT_COMMAND_SAVE_VIEWPORT_CAPTURE, Key, Handle, 0, 0, 0, 0, 0, 0, 0) <> 0
+
+    Return Result
+
+End Function
+
+''' Restore without drawing a scene. Missing, corrupt or unsupported returns zero.
+Public Function LoadViewportCapture3D(Key As Text) As Number
+
+    Dim Result As Number
+
+    Result = Renderer3DText(TEXT_COMMAND_LOAD_VIEWPORT_CAPTURE, Key, 0, 0, 0, 0, 0, 0, 0, 0)
 
     Return Result
 

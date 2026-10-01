@@ -2,6 +2,8 @@
 from math import sin, cos, radians
 from town_design import Town, GROUND, WATER, ROAD
 
+SPACEPORT_NIGHT = [150, 185, 255, 65, 32, 215.0, 32.0, 0, 45]
+
 
 def point(r, a):
     return r*sin(radians(a)), r*cos(radians(a))
@@ -9,6 +11,7 @@ def point(r, a):
 
 def spaceport():
     t = Town('Neris Spaceport', 1200, 5, smooth=True)
+    t.night_preset = SPACEPORT_NIGHT.copy()
     t.center = (-550, -670)
     # A luminous orbital garden surrounds the unchanged crystal terminal and pads.
     t.disk(0, 0, 565)

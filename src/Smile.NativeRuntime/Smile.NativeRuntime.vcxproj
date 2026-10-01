@@ -69,6 +69,7 @@
     <ClCompile Include="graphics\graphics_directx.cpp" />
     <ClCompile Include="graphics\graphics3d_directx.cpp" />
     <ClCompile Include="graphics\graphics3d_reflections.cpp" />
+    <ClCompile Include="graphics\viewport_capture_storage.cpp" />
     <ClCompile Include="graphics\graphics_gdi.c" />
     <ClCompile Include="graphics\graphics_gdi_image.cpp" />
     <ClCompile Include="graphics\image_resource.cpp" />

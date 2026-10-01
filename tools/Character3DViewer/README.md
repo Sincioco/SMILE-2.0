@@ -1,5 +1,24 @@
 # SMILE 2.0 - Sin Star I - Game Engine and Studio
 
+## October 1 persistent map photographs
+
+The Maps chooser reuses saved thumbnails across Studio launches. Each card has
+**Refresh** beside its independent Demo toggle; **Refresh All** is at the dialog's
+lower right. Missing images show **Generating Maps Thumbnail.** while the normal
+scene loader prepares them behind a solid background. Closing the chooser restores
+the original map. Editing a map refreshes its own image after its renderer is ready.
+
+Cache validation compares the complete serialized map content, including scenery
+and lighting. Images and their input snapshot publish together through a two-slot
+commit pointer in the native Saved Games store. A failed cache write leaves the
+previous published generation available; map edits themselves are never discarded.
+Use Refresh after changing external model assets without editing the map document.
+
+The reusable native graphics operations are `SaveViewportCapture3D(Handle, Key)`
+and `LoadViewportCapture3D(Key)`. They use checked Save Data blocks, not external
+image tools. Native programs need recompilation with VSIX 2.0.66; Web adoption
+remains paused and unsupported backends return failure/zero.
+
 ## October 1 Demo camera and countdown
 
 Turning **Demo On** eases from the displayed camera into the starting overview
@@ -1784,3 +1803,15 @@ and main road are editable terrain cells in the current Neris Town. Its prior
 working records were backed up; portable terrain revisions and all earlier Blender
 town exports are preserved. Package/evidence and native ownership
 are documented in [NerisCastleM01V1](../../games/SinStarI/SourceAssets/Towns/Neris/NerisCastleM01V1/README.md).
+# October 1 Demo and Blender follow-up
+
+Each 30-second Demo visit shows the map's current lighting for ten seconds, its opposite
+day/night preset for ten seconds, then its original lighting again. Automatic cycling
+does not save over map lighting or thumbnail inputs. The large upper-right digits show
+seconds remaining. Manual day/night changes keep Demo and orbit running; enabling Demo
+continues forward from the displayed camera bearing.
+
+Save For Blender now exports native prepared curved terrain rather than grid-cell
+approximations. Re-export existing `.blend` files to obtain smooth roads and shorelines.
+A delayed Blender startup remains pending until the worker reports a verified result.
+Renamed/duplicate airport documents retain their terminal and runway assemblies.

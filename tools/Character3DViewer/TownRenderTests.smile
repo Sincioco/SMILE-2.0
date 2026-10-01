@@ -192,9 +192,20 @@ Call Check(Timer() - Before < 500,
     "Cached Photographs Do Not Wait For Another Display Frame Per Card")
 Call Check(Not G.DrawViewportCapture3D(Photograph, 420, 215, 0, 150),
     "Photograph Rejects An Empty Card Without A Clip Crash")
+Call Check(G.SaveViewportCapture3D(Photograph, "TownRender.Thumbnail"),
+    "Native Photograph Persists Through Checked Save Data")
 Call G.ReleaseViewportCapture3D(Photograph)
 Call Check(Not G.DrawViewportCapture3D(Photograph, 420, 215, 240, 150),
     "Released Photograph Handle Cannot Replay Stale GPU Memory")
+
+Photograph = G.LoadViewportCapture3D("TownRender.Thumbnail")
+
+Call Check(Photograph > 0 And G.DrawViewportCapture3D(Photograph, 420, 215, 240, 150),
+    "Saved Photograph Reopens Without Drawing A Scene")
+Call Check(Not G.SaveViewportCapture3D(0, "TownRender.Thumbnail") And
+    G.LoadViewportCapture3D("TownRender.Thumbnail.Missing") = 0,
+    "Invalid Capture And Missing Save Return Failure Without Damaging The Cache")
+Call G.ReleaseViewportCapture3D(Photograph)
 
 Print "Meshes"
 Print G.LiveMeshCount3D()

@@ -24,6 +24,22 @@ Public Sub Frame(ByRef Camera As P.Camera3D, Center As P.Vector3,
 
 End Sub
 
+''' Retain the displayed bearing; the live orbit clock advances from this angle.
+Public Sub ContinueOrbit(ByRef Overview As P.Camera3D, Displayed As P.Camera3D)
+
+    Dim Offset As P.Vector3
+    Dim Heading As Double
+    Dim Radius As Double
+
+    Offset = M.Subtract(Displayed.Position, Displayed.Target)
+    Heading = Atan2(Offset.X, Offset.Z)
+    Offset = M.Subtract(Overview.Position, Overview.Target)
+    Radius = Sqrt(Offset.X * Offset.X + Offset.Z * Offset.Z)
+    Overview.Position = M.Add(Overview.Target,
+        P.Vector(Sin(Heading) * Radius, Offset.Y, Cos(Heading) * Radius))
+
+End Sub
+
 ''' Sin's September 29 reference view, read from the camera HUD in the approved image.
 Public Sub TownOverview(ByRef Camera As P.Camera3D, Center As P.Vector3)
 

@@ -145,7 +145,8 @@ Public Function Prepare(ByRef Source As Document.State, ByRef Candidate As Docum
         Return "Keep both rectangles inside the map."
     End If
 
-    If ProtectedArea(Source.Name, Area) Or ProtectedArea(Source.Name, Destination) Then
+    If (ProtectedArea(Document.LandmarkName(Source), Area) Or
+        ProtectedArea(Document.LandmarkName(Source), Destination)) Then
         Return "Fixed landmark area; section unchanged."
     End If
 

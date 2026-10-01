@@ -105,12 +105,12 @@ Public Sub Start(ByRef Value As State)
 
 End Sub
 
-''' The Demo button owns its toggle; other deliberate input ends the showcase.
-Public Function StopOnInput(ByRef Value As State, Active As Boolean, DemoButton As Boolean) As Boolean
+''' Demo and day/night controls preserve the showcase; other deliberate input ends it.
+Public Function StopOnInput(ByRef Value As State, Active As Boolean, PreserveDemo As Boolean) As Boolean
 
     If (Not Value.Enabled Or
         Not Active Or
-        DemoButton) Then
+        PreserveDemo) Then
         Return False
     End If
 
@@ -156,6 +156,17 @@ Public Function StatisticsVisible(Value As State) As Boolean
     Dim Result As Boolean
 
     Result = Not Value.Enabled Or Value.Elapsed < 15000
+
+    Return Result
+
+End Function
+
+''' Show the opposite lighting during the middle ten seconds of each map visit.
+Public Function AlternateLighting(Value As State) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Value.Enabled And Value.Elapsed >= 10000 And Value.Elapsed < 20000
 
     Return Result
 

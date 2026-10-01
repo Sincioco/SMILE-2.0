@@ -8,6 +8,8 @@ Import Smile.Simple3D.Scene3D As Scene
 Import Smile.Tools.TownDocument As Town
 Import Smile.Tools.TownWorldDocument As World
 Import Smile.Tools.TownStartingCamera As Starting
+Import Smile.Tools.TownDocumentStore As Store
+Import Smile.Tools.TownDerivedCache As Cache
 
 Public Type State
     Names[16] As Text
@@ -17,12 +19,14 @@ Private Type Photograph
     Name As Text
     Revision As Number
     Handle As Number
+    Refresh As Boolean
 End Type
 
 Private Dim Photos[16] As Photograph
 Private Dim PendingSlot As Number
 Private Dim PendingName As Text
 Private Dim PendingRevision As Number
+Private Dim PendingMap As Town.State
 Private Dim NextSlot As Number
 Private Dim UpdatedAt As Number
 
@@ -46,6 +50,81 @@ Private Function Find(Name As Text) As Number
 
 End Function
 
+Private Function SlotFor(Name As Text) As Number
+
+    Dim Slot As Number
+    Dim Empty As Photograph
+
+    Slot = Find(Name)
+
+    If Slot < 0 Then
+
+        Slot = NextSlot
+        NextSlot = (NextSlot + 1) Mod 16
+
+        Call G.ReleaseViewportCapture3D(Photos[Slot].Handle)
+
+        Photos[Slot] = Empty
+        Photos[Slot].Name = Name
+        Photos[Slot].Revision = -1
+
+    End If
+
+    Return Slot
+
+End Function
+
+''' Check content once per live revision; a cache hit never loads the map renderer.
+Public Function Check(ByRef Map As Town.State) As Boolean
+
+    Dim Slot As Number
+    Dim Generation As Number
+    Dim Prefix As Text
+    Dim Key As Text
+    Dim Result As Boolean
+
+    Slot = SlotFor(Map.Name)
+
+    If Photos[Slot].Revision <> Map.Revision And Not Photos[Slot].Refresh Then
+
+        Call G.ReleaseViewportCapture3D(Photos[Slot].Handle)
+
+        Photos[Slot].Handle = 0
+        Photos[Slot].Revision = Map.Revision
+        Prefix = "TownThumbnail1." + Map.Name
+        Generation = Cache.ReadNumber(Prefix)
+
+        If Generation >= 1 And Generation <= 2 Then
+
+            Key = Prefix + "." + Text_From_Code(48 + Generation)
+
+            If Store.MatchesDocument(Map, Key + ".Input") Then
+                Photos[Slot].Handle = G.LoadViewportCapture3D(Key + ".Image")
+            End If
+
+        End If
+
+    End If
+
+    Result = Photos[Slot].Handle > 0
+
+    Return Result
+
+End Function
+
+Public Sub Refresh(Name As Text)
+
+    Dim Slot As Number
+
+    Slot = SlotFor(Name)
+
+    Call G.ReleaseViewportCapture3D(Photos[Slot].Handle)
+
+    Photos[Slot].Handle = 0
+    Photos[Slot].Refresh = True
+
+End Sub
+
 Public Function Has(Name As Text) As Boolean
 
     Dim Slot As Number
@@ -67,17 +146,8 @@ Public Function Begin(ByRef Map As Town.State) As Boolean
     Dim Slot As Number
     Dim Ok As Boolean
 
-    Slot = Find(Map.Name)
-
-    If Slot >= 0 Then
-
-        If Photos[Slot].Revision = Map.Revision And Photos[Slot].Handle > 0 Then
-            Return False
-        End If
-
-    Else
-        Slot = NextSlot
-
+    If Check(Map) Then
+        Return False
     End If
 
     If Timer() - UpdatedAt < 500 Then
@@ -85,10 +155,11 @@ Public Function Begin(ByRef Map As Town.State) As Boolean
     End If
 
     UpdatedAt = Timer()
-    NextSlot = (Slot + 1) Mod 16
+    Slot = SlotFor(Map.Name)
     PendingSlot = Slot
     PendingName = Map.Name
     PendingRevision = Map.Revision
+    PendingMap = Map
     Ok = G.SetViewport3D(0, 0, Min(384, Window_Width()), Min(240, Window_Height()), True)
 
     If Ok Then
@@ -107,6 +178,9 @@ Public Sub Finish()
 
     Dim Ok As Boolean
     Dim Handle As Number
+    Dim Prefix As Text
+    Dim Key As Text
+    Dim Generation As Number
 
     Ok = Scene.EndScene()
 
@@ -118,6 +192,23 @@ Public Sub Finish()
         Photos[PendingSlot].Name = PendingName
         Photos[PendingSlot].Revision = PendingRevision
         Photos[PendingSlot].Handle = Handle
+        Photos[PendingSlot].Refresh = False
+        Prefix = "TownThumbnail1." + PendingName
+        Generation = 3 - Max(1, Min(2, Cache.ReadNumber(Prefix)))
+        Key = Prefix + "." + Text_From_Code(48 + Generation)
+
+        ' Publish the pair only after both checked blocks succeed.
+
+        If Handle > 0 Then
+
+            Ok = Store.SaveDocument(PendingMap, Key + ".Input", False)
+            Ok = G.SaveViewportCapture3D(Handle, Key + ".Image") And Ok
+
+            If Ok Then
+                Ok = Cache.WriteNumber(Generation, Prefix)
+            End If
+
+        End If
 
     End If
 
@@ -154,6 +245,7 @@ Public Sub Draw(ByRef Value As State, Slot As Number, ScreenX As Number, ScreenY
 
         If Not Ok Then
             Photos[Index].Handle = 0
+            Photos[Index].Revision = -1
         End If
 
     End If
@@ -172,6 +264,7 @@ Public Sub Destroy()
         Call G.ReleaseViewportCapture3D(Photos[Index].Handle)
 
         Photos[Index].Handle = 0
+        Photos[Index].Revision = -1
     End For
 
 End Sub

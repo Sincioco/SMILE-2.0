@@ -10650,6 +10650,8 @@ extern "C" long long smile_renderer3d_model_text_operation(long long command,
 {
     char name[1025];
     if (text == 0 || length <= 0 || length > 1024) { smile_last_error3d = 48; return 0; }
+    if (command == SMILE_3D_TEXT_SAVE_VIEWPORT_CAPTURE || command == SMILE_3D_TEXT_LOAD_VIEWPORT_CAPTURE)
+        return smile_3d_capture_storage(command, text, length, a);
     memcpy(name, text, (size_t)length);
     name[length] = 0;
     if (command == SMILE_3D_TEXT_MODEL_CLIP_INDEX)

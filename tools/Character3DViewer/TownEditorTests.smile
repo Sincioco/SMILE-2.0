@@ -62,6 +62,7 @@ Dim DemoChoices As Demo.Selection
 Dim ReopenedChoices As Demo.Selection
 
 Call CheckMinimapGesture()
+Call CheckLandmarkIdentity()
 Call Demo.Start(Showcase)
 Call Check(Showcase.Enabled, "Town Demo Starts Enabled")
 Call Check(Demo.SecondsRemaining(Showcase) = 30, "Demo Countdown Starts At Thirty")
@@ -91,6 +92,22 @@ Call Check(Demo.DefaultIncluded("Neris Town") And Demo.DefaultIncluded("Neris Sp
     Not Demo.DefaultIncluded("Neris Canals") And Not Demo.DefaultIncluded("New Map"),
     "Only The Four Approved Maps Default To Demo On")
 Call Demo.Start(Showcase)
+
+Showcase.Elapsed = 9999
+
+Call Check(Not Demo.AlternateLighting(Showcase), "Demo Retains Initial Lighting Before Ten Seconds")
+
+Showcase.Elapsed = 10000
+
+Call Check(Demo.AlternateLighting(Showcase), "Demo Changes Lighting At Ten Seconds")
+
+Showcase.Elapsed = 19999
+
+Call Check(Demo.AlternateLighting(Showcase), "Demo Retains Alternate Lighting Until Twenty Seconds")
+
+Showcase.Elapsed = 20000
+
+Call Check(Not Demo.AlternateLighting(Showcase), "Demo Restores Initial Lighting At Twenty Seconds")
 
 Showcase.Elapsed = 14999
 
@@ -324,9 +341,21 @@ Town.Light.ShadowOpacity = 37
 Ok = Storage.SaveDocument(Town, "TownEditor.FoundationFixture")
 
 Call Check(Ok And Not Document.Dirty(Town), "Viewer Save Commits A Complete Town")
+Call Check(Storage.MatchesDocument(Town, "TownEditor.FoundationFixture"),
+    "Thumbnail Input Matches Exact Saved Content")
+
+Town.Light.Ambient = Town.Light.Ambient + 1
+
+Call Check(Not Storage.MatchesDocument(Town, "TownEditor.FoundationFixture"),
+    "Lighting Edit Invalidates A Thumbnail Even Without A Revision Change")
+
+Town.Light.Ambient = Town.Light.Ambient - 1
 
 Town.Name = "Temporary"
 Town.Items[0].Position.X = 999.0
+
+Call Check(Not Storage.MatchesDocument(Town, "TownEditor.FoundationFixture"),
+    "Changed Map Content Cannot Reuse Its Old Thumbnail")
 
 Call Document.DefaultSun(Town.Light)
 
@@ -409,6 +438,29 @@ Sub Check(Condition As Boolean, Label As Text)
         Failures = Failures + 1
         Print "FAIL " + Label
     End If
+
+End Sub
+
+Sub CheckLandmarkIdentity()
+
+    Dim Copy As Document.State
+    Dim Reopened As Document.State
+    Dim Saved As Boolean
+
+    Saved = Document.Blank(Copy, "Horizon Airport", 4, 4, 20.0)
+    Copy.Name = "My Airport"
+    Copy.Light.Ambient = 63
+    Saved = Storage.SaveDocument(Copy, "Landmark.Copy") And Saved
+    Saved = Storage.LoadDocument(Reopened, "Landmark.Copy") And Saved
+
+    Call Check(Saved And Reopened.Landmark = Document.LANDMARK_HORIZON And
+        Reopened.Name = "My Airport" And Reopened.Light.Ambient = 63,
+        "Renamed Airport Keeps Its Assembly And Lighting After Save Reload")
+    Call Check(Document.LegacyLandmark("Horizon Airport 2") = Document.LANDMARK_HORIZON And
+        Document.LegacyLandmark("Neris Spaceport 12") = Document.LANDMARK_SPACEPORT,
+        "Older Numbered Airport Copies Recover Their Assembly")
+    Call Check(Document.LegacyLandmark("Horizon Airport Gardens") = 0,
+        "Unrelated Map Name Does Not Acquire An Airport")
 
 End Sub
 

@@ -11,9 +11,11 @@ Import Smile.Tools.NerisHorizonPreview As Horizon
 Import Smile.Tools.NerisHorizonRoute As AirportRoute
 Import Smile.Tools.NerisSpaceportRoute As OriginalRoute
 Import Smile.Simple3D.Precision3D As P
+Import Smile.Tools.TownDocument As Document
 
 Public Type State
     Town As Text
+    Kind As Number
     Doors[2] As Core.Model3D
     DoorCount As Number
     Failed As Boolean
@@ -63,7 +65,7 @@ Public Sub Destroy(ByRef Value As State, ByRef Court As Castle.State,
 
 End Sub
 
-Public Function LoadNext(ByRef Value As State, Name As Text, HasCourt As Boolean,
+Public Function LoadNext(ByRef Value As State, Name As Text, Kind As Number, HasCourt As Boolean,
     ByRef Court As Castle.State, ByRef Original As Spaceport.State,
     ByRef Airport As Horizon.State) As Boolean
 
@@ -72,10 +74,13 @@ Public Function LoadNext(ByRef Value As State, Name As Text, HasCourt As Boolean
     Dim Path As Text
     Dim Ok As Boolean
 
-    If Value.Town <> Name Then
+    If Value.Town <> Name Or Value.Kind <> Kind Then
+
         Call Destroy(Value, Court, Original, Airport)
 
         Value.Town = Name
+        Value.Kind = Kind
+
     End If
 
     If HasCourt And Not Court.Ready Then
@@ -87,7 +92,7 @@ Public Function LoadNext(ByRef Value As State, Name As Text, HasCourt As Boolean
 
     End If
 
-    If Name = "Neris Spaceport" Then
+    If Kind = Document.LANDMARK_SPACEPORT Then
 
         If Value.DoorCount < 2 Then
 
@@ -116,7 +121,7 @@ Public Function LoadNext(ByRef Value As State, Name As Text, HasCourt As Boolean
 
     End If
 
-    If Name = "Horizon Airport" Then
+    If Kind = Document.LANDMARK_HORIZON Then
 
         Call Horizon.LoadNext(Airport)
 

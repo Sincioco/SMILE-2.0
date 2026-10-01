@@ -101,6 +101,7 @@ End Sub
 
 Public Sub Update(ByRef Value As State, Elapsed As Number)
 
+    Call Glow.Update(Value.Light, Elapsed)
     Call Fleet.Update(Value.Visitors, Elapsed)
     Call Orbital.Update(Value.Shuttles, Elapsed)
 

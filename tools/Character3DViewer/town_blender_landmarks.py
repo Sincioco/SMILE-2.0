@@ -3,6 +3,7 @@ from pathlib import Path
 import bpy
 import math
 from town_surface_layers import distance, elevation
+from town_document_codec import landmark
 
 ROOT = Path(__file__).resolve().parents[2] / 'games/SinStarI/SourceAssets/Towns/Neris'
 
@@ -150,11 +151,11 @@ def append_orbital_craft():
 def populate(document):
     original = ROOT / 'NerisSpaceport01V1/Town/Neris-Town-Spaceport-SW-r003.blend'
     counts = {}
-    if document['name'] == 'Neris Spaceport':
+    if landmark(document) == 1:
         counts['Spaceport01'] = append_spaceport()
         counts['AlienVisitors'] = append_visitors()
         counts['NerisOrbitalCraft'] = append_orbital_craft()
-    elif document['name'] == 'Horizon Airport':
+    elif landmark(document) == 2:
         counts['Horizon'] = append_airport()
     if document.get('court_placed', document['name'].startswith('Neris Town')):
         counts['RoyalCourt'] = append_court(document.get('court_offset', (0, 0)))

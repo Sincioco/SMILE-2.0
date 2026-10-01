@@ -176,7 +176,8 @@ def crown_isles():
     for angle in range(-150,151,15):
         x,z=polar(326,angle)
         t.place(18,x,z,1.6)
-    t.gates(z=-38)
+    # End the outward links inside the perimeter stroke, without an inward cap.
+    t.gates(z=-38,join_x=343)
     t.notes=['Smooth palm fronds inside an open circular breakwater',
         'Water channels between seven paired residential branches',
         'A central civic approach and linked outer promenade']
