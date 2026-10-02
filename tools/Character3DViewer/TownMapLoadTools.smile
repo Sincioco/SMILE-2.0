@@ -8,11 +8,27 @@ Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownMapLoads As Links
 Import Smile.Tools.TownGuides As Guides
 Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.TerrainSurface3D As Terrain
 Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionCamera3D As Camera
 
 Private Dim Borders As Links.Outline
 
 Public Type State
+    Labels As Links.LabelSet
+    LabelName As Text
+    LabelRevision As Number
+    Area As Links.Area
+    Selected As Boolean
+    Moving As Boolean
+    AnchorX As Number
+    AnchorZ As Number
+    X0 As Number
+    Z0 As Number
+    X1 As Number
+    Z1 As Number
+    FarX As Boolean
+    FarZ As Boolean
     Drawing As Boolean
     Pending As Boolean
     Reassign As Boolean
@@ -28,6 +44,12 @@ Public Sub Gesture(ByRef Value As State, ByRef Town As Document.State,
     Dim Z As Number
     Dim Index As Number
     Dim Ok As Boolean
+
+    If Tool = 760 Or Tool = 761 Then
+        Call TransformGesture(Value, Town, Point, Available, Pressed, Held, Tool = 761)
+
+        Return
+    End If
 
     If Value.Pending Then
         Return
@@ -69,6 +91,119 @@ Public Sub Gesture(ByRef Value As State, ByRef Town As Document.State,
             Value.Reassign = Tool = 18
             Value.Pending = Value.Reassign
             Value.Drawing = Not Value.Reassign
+
+        End If
+
+    End If
+
+End Sub
+
+Private Sub TransformGesture(ByRef Value As State, ByRef Town As Document.State,
+    Point As P.Vector3, Available As Boolean, Pressed As Boolean, Held As Boolean, Resize As Boolean)
+
+    Dim X As Number
+    Dim Z As Number
+    Dim DeltaX As Number
+    Dim DeltaZ As Number
+    Dim Ok As Boolean
+    Dim SelectedNow As Boolean
+
+    X = Max(0, Min(Town.Surface.Columns - 1, Grid.CellX(Town.Surface, Point.X)))
+    Z = Max(0, Min(Town.Surface.Rows - 1, Grid.CellZ(Town.Surface, Point.Z)))
+
+    If (Not Value.Moving And
+        Pressed And
+        Available) Then
+
+        ' A selected area also accepts a second click, useful for small distant tiles.
+
+        If (Links.Find(Town, X, Z) >= 0 Or
+            Not Value.Selected Or
+            Value.Area.Revision <> Town.Revision) Then
+
+            Value.Selected = Links.SelectArea(Town, X, Z, Value.Area)
+            Value.Message = "Click inside a yellow Map Load area."
+
+            If Not Value.Selected Then
+                Return
+            End If
+
+            Value.AnchorX = X
+            Value.AnchorZ = Z
+            SelectedNow = True
+            Value.X0 = Value.Area.X0
+            Value.Z0 = Value.Area.Z0
+            Value.X1 = Value.Area.X1
+            Value.Z1 = Value.Area.Z1
+            Value.FarX = Point.X >= (Town.Surface.XEdges[Value.X0] + Town.Surface.XEdges[Value.X1 + 1]) / 2.0
+            Value.FarZ = Point.Z >= (Town.Surface.ZEdges[Value.Z0] + Town.Surface.ZEdges[Value.Z1 + 1]) / 2.0
+
+        End If
+
+        Value.Moving = True
+        Value.Message = "Map Load: " + Value.Area.Tiles[0].Destination
+
+    End If
+
+    If Value.Moving Then
+
+        If Available And Not SelectedNow Then
+
+            If Resize Then
+
+                If Value.FarX Then
+                    Value.X1 = Max(Value.X0, X)
+                Else
+                    Value.X0 = Min(Value.X1, X)
+                End If
+
+                If Value.FarZ Then
+                    Value.Z1 = Max(Value.Z0, Z)
+                Else
+                    Value.Z0 = Min(Value.Z1, Z)
+                End If
+
+            Else
+
+                DeltaX = Max(-Value.Area.X0, Min(Town.Surface.Columns - 1 - Value.Area.X1, X - Value.AnchorX))
+                DeltaZ = Max(-Value.Area.Z0, Min(Town.Surface.Rows - 1 - Value.Area.Z1, Z - Value.AnchorZ))
+                Value.X0 = Value.Area.X0 + DeltaX
+                Value.Z0 = Value.Area.Z0 + DeltaZ
+                Value.X1 = Value.Area.X1 + DeltaX
+                Value.Z1 = Value.Area.Z1 + DeltaZ
+
+            End If
+
+        End If
+
+        If Not Held Then
+
+            X = Value.Area.Tiles[0].X + Value.X0 - Value.Area.X0
+            Z = Value.Area.Tiles[0].Z + Value.Z0 - Value.Area.Z0
+            Ok = Links.TransformArea(Town, Value.Area, Value.X0, Value.Z0, Value.X1, Value.Z1, Resize)
+            Value.Moving = False
+            Value.Message = "Area retained: overlap, changed document or nonrectangular resize."
+
+            If Ok Then
+
+                If Resize Then
+                    X = Value.X0
+                    Z = Value.Z0
+                End If
+
+                Value.Selected = Links.SelectArea(Town, X, Z, Value.Area)
+                Value.AnchorX = (Value.Area.X0 + Value.Area.X1) / 2
+                Value.AnchorZ = (Value.Area.Z0 + Value.Area.Z1) / 2
+                Value.Message = "Map Load: " + Value.Area.Tiles[0].Destination + " (Ctrl+Z to undo)"
+
+            Else
+
+                Value.X0 = Value.Area.X0
+                Value.Z0 = Value.Area.Z0
+                Value.X1 = Value.Area.X1
+                Value.Z1 = Value.Area.Z1
+
+            End If
 
         End If
 
@@ -127,9 +262,18 @@ Public Function Apply(ByRef Value As State, ByRef Town As Document.State, Name A
 
 End Function
 
-Public Sub DrawPreview(ByRef Value As State, View As P.Camera3D)
+Public Sub DrawPreview(ByRef Value As State, ByRef Town As Document.State, View As P.Camera3D)
 
     Dim Mark As Guides.Marker
+
+    If Value.Selected And Value.Area.Revision = Town.Revision Then
+
+        Mark.First = P.Vector(Town.Surface.XEdges[Value.X0], Layers.OVERLAY_Y, Town.Surface.ZEdges[Value.Z0])
+        Mark.Last = P.Vector(Town.Surface.XEdges[Value.X1 + 1], Layers.OVERLAY_Y, Town.Surface.ZEdges[Value.Z1 + 1])
+
+        Call DrawArea(Town, Mark, View, RGB(80, 255, 220))
+
+    End If
 
     If Value.Drawing Or Value.Pending Then
 
@@ -137,19 +281,73 @@ Public Sub DrawPreview(ByRef Value As State, View As P.Camera3D)
         Mark.Last = Value.Last
         Mark.IsRectangle = True
 
-        Call Guides.DrawMarker(Mark, View, RGB(255, 220, 40))
+        Call DrawArea(Town, Mark, View, RGB(255, 220, 40))
 
     End If
 
 End Sub
 
-Public Sub Draw(ByRef Town As Document.State, View As P.Camera3D, RightEdge As Number)
+Private Sub DrawArea(ByRef Town As Document.State, Mark As Guides.Marker,
+    View As P.Camera3D, ColorValue As Number)
+
+    Dim Side As Number
+    Dim Step As Number
+    Dim Steps As Number
+    Dim First As P.Vector3
+    Dim Last As P.Vector3
+    Dim Previous As P.Vector3
+    Dim Point As P.Vector3
+    Dim Sample As Terrain.Sample
+    Dim Amount As Double
+
+    For Side = 0 To 3
+
+        First = Mark.First
+        Last = Mark.Last
+
+        If Side = 0 Then
+            Last.X = First.X
+        Else If Side = 1 Then
+            First.X = Last.X
+        Else If Side = 2 Then
+            Last.Z = First.Z
+        Else
+            First.Z = Last.Z
+        End If
+
+        Steps = Max(1, ToNumber((Abs(Last.X - First.X) + Abs(Last.Z - First.Z)) / Town.Surface.CellSize) + 1)
+
+        For Step = 0 To Steps
+
+            Amount = ToDouble(Step) / ToDouble(Steps)
+            Point = P.Vector(First.X + (Last.X - First.X) * Amount, Layers.OVERLAY_Y,
+                First.Z + (Last.Z - First.Z) * Amount)
+            Sample = Terrain.SamplePoint(Town.Surface, Point.X, Point.Z)
+            Point.Y = Point.Y + Sample.Offset
+
+            If Step > 0 Then
+                Call Guides.Segment(Previous, Point, View, ColorValue)
+            End If
+
+            Previous = Point
+        End For
+    End For
+
+End Sub
+
+Public Sub Draw(ByRef Value As State, ByRef Town As Document.State, View As P.Camera3D, RightEdge As Number)
 
     Dim Index As Number
     Dim X As Number
     Dim Z As Number
     Dim Side As Number
+    Dim Sample As Terrain.Sample
     Dim Mark As Guides.Marker
+    Dim Point As P.Vector3
+    Dim ScreenPoint As Camera.ProjectedPoint
+    Dim LabelX As Number
+    Dim LabelY As Number
+    Dim LabelWidth As Number
 
     If Town.MapTileCount = 0 Then
         Return
@@ -181,11 +379,45 @@ Public Sub Draw(ByRef Town As Document.State, View As P.Camera3D, RightEdge As N
                     Mark.First.Z = Mark.Last.Z
                 End If
 
+                Sample = Terrain.SamplePoint(Town.Surface, Mark.First.X, Mark.First.Z)
+                Mark.First.Y = Mark.First.Y + Sample.Offset
+                Sample = Terrain.SamplePoint(Town.Surface, Mark.Last.X, Mark.Last.Z)
+                Mark.Last.Y = Mark.Last.Y + Sample.Offset
+
                 Call Guides.DrawMarker(Mark, View, RGB(255, 220, 40))
 
             End If
 
         End For
+    End For
+
+    If Value.LabelName <> Town.Name Or Value.LabelRevision <> Town.Revision Then
+
+        Call Links.BuildLabels(Town, Value.Labels)
+
+        Value.LabelName = Town.Name
+        Value.LabelRevision = Town.Revision
+
+    End If
+
+    For Index = 0 To Value.Labels.LabelCount - 1
+
+        Point = Value.Labels.Positions[Index]
+        Sample = Terrain.SamplePoint(Town.Surface, Point.X, Point.Z)
+        Point.Y = Sample.Offset + Layers.OVERLAY_Y
+        ScreenPoint = Camera.ProjectViewerPoint(Point, View, Window_Width(), Window_Height())
+
+        If ScreenPoint.Visible Then
+
+            LabelWidth = Text_Length(Value.Labels.Names[Index]) * 8
+            LabelX = Max(6, Min(RightEdge - LabelWidth - 6, ToNumber(ScreenPoint.X) - LabelWidth / 2))
+            LabelY = ToNumber(ScreenPoint.Y) - 22
+
+            Draw Text Value.Labels.Names[Index] At LabelX + 1, LabelY + 1 Size 14 Color BLACK
+            Draw Text Value.Labels.Names[Index] At LabelX, LabelY Size 14 Color RGB(255, 230, 75)
+
+        End If
+
     End For
 
     End Clip

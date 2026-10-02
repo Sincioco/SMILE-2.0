@@ -136,7 +136,6 @@ Public Function EditingView(View As P.Camera3D, Mode As Number) As P.Camera3D
 
         If View.OrthographicHeight > 0.0 Then
             Result.OrthographicHeight = View.OrthographicHeight
-            Result.UpDirection = View.UpDirection
         End If
 
     Else
@@ -165,6 +164,21 @@ Public Function EditingView(View As P.Camera3D, Mode As Number) As P.Camera3D
     Return Result
 
 End Function
+
+''' Retain the displayed framing while easing a top-view gesture into perspective.
+Public Sub LeaveTopView(ByRef View As Arena.State, ByRef Base As P.Camera3D)
+
+    If View.LiveCamera.OrthographicHeight <= 0.0 Then
+        Return
+    End If
+
+    Base = EditingView(View.LiveCamera, 2)
+
+    Call Motion.Reset(View.Controls, View.Zoom)
+    Call Arena.BeginTransition(View, 700)
+    Call Arena.ComposeCamera(View, Base)
+
+End Sub
 
 ''' Advance clockwise to the next cardinal bearing, discarding any off-angle remainder.
 Public Sub TurnClockwise(ByRef Value As State, ByRef View As Arena.State, ByRef Base As P.Camera3D)
@@ -209,6 +223,10 @@ Public Sub BeginCursorOrbit(ByRef Value As State, View As P.Camera3D,
     Point As P.Vector3, X As Number, Y As Number)
 
     Dim Projected As Camera.ProjectedPoint
+
+    If View.OrthographicHeight > 0.0 Then
+        Return
+    End If
 
     Projected = Camera.ProjectViewerPoint(Point, View, Window_Width(), Window_Height())
     Value.CursorZoom = False

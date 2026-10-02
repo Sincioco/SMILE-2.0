@@ -82,12 +82,14 @@ if (-not $SkipRendering) {
     Copy-Item -LiteralPath (Join-Path $viewer 'Fixtures/DenseCanals.town') `
         -Destination (Join-Path $renderData "$canalHash.bin") -Force
     # Keep only the checked authored envelope, forcing a fresh native terrain build.
-    $silverfall = [IO.File]::ReadAllBytes((Join-Path $root 'games/SinStarI/SourceAssets/Towns/Neris/StoryTownsV1/Towns/Silverfall Basin.town'))
-    $silverfallLength = 44 + [BitConverter]::ToUInt32($silverfall, 8)
-    if ($silverfallLength -gt $silverfall.Length) { throw 'Incomplete Silverfall fixture.' }
-    $silverfallHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData(
-        [Text.Encoding]::UTF8.GetBytes('TownRender.Silverfall'))).ToLowerInvariant()
-    [IO.File]::WriteAllBytes((Join-Path $renderData "$silverfallHash.bin"), $silverfall[0..($silverfallLength - 1)])
+    foreach ($landscape in @('Silverfall Basin', 'Willowstep Highlands')) {
+        $fixture = [IO.File]::ReadAllBytes((Join-Path $root "games/SinStarI/SourceAssets/Towns/Neris/StoryTownsV1/Towns/$landscape.town"))
+        $fixtureLength = 44 + [BitConverter]::ToUInt32($fixture, 8)
+        if ($fixtureLength -gt $fixture.Length) { throw "Incomplete $landscape fixture." }
+        $fixtureHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData(
+            [Text.Encoding]::UTF8.GetBytes('TownRender.' + $landscape.Split(' ')[0]))).ToLowerInvariant()
+        [IO.File]::WriteAllBytes((Join-Path $renderData "$fixtureHash.bin"), $fixture[0..($fixtureLength - 1)])
+    }
     Invoke-Check (Join-Path $viewer 'TownRenderTests.smileproj') (Join-Path $output 'TownRenderTests.exe') 'PASS Town Editor Rendering'
 
     [xml]$project = Get-Content (Join-Path $viewer 'Character3DViewer.smileproj') -Raw

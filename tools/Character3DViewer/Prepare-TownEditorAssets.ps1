@@ -19,6 +19,9 @@ $textureRoot = Join-Path $PSScriptRoot 'Assets\Neris'
 $null = New-Item -ItemType Directory -Force -Path $textureRoot
 Copy-Item -LiteralPath (Join-Path $townRoot 'Textures\Neris-Grass-Color.png') -Destination $textureRoot -Force
 Copy-Item -LiteralPath (Join-Path $townRoot 'Authoring\Town-Palette.png') -Destination $textureRoot -Force
+Copy-Item -LiteralPath (Join-Path $repositoryRoot 'games\SinStarI\SourceAssets\Towns\Neris\StoryTownsV1\Textures\Greyglass-Strata.png') -Destination $textureRoot -Force
+Copy-Item -LiteralPath (Join-Path $repositoryRoot 'games\SinStarI\SourceAssets\Towns\Neris\StoryTownsV1\Textures\Green-Slope-Tile.png') -Destination $textureRoot -Force
+Copy-Item -LiteralPath (Join-Path $repositoryRoot 'games\SinStarI\SourceAssets\Towns\Neris\StoryTownsV1\Textures\Snow-Slope-Tile.png') -Destination $textureRoot -Force
 
 # A deterministic two-metre paving tile. Geometry remains at its authored scale;
 # repeating texture coordinates supply fine seams without thousands of draw calls.

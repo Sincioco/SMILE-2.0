@@ -223,7 +223,7 @@ Public Function LoadBatch(ByRef Value As Batch, Key As Text, BatchIndex As Numbe
             Part.Style = Read()
 
             If (Part.Style < 0 Or
-                Part.Style > 4 Or
+                Part.Style > 5 Or
                 Part.Kind < 1 Or
                 Part.Kind > 6 Or
                 Part.Plane < 0 Or

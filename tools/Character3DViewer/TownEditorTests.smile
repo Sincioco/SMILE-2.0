@@ -804,6 +804,7 @@ Sub CheckMapLoads()
     Call Check(Ok And Town.MapTileCount = 3 And
         Links.DestinationAt(Town, -150.0, -150.0) = "Another Town", "Map Load Destinations Survive Native Save/Open")
     Call CheckMapAreas()
+    Call CheckMapTransforms()
 
 End Sub
 
@@ -870,6 +871,54 @@ Sub CheckMapAreas()
 
     Call Check(Ok And Town.MapTileCount = 5 And Links.Find(Town, 1, 0) >= 0,
         "Delete Preserves Neighboring Areas With A Different Destination")
+
+End Sub
+
+Sub CheckMapTransforms()
+
+    Dim Area As Links.Area
+    Dim Labels As Links.LabelSet
+    Dim Revision As Number
+
+    Ok = Document.Blank(Town, "Travel Transform Fixture", 20, 20, 20.0)
+    Ok = Links.PlaceRectangle(Town, 1, 2, 2, 4, "Horizon Airport") And Ok
+    Ok = Links.PlaceRectangle(Town, 12, 2, 13, 4, "Neris Town") And Ok
+
+    Call History.Reset(Journal, Town, Guide.Ink)
+
+    Ok = Links.SelectArea(Town, 2, 3, Area) And Ok
+    Ok = Links.TransformArea(Town, Area, 5, 6, 6, 8, False) And Ok
+
+    Call History.Record(Journal, Town, Guide.Ink)
+    Call Check(Ok And Links.Find(Town, 1, 2) < 0 And Links.Find(Town, 5, 6) >= 0 And
+        Town.MapTileCount = 12, "Moving Travel Area Preserves Shape And Other Areas")
+
+    Ok = History.Restore(Journal, Town, Guide.Ink, False)
+
+    Call Check(Ok And Links.Find(Town, 1, 2) >= 0 And Links.Find(Town, 5, 6) < 0,
+        "One Undo Restores Entire Moved Area")
+
+    Ok = Links.SelectArea(Town, 1, 2, Area)
+    Ok = Links.TransformArea(Town, Area, 1, 2, 5, 6, True) And Ok
+
+    Call Check(Ok And Town.MapTileCount = 31 And
+        Links.DestinationAt(Town, -170.0, -150.0) = "Horizon Airport",
+        "Resize Retains Travel Destination")
+
+    Ok = Links.SelectArea(Town, 1, 2, Area)
+    Revision = Town.Revision
+
+    Call Check(Not Links.TransformArea(Town, Area, 10, 1, 14, 5, True) And
+        Town.Revision = Revision And Town.MapTileCount = 31,
+        "Overlapping Resize Is Rejected Without Partial Mutation")
+    Call Links.BuildLabels(Town, Labels)
+    Call Check(Labels.LabelCount = 2 And Labels.Names[0] <> Labels.Names[1],
+        "Each Connected Travel Area Has Its Destination Label")
+
+    Town.Revision = Town.Revision + 1
+
+    Call Check(Not Links.TransformArea(Town, Area, 2, 2, 6, 6, False),
+        "Changed Document Rejects Stale Travel Gesture")
 
 End Sub
 

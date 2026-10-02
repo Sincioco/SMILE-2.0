@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "source": "Blend/Catalog.blend",
-  "source_sha256": "6da01563094a44320b73c97a4a828c2dc4dd83f66524958d6f6d2348e35eaabb",
+  "source_sha256": "eacb47a18e030f1fa6b1bcf2f1a2012995420e7a840564e15752419a889a082d",
   "templates": [
     {
       "id": 0,
@@ -8528,7 +8528,7 @@
           -4.5,
           -54,
           4.5,
-          -27,
+          -32.0,
           -0.001
         ]
       ]
@@ -10892,6 +10892,56 @@
           65
         ]
       ],
+      "steps": [],
+      "floors": [],
+      "doors": [],
+      "water": []
+    },
+    {
+      "id": 39,
+      "label": "Campfire",
+      "source": "wilderness:campfire",
+      "category": "decoration",
+      "bounds": [
+        [
+          -1.1,
+          -1.1,
+          0
+        ],
+        [
+          1.1,
+          1.1,
+          1.85
+        ]
+      ],
+      "parts": [
+        [
+          37,
+          0
+        ],
+        [
+          37,
+          1
+        ],
+        [
+          37,
+          2
+        ],
+        [
+          37,
+          3
+        ]
+      ],
+      "solids": [
+        [
+          -0.95,
+          -0.95,
+          0.95,
+          0.95,
+          0.35
+        ]
+      ],
+      "camera": [],
       "steps": [],
       "floors": [],
       "doors": [],
@@ -31785,7 +31835,7 @@
       "file": "Templates/Catalog-30.glb",
       "parts": 9,
       "triangles": 42738,
-      "sha256": "73548f84adc2b1f582b3409fa2a40c5246b3ee1da70e22fa35443dccc7f16d62"
+      "sha256": "2e6528dd5de359a212953cbb8c98676cb148651ad5887442c752051b4860f713"
     },
     {
       "file": "Templates/Catalog-31.glb",
@@ -31821,6 +31871,11 @@
       "file": "Catalog-36.glb",
       "parts": 12,
       "sha256": "de3f556a81cef45ec8816cf62300ca1fb8d0bfe4fddd9b31d55dd14457fb817c"
+    },
+    {
+      "file": "Catalog-37.glb",
+      "parts": 4,
+      "sha256": "c37db36f17798ac73f28cdbb46b8ba24bcc3460af1a6cb80613f3223b95ad896"
     }
   ],
   "terrain": {

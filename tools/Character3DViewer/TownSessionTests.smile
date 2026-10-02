@@ -578,6 +578,8 @@ Sub CheckQueuedSaves()
 
     Call Check(Not QueueFixture.Active And QueueFixture.MapCount = 3 And QueueFixture.Failed = 1 And QueueJob.Progress = 100,
         "Save All Finishes Later Maps After One Snapshot Fails")
+    Call Check(QueueJob.Pending.Name = "QueueFixture Inactive Snapshot",
+        "Save All Progress Heading Uses The Current Job Map")
     Call Check(Current.Revision = 4 And Current.SavedRevision = 0 And
         QueueMaps.Documents[2].Revision = 4 And QueueMaps.Documents[2].SavedRevision = 0,
         "Save All Does Not Mark Newer Active Or Inactive Edits Saved")
@@ -677,10 +679,33 @@ Sub CheckGuideAndMapControls()
 
     Call Check(Chosen And MapLoads.DestinationAt(Draft, -90.0, -90.0) = "Horizon Airport",
         "Map Choice Reassigns The Existing Connected Area")
-    Call MapLoadTools.Gesture(MapGesture, Draft, P.Vector(-90.0, 23.12, -90.0),
+    Call MapLoadTools.Gesture(MapGesture, Draft, P.Vector(-110.0, 23.12, -110.0),
+        True, True, True, 760)
+    Call MapLoadTools.Gesture(MapGesture, Draft, P.Vector(-70.0, 23.12, -70.0),
+        True, False, True, 760)
+    Call Check(MapGesture.Moving And MapLoads.DestinationAt(Draft, -110.0, -110.0) = "Horizon Airport",
+        "Held Map Load Move Does Not Mutate The Document")
+    Call MapLoadTools.Gesture(MapGesture, Draft, P.Vector(-70.0, 23.12, -70.0),
+        True, False, False, 760)
+    Call Check(Not MapGesture.Moving And Draft.MapTileCount = 4 And
+        MapLoads.DestinationAt(Draft, -70.0, -70.0) = "Horizon Airport" And
+        MapLoads.DestinationAt(Draft, -110.0, -110.0) = "",
+        "Released Map Load Move Retains Its Destination")
+    Call MapLoadTools.Gesture(MapGesture, Draft, P.Vector(-50.0, 23.12, -50.0),
+        True, True, True, 761)
+    Call MapLoadTools.Gesture(MapGesture, Draft, P.Vector(-30.0, 23.12, -30.0),
+        True, False, False, 761)
+    Call Check(Draft.MapTileCount = 9 And MapLoads.DestinationAt(Draft, -30.0, -30.0) = "Horizon Airport",
+        "Released Map Load Resize Updates The Complete Rectangle")
+    Call MapLoadTools.Gesture(MapGesture, Draft, P.Vector(30.0, 23.12, 30.0),
+        True, True, False, 760)
+    Call Check(Draft.MapTileCount = 9 And MapLoads.DestinationAt(Draft, 30.0, 30.0) = "Horizon Airport" And
+        MapLoads.DestinationAt(Draft, -70.0, -70.0) = "",
+        "Selected Map Load Can Also Move With A Destination Click")
+    Call MapLoadTools.Gesture(MapGesture, Draft, P.Vector(30.0, 23.12, 30.0),
         True, True, True, 19)
     Call Check(Draft.MapTileCount = 0 And Not MapGesture.Pending,
-        "One Delete Gesture Removes The Whole Four Cell Map Load Rectangle")
+        "One Delete Gesture Removes The Whole Resized Map Load Rectangle")
     Call DocumentMap.SetZoom(Draft, P.Vector(0.0, 0.0, 0.0), 1)
 
     Point = DocumentMap.Pick(Draft, Window_Width() - 148, 387)
@@ -1641,9 +1666,9 @@ Sub CheckDecorPalette()
         Command = Commands.Command(Controls, Draft, 21)
     End For
 
-    Call Check(VisibleCount = 15 And Seen[20] = 1 And Seen[27] = 1,
-        "Decor Pages Include Four Landforms And One Of Each Consolidated Ornament")
-    Call Check(Controls.Ui.Page = 14 / Panel.PaletteRows(),
+    Call Check(VisibleCount = 16 And Seen[20] = 1 And Seen[27] = 1 And Seen[39] = 1,
+        "Decor Pages Include Campfire Four Landforms And Consolidated Ornaments")
+    Call Check(Controls.Ui.Page = 15 / Panel.PaletteRows(),
         "Next Stops At The Last Consolidated Decor Page")
 
     For Item = 14 To Catalog.TEMPLATE_COUNT - 1

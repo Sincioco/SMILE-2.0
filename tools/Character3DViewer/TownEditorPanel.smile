@@ -256,7 +256,8 @@ Private Sub Library(ByRef Value As State, X As Number)
             Call Button(Value, 754, X + 144, 240 + StepY * 3, 139, "Desert", Value.PaintStyle = 4, True, StepY - 3)
             Call Button(Value, 755, X, 240 + StepY * 4, 139, "Paint Tiles", Value.Tool = 750, True, StepY - 3)
             Call Button(Value, 756, X + 144, 240 + StepY * 4, 139, "Paint Rectangle", Value.Tool = 751, True, StepY - 3)
-            Call Button(Value, 757, X, 240 + StepY * 5, 283, "Erase Local Style", Value.PaintStyle = 0, True, StepY - 3)
+            Call Button(Value, 758, X, 240 + StepY * 5, 139, "Snow", Value.PaintStyle = 5, True, StepY - 3)
+            Call Button(Value, 757, X + 144, 240 + StepY * 5, 139, "Erase Local Style", Value.PaintStyle = 0, True, StepY - 3)
             Call Button(Value, 49, X, 240 + StepY * 6, 283, "Whole Map: " + Styles.Label(Value.TerrainStyle), False, True, StepY - 3)
 
             Draw Text "Click or drag to paint; release to apply." At X, 244 + StepY * 7 Size 11 Color WHITE
@@ -268,8 +269,12 @@ Private Sub Library(ByRef Value As State, X As Number)
             Call Button(Value, 18, X + 96, 240 + StepY * 2, 91, "Reassign", Value.Tool = 18, True, StepY - 3)
             Call Button(Value, 19, X + 192, 240 + StepY * 2, 91, "Delete", Value.Tool = 19, True, StepY - 3)
 
-            Draw Text "Draw area, then choose a map." At X, 244 + StepY * 3 Size 12 Color WHITE
-            Draw Text "Delete/Reassign affects the whole area." At X, 244 + StepY * 4 Size 12 Color WHITE
+            Call Button(Value, 760, X, 240 + StepY * 3, 139, "Select / Move", Value.Tool = 760, True, StepY - 3)
+            Call Button(Value, 761, X + 144, 240 + StepY * 3, 139, "Resize", Value.Tool = 761, True, StepY - 3)
+
+            Draw Text "Move area / resize nearest corner." At X, 244 + StepY * 4 Size 12 Color WHITE
+            Draw Text "Drag, or select then click target." At X, 244 + StepY * 5 Size 12 Color WHITE
+            Draw Text "Escape clears. Ctrl+Z undoes." At X, 244 + StepY * 6 Size 12 Color WHITE
 
         Else
 

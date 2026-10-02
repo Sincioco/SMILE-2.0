@@ -31,40 +31,6 @@ Public Type PointerInput
     Wheel As Number
 End Type
 
-''' Wheel cadence survives rebasing the camera beneath the pointer.
-Public Type WheelState
-    Direction As Number
-    LastTime As Number
-    Ticks As Number
-End Type
-
-Public Function AcceleratedWheelStep(ByRef Value As WheelState, Delta As Number,
-    CurrentTime As Number, BaseStep As Number) As Number
-
-    Dim Direction As Number
-    Dim Result As Number
-
-    Direction = 1
-
-    If Delta < 0 Then
-        Direction = -1
-    End If
-
-    If (Direction <> Value.Direction Or
-        CurrentTime < Value.LastTime Or
-        CurrentTime - Value.LastTime > 300) Then
-        Value.Ticks = 0
-    End If
-
-    Value.Direction = Direction
-    Value.LastTime = CurrentTime
-    Value.Ticks = Min(5, Value.Ticks + Abs(Delta))
-    Result = Max(1, BaseStep) * (2 + Max(0, Value.Ticks - 1)) / 2
-
-    Return Result
-
-End Function
-
 Public Function ReadPointer(Blocked As Boolean) As PointerInput
 
     Dim Result As PointerInput

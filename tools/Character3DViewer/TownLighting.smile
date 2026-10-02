@@ -108,7 +108,19 @@ Public Function ApplyLocal(ByRef Town As Document.State, Optional Intensity As N
             Shape = Catalog.TemplateAt(Item.Template)
             Height = (Shape.High.Y - Shape.Low.Y) * Item.Scale.Y / 1000.0
 
-            If Shape.Label = "Crystal Lamp" Then
+            If Shape.Label = "Campfire" Then
+
+                If Slot < Capacity Then
+                    Point = Geometry.ToWorld(Item, P.Vector(0.0, 12.0, 0.0))
+                    Ok = G.SetPointLight3D(Slot, ToNumber(Point.X), ToNumber(Point.Y), ToNumber(Point.Z),
+                        255, 136, 48, ToNumber(Night * 360.0), 160) And Ok
+                Else
+                    Ok = False
+                End If
+
+                Slot = Slot + 1
+
+            Else If Shape.Label = "Crystal Lamp" Then
 
                 If Slot < Capacity Then
                     Point = Geometry.ToWorld(Item, P.Vector(0.0, Shape.High.Y * 0.82, 0.0))

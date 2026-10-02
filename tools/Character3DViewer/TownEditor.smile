@@ -123,6 +123,9 @@ Public Sub Cancel(ByRef Value As State, ByRef Town As Document.State)
 
     Value.Rubber = False
     Value.Anchored = False
+    Value.MapGesture.Moving = False
+    Value.MapGesture.Selected = False
+    Value.MapGesture.LabelName = ""
     Value.MapGesture.Drawing = False
     Value.MapGesture.Pending = False
 
@@ -250,7 +253,9 @@ Public Function Command(ByRef Value As State, ByRef Town As Document.State, Acti
 
     Else If ((Action >= 10 And Action <= 19) Or
         Action = 91 Or
-        Action = 92) Then
+        Action = 92 Or
+        Action = 760 Or
+        Action = 761) Then
 
         Value.Ui.Tool = Action
 
@@ -358,8 +363,8 @@ Public Function Command(ByRef Value As State, ByRef Town As Document.State, Acti
     Else If Action = 46 Then
 
         Value.Ui.Surface = 5
-        Value.Ui.Tool = 17
-        Value.Ui.Message = "Drag a rectangle, then choose its destination map."
+        Value.Ui.Tool = 760
+        Value.Ui.Message = "Drag inside a yellow area to move it; Resize drags its nearest corner."
 
     Else If Action = 44 Then
 
@@ -381,7 +386,7 @@ Public Function Command(ByRef Value As State, ByRef Town As Document.State, Acti
             Value.Ui.Message = "Drag a triangle or curve control point."
         End If
 
-    Else If Action >= 750 And Action <= 757 Then
+    Else If Action >= 750 And Action <= 758 Then
 
         Value.Ui.Surface = 6
 
@@ -390,6 +395,8 @@ Public Function Command(ByRef Value As State, ByRef Town As Document.State, Acti
             Value.Ui.Tool = 750
         Else If Action <= 754 Then
             Value.Ui.PaintStyle = Action - 750
+        Else If Action = 758 Then
+            Value.Ui.PaintStyle = 5
         Else If Action = 757 Then
             Value.Ui.PaintStyle = 0
         Else
@@ -402,7 +409,7 @@ Public Function Command(ByRef Value As State, ByRef Town As Document.State, Acti
 
         Call SurfaceStyles.Reset(Town.Appearance)
 
-        Town.TerrainStyle = (Town.TerrainStyle + 1) Mod 4
+        Town.TerrainStyle = (Town.TerrainStyle + 1) Mod 5
         Town.Surface.Revision = Town.Surface.Revision + 1
         Town.Revision = Town.Revision + 1
         Value.Ui.Message = "Terrain appearance changed. Ctrl+Z to undo."
@@ -814,8 +821,10 @@ Public Function Input(ByRef Value As State, ByRef Town As Document.State,
 
     If (Value.Ui.Category = 2 And
         Value.Ui.Surface = 5 And
-        Value.Ui.Tool >= 17 And
-        Value.Ui.Tool <= 19) Then
+        ((Value.Ui.Tool >= 17 And Value.Ui.Tool <= 19) Or
+        Value.Ui.Tool = 760 Or Value.Ui.Tool = 761)) Then
+
+        OnGround = Picking.TerrainPoint(Town, View, Pointer_X(), Pointer_Y(), Window_Width(), Window_Height(), RawPoint)
 
         Call MapLoadTools.Gesture(Value.MapGesture, Town, RawPoint,
             OnGround And Not Blocked And Not Panel.Hovered() And Not Key_Held(KEY_SHIFT),
@@ -823,7 +832,7 @@ Public Function Input(ByRef Value As State, ByRef Town As Document.State,
 
         Value.Ui.Message = Value.MapGesture.Message
 
-        If Not Value.MapGesture.Drawing Then
+        If Not Value.MapGesture.Drawing And Not Value.MapGesture.Moving Then
             Call History.Record(Value.HistoryState, Town, Value.Guide.Ink)
         End If
 
@@ -1091,8 +1100,8 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State, View As P.Ca
 
     End If
 
-    Call MapLoadTools.Draw(Town, View, Panel.LeftEdge())
-    Call MapLoadTools.DrawPreview(Value.MapGesture, View)
+    Call MapLoadTools.Draw(Value.MapGesture, Town, View, Panel.LeftEdge())
+    Call MapLoadTools.DrawPreview(Value.MapGesture, Town, View)
     Call SectionTools.Draw(Value.SectionGesture, Town, View)
     Call CourtTools.Draw(Value.CourtGesture, Town, View)
 

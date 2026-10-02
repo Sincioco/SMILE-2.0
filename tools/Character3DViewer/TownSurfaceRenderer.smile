@@ -18,22 +18,26 @@ Import Smile.Simple3D.SurfacePaint3D As Paint
 Import Smile.Tools.TownTerrainCache As Cache
 Import Smile.Tools.TownTerrainBuilder As Builder
 Import Smile.Tools.TownDerivedCache As Derived
+Import Smile.Tools.TownTerrainLighting As Lighting
 
 Private Dim CacheTown As Document.State
 
 Public Type State
     Recipe As Builder.State
+    Lighting As Lighting.State
     Objects[64] As Core.Object3D
     NextObjects[64] As Core.Object3D
     Water[4] As Core.RibbonBatch3D
     NextWater[4] As Core.RibbonBatch3D
-    Materials[13] As Core.Material3D
+    PendingWater[8192] As Cache.Patch
+    WaterPatchCount As Number
+    Materials[15] As Core.Material3D
     FlowMaterials[3] As Core.Material3D
     NextFlowMaterials[3] As Core.Material3D
     FlowGroup As Number
     PendingStyle As Number
     StyleGroup As Number
-    Textures[2] As Core.Texture3D
+    Textures[5] As Core.Texture3D
     LiveRevision As Number
     PendingRevision As Number
     Stage As Number
@@ -56,6 +60,7 @@ Public Function Create(ByRef Value As State) As Boolean
 
     Dim Index As Number
     Dim EmptyTexture As Core.Texture3D
+    Dim TileTexture As Core.Texture3D
     Dim Ok As Boolean
 
     ' Both ground surfaces share the document sun, ambient and shadow response.
@@ -63,11 +68,22 @@ Public Function Create(ByRef Value As State) As Boolean
         G.TEXTURE_USAGE_COLOR, G.TEXTURE_FILTER_ANISOTROPIC, G.TEXTURE_WRAP_REPEAT, 16)
     Value.Textures[1] = G.LoadTexture3DEx("Assets/Neris/Neris-Paving.png",
         G.TEXTURE_USAGE_COLOR, G.TEXTURE_FILTER_ANISOTROPIC, G.TEXTURE_WRAP_REPEAT, 16)
+    Value.Textures[2] = G.LoadTexture3DEx("Assets/Neris/Greyglass-Strata.png",
+        G.TEXTURE_USAGE_COLOR, G.TEXTURE_FILTER_ANISOTROPIC, G.TEXTURE_WRAP_REPEAT, 16)
+    Value.Textures[3] = G.LoadTexture3DEx("Assets/Neris/Green-Slope-Tile.png",
+        G.TEXTURE_USAGE_COLOR, G.TEXTURE_FILTER_ANISOTROPIC, G.TEXTURE_WRAP_REPEAT, 16)
+    Value.Textures[4] = G.LoadTexture3DEx("Assets/Neris/Snow-Slope-Tile.png",
+        G.TEXTURE_USAGE_COLOR, G.TEXTURE_FILTER_ANISOTROPIC, G.TEXTURE_WRAP_REPEAT, 16)
+    Ok = True
+
+    For Index = 0 To 4
+        Ok = Value.Textures[Index].Handle <> 0 And Ok
+    End For
     Value.Materials[1] = G.CreatePbrMaterial3D(Value.Textures[0], EmptyTexture,
         EmptyTexture, EmptyTexture, G.MATERIAL_ALPHA_OPAQUE, True)
     Value.Materials[3] = G.CreatePbrMaterial3D(Value.Textures[1], EmptyTexture,
         EmptyTexture, EmptyTexture, G.MATERIAL_ALPHA_OPAQUE, True)
-    Ok = G.SetPbrMaterialFactors3D(Value.Materials[3], 255, 255, 255, 100, 0, 38, 0, 100)
+    Ok = G.SetPbrMaterialFactors3D(Value.Materials[3], 255, 255, 255, 100, 0, 38, 0, 100) And Ok
     Ok = G.SetPbrMaterialFactors3D(Value.Materials[1], 255, 255, 255, 100, 0, 100, 0, 100) And Ok
     Value.Materials[4] = G.CreateMaterial3D(EmptyTexture, 0, 220, 214, 188, 100, False, 0, 0)
     Value.Materials[5] = G.CreateMaterial3D(EmptyTexture, 0, 175, 136, 66, 100, False, 0, 0)
@@ -78,9 +94,20 @@ Public Function Create(ByRef Value As State) As Boolean
     Ok = (Value.Materials[1].Handle <> 0 And Value.Materials[3].Handle <> 0 And
         Value.Materials[4].Handle <> 0 And Ok)
 
-    For Index = 1 To 3
-        Value.Materials[Styles.Slot(1, Index)] = Styles.Material(Index, False)
-        Value.Materials[Styles.Slot(3, Index)] = Styles.Material(Index, True)
+    For Index = 1 To 4
+
+        TileTexture = EmptyTexture
+
+        If Index = 1 Then
+            TileTexture = Value.Textures[3]
+        Else If Index = 2 Then
+            TileTexture = Value.Textures[2]
+        Else If Index = 4 Then
+            TileTexture = Value.Textures[4]
+        End If
+
+        Value.Materials[Styles.Slot(1, Index)] = Styles.Material(Index, False, TileTexture)
+        Value.Materials[Styles.Slot(3, Index)] = Styles.Material(Index, True, TileTexture)
         Ok = Ok And Value.Materials[Styles.Slot(1, Index)].Handle <> 0 And Value.Materials[Styles.Slot(3, Index)].Handle <> 0
     End For
 
@@ -106,6 +133,7 @@ Public Sub BeginBuild(ByRef Value As State, ByRef Town As Document.State)
     End For
 
     Call Builder.Begin(Value.Recipe, Town)
+    Call Lighting.Reset(Value.Lighting)
 
     Ok = Not Value.Recipe.Failed
 
@@ -135,7 +163,7 @@ Public Sub BeginBuild(ByRef Value As State, ByRef Town As Document.State)
     CacheTown = Town
     Value.CacheBatch = 0
     Value.CacheBatches = 0
-    Value.CacheKey = Derived.ReadKey(Town, "Terrain7", False)
+    Value.CacheKey = Derived.ReadKey(Town, "Terrain8", False)
     Value.CacheRead = Text_Length(Value.CacheKey) > 0
     Value.CacheOk = True
 
@@ -145,9 +173,10 @@ Public Sub BeginBuild(ByRef Value As State, ByRef Town As Document.State)
     End If
 
     If Not Value.CacheRead Then
-        Value.CacheKey = Derived.WriteKey(Town.Name, "Terrain7")
+        Value.CacheKey = Derived.WriteKey(Town.Name, "Terrain8")
     End If
 
+    Value.WaterPatchCount = 0
     Value.PendingStyle = Town.TerrainStyle
     Value.Recipe.Buffer.PatchCount = 0
     Value.PendingRevision = Town.Surface.Revision
@@ -191,10 +220,11 @@ Private Sub ReadCachedBatch(ByRef Value As State)
 
         Value.NextCount = 0
         Value.NextWaterCount = 0
+        Value.WaterPatchCount = 0
         Value.CacheRead = False
         Value.CacheOk = True
         Value.CacheBatch = 0
-        Value.CacheKey = Derived.WriteKey(CacheTown.Name, "Terrain7")
+        Value.CacheKey = Derived.WriteKey(CacheTown.Name, "Terrain8")
         Value.Recipe.Row = 0
         Value.Recipe.Buffer.PatchCount = 0
         Value.Stage = 1
@@ -203,65 +233,47 @@ Private Sub ReadCachedBatch(ByRef Value As State)
 
 End Sub
 
-Private Function Vertex(Mesh As Number, Index As Number, X As Double,
+Private Function Vertex(ByRef Value As State, Mesh As Number, Index As Number, X As Double,
     Y As Double, Z As Double, Kind As Number) As Boolean
 
     Dim Ok As Boolean
-    Dim Period As Double
+    Dim Style As Number
+    Dim Uv As P.Vector3
 
-    Period = 20.0
+    Style = Value.PendingStyle
 
-    If Kind = 1 Then
-        Period = 160.0
+    If Value.StyleGroup > 0 Then
+        Style = Value.StyleGroup - 1
     End If
 
+    Uv = Styles.Coordinates(Style, Kind, X, Y, Z, P.Vector(0.0, 1.0, 0.0))
     Ok = P.SetMeshVertex(Mesh, Index, P.Vector(X, Y, Z))
-    Ok = G.SetMeshUv3D(Mesh, Index, ToNumber(X * 1000.0 / Period),
-        ToNumber(Z * 1000.0 / Period)) And Ok
+    Ok = G.SetMeshUv3D(Mesh, Index, ToNumber(Uv.X * 1000.0), ToNumber(Uv.Y * 1000.0)) And Ok
     Ok = G.SetMeshNormal3D(Mesh, Index, 0, 1000, 0) And Ok
 
     Return Ok
 
 End Function
 
-''' Continuous lighting across triangle boundaries; collision retains the exact height mesh.
-Public Function ShadingNormal(ByRef Surface As Grid.State, X As Double, Z As Double) As P.Vector3
-
-    Dim LowX As Double
-    Dim HighX As Double
-    Dim LowZ As Double
-    Dim HighZ As Double
-    Dim First As Terrain.Sample
-    Dim Last As Terrain.Sample
-    Dim GradientX As Double
-    Dim GradientZ As Double
-    Dim Result As P.Vector3
-    Dim Ok As Boolean
-
-    LowX = Max(Surface.XEdges[0], X - Surface.CellSize)
-    HighX = Min(Surface.XEdges[Surface.Columns], X + Surface.CellSize)
-    LowZ = Max(Surface.ZEdges[0], Z - Surface.CellSize)
-    HighZ = Min(Surface.ZEdges[Surface.Rows], Z + Surface.CellSize)
-    First = Terrain.SamplePoint(Surface, LowX, Z)
-    Last = Terrain.SamplePoint(Surface, HighX, Z)
-    GradientX = (Last.Offset - First.Offset) / Max(0.001, HighX - LowX)
-    First = Terrain.SamplePoint(Surface, X, LowZ)
-    Last = Terrain.SamplePoint(Surface, X, HighZ)
-    GradientZ = (Last.Offset - First.Offset) / Max(0.001, HighZ - LowZ)
-    Ok = M.TryNormalize(P.Vector(-GradientX, 1.0, -GradientZ), Result)
-
-    Return Result
-
-End Function
-
-Private Function TerrainVertex(ByRef Surface As Grid.State, Mesh As Number, Index As Number,
+Private Function TerrainVertex(ByRef Value As State, Mesh As Number, Index As Number,
     X As Double, Y As Double, Z As Double, Kind As Number) As Boolean
 
     Dim Normal As P.Vector3
+    Dim Uv As P.Vector3
     Dim Ok As Boolean
+    Dim Style As Number
 
-    Normal = ShadingNormal(Surface, X, Z)
-    Ok = Vertex(Mesh, Index, X, Y, Z, Kind)
+    Normal = Lighting.Sample(Value.Lighting, Value.Recipe.Surface, X, Z)
+    Ok = Vertex(Value, Mesh, Index, X, Y, Z, Kind)
+    Style = Value.PendingStyle
+
+    If Value.StyleGroup > 0 Then
+        Style = Value.StyleGroup - 1
+    End If
+
+    Uv = Styles.Coordinates(Style, Kind, X, Y, Z, Normal)
+    Ok = G.SetMeshUv3D(Mesh, Index, ToNumber(Uv.X * 1000.0), ToNumber(Uv.Y * 1000.0)) And Ok
+
     Ok = G.SetMeshNormal3D(Mesh, Index, ToNumber(Normal.X * 1000.0),
         ToNumber(Normal.Y * 1000.0), ToNumber(Normal.Z * 1000.0)) And Ok
 
@@ -274,6 +286,8 @@ Private Sub UploadNext(ByRef Value As State)
     Dim Index As Number
     Dim StopIndex As Number
     Dim Total As Number
+    Dim WaterPoints As Number
+    Dim PointStep As Number
     Dim Mesh As Number
     Dim Point As Number
     Dim Part As Cache.Patch
@@ -295,7 +309,15 @@ Private Sub UploadNext(ByRef Value As State)
         If (Value.Recipe.Buffer.Patches[StopIndex].Kind = Value.Kind And
             (Value.Kind <> 2 Or Value.Recipe.Buffer.Patches[StopIndex].FlowGroup = Value.FlowGroup) And
             Value.Recipe.Buffer.Patches[StopIndex].Style = Value.StyleGroup) Then
+
             Total = Total + 1
+
+            If Value.Recipe.Buffer.Patches[StopIndex].Plane = 5 Then
+                WaterPoints = WaterPoints + 3
+            Else
+                WaterPoints = WaterPoints + 4
+            End If
+
         End If
 
         StopIndex = StopIndex + 1
@@ -320,9 +342,9 @@ Private Sub UploadNext(ByRef Value As State)
             End If
 
             If Value.FlowGroup = 0 Then
-                Value.NextWater[Value.NextWaterCount] = G.CreateRibbonBatch3D(Total * 4, Value.Materials[2])
+                Value.NextWater[Value.NextWaterCount] = G.CreateRibbonBatch3D(WaterPoints, Value.Materials[2])
             Else
-                Value.NextWater[Value.NextWaterCount] = G.CreateRibbonBatch3D(Total * 4, Value.NextFlowMaterials[Value.FlowGroup - 1])
+                Value.NextWater[Value.NextWaterCount] = G.CreateRibbonBatch3D(WaterPoints, Value.NextFlowMaterials[Value.FlowGroup - 1])
             End If
 
             Ok = Value.NextWater[Value.NextWaterCount].Handle <> 0
@@ -355,8 +377,6 @@ Private Sub UploadNext(ByRef Value As State)
                         P.Vector(Part.X0, Part.Y0, Part.Z0), P.Vector(Part.X1, Part.Y1, Part.Z1), 0.0) And Ok
                     Ok = P.SetRibbonPoint(Value.NextWater[Value.NextWaterCount], Point + 2,
                         P.Vector(Part.X2, Part.Y2, Part.Z2), P.Vector(Part.X2, Part.Y2, Part.Z2), 1.0) And Ok
-                    Ok = P.SetRibbonPoint(Value.NextWater[Value.NextWaterCount], Point + 3,
-                        P.Vector(Part.X2, Part.Y2, Part.Z2), P.Vector(Part.X2, Part.Y2, Part.Z2), 1.0) And Ok
 
                 Else If Value.Kind = 2 Then
 
@@ -382,10 +402,10 @@ Private Sub UploadNext(ByRef Value As State)
 
                 Else If Part.Plane = 5 Then
 
-                    Ok = TerrainVertex(Value.Recipe.Surface, Mesh, Point, Part.X0, Part.Y0, Part.Z0, Value.Kind) And Ok
-                    Ok = TerrainVertex(Value.Recipe.Surface, Mesh, Point + 1, Part.X1, Part.Y1, Part.Z1, Value.Kind) And Ok
-                    Ok = TerrainVertex(Value.Recipe.Surface, Mesh, Point + 2, Part.X2, Part.Y2, Part.Z2, Value.Kind) And Ok
-                    Ok = TerrainVertex(Value.Recipe.Surface, Mesh, Point + 3, Part.X2, Part.Y2, Part.Z2, Value.Kind) And Ok
+                    Ok = TerrainVertex(Value, Mesh, Point, Part.X0, Part.Y0, Part.Z0, Value.Kind) And Ok
+                    Ok = TerrainVertex(Value, Mesh, Point + 1, Part.X1, Part.Y1, Part.Z1, Value.Kind) And Ok
+                    Ok = TerrainVertex(Value, Mesh, Point + 2, Part.X2, Part.Y2, Part.Z2, Value.Kind) And Ok
+                    Ok = TerrainVertex(Value, Mesh, Point + 3, Part.X2, Part.Y2, Part.Z2, Value.Kind) And Ok
 
                     FaceNormal = M.Cross(P.Vector(Part.X1 - Part.X0, Part.Y1 - Part.Y0, Part.Z1 - Part.Z0),
                         P.Vector(Part.X2 - Part.X0, Part.Y2 - Part.Y0, Part.Z2 - Part.Z0))
@@ -405,31 +425,31 @@ Private Sub UploadNext(ByRef Value As State)
 
                 Else If Part.Plane = 3 Then
 
-                    Ok = Vertex(Mesh, Point, Part.X0, Height, Part.Z0, Value.Kind) And Ok
-                    Ok = Vertex(Mesh, Point + 1, Part.X1, Height, Part.Z1, Value.Kind) And Ok
-                    Ok = Vertex(Mesh, Point + 2, Part.X2, Height, Part.Z2, Value.Kind) And Ok
-                    Ok = Vertex(Mesh, Point + 3, Part.X2, Height, Part.Z2, Value.Kind) And Ok
+                    Ok = Vertex(Value, Mesh, Point, Part.X0, Height, Part.Z0, Value.Kind) And Ok
+                    Ok = Vertex(Value, Mesh, Point + 1, Part.X1, Height, Part.Z1, Value.Kind) And Ok
+                    Ok = Vertex(Value, Mesh, Point + 2, Part.X2, Height, Part.Z2, Value.Kind) And Ok
+                    Ok = Vertex(Value, Mesh, Point + 3, Part.X2, Height, Part.Z2, Value.Kind) And Ok
 
                 Else If Part.Plane = 4 Then
 
-                    Ok = Vertex(Mesh, Point, Part.X0, Part.Y0, Part.Z0, Value.Kind) And Ok
-                    Ok = Vertex(Mesh, Point + 1, Part.X0, Part.Y1, Part.Z0, Value.Kind) And Ok
-                    Ok = Vertex(Mesh, Point + 2, Part.X1, Part.Y1, Part.Z1, Value.Kind) And Ok
-                    Ok = Vertex(Mesh, Point + 3, Part.X1, Part.Y0, Part.Z1, Value.Kind) And Ok
+                    Ok = Vertex(Value, Mesh, Point, Part.X0, Part.Y0, Part.Z0, Value.Kind) And Ok
+                    Ok = Vertex(Value, Mesh, Point + 1, Part.X0, Part.Y1, Part.Z0, Value.Kind) And Ok
+                    Ok = Vertex(Value, Mesh, Point + 2, Part.X1, Part.Y1, Part.Z1, Value.Kind) And Ok
+                    Ok = Vertex(Value, Mesh, Point + 3, Part.X1, Part.Y0, Part.Z1, Value.Kind) And Ok
 
                 Else If Part.Plane = 1 Then
 
-                    Ok = Vertex(Mesh, Point, Part.X0, Part.Y0, Part.Z0, Value.Kind) And Ok
-                    Ok = Vertex(Mesh, Point + 1, Part.X0, Part.Y1, Part.Z0, Value.Kind) And Ok
-                    Ok = Vertex(Mesh, Point + 2, Part.X1, Part.Y1, Part.Z0, Value.Kind) And Ok
-                    Ok = Vertex(Mesh, Point + 3, Part.X1, Part.Y0, Part.Z0, Value.Kind) And Ok
+                    Ok = Vertex(Value, Mesh, Point, Part.X0, Part.Y0, Part.Z0, Value.Kind) And Ok
+                    Ok = Vertex(Value, Mesh, Point + 1, Part.X0, Part.Y1, Part.Z0, Value.Kind) And Ok
+                    Ok = Vertex(Value, Mesh, Point + 2, Part.X1, Part.Y1, Part.Z0, Value.Kind) And Ok
+                    Ok = Vertex(Value, Mesh, Point + 3, Part.X1, Part.Y0, Part.Z0, Value.Kind) And Ok
 
                 Else If Part.Plane = 2 Then
 
-                    Ok = Vertex(Mesh, Point, Part.X0, Part.Y0, Part.Z0, Value.Kind) And Ok
-                    Ok = Vertex(Mesh, Point + 1, Part.X0, Part.Y1, Part.Z0, Value.Kind) And Ok
-                    Ok = Vertex(Mesh, Point + 2, Part.X0, Part.Y1, Part.Z1, Value.Kind) And Ok
-                    Ok = Vertex(Mesh, Point + 3, Part.X0, Part.Y0, Part.Z1, Value.Kind) And Ok
+                    Ok = Vertex(Value, Mesh, Point, Part.X0, Part.Y0, Part.Z0, Value.Kind) And Ok
+                    Ok = Vertex(Value, Mesh, Point + 1, Part.X0, Part.Y1, Part.Z0, Value.Kind) And Ok
+                    Ok = Vertex(Value, Mesh, Point + 2, Part.X0, Part.Y1, Part.Z1, Value.Kind) And Ok
+                    Ok = Vertex(Value, Mesh, Point + 3, Part.X0, Part.Y0, Part.Z1, Value.Kind) And Ok
 
                 Else
 
@@ -437,16 +457,23 @@ Private Sub UploadNext(ByRef Value As State)
                         Height = Part.Y0
                     End If
 
-                    Ok = Vertex(Mesh, Point, Part.X0, Height, Part.Z0, Value.Kind) And Ok
-                    Ok = Vertex(Mesh, Point + 1, Part.X0, Height, Part.Z1, Value.Kind) And Ok
-                    Ok = Vertex(Mesh, Point + 2, Part.X1, Height, Part.Z1, Value.Kind) And Ok
-                    Ok = Vertex(Mesh, Point + 3, Part.X1, Height, Part.Z0, Value.Kind) And Ok
+                    Ok = Vertex(Value, Mesh, Point, Part.X0, Height, Part.Z0, Value.Kind) And Ok
+                    Ok = Vertex(Value, Mesh, Point + 1, Part.X0, Height, Part.Z1, Value.Kind) And Ok
+                    Ok = Vertex(Value, Mesh, Point + 2, Part.X1, Height, Part.Z1, Value.Kind) And Ok
+                    Ok = Vertex(Value, Mesh, Point + 3, Part.X1, Height, Part.Z0, Value.Kind) And Ok
 
+                End If
+
+                PointStep = 4
+
+                If Value.Kind = 2 And Part.Plane = 5 Then
+                    ' Collapsed endpoints already isolate adjacent triangles; no fourth point is needed.
+                    PointStep = 3
                 End If
 
                 If Value.Kind = 2 Then
 
-                    For NormalIndex = 0 To 3
+                    For NormalIndex = 0 To PointStep - 1
                         Ok = G.SetRibbonPointColor3D(Value.NextWater[Value.NextWaterCount], Point + NormalIndex, 255, 255, 255, 100) And Ok
                     End For
 
@@ -456,7 +483,7 @@ Private Sub UploadNext(ByRef Value As State)
 
                 End If
 
-                Point = Point + 4
+                Point = Point + PointStep
 
             End If
 
@@ -464,7 +491,7 @@ Private Sub UploadNext(ByRef Value As State)
 
         If Value.Kind = 2 Then
 
-            Ok = G.CommitRibbonBatch3D(Value.NextWater[Value.NextWaterCount], Total * 4) And Ok
+            Ok = G.CommitRibbonBatch3D(Value.NextWater[Value.NextWaterCount], Point) And Ok
             Value.NextWaterCount = Value.NextWaterCount + 1
 
         Else
@@ -495,7 +522,7 @@ Private Sub UploadNext(ByRef Value As State)
     If Value.Cursor >= Value.Recipe.Buffer.PatchCount Then
 
         If ((Value.Kind = 1 Or Value.Kind = 3) And
-            Value.StyleGroup < 4 And
+            Value.StyleGroup < 5 And
             Value.Recipe.Appearance.Nonzero > 0) Then
 
             Value.StyleGroup = Value.StyleGroup + 1
@@ -514,6 +541,69 @@ Private Sub UploadNext(ByRef Value As State)
         Value.Cursor = 0
 
     End If
+
+End Sub
+
+''' Preflight then publish water in one update, without holding two full water copies.
+Private Sub UploadWater(ByRef Value As State)
+
+    Dim Index As Number
+    Dim Points As Number
+    Dim Groups[4] As Number
+    Dim Batches As Number
+    Dim LivePoints As Number
+    Dim AvailablePoints As Number
+    Dim AvailableBatches As Number
+
+    For Index = 0 To Value.WaterPatchCount - 1
+
+        Groups[Value.PendingWater[Index].FlowGroup] = Groups[Value.PendingWater[Index].FlowGroup] + 1
+
+        If Value.PendingWater[Index].Plane = 5 Then
+            Points = Points + 3
+        Else
+            Points = Points + 4
+        End If
+
+    End For
+
+    For Index = 0 To 3
+        Batches = Batches + (Groups[Index] + 2047) / 2048
+    End For
+
+    For Index = 0 To Value.WaterCount - 1
+        LivePoints = LivePoints + G.VfxValue3D(G.VFX_QUERY_RESOURCE_CAPACITY, Value.Water[Index].Handle)
+    End For
+
+    AvailablePoints = (G.VfxValue3D(G.VFX_QUERY_MAX_STAGED_RIBBON_POINTS) -
+        G.VfxValue3D(G.VFX_QUERY_STAGED_RIBBON_CAPACITY))
+    AvailableBatches = (G.VfxValue3D(G.VFX_QUERY_MAX_RIBBON_BATCHES) -
+        G.VfxValue3D(G.VFX_QUERY_LIVE_RIBBON_BATCHES))
+
+    If (Batches > 4 Or
+        Points > AvailablePoints + LivePoints Or
+        Batches > AvailableBatches + Value.WaterCount) Then
+        Value.Failed = True
+        Return
+    End If
+
+    If Points > AvailablePoints Or Batches > AvailableBatches Then
+
+        ' The complete CPU recipe and land are ready; no draw occurs during this swap.
+
+        For Index = 0 To Value.WaterCount - 1
+            Call G.DestroyRibbonBatch3D(Value.Water[Index])
+        End For
+
+        Value.WaterCount = 0
+
+    End If
+
+    Do
+
+        Call UploadNext(Value)
+
+    Loop Until Value.Kind > 2 Or Value.Failed
 
 End Sub
 
@@ -546,7 +636,7 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
 
         Deadline = Timer() + 3
 
-        For Index = 1 To 12
+        For Index = 1 To 14
 
             Call Builder.ScanRow(Value.Recipe)
 
@@ -576,6 +666,32 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
 
     Else If Value.Stage = 2 Then
 
+        If Value.Kind = 2 Then
+
+            ' Collect water across recipe pages before allocating exact-size ribbons.
+            ' The CPU bound equals the existing four batches of 2048 patches.
+
+            For Index = 0 To Value.Recipe.Buffer.PatchCount - 1
+
+                If Value.Recipe.Buffer.Patches[Index].Kind = 2 Then
+
+                    If Value.WaterPatchCount >= 8192 Then
+                        Value.Failed = True
+                        Return
+                    End If
+
+                    Value.PendingWater[Value.WaterPatchCount] = Value.Recipe.Buffer.Patches[Index]
+                    Value.WaterPatchCount = Value.WaterPatchCount + 1
+
+                End If
+
+            End For
+
+            Value.Kind = 3
+            Value.Cursor = 0
+
+        End If
+
         Call UploadNext(Value)
 
         If Value.Kind > 6 And Not Value.Failed Then
@@ -602,6 +718,25 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
                 Return
 
             End If
+
+            For Index = 0 To Value.WaterPatchCount - 1
+                Value.Recipe.Buffer.Patches[Index] = Value.PendingWater[Index]
+            End For
+
+            Value.Recipe.Buffer.PatchCount = Value.WaterPatchCount
+            Value.Kind = 2
+            Value.FlowGroup = 0
+            Value.StyleGroup = 0
+            Value.Cursor = 0
+            Value.Stage = 3
+
+        End If
+
+    Else If Value.Stage = 3 Then
+
+        Call UploadWater(Value)
+
+        If Value.Kind > 2 And Not Value.Failed Then
 
             For Index = 0 To 63
                 Call G.DestroyObject3D(Value.Objects[Index])
@@ -635,7 +770,7 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
                 Ok = Derived.WriteNumber(Value.CacheBatch, Value.CacheKey + ".Batches")
 
                 If Ok Then
-                    Ok = Derived.Commit(CacheTown, "Terrain7", Value.CacheKey)
+                    Ok = Derived.Commit(CacheTown, "Terrain8", Value.CacheKey)
                 End If
 
             End If
@@ -682,7 +817,7 @@ Public Sub Destroy(ByRef Value As State)
         Call G.DestroyRibbonBatch3D(Value.NextWater[Index])
     End For
 
-    For Index = 1 To 12
+    For Index = 1 To 14
         Call G.DestroyMaterial3D(Value.Materials[Index])
     End For
 
@@ -691,7 +826,7 @@ Public Sub Destroy(ByRef Value As State)
         Call G.DestroyMaterial3D(Value.NextFlowMaterials[Index])
     End For
 
-    For Index = 0 To 1
+    For Index = 0 To 4
         Call G.DestroyTexture3D(Value.Textures[Index])
     End For
 

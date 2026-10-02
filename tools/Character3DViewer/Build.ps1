@@ -136,6 +136,7 @@ $nativeBattleSources = @(
     'TownTerrainCache.smile',
     'TownDerivedCache.smile',
     'TownTerrainStyles.smile',
+    'TownTerrainLighting.smile',
     'TownTerrainTools.smile',
     'TownTerrainProtection.smile',
     'TownTerrainPanel.smile',

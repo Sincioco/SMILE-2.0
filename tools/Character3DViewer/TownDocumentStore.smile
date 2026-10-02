@@ -318,8 +318,8 @@ Private Function DocumentVersion(ByRef Value As Document.State) As Number
 
     Version = 7
 
-    If Value.Appearance.Nonzero > 0 Then
-        Return 12
+    If Value.Appearance.Nonzero > 0 Or Value.TerrainStyle = 4 Then
+        Return 13
     End If
 
     If Value.Surface.Heights.Nonzero > 0 Then
@@ -500,7 +500,7 @@ Private Function ReadAppearance(ByRef Value As Styles.State, Expected As Number)
             Length < 1 Or
             Length > Total - Index Or
             Style < 0 Or
-            Style > 4) Then
+            Style > 5) Then
             Return False
         End If
 
@@ -653,7 +653,7 @@ Private Sub Encode(ByRef Value As Document.State, MarkSaved As Boolean)
 
     End If
 
-    Valid = Valid And Value.TerrainStyle >= 0 And Value.TerrainStyle <= 3
+    Valid = Valid And Value.TerrainStyle >= 0 And Value.TerrainStyle <= 4
 
     Call WriteByte(Value.TerrainStyle)
 
@@ -696,7 +696,7 @@ Private Function Decode() As Boolean
 
     Version = ReadByte()
 
-    If Version < 1 Or Version > 12 Then
+    If Version < 1 Or Version > 13 Then
         Return False
     End If
 
@@ -917,7 +917,7 @@ Private Function Decode() As Boolean
 
     If Version >= 7 Then
         Candidate.TerrainStyle = ReadByte()
-        Valid = Valid And Candidate.TerrainStyle <= 3
+        Valid = Valid And Candidate.TerrainStyle <= 4
     End If
 
     If Version >= 10 Then

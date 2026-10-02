@@ -5,6 +5,7 @@ Option Explicit
 
 Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Precision3D As P
 
 Public Function Label(Style As Number) As Text
 
@@ -15,6 +16,8 @@ Public Function Label(Style As Number) As Text
             Return "Highland"
         Case 3
             Return "Desert"
+        Case 4
+            Return "Snow"
     End Select
 
     Return "Meadow"
@@ -28,7 +31,7 @@ Public Function Slot(Kind As Number, Style As Number) As Number
     Result = Kind
 
     If (Style > 0 And
-        Style <= 3 And
+        Style <= 4 And
         (Kind = 1 Or Kind = 3)) Then
         Result = 7 + (Style - 1) * 2 + (Kind - 1) / 2
     End If
@@ -37,10 +40,11 @@ Public Function Slot(Kind As Number, Style As Number) As Number
 
 End Function
 
-Public Function Material(Style As Number, Road As Boolean) As Core.Material3D
+Public Function Material(Style As Number, Road As Boolean, TileTexture As Core.Texture3D) As Core.Material3D
 
     Dim Result As Core.Material3D
     Dim EmptyTexture As Core.Texture3D
+    Dim ColorTexture As Core.Texture3D
     Dim RedValue As Number
     Dim GreenValue As Number
     Dim BlueValue As Number
@@ -80,9 +84,76 @@ Public Function Material(Style As Number, Road As Boolean) As Core.Material3D
 
     End If
 
-    Result = G.CreatePbrMaterial3D(EmptyTexture, EmptyTexture, EmptyTexture,
+    If (Style = 1 Or Style = 2 Or Style = 4) And Not Road Then
+
+        ColorTexture = TileTexture
+        RedValue = 110
+        GreenValue = 115
+        BlueValue = 102
+
+    End If
+
+    If Style = 4 Then
+
+        RedValue = 200
+        GreenValue = 215
+        BlueValue = 230
+
+        If Road Then
+
+            RedValue = 92
+            GreenValue = 104
+            BlueValue = 108
+
+        End If
+
+    End If
+
+    Result = G.CreatePbrMaterial3D(ColorTexture, EmptyTexture, EmptyTexture,
         EmptyTexture, G.MATERIAL_ALPHA_OPAQUE, True)
     Ok = G.SetPbrMaterialFactors3D(Result, RedValue, GreenValue, BlueValue, 100, 0, 100, 0, 100)
+
+    Return Result
+
+End Function
+
+''' A smooth slope coordinate exposes rock without cell-shaped color boundaries.
+Public Function Coordinates(Style As Number, Kind As Number, X As Double,
+    Y As Double, Z As Double, Normal As P.Vector3) As P.Vector3
+
+    Dim Result As P.Vector3
+    Dim Period As Double
+    Dim Repeat As Double
+    Dim Exposure As Double
+
+    Period = 20.0
+
+    If Kind = 1 Then
+        Period = 160.0
+    End If
+
+    Result = P.Vector(X / Period, Z / Period, 0.0)
+
+    If Kind = 1 And Style = 2 Then
+
+        ' The valley samples the atlas's plain region; rock appears on elevated slopes.
+        Exposure = Max(0.0, Min(1.0, (Y - 120.9) / 700.0))
+        Exposure = Exposure * Exposure * (3.0 - 2.0 * Exposure)
+        Repeat = (Z + Y * 0.65 + 60.0 * Sin(X / 570.0)) / 180.0
+        Repeat = Abs(2.0 * (Repeat - Floor(Repeat)) - 1.0)
+        Result = P.Vector((X + 55.0 * Sin(Z / 430.0)) / 300.0,
+            0.04 + Exposure * 0.64 + Repeat * 0.27, 0.0)
+
+    Else If Kind = 1 And (Style = 1 Or Style = 4) Then
+
+        ' Mirrored repeats retain two-dimensional detail inside each atlas band.
+        Repeat = (Z + Y * 0.65 + 60.0 * Sin(X / 570.0)) / 160.0
+        Repeat = Abs(2.0 * (Repeat - Floor(Repeat)) - 1.0)
+        Exposure = Max(0.0, Min(1.0, (1.0 - Normal.Y - 0.045) * 3.0))
+        Result = P.Vector((X + 55.0 * Sin(Z / 430.0)) / 300.0,
+            0.04 + Exposure * 0.64 + Repeat * 0.27, 0.0)
+
+    End If
 
     Return Result
 

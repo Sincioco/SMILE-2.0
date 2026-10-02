@@ -3765,6 +3765,13 @@ Public Function SolidAt(TemplateIndex As Number, Index As Number) As Box
             Result.Z1 = 122.000000
             Result.Height = 650.000000
 
+        Case 9984
+            Result.X0 = -9.500000
+            Result.Z0 = -9.500000
+            Result.X1 = 9.500000
+            Result.Z1 = 9.500000
+            Result.Height = 3.500000
+
     End Select
 
     Return Result
@@ -4427,7 +4434,7 @@ Public Function FloorAt(TemplateIndex As Number, Index As Number) As Box
             Result.X0 = -45.000000
             Result.Z0 = -540.000000
             Result.X1 = 45.000000
-            Result.Z1 = -270.000000
+            Result.Z1 = -320.000000
             Result.Height = -0.010000
 
     End Select

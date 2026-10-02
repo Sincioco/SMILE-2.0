@@ -11,7 +11,7 @@ def read_prepared(read):
         return int.from_bytes(data, 'big')
 
     version = number('.PreparedVersion')
-    if version not in (3, 4, 5, 6, 7):
+    if version not in (3, 4, 5, 6, 7, 8):
         raise ValueError('Unsupported terrain recipe; save the map in the current Studio first.')
     batches = number('.Terrain.Batches')
     if not 1 <= batches <= 256:
@@ -38,7 +38,7 @@ def read_prepared(read):
                         not 0 <= flow <= 3 or (flow and (patch[8],patch[9]) != (2,5))):
                     raise ValueError('Unsupported terrain patch; export canceled without flattening.')
                 style = r.integer() if version >= 6 else 0
-                if not 0 <= style <= 4:
+                if not 0 <= style <= 5:
                     raise ValueError("Invalid terrain appearance")
                 result.append(patch + [style, y2, flow])
             if r.offset != len(r.data):

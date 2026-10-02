@@ -1,4 +1,4 @@
-"""Bounded TWN1–TWN12 codec shared by the existing Blender document worker."""
+"""Bounded TWN1–TWN13 codec shared by the existing Blender document worker."""
 import math
 from functools import lru_cache
 import hashlib
@@ -163,7 +163,7 @@ def decode(payload, catalog, request=False):
     if bytes(r.byte() for _ in range(3)) != b'TWN':
         raise ValueError('Unsupported town format')
     version = r.byte()
-    if not 1 <= version <= 12:
+    if not 1 <= version <= 13:
         raise ValueError('Unsupported town format')
     fingerprint = catalog.get('document_fingerprint') or hashlib.sha256(json.dumps(catalog, sort_keys=True).encode()).hexdigest()
     if r.name() != fingerprint:
@@ -251,7 +251,7 @@ def decode(payload, catalog, request=False):
             result['cells'] = raster_curves(result)
     if version >= 7:
         result['terrain_style'] = r.byte()
-        if result['terrain_style'] > 3:
+        if result['terrain_style'] > 4:
             raise ValueError('Invalid terrain style')
     if version >= 10:
         result['landmark'] = r.byte()
@@ -294,7 +294,7 @@ def decode(payload, catalog, request=False):
         appearance = []
         while len(appearance) < total:
             length, style = r.integer(), r.integer()
-            if not 1 <= length <= total-len(appearance) or not 0 <= style <= 4:
+            if not 1 <= length <= total-len(appearance) or not 0 <= style <= 5:
                 raise ValueError('Invalid tile appearance run')
             appearance.extend([style]*length)
         result['appearance'] = appearance
@@ -429,10 +429,12 @@ def encode(document, catalog):
     appearance = document.get('appearance', [])
     if appearance and len(appearance) != document['columns'] * document['rows']:
         raise ValueError('Invalid appearance cell count')
-    if any(not isinstance(style, int) or not 0 <= style <= 4 for style in appearance):
+    if any(not isinstance(style, int) or not 0 <= style <= 5 for style in appearance):
         raise ValueError('Invalid tile appearance')
-    if any(appearance):
-        version = 12
+    if any(appearance) or document.get('terrain_style',0) == 4:
+        version = 13
+        if not appearance:
+            appearance = [0]*(document['columns']*document['rows'])
     result = bytearray(b'TWN') + bytes([version]) + name(fingerprint) + name(document['name']) + b'\0'
     precise = lambda value: integer(round(value * 1000000))
     result += integer(document['columns']) + integer(document['rows']) + precise(document['cell_size'])

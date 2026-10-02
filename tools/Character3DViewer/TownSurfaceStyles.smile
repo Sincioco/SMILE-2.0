@@ -1,4 +1,4 @@
-''' Optional tile appearance. Zero inherits the map style; 1..4 explicitly select a style.
+''' Optional tile appearance. Zero inherits the map style; 1..5 explicitly select a style.
 Module Smile.Tools.TownSurfaceStyles
 
 Option Explicit
@@ -55,7 +55,7 @@ Public Function Write(ByRef Value As State, Index As Number, Style As Number) As
     If (Index < 0 Or
         Index >= 262144 Or
         Style < 0 Or
-        Style > 4) Then
+        Style > 5) Then
         Return False
     End If
 
@@ -153,7 +153,7 @@ Public Function Valid(ByRef Value As State, CellCount As Number) As Boolean
                 Code = Text_Code_At(Value.Pages[Page], Offset) - 48
 
                 If (Code < 0 Or
-                    Code > 4 Or
+                    Code > 5 Or
                     (Page * 256 + Offset >= CellCount And Code <> 0)) Then
                     Return False
                 End If

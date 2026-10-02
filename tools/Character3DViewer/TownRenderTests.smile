@@ -16,6 +16,7 @@ Import Smile.Tools.TownCatalogData As Catalog
 Import Smile.Tools.TownInitialSurface As Initial
 Import Smile.Tools.TownCatalogRenderer As Renderer
 Import Smile.Tools.TownSurfaceRenderer As Terrain
+Import Smile.Tools.TownTerrainLighting As TerrainLighting
 Import Smile.Tools.TownLighting As Lighting
 Import Smile.Tools.TownAttachments As Attachments
 Import Smile.Tools.TownDocumentNavigation As Navigation
@@ -95,7 +96,9 @@ Call CheckSmoothTerrain()
 Ok = Terrain.Create(Ground)
 
 Call Check(Ground.Textures[0].MipLevels > 1 And Ground.Textures[1].MipLevels > 1 And
-    Assets.Grass.MipLevels > 1, "Grass And Paving Filter Distant Repetitions")
+    Assets.Grass.MipLevels > 1 And Ground.Textures[2].MipLevels > 1 And
+    Ground.Textures[3].MipLevels > 1 And Ground.Textures[4].MipLevels > 1,
+    "Terrain Tiles And Paving Filter Distant Repetitions")
 Call Check(Ground.Materials[1].Kind = G.MATERIAL_KIND_PBR And
     Assets.Lawn.Kind = G.MATERIAL_KIND_PBR And Ground.Materials[1].RoughnessPercent = 100,
     "Terrain And Courtyard Grass Follow The Sun And Ambient Like Paving")
@@ -490,7 +493,8 @@ End For
 Call Check(Ok, "The Sixteenth Destination Has A Visible Control Without Overflow")
 Call Panel.Release(Controls.Ui)
 Call CheckElevatedTerrain()
-Call CheckSilverfall()
+Call CheckLandscape("Silverfall")
+Call CheckLandscape("Willowstep")
 Call Scene.Shutdown()
 
 If Failures = 0 Then
@@ -588,14 +592,28 @@ Sub CheckElevatedTerrain()
 
 End Sub
 
-''' The enlarged lake exhausted four water batches with redundant four-way cell fans.
-Sub CheckSilverfall()
+''' Terrain pages must share four exact-size ribbons alongside the live Studio effects.
+Sub CheckLandscape(Name As Text)
 
     Dim Deadline As Number
+    Dim EmptyTexture As Core.Texture3D
+    Dim EffectMaterial As Core.Material3D
+    Dim EffectRibbon As Core.RibbonBatch3D
+    Dim GlowRibbon As Core.RibbonBatch3D
+    Dim CoreRibbon As Core.RibbonBatch3D
+    Dim Reserved As Number
 
-    Ok = Store.LoadDocument(Town, "TownRender.Silverfall")
+    EffectMaterial = G.CreateEffectMaterial3D(EmptyTexture, G.MATERIAL_ALPHA_BLEND, 100)
+    EffectRibbon = G.CreateRibbonBatch3D(8192, EffectMaterial)
+    GlowRibbon = G.CreateRibbonBatch3D(6144, EffectMaterial)
+    CoreRibbon = G.CreateRibbonBatch3D(6144, EffectMaterial)
 
-    Call Check(Ok, "Silverfall Portable Regression Fixture Imports")
+    Call Check(EffectRibbon.Handle <> 0 And GlowRibbon.Handle <> 0 And CoreRibbon.Handle <> 0,
+        "Reserve 20480 Points For Shared Studio Effects Before Landscape Loading")
+
+    Ok = Store.LoadDocument(Town, "TownRender." + Name)
+
+    Call Check(Ok, Name + " Portable Regression Fixture Imports")
 
     If Not Ok Then
         Return
@@ -614,8 +632,39 @@ Sub CheckSilverfall()
     Loop Until Ground.Stage = 0 Or Ground.Failed Or Timer() >= Deadline
 
     Call Check(Ok And Not Ground.Failed And Ground.Stage = 0 And Ground.WaterCount <= 4,
-        "Silverfall Enlarged Lake And Stream Fit The Unchanged Native Water Budget")
+        Name + " Lake And Stream Fit The Unchanged Native Water Budget")
+
+    Reserved = G.VfxValue3D(G.VFX_QUERY_STAGED_RIBBON_CAPACITY)
+
+    Call Terrain.BeginBuild(Ground, Town)
+
+    Deadline = Timer() + 15000
+
+    Do
+
+        Call Terrain.Update(Ground, 16)
+
+    Loop Until Ground.Stage = 0 Or Ground.Failed Or Timer() >= Deadline
+
+    Call Check(Not Ground.Failed And Ground.Stage = 0 And
+        G.VfxValue3D(G.VFX_QUERY_STAGED_RIBBON_CAPACITY) = Reserved,
+        Name + " Cached Replacement Fits Alongside Live Water And Effects Without Leaking")
+
+    If Ground.Failed Then
+
+        Print "Landscape Shared Capacity: " + Name
+        Print Reserved
+        Print G.VfxValue3D(G.VFX_QUERY_STAGED_RIBBON_CAPACITY)
+        Print Ground.NextWaterCount
+        Print G.LastError()
+
+    End If
+
     Call Terrain.Destroy(Ground)
+    Call G.DestroyRibbonBatch3D(EffectRibbon)
+    Call G.DestroyRibbonBatch3D(GlowRibbon)
+    Call G.DestroyRibbonBatch3D(CoreRibbon)
+    Call G.DestroyMaterial3D(EffectMaterial)
 
 End Sub
 
@@ -627,6 +676,8 @@ Sub CheckSmoothTerrain()
     Dim First As P.Vector3
     Dim Last As P.Vector3
     Dim Ok As Boolean
+    Dim Cache As TerrainLighting.State
+    Dim Cached As P.Vector3
 
     Ok = Document.Blank(Draft, "Smooth Shading", 4, 4, 30.0)
 
@@ -637,14 +688,35 @@ Sub CheckSmoothTerrain()
         End For
     End For
 
-    First = Terrain.ShadingNormal(Draft.Surface, Draft.Surface.XEdges[2] - 0.001,
+    Call TerrainLighting.Reset(Cache)
+
+    First = TerrainLighting.Calculate(Draft.Surface, Draft.Surface.XEdges[2] - 0.001,
         Draft.Surface.ZEdges[2])
-    Last = Terrain.ShadingNormal(Draft.Surface, Draft.Surface.XEdges[2] + 0.001,
+    Last = TerrainLighting.Calculate(Draft.Surface, Draft.Surface.XEdges[2] + 0.001,
         Draft.Surface.ZEdges[2])
 
     Call Check(Ok And First.Y > 0.0 And Abs(First.X - Last.X) < 0.001 And
         Abs(First.Y - Last.Y) < 0.001 And Abs(First.Z - Last.Z) < 0.001,
         "Terrain Lighting Is Continuous Across Cell And Triangle Seams")
+
+    Cached = TerrainLighting.Sample(Cache, Draft.Surface, Draft.Surface.XEdges[2] - 0.001,
+        Draft.Surface.ZEdges[2])
+
+    Call Check(Cached.X = First.X And Cached.Y = First.Y And Cached.Z = First.Z,
+        "Cached Terrain Normals Equal Exact Original Sampling")
+
+    Ok = Elevation.SetCorner(Draft.Surface, 1, 2, 71.0)
+
+    Call TerrainLighting.Reset(Cache)
+
+    Cached = TerrainLighting.Sample(Cache, Draft.Surface, Draft.Surface.XEdges[2] - 0.001,
+        Draft.Surface.ZEdges[2])
+    First = TerrainLighting.Calculate(Draft.Surface, Draft.Surface.XEdges[2] - 0.001,
+        Draft.Surface.ZEdges[2])
+
+    Call Check(Cached.X = First.X And Cached.Y = First.Y And Cached.Z = First.Z,
+        "Terrain Edits Invalidate Cached Normals On Rebuild")
+
     Call Check(Elevation.Corner(Draft.Surface, 2, 2) = 24.0,
         "Smooth Shading Preserves The Authored Collision Heights")
 

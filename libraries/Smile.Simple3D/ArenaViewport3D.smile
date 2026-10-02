@@ -14,7 +14,6 @@ Public Type State
     Backgrounds As Backdrop.State
     Controls As Camera.Controls
     Zoom As Camera.ZoomState
-    Wheel As Motion.WheelState
     LiveCamera As P.Camera3D
     TransitionFrom As P.Camera3D
     TransitionElapsed As Number
@@ -64,7 +63,6 @@ Public Sub Update(ByRef Value As State, Key As Number, Optional Blocked As Boole
     Dim Changed As Boolean
     Dim CurrentTime As Number
     Dim Pointer As Motion.PointerInput
-    Dim EmptyWheel As Motion.WheelState
 
     Call Arena.HandleKey(Key, Value.FloorVisible, Value.GridVisible)
 
@@ -78,18 +76,6 @@ Public Sub Update(ByRef Value As State, Key As Number, Optional Blocked As Boole
 
     CurrentTime = Timer()
     Pointer = Motion.ReadPointer(Blocked)
-
-    If (Blocked Or
-        Key <> KEY_NONE Or
-        Pointer.OrbitPressed Or
-        Pointer.PanPressed Or
-        Pointer_Pressed(POINTER_SECONDARY)) Then
-        Value.Wheel = EmptyWheel
-    End If
-
-    If Not Blocked And Pointer.Wheel <> 0 Then
-        WheelStep = Motion.AcceleratedWheelStep(Value.Wheel, Pointer.Wheel, CurrentTime, WheelStep)
-    End If
 
     Changed = Motion.UpdatePointer(Value.Controls, Value.Zoom, Pointer,
         Value.PanXLimit, Value.PanYLimit, Value.WorldScale, WheelStep)

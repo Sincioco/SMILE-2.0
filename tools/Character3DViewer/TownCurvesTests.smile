@@ -174,6 +174,26 @@ Public Function Run() As Number
     Call Check(SelectedCurves.BrushCount = 0,
         "Distant Brushes Are Excluded From Terrain Sampling", Failures)
 
+    Ok = Grid.Initialize(Town.Surface, 4, 4, -20.0, -20.0, 10.0, Grid.SURFACE_WATER)
+    Brush.Form = Paint.FORM_RECTANGLE
+    Brush.Surface = Grid.SURFACE_GROUND
+    Brush.X0 = -20.0
+    Brush.X1 = 20.0
+    Brush.Z0 = -20.0
+    Brush.Z1 = 0.0
+    Ok = Grid.PaintBrush(Town.Surface, Brush)
+    Brush.Form = Paint.FORM_CIRCLE
+    Brush.Surface = Grid.SURFACE_ROAD
+    Brush.X0 = 10.0
+    Brush.Z0 = 0.0
+    Brush.X1 = 12.0
+    Ok = Grid.PaintBrush(Town.Surface, Brush)
+    Slice = Contours.Split(Town.Surface, P.Vector(10.0, 0.0, 0.0),
+        P.Vector(-10.0, 0.0, 10.0), P.Vector(-10.0, 0.0, -10.0))
+
+    Call Check(Slice.Rail And Abs(Slice.EdgeA.Z) < 0.01,
+        "Curved Road Shoreline Join Does Not Produce A Ground Spike", Failures)
+
     Ok = Document.Blank(Town, "Rounded Junction Regression", 20, 20, 10.0)
     Brush.Form = Paint.FORM_FILLET
     Brush.Surface = Grid.SURFACE_ROAD

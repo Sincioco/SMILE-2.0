@@ -1,5 +1,40 @@
 # SMILE 2.0 - Sin Star I - Game Engine and Studio
 
+## October 2 landscape and editor refinement
+
+Willowstep Highlands is a snowy mountain pass with four broad massifs (about
+154 m maximum elevation), a winding downhill river, a larger irregular lake,
+graded lookout trails, temples/pavilions and small rock groups. Silverfall keeps
+its pale exposed cascade banks, with two different dirt trails and an irregular
+lake open to the map edge. Greyglass has softened summits, a grounded house and
+plain valley ground beneath reusable rock tiles. Verdant's short road stubs and
+heart-shaped ponds are removed. Relief Quarter mixes a civic plaza and homes
+with raised mountain ground, a lake, a sandy district and lookout paths.
+
+All sixteen saved maps have square road approaches and destination areas across
+the full road width at the boundary. Arrivals start farther inside, beyond the
+trigger. Silverfall, Willowstep, Ancient Relay, Sunglass, Greyglass and Verdant
+use campfires instead of street lamps. Campfire is also a reusable Decor template.
+
+In **Edit Town > Items > Surfaces > Map Load (Yellow Border)**, choose
+**Select / Move** or **Resize**. Click an area, then click the destination or new
+corner; dragging is also supported. Escape clears selection and Ctrl+Z undoes.
+Destination labels remain upright as the camera rotates.
+
+Press **1** in the editor to restore the default centred, north-up **2D Top View**.
+Middle mouse starts an eased transition back into 3D orbit. Wheel steps no longer
+accelerate when repeated quickly; bounded target easing is retained. **Save All
+for Viewer** displays the map currently being saved above the progress gauge.
+The minimap samples analytic road/water boundaries at its display resolution with
+four samples per pixel and builds its cache incrementally.
+
+Snow joins Meadow, Forest, Highland and Desert as a reusable terrain style.
+Native/Python documents use TWN13 where this style is needed; older formats remain
+readable. Prepared version 8 invalidates older terrain recipes. Normal shading
+uses a bounded cache; water from all terrain blocks is grouped into exact-size
+native batches and replaced together, retaining the four-batch limit. The Royal
+Castle bridge deck now ends at the courtyard edge instead of overlapping it.
+
 ## October 2 queued exports and landscape corrections
 
 **Edit Town → Files → Save All for Viewer / Save All for Blender** captures every

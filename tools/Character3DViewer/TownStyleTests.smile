@@ -106,7 +106,7 @@ Public Function Run() As Number
 
     Ok = Styles.Write(Copy.Appearance, 0, 3)
 
-    Call Check(Derived.ReadKey(Copy, "Terrain7", False) = "",
+    Call Check(Derived.ReadKey(Copy, "Terrain8", False) = "",
         "Changed Appearance Rejects Previous Prepared Terrain")
     Call Styles.Reset(Town.Appearance)
 
@@ -160,6 +160,14 @@ Public Function Run() As Number
     Ok = Store.SaveDocument(Town, "Styles.Mixed")
 
     Call Check(Not Ok, "Malformed Appearance Cannot Replace Saved Map")
+
+    Copy.TerrainStyle = 4
+    Ok = Styles.Write(Copy.Appearance, 2, 5)
+    Ok = Store.SaveDocument(Copy, "Styles.Snow") And Ok
+    Ok = Store.LoadDocument(Town, "Styles.Snow") And Ok
+
+    Call Check(Ok And Town.TerrainStyle = 4 And Styles.Read(Town.Appearance, 2) = 5,
+        "Snow Map And Snow Tile Survive TWN13 Save Open")
 
     Return Failures
 

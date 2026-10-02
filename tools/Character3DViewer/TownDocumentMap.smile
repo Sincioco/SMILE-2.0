@@ -6,6 +6,7 @@ Option Explicit
 Import Smile.Tools.TownSurfaceLayers As Layers
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.SurfacePaint3D As Paint
 Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownCatalogData As Catalog
 Import Smile.Tools.TownEditorPanel As Panel
@@ -15,7 +16,11 @@ Import Smile.Tools.TownRoadStops As Stops
 Import Smile.Tools.TownResidents As Residents
 Import Smile.Tools.TownResidentDialogue As Dialogue
 
-Private Dim Cells[64, 64] As Number
+Private Dim Cells[256, 256] As Number
+Private Dim PendingCells[256, 256] As Number
+Private Dim BuildRow As Number
+Private Dim BuildRevision As Number
+Private Dim Building As Boolean
 Private Dim Revision As Number
 Private Dim ZoomLevel As Number
 Private Dim MapName As Text
@@ -38,6 +43,7 @@ Public Sub SetZoom(ByRef Town As Document.State, Focus As P.Vector3, Level As Nu
     HighZ = LowZ + Depth
     MapName = Town.Name
     Revision = -1
+    Building = False
 
 End Sub
 
@@ -120,6 +126,7 @@ Public Sub Pan(ByRef Town As Document.State, DeltaX As Number, DeltaY As Number)
     LowZ = FocusZ - Depth * 0.5
     HighZ = FocusZ + Depth * 0.5
     Revision = -1
+    Building = False
 
 End Sub
 
@@ -327,56 +334,95 @@ Private Sub DrawRoute(Leader As P.Vector3, MapLeft As Number)
 
 End Sub
 
+''' Four analytic samples per display pixel. Publish only the finished cache.
 Private Sub Rebuild(ByRef Town As Document.State)
 
     Dim X As Number
     Dim Z As Number
-    Dim MX As Number
-    Dim MZ As Number
-    Dim SX As Number
-    Dim SZ As Number
-    Dim EX As Number
-    Dim EZ As Number
-    Dim Surface As Number
+    Dim Sample As Number
+    Dim Kind As Number
+    Dim RedValue As Number
+    Dim GreenValue As Number
+    Dim BlueValue As Number
+    Dim WX As Double
+    Dim WZ As Double
+    Dim Region As Paint.State
 
-    For Z = 0 To 63
+    If Not Building Or BuildRevision <> Town.Revision Then
 
-        For X = 0 To 63
-            Cells[X, Z] = 0
+        BuildRow = 0
+        BuildRevision = Town.Revision
+        Building = True
+
+    End If
+
+    For Z = BuildRow To Min(255, BuildRow + 7)
+
+        Call Paint.SelectRegion(Town.Surface.Curves, Region, LowX,
+            LowZ + ToDouble(Z) * (HighZ - LowZ) / 256.0, HighX,
+            LowZ + ToDouble(Z + 1) * (HighZ - LowZ) / 256.0)
+
+        For X = 0 To 255
+
+            RedValue = 0
+            GreenValue = 0
+            BlueValue = 0
+
+            For Sample = 0 To 3
+
+                WX = LowX + (ToDouble(X) + 0.25 + ToDouble(Sample Mod 2) * 0.5) * (HighX - LowX) / 256.0
+                WZ = LowZ + (ToDouble(Z) + 0.25 + ToDouble(Sample / 2) * 0.5) * (HighZ - LowZ) / 256.0
+                Kind = Grid.ReadBase(Town.Surface, Grid.CellX(Town.Surface, WX), Grid.CellZ(Town.Surface, WZ))
+                Kind = Paint.Resolve(Region, WX, WZ, Kind)
+                ' Accumulate channels directly; packed-color byte order is runtime-owned.
+
+                If Kind = 0 Then
+
+                    RedValue = RedValue + 10
+                    GreenValue = GreenValue + 22
+                    BlueValue = BlueValue + 35
+
+                Else If Kind = 2 Then
+
+                    RedValue = RedValue + 12
+                    GreenValue = GreenValue + 54
+                    BlueValue = BlueValue + 103
+
+                Else If Kind >= 3 Then
+
+                    RedValue = RedValue + 123
+                    GreenValue = GreenValue + 147
+                    BlueValue = BlueValue + 158
+
+                Else
+
+                    RedValue = RedValue + 35
+                    GreenValue = GreenValue + 77
+                    BlueValue = BlueValue + 37
+
+                End If
+
+            End For
+
+            PendingCells[X, Z] = RGB(RedValue / 4, GreenValue / 4, BlueValue / 4)
         End For
     End For
 
-    For Z = 0 To Town.Surface.Rows - 1
+    BuildRow = BuildRow + 8
 
-        SZ = Coordinate(Town.Surface.ZEdges[Z], LowZ, HighZ)
-        EZ = Coordinate(Town.Surface.ZEdges[Z + 1], LowZ, HighZ)
+    If BuildRow >= 256 Then
 
-        If Town.Surface.ZEdges[Z + 1] < LowZ Or Town.Surface.ZEdges[Z] > HighZ Then
-            SZ = 0
-            EZ = -1
-        End If
+        For Z = 0 To 255
 
-        For X = 0 To Town.Surface.Columns - 1
-
-            Surface = Grid.ReadCell(Town.Surface, X, Z)
-            SX = Coordinate(Town.Surface.XEdges[X], LowX, HighX)
-            EX = Coordinate(Town.Surface.XEdges[X + 1], LowX, HighX)
-
-            If Town.Surface.XEdges[X + 1] < LowX Or Town.Surface.XEdges[X] > HighX Then
-                SX = 0
-                EX = -1
-            End If
-
-            For MZ = SZ To EZ
-
-                For MX = SX To EX
-                    Cells[MX, MZ] = Max(Cells[MX, MZ], Surface)
-                End For
+            For X = 0 To 255
+                Cells[X, Z] = PendingCells[X, Z]
             End For
         End For
-    End For
 
-    Revision = Town.Revision
+        Revision = Town.Revision
+        Building = False
+
+    End If
 
 End Sub
 
@@ -388,7 +434,6 @@ Public Sub Draw(ByRef Town As Document.State, Position As P.Vector3,
     Dim Z As Number
     Dim StartX As Number
     Dim Kind As Number
-    Dim ColorValue As Number
     Dim MapLeft As Number
     Dim Index As Number
     Dim Shape As Catalog.Template
@@ -403,7 +448,7 @@ Public Sub Draw(ByRef Town As Document.State, Position As P.Vector3,
 
     If Revision <> Town.Revision Then
 
-        If Revision >= 0 Then
+        If Revision >= 0 And Not Building Then
             Call SetZoom(Town, P.Vector((LowX + HighX) * 0.5, 0.0, (LowZ + HighZ) * 0.5), Max(1, ZoomLevel))
         End If
 
@@ -422,7 +467,7 @@ Public Sub Draw(ByRef Town As Document.State, Position As P.Vector3,
 
     Clip Rectangle MapLeft, 259, 256, 256
 
-    For Z = 0 To 63
+    For Z = 0 To 255
 
         X = 0
 
@@ -433,21 +478,11 @@ Public Sub Draw(ByRef Town As Document.State, Position As P.Vector3,
             Do
                 X = X + 1
 
-            Loop Until X >= 64 Or Cells[X, Z] <> Kind
+            Loop Until X >= 256 Or Cells[X, Z] <> Kind
 
-            ColorValue = RGB(35, 77, 37)
+            Fill Rectangle MapLeft + StartX, 259 + (255 - Z), X - StartX, 1, Kind Opacity Opacity
 
-            If Kind = 0 Then
-                ColorValue = RGB(10, 22, 35)
-            Else If Kind = 2 Then
-                ColorValue = RGB(12, 54, 103)
-            Else If Kind >= 3 Then
-                ColorValue = RGB(123, 147, 158)
-            End If
-
-            Fill Rectangle MapLeft + StartX * 4, 259 + (63 - Z) * 4, (X - StartX) * 4, 4, ColorValue Opacity Opacity
-
-        Loop Until X >= 64
+        Loop Until X >= 256
 
     End For
 

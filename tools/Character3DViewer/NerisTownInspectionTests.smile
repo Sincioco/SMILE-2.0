@@ -25,6 +25,7 @@ Public Sub Run(ByRef Value As Town.State, ByRef Failures As Number)
 
     Dim SavedMap As TownMap.State
     Dim SavedPosition As P.Vector3
+    Dim Frame As Number
 
     SavedMap = Value.Map
     SavedPosition = Value.People.Path.Positions[0]
@@ -49,13 +50,109 @@ Public Sub Run(ByRef Value As Town.State, ByRef Failures As Number)
     Call FrontView(Value, Failures)
     Call CursorZoom(Value, Failures)
     Call OrbitZoom(Value, Failures)
+    Call TopViewResetAndOrbit(Value, Failures)
+    Call ConstantWheelSteps(Failures)
     Call FocusWallClearance(Failures)
+
+    ' Loading is incremental. Finish it before checking the final recorded duration.
+    Value.LoadingTown = "Previous Failed Map"
+    Value.Failed = True
+    Value.Panel.Loading = True
+    Value.Panel.LoadStarted = Timer() - 60000
+
+    For Frame = 0 To 180
+
+        Call Town.LoadNext(Value)
+
+        If Value.Ready Or Value.Failed Then
+            Exit For
+        End If
+
+    End For
+
+    Call Check(Value.Ready And Not Value.Failed And Value.Panel.LoadMilliseconds < 60000,
+        "Changed Map Resets Failed Load Timing", Failures)
 
     Call Party.Teleport(Value.People, SavedPosition)
     Call Party.Update(Value.People, SavedPosition, 0)
 
     Value.Map = SavedMap
     Value.Look.Time = 0
+
+End Sub
+
+Private Sub ConstantWheelSteps(ByRef Failures As Number)
+
+    Dim Controls As Camera.Controls
+    Dim Zoom As Camera.ZoomState
+    Dim Pointer As Motion.PointerInput
+    Dim Index As Number
+    Dim Previous As Double
+    Dim Changed As Boolean
+
+    Call Motion.Reset(Controls, Zoom)
+
+    Pointer.Wheel = 1
+
+    For Index = 0 To 4
+
+        Previous = Zoom.Target
+        Changed = Motion.UpdatePointer(Controls, Zoom, Pointer, 360.0, 220.0, 1.0, 8)
+
+        Call Check(Changed And Zoom.Target - Previous = -8.0,
+            "Repeated Wheel Ticks Keep The Same Zoom Step", Failures)
+        Call Motion.Advance(Controls, Zoom, 16)
+    End For
+
+    Pointer.Wheel = -1
+    Previous = Zoom.Target
+    Changed = Motion.UpdatePointer(Controls, Zoom, Pointer, 360.0, 220.0, 1.0, 8)
+
+    Call Check(Zoom.Target - Previous = 8.0,
+        "Reversing The Wheel Keeps The Same Zoom Step", Failures)
+
+End Sub
+
+Private Sub TopViewResetAndOrbit(ByRef Value As Town.State, ByRef Failures As Number)
+
+    Dim Before As P.Camera3D
+    Dim Expected As P.Camera3D
+    Dim Index As Number
+
+    Call Authoring.BeginEditing()
+    Call Town.ResetOverview(Value)
+    Call Town.TopDown(Value, True)
+
+    Expected = Value.View.LiveCamera
+    Value.View.Controls.PanX = 150.0
+    Value.View.Controls.OrbitYaw = 83.0
+    Value.View.Zoom.Current = -40.0
+    Value.View.Controls.Zoom = -40.0
+
+    Call Arena.ComposeCamera(Value.View, Value.BaseCamera)
+    Call Town.Input(Value, KEY_1, False)
+    Call Check(M.Distance(Expected.Position, Value.View.LiveCamera.Position) < 0.01 And
+        M.Distance(Expected.Target, Value.View.LiveCamera.Target) < 0.01 And
+        M.Distance(Value.View.LiveCamera.UpDirection, P.Vector(0.0, 0.0, 1.0)) < 0.01,
+        "Editor One Resets Pan Zoom Bearing And North Up Top View", Failures)
+
+    Before = Value.View.LiveCamera
+
+    Call Town.BeginPointerOrbit(Value, False)
+    Call Check(M.Distance(Before.Position, Value.View.LiveCamera.Position) < 0.01 And
+        Value.View.TransitionDuration > 0,
+        "Middle Press Starts A Continuous Transition Out Of Top View", Failures)
+
+    For Index = 0 To 49
+        Call Arena.AdvanceTransition(Value.View, 16)
+        Call Arena.ComposeCamera(Value.View, Value.BaseCamera)
+    End For
+
+    Call Check(Value.View.LiveCamera.OrthographicHeight = 0.0 And
+        M.Distance(Before.Target, Value.View.LiveCamera.Target) < 0.01,
+        "Middle Orbit Reaches Perspective While Retaining Its Center", Failures)
+    Call Authoring.Input(Value.View.LiveCamera, KEY_TAB, True)
+    Call Town.ResetOverview(Value)
 
 End Sub
 

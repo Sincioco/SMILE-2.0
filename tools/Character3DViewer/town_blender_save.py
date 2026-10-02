@@ -46,7 +46,7 @@ def populate_items(document, catalog):
     output = bpy.data.collections.new('Town Editor Instances')
     bpy.context.scene.collection.children.link(output)
     for item in document['items']:
-        if 35 <= item['template'] <= 38:
+        if 35 <= item['template'] <= 39:
             from town_blender_landforms import populate
             populate(item, item_matrix(item), output)
             continue

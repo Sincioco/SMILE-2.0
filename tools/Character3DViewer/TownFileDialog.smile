@@ -109,6 +109,9 @@ Public Sub Draw(ByRef Value As Files.State, ShowDetails As Boolean)
         Height = Window_Height() - 276 - Y
     End If
 
+    ' The job snapshot owns this heading even when a different tab remains selected.
+    Fill Rectangle X, Y - 22, 283, 20, RGB(11, 25, 39)
+    Draw Text Text_Slice(Value.Pending.Name, 0, 30) At X, Y - 20 Size 14 Color WHITE
     Fill Rectangle X, Y, 283, Height, RGB(11, 25, 39)
     Draw Rectangle X, Y, 283, Height, BarColor
     Draw Text Title At X + 8, Y + 7 Size 13 Color BarColor

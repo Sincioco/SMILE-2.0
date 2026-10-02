@@ -114,6 +114,7 @@ Public Sub LoadNext(ByRef Value As State)
         Value.LoadingTown = Authoring.TownName()
         Value.Failed = False
         Value.Ready = False
+        Value.Panel.Loading = False
 
     End If
 
@@ -316,9 +317,15 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
     If (Key = KEY_1 And
         Not Blocked And
         Not Authoring.GestureActive()) Then
+
+        If Authoring.Editing() Then
+            Call ResetOverview(Value)
+        End If
+
         Call TopDown(Value, Authoring.Editing())
 
         Return
+
     End If
 
     If (Key = KEY_2 And
@@ -833,6 +840,10 @@ Public Sub BeginPointerOrbit(ByRef Value As State, Optional PanModifier As Boole
     End If
 
     Value.Cinematic = False
+
+    If Not PanModifier Then
+        Call Drone.LeaveTopView(Value.View, Value.BaseCamera)
+    End If
 
 End Sub
 

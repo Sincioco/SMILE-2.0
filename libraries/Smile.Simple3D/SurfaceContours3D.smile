@@ -73,20 +73,62 @@ Private Function Boundary(ByRef Surface As Grid.State, PointA As P.Vector3,
 
 End Function
 
+''' Read the land/water beneath a road chord; a curved edge can bulge past that chord.
+Private Function UnderRoad(ByRef Surface As Grid.State, Point As P.Vector3, Base As Number) As Number
+
+    Dim Index As Number
+    Dim Offset As Number
+    Dim Result As Number
+    Dim Found As Boolean
+
+    For Offset = 0 To Surface.Curves.BrushCount - 1
+
+        Index = Surface.Curves.BrushCount - Offset - 1
+
+        If Surface.Curves.Brushes[Index].Surface <> Grid.SURFACE_ROAD Then
+
+            If Paint.Contains(Surface.Curves.Brushes[Index], Point.X, Point.Z) Then
+
+                Result = Surface.Curves.Brushes[Index].Surface
+                Found = True
+                Exit For
+
+            End If
+
+        End If
+
+    End For
+
+    If Not Found Then
+
+        Result = Base
+
+        If Base < 0 Then
+            Result = Grid.ReadBase(Surface, Grid.CellX(Surface, Point.X), Grid.CellZ(Surface, Point.Z))
+        End If
+
+    End If
+
+    If Result = Grid.SURFACE_BRIDGE Then
+        Result = Grid.SURFACE_WATER
+    End If
+
+    Return Result
+
+End Function
+
 ''' Find the land/water junction on the already clipped road edge.
 Private Function Junction(ByRef Surface As Grid.State, PointA As P.Vector3,
-    PointB As P.Vector3, RoadPoint As P.Vector3, FirstKind As Number, Base As Number) As P.Vector3
+    PointB As P.Vector3, FirstKind As Number, Base As Number) As P.Vector3
 
     Dim Index As Number
     Dim Middle As P.Vector3
-    Dim Outside As P.Vector3
 
     For Index = 0 To 11
 
         Middle = Blend(PointA, PointB, 0.5)
-        Outside = Blend(RoadPoint, Middle, 1.002)
 
-        If Min(3, Kind(Surface, Outside, Base)) = FirstKind Then
+        If UnderRoad(Surface, Middle, Base) = FirstKind Then
             PointA = Middle
         Else
             PointB = Middle
@@ -184,7 +226,7 @@ Public Function Split(ByRef Surface As Grid.State, PointA As P.Vector3,
 
         If Ka = 3 Then
 
-            Center = Junction(Surface, Ab, Ca, PointA, Kb, Base)
+            Center = Junction(Surface, Ab, Ca, Kb, Base)
 
             Call Face(Result, PointA, Ab, Ca, Ka, IncludeWater)
 

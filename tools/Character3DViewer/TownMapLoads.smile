@@ -5,11 +5,28 @@ Option Explicit
 
 Import Smile.Tools.TownDocument As Document
 Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.SurfaceSections3D As Regions
 
 Private Dim Lookup[512, 512] As Number
 Private Dim Queue[4096] As Number
 Private Dim Seen[4096] As Boolean
+
+Public Type LabelSet
+    Names[4096] As Text
+    Positions[4096] As P.Vector3
+    LabelCount As Number
+End Type
+
+Public Type Area
+    Tiles[4096] As Document.MapTile
+    TileCount As Number
+    X0 As Number
+    Z0 As Number
+    X1 As Number
+    Z1 As Number
+    Revision As Number
+End Type
 
 Public Type Outline
     Edge[4096, 4] As Boolean
@@ -146,6 +163,18 @@ End Function
 Private Function CollectConnected(ByRef Town As Document.State,
     First As Number, SameDestination As Boolean) As Number
 
+    Dim Result As Number
+
+    Call IndexTiles(Town)
+
+    Result = FloodConnected(Town, First, SameDestination)
+    Return Result
+
+End Function
+
+Private Function FloodConnected(ByRef Town As Document.State,
+    First As Number, SameDestination As Boolean) As Number
+
     Dim Index As Number
     Dim X As Number
     Dim Z As Number
@@ -157,8 +186,6 @@ Private Function CollectConnected(ByRef Town As Document.State,
     If First < 0 Or First >= Town.MapTileCount Then
         Return 0
     End If
-
-    Call IndexTiles(Town)
 
     Queue[0] = First
     Seen[First] = True
@@ -203,6 +230,44 @@ Private Function CollectConnected(ByRef Town As Document.State,
     Return Tail
 
 End Function
+
+''' One upright label per connected area, including separate areas sharing a destination.
+Public Sub BuildLabels(ByRef Town As Document.State, ByRef Value As LabelSet)
+
+    Dim Index As Number
+    Dim Member As Number
+    Dim AreaCount As Number
+    Dim Tile As Document.MapTile
+    Dim Center As P.Vector3
+
+    Call IndexTiles(Town)
+
+    Value.LabelCount = 0
+
+    For Index = 0 To Town.MapTileCount - 1
+
+        If Not Seen[Index] Then
+
+            AreaCount = FloodConnected(Town, Index, True)
+            Center = P.Vector(0.0, 0.0, 0.0)
+
+            For Member = 0 To AreaCount - 1
+                Tile = Town.MapTiles[Queue[Member]]
+                Center.X = Center.X + (Town.Surface.XEdges[Tile.X] + Town.Surface.XEdges[Tile.X + 1]) / 2.0
+                Center.Z = Center.Z + (Town.Surface.ZEdges[Tile.Z] + Town.Surface.ZEdges[Tile.Z + 1]) / 2.0
+            End For
+
+            Center.X = Center.X / ToDouble(AreaCount)
+            Center.Z = Center.Z / ToDouble(AreaCount)
+            Value.Positions[Value.LabelCount] = Center
+            Value.Names[Value.LabelCount] = Town.MapTiles[Index].Destination
+            Value.LabelCount = Value.LabelCount + 1
+
+        End If
+
+    End For
+
+End Sub
 
 Public Sub AssignConnected(ByRef Town As Document.State, First As Number,
     Destination As Text, Optional Merge As Boolean = False)
@@ -375,6 +440,151 @@ Public Function Remove(ByRef Town As Document.State, X As Number, Z As Number) A
     Town.MapTileCount = Kept
     Town.Revision = Town.Revision + 1
 
+    Return True
+
+End Function
+
+''' Capture one connected destination without exposing the flood-fill scratch.
+Public Function SelectArea(ByRef Town As Document.State, X As Number, Z As Number,
+    ByRef Value As Area) As Boolean
+
+    Dim Index As Number
+    Dim Tile As Document.MapTile
+    Dim Result As Boolean
+
+    Value.TileCount = CollectConnected(Town, Find(Town, X, Z), True)
+    Value.Revision = Town.Revision
+    Value.X0 = Town.Surface.Columns
+    Value.Z0 = Town.Surface.Rows
+    Value.X1 = -1
+    Value.Z1 = -1
+
+    For Index = 0 To Value.TileCount - 1
+
+        Tile = Town.MapTiles[Queue[Index]]
+        Value.Tiles[Index] = Tile
+        Value.X0 = Min(Value.X0, Tile.X)
+        Value.Z0 = Min(Value.Z0, Tile.Z)
+        Value.X1 = Max(Value.X1, Tile.X)
+        Value.Z1 = Max(Value.Z1, Tile.Z)
+    End For
+
+    Result = Value.TileCount > 0
+    Return Result
+
+End Function
+
+''' Validate bounds, overlap and capacity before changing any travel cell.
+Public Function TransformArea(ByRef Town As Document.State, ByRef Value As Area,
+    X0 As Number, Z0 As Number, X1 As Number, Z1 As Number, Resize As Boolean) As Boolean
+
+    Dim AreaCount As Number
+    Dim Needed As Number
+    Dim Index As Number
+    Dim X As Number
+    Dim Z As Number
+    Dim Existing As Number
+    Dim Kept As Number
+    Dim Tile As Document.MapTile
+    Dim Empty As Document.MapTile
+
+    If (Value.TileCount = 0 Or
+        Value.Revision <> Town.Revision Or
+        X0 < 0 Or
+        Z0 < 0 Or
+        X1 < X0 Or
+        Z1 < Z0 Or
+        X1 >= Town.Surface.Columns Or
+        Z1 >= Town.Surface.Rows) Then
+        Return False
+    End If
+
+    If Resize Then
+
+        If Value.TileCount <> (Value.X1 - Value.X0 + 1) * (Value.Z1 - Value.Z0 + 1) Then
+            Return False
+        End If
+
+    Else
+
+        If X1 - X0 <> Value.X1 - Value.X0 Or Z1 - Z0 <> Value.Z1 - Value.Z0 Then
+            Return False
+        End If
+
+    End If
+
+    AreaCount = CollectConnected(Town, Find(Town, Value.Tiles[0].X, Value.Tiles[0].Z), True)
+    Needed = Value.TileCount
+
+    If Resize Then
+        Needed = (X1 - X0 + 1) * (Z1 - Z0 + 1)
+    End If
+
+    If (AreaCount <> Value.TileCount Or
+        Town.MapTileCount - AreaCount + Needed > Document.MAX_MAP_TILES) Then
+        Return False
+    End If
+
+    For Index = 0 To Needed - 1
+
+        If Resize Then
+            X = X0 + Index Mod (X1 - X0 + 1)
+            Z = Z0 + Index / (X1 - X0 + 1)
+        Else
+            X = Value.Tiles[Index].X + X0 - Value.X0
+            Z = Value.Tiles[Index].Z + Z0 - Value.Z0
+        End If
+
+        Existing = Lookup[X, Z] - 1
+
+        If Existing >= 0 Then
+
+            If Not Seen[Existing] Then
+                Return False
+            End If
+
+        End If
+
+    End For
+
+    If (X0 = Value.X0 And
+        Z0 = Value.Z0 And
+        X1 = Value.X1 And
+        Z1 = Value.Z1) Then
+        Return True
+    End If
+
+    For Index = 0 To Town.MapTileCount - 1
+
+        If Not Seen[Index] Then
+            Town.MapTiles[Kept] = Town.MapTiles[Index]
+            Kept = Kept + 1
+        End If
+
+    End For
+
+    Tile.Destination = Value.Tiles[0].Destination
+
+    For Index = 0 To Needed - 1
+
+        If Resize Then
+            Tile.X = X0 + Index Mod (X1 - X0 + 1)
+            Tile.Z = Z0 + Index / (X1 - X0 + 1)
+        Else
+            Tile.X = Value.Tiles[Index].X + X0 - Value.X0
+            Tile.Z = Value.Tiles[Index].Z + Z0 - Value.Z0
+        End If
+
+        Town.MapTiles[Kept] = Tile
+        Kept = Kept + 1
+    End For
+
+    For Index = Kept To Town.MapTileCount - 1
+        Town.MapTiles[Index] = Empty
+    End For
+
+    Town.MapTileCount = Kept
+    Town.Revision = Town.Revision + 1
     Return True
 
 End Function

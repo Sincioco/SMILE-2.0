@@ -1,0 +1,81 @@
+''' Per-build memoization of exact sampled lighting; authored collision remains unchanged.
+Module Smile.Tools.TownTerrainLighting
+
+Option Explicit
+
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.TerrainSurface3D As Terrain
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+
+Public Type State
+    Epoch As Number
+    Stamps[8192] As Number
+    Positions[8192] As P.Vector3
+    Normals[8192] As P.Vector3
+End Type
+
+Public Sub Reset(ByRef Value As State)
+
+    Value.Epoch = Value.Epoch + 1
+
+End Sub
+
+''' Hash collisions only evict entries. Exact coordinates determine reuse.
+Public Function Sample(ByRef Value As State, ByRef Surface As Grid.State,
+    X As Double, Z As Double) As P.Vector3
+
+    Dim Slot As Number
+    Dim Result As P.Vector3
+
+    Slot = Abs(((ToNumber(X * 1000.0) Mod 104729) * 31 +
+        ToNumber(Z * 1000.0) Mod 130363) Mod 8192)
+
+    If (Value.Stamps[Slot] = Value.Epoch And
+        Value.Epoch > 0 And
+        Value.Positions[Slot].X = X And
+        Value.Positions[Slot].Z = Z) Then
+        Result = Value.Normals[Slot]
+        Return Result
+    End If
+
+    Result = Calculate(Surface, X, Z)
+    Value.Stamps[Slot] = Value.Epoch
+    Value.Positions[Slot] = P.Vector(X, 0.0, Z)
+    Value.Normals[Slot] = Result
+
+    Return Result
+
+End Function
+
+''' Continuous lighting across triangle boundaries; collision retains the exact height mesh.
+Public Function Calculate(ByRef Surface As Grid.State, X As Double, Z As Double) As P.Vector3
+
+    Dim LowX As Double
+    Dim HighX As Double
+    Dim LowZ As Double
+    Dim HighZ As Double
+    Dim First As Terrain.Sample
+    Dim Last As Terrain.Sample
+    Dim GradientX As Double
+    Dim GradientZ As Double
+    Dim Result As P.Vector3
+    Dim Ok As Boolean
+
+    LowX = Max(Surface.XEdges[0], X - Surface.CellSize)
+    HighX = Min(Surface.XEdges[Surface.Columns], X + Surface.CellSize)
+    LowZ = Max(Surface.ZEdges[0], Z - Surface.CellSize)
+    HighZ = Min(Surface.ZEdges[Surface.Rows], Z + Surface.CellSize)
+    First = Terrain.SamplePoint(Surface, LowX, Z)
+    Last = Terrain.SamplePoint(Surface, HighX, Z)
+    GradientX = (Last.Offset - First.Offset) / Max(0.001, HighX - LowX)
+    First = Terrain.SamplePoint(Surface, X, LowZ)
+    Last = Terrain.SamplePoint(Surface, X, HighZ)
+    GradientZ = (Last.Offset - First.Offset) / Max(0.001, HighZ - LowZ)
+    Ok = M.TryNormalize(P.Vector(-GradientX, 1.0, -GradientZ), Result)
+
+    Return Result
+
+End Function
+
+End Module

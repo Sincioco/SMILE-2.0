@@ -17,8 +17,8 @@ catalog and terminal assemblies; no downloaded assets or new dependencies.
 | Sunglass Expanse | Dunes, sandstone mesas and an oasis loop |
 | Neris Waterworks | Five crescent basins and five round gardens around interlaced star service paths |
 | Ancient Relay | Weathered rock spires around concentric service paths |
-| Neris Relief Quarter | Clinic courtyard, modest homes and provision stalls |
-| Willowstep Highlands | Editable 38 m wooded hills, switchback and summit trails, four clearings and a downhill stream |
+| Neris Relief Quarter | Civic plaza, homes, market, mountain terrace, lake and sandy district |
+| Willowstep Highlands | Snowy massifs up to 154 m, graded trails, winding river, irregular lake and mountain landmarks |
 | Silverfall Basin | Three 14 m terrain terraces, a 42 m climb, encounter shelves and a cascading stream |
 
 The two terrain journeys are available through **Maps**, with Demo disabled by
@@ -26,30 +26,38 @@ default. Their west/east exits connect to each other and existing locations; the
 older fourteen-map atlas remains unchanged. Their working names do not add story
 canon. Water follows the sculpted bed; there is no vertical free-fall simulation.
 These landscapes reserve room for questing and grinding but do not add quests,
-enemies or combat rules. Willowstep has 156 trees and 13 lamps; Silverfall has
-69 trees and 20 lamps. All props are grounded on authored terrain corners.
+enemies or combat rules. Willowstep has four snowy massifs, a winding downhill
+stream, irregular collection lake, three buildings and small rock groups. Silverfall
+retains pale cascade banks, two distinct dirt trails and a large irregular lake
+that reaches the boundary. Greyglass uses softened ridge summits and a flattened
+house plot; Verdant has irregular lakes and no redundant central road spur.
 
-`Source/terrain_quests.py --output <new-folder>` authors only these two TWN11 maps
-without overwriting existing output. Use `prepare_maps.py` to bake a separate
-prepared folder, then `validate_terrain_quests.py --maps <prepared-folder>
---manifest <source-folder>/terrain-manifest.json --work <new-work-folder>` to check
-native prepared import, every prop height, downhill flow and the full 4 m usable
-route corridor in both directions. The October 2 run passes 23 route segments
-sampled at 0.2 m intervals, including the summit spur, spawn connectors and both gate approaches. All 27
-full native journeys finish, including spawn-to-summit and return on each map.
-Logs are `artifacts/terrain-quests-v5-prepare.log` and `terrain-quests-v5-routes.log`.
+Six wilderness maps (Verdant, Greyglass, Sunglass, Ancient Relay, Willowstep and
+Silverfall) use reusable campfires instead of street lamps. The manifest records
+current item counts, height ranges, input checksums and acceptance routes.
+All props are grounded against the native terrain sampler.
 
-The existing `install_maps.py --map "Willowstep Highlands" --map "Silverfall Basin"`
-can install just these documents while Studio is closed; supply the usual data
-root and fresh backup directory. It retains newer edited layouts. Initial local
-installation backed up records under `artifacts/tests/terrain-quests-20261002/live-backup`.
-The 16-tab capacity is unchanged; close an unneeded tab before opening another
-copy when all maps are open. Existing maps, castle assets and calibration are untouched.
+`Source/terrain_quests.py --output <new-folder>` authors the landscape set without
+overwriting existing output. `journey_layouts.relief` uses `relief_landscape` for
+the mixed town. Run `town_access.prepare` before saving a new building layout.
+Use `prepare_maps.py` to bake a separate prepared folder, then
+`validate_terrain_quests.py --maps <prepared-folder> --manifest <source-manifest>
+--work <new-work-folder>` for native round trips, downhill flow and sampled 4 m
+route corridors in both directions. The current full landscape pass is recorded
+in `artifacts/landscape-v8-routes.log`; all sixteen actual native gateway arrivals
+also pass standability, clear forward travel and trigger exclusion.
+
+The installer accepts `--map` to limit the selection. It requires Studio closed,
+a fresh backup folder and a matching baseline, rejecting newer user layout edits.
+Use `--boundary-markers` explicitly when applying the requested edge policy; omit
+it to preserve independently moved markers. `Towns/Neris Town.town` retains the
+original town layout with its boundary approaches/markers updated. The other
+fifteen documents remain independent. The existing sixteen-tab limit is unchanged.
 
 The first five maps each have west/east pedestrian map tiles leading to Neris
 Spaceport and Horizon Airport. Airport return travel remembers the town of origin.
 The new airport landscapes retain the native terminal, doors, traffic and runway.
-The original Neris Town is not replaced by these alternatives.
+The original Neris layout is retained alongside these alternatives.
 
 `Luma - Story Atlas.world` is a separate fourteen-map graph including original Neris.
 It does not overwrite Sin's `Luma.world`. Graph connections visualize the network;
@@ -81,8 +89,8 @@ residents; the generated alternatives do not yet have inhabitants.
 The atlas is not a claim that every Sin Star I location has been implemented.
 
 All 25 atlas connections have reciprocal road markers. The original Neris receives
-only marker metadata updates; its edited buildings and terrain remain intact.
-Triggers sit on final road cells, side by side when sharing an exit. Arrival uses
+square boundary approaches and full-width marker updates; its buildings remain intact.
+Triggers cover the final 6 m of the road, side by side when sharing an exit. Arrival uses
 the matching entrance and a clear inward route outside every trigger. Explicit airport destinations retain their names;
 legacy shared-airport exits still remember their origin. The native route check
 covers all 50 directed entrances.

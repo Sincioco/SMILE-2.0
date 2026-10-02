@@ -99,8 +99,9 @@ def geometry(form):
 
 def build():
     catalog = json.loads((AUTHORING/'catalog.json').read_text(encoding='utf-8'))
-    assert len(catalog['templates']) in (35,39)
-    assert len(catalog['chunks']) in (36,37)
+    assert len(catalog['templates']) in (35,39,40)
+    assert len(catalog['chunks']) in (36,37,38)
+    campfire = len(catalog['templates']) == 40
     catalog['templates'] = catalog['templates'][:35]
     catalog['chunks'] = catalog['chunks'][:36]
     binary = bytearray()
@@ -153,6 +154,9 @@ def build():
         sha256=hashlib.sha256(raw).hexdigest()))
     (AUTHORING/'catalog.json').write_text(json.dumps(catalog,indent=2)+'\n',encoding='utf-8')
     print('Appended 4 landforms, 12 mesh parts; existing 35 templates and fingerprint preserved.')
+    if campfire:
+        from wilderness_campfire import build as build_campfire
+        build_campfire()
 
 
 if __name__=='__main__':

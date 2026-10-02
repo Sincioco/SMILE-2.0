@@ -64,6 +64,9 @@ def mountain_height(x, z, valley, ramps):
         angle=math.atan2(dz,dx)
         ribs=1+.12*math.sin(angle*7+phase)+.055*math.sin(angle*13-phase)
         radius*=1+(ribs-1)*smooth(radius*4)
+        # A quadratic crown has zero slope at the summit and joins the flank smoothly.
+        if radius < .24:
+            radius = .12 + radius*radius/.48
         flank=max(0,1-radius)**1.18
         height=max(height,peak*flank)
     # Broad green lower slopes surround a navigable winding valley floor.
@@ -83,7 +86,9 @@ def mountain_height(x, z, valley, ramps):
             travelled += length
         blend = 1-smooth((best[0]-18)/40)
         height += (best[1]-height)*blend
-    return height
+    # A level foundation and broad shoulder keep the hillside cottage grounded.
+    plot = 1-smooth((math.hypot(x+240,z+150)-12)/28)
+    return height+(16.7445-height)*plot
 
 
 def forest():
@@ -91,8 +96,10 @@ def forest():
     t.wilderness=True
     path=[(-348,0),(-260,0),(-175,75),(-80,75),(0,-30),(100,-30),(190,80),(270,0),(348,0)]
     path=t.path(path,16)
-    t.curve([(-136,-159),(-93,-188),(-97,-139)],52,WATER)
-    t.curve([(169,-187),(206,-187),(195,-157)],34,WATER)
+    t.lake((-110,-155),[(-170,-166),(-141,-191),(-116,-179),(-92,-201),
+        (-70,-179),(-61,-148),(-90,-143),(-106,-111),(-122,-139),(-158,-129)])
+    t.lake((185,-175),[(148,-191),(169,-211),(184,-193),(211,-204),
+        (225,-172),(202,-150),(188,-165),(168,-136),(160,-165)])
     rng=random.Random(1811)
     for row in range(23):
         for col in range(23):
@@ -107,8 +114,7 @@ def forest():
     t.lamps([(-242,26),(-193,116),(-10,8),(212,115)],1.7)
     t.gates(destinations=('Neris Waterworks','Greyglass Pass'))
     t.height=forest_height
-    t.acceptance_paths=[path,[(0,0),(0,-30)]]
-    t.path(t.acceptance_paths[-1],12)
+    t.acceptance_paths=[path]
     t.notes=['A wooded journey from the waterworks toward the eastern settlements.',
              'Rolling hills and two smooth, irregular lake basins; the winding trail remains walkable.']
     return t
@@ -119,20 +125,14 @@ def mountains():
     t.wilderness=True
     path=MOUNTAIN_PASS
     path=t.path(path,18)
-    # Small rocky outcrops add scale below the continuous authored mountain field.
-    for x,z,scale,yaw in [(-325,190,.65,20),(-265,285,.8,120),(-35,250,.55,210),
-                           (305,155,.9,65),(300,-270,.6,175),(-275,-285,.75,285)]:
-        t.place(35,x,z,scale,yaw)
     ramps=[t.path(points,12) for points,_ in MOUNTAIN_RAMPS]
     for x,z in ((-290,45),(-120,-155),(30,110),(240,-145),(320,45)):
         t.grove(x,z,2,2,11,2.5)
-    t.place(38,40,137,.7,40)
     t.place(5,-240,-150,1.25,180)
     t.lamps([(-305,22),(-190,-74),(2,85),(221,-58),(320,25)],1.5)
     t.gates(destinations=('Verdant Reach','East Valley'))
     t.height=lambda x,z: mountain_height(x,z,path,list(zip(ramps,[p for _,p in MOUNTAIN_RAMPS])))
     t.acceptance_paths=[path]+ramps+[[(0,0),(0,55)]]
-    t.path(t.acceptance_paths[-1],12)
     t.notes=['Rocky switchback route linking the forest to East Valley.',
              'Connected fluted ridgelines enclose a winding valley; broad ramps reach 116 m and 98 m lookouts.']
     return t
@@ -239,27 +239,8 @@ def relay():
 
 
 def relief():
-    t=base('Neris Relief Quarter',400,0)
-    for z in (-130,0,130):
-        t.path([(-188,z),(188,z)],16)
-    for x in (-110,0,110):
-        t.path([(x,-150),(x,150)],14)
-    t.place(9,0,75,1.5,180)
-    t.place(3,-62,78,1.8,180)
-    t.place(2,62,78,1.8,180)
-    for x in (-155,155):
-        t.homes(x,(-95,-40,55,108),side=1 if x<0 else -1,template=5)
-    for x in (-57,57):
-        for z in (-85,-35):
-            t.place(17,x,z,1.5,0)
-    t.disk(60,-180,12,WATER)
-    t.grove(-57,-178,5,1,12,2.2)
-    t.grove(57,170,5,1,12,2.2)
-    t.lamps([(x,z) for x in (-25,25) for z in (-110,-50,35,120)],1.5)
-    t.gates(destinations=('Neris Town','Neris Waterworks'))
-    t.notes=['Chapter One clinic and relief staging: medical hall, supply stalls and modest homes.',
-             'Architecture is draft staging; does not replace accepted character or story canon.']
-    return t
+    from relief_landscape import build
+    return build()
 
 
 BUILDERS=(forest,mountains,desert,waterworks,relay,relief)

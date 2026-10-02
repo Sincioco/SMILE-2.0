@@ -85,6 +85,20 @@ class Town:
     def triangle(self, points, kind=GROUND):
         self.shape(7,points,0,kind)
 
+    def lake(self, center, shore):
+        """A star-shaped shoreline with softened corners, not overlapping circular pools."""
+        boundary=[]
+        for i,point in enumerate(shore):
+            before=shore[i-1]; after=shore[(i+1)%len(shore)]
+            entry=tuple(p*.78+b*.22 for p,b in zip(point,before))
+            exit=tuple(p*.78+a*.22 for p,a in zip(point,after))
+            for step in range(4):
+                t=step/3
+                boundary.append(tuple((1-t)**2*a+2*t*(1-t)*b+t*t*c
+                                      for a,b,c in zip(entry,point,exit)))
+        for a,b in zip(boundary,boundary[1:]+boundary[:1]):
+            self.triangle([center,a,b],WATER)
+
     def curve(self, points, width, kind=GROUND):
         self.shape(8,points,width,kind)
 

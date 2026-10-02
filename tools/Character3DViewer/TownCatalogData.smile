@@ -7,8 +7,8 @@ Import Smile.Simple3D.Precision3D As P
 Import Smile.Tools.TownDocument As Document
 
 Public Const FINGERPRINT = "a0be1e73b6bd14876474e016d063eb257fd031c2de7ad2a332cbac25d8541d9d"
-Public Const CHUNK_COUNT = 37
-Public Const TEMPLATE_COUNT = 39
+Public Const CHUNK_COUNT = 38
+Public Const TEMPLATE_COUNT = 40
 Public Const INITIAL_ITEMS = 358
 
 Public Type Template
@@ -225,34 +225,34 @@ Public Function TemplateAt(Index As Number) As Template
             Result.FloorCount = 0
             Result.DoorCount = 0
             Result.WaterCount = 0
-            Result.Parts[0] = 592
-            Result.Parts[1] = 593
-            Result.Parts[2] = 608
-            Result.Parts[3] = 609
-            Result.Parts[4] = 624
-            Result.Parts[5] = 625
-            Result.Parts[6] = 640
-            Result.Parts[7] = 641
-            Result.Parts[8] = 656
-            Result.Parts[9] = 657
-            Result.Parts[10] = 672
-            Result.Parts[11] = 673
-            Result.Parts[12] = 688
-            Result.Parts[13] = 689
-            Result.Parts[14] = 704
-            Result.Parts[15] = 705
-            Result.Parts[16] = 720
-            Result.Parts[17] = 721
-            Result.Parts[18] = 736
-            Result.Parts[19] = 737
-            Result.Parts[20] = 752
-            Result.Parts[21] = 753
-            Result.Parts[22] = 768
-            Result.Parts[23] = 769
-            Result.Parts[24] = 784
-            Result.Parts[25] = 785
-            Result.Parts[26] = 800
-            Result.Parts[27] = 801
+            Result.Parts[0] = 608
+            Result.Parts[1] = 609
+            Result.Parts[2] = 624
+            Result.Parts[3] = 625
+            Result.Parts[4] = 640
+            Result.Parts[5] = 641
+            Result.Parts[6] = 656
+            Result.Parts[7] = 657
+            Result.Parts[8] = 672
+            Result.Parts[9] = 673
+            Result.Parts[10] = 688
+            Result.Parts[11] = 689
+            Result.Parts[12] = 704
+            Result.Parts[13] = 705
+            Result.Parts[14] = 720
+            Result.Parts[15] = 721
+            Result.Parts[16] = 736
+            Result.Parts[17] = 737
+            Result.Parts[18] = 752
+            Result.Parts[19] = 753
+            Result.Parts[20] = 768
+            Result.Parts[21] = 769
+            Result.Parts[22] = 784
+            Result.Parts[23] = 785
+            Result.Parts[24] = 800
+            Result.Parts[25] = 801
+            Result.Parts[26] = 816
+            Result.Parts[27] = 817
 
         Case 7
             Result.Label = "Military HQ"
@@ -1006,6 +1006,25 @@ Public Function TemplateAt(Index As Number) As Template
             Result.Parts[0] = 585
             Result.Parts[1] = 586
             Result.Parts[2] = 587
+
+        Case 39
+            Result.Label = "Campfire"
+            Result.Category = 3
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 29
+            Result.Low = P.Vector(-11.000000, 0.000000, -11.000000)
+            Result.High = P.Vector(11.000000, 18.500000, 11.000000)
+            Result.PartCount = 4
+            Result.SolidCount = 1
+            Result.CameraCount = 0
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 592
+            Result.Parts[1] = 593
+            Result.Parts[2] = 594
+            Result.Parts[3] = 595
 
     End Select
 

@@ -1,5 +1,68 @@
 # Character Viewer Architecture
 
+## October 2 mountain refresh and editor interaction
+
+Landscape shape/layout remains in StoryTownsV1 authoring helpers and the sixteen
+canonical portable town documents. `relief_landscape.py` is the focused mixed-town
+height/style owner; `terrain_quests` owns Willowstep and Silverfall. `road_end_markers`
+squares edge approaches and spans the road with destination cells. Installation
+checks baselines, backs up replaced keys and only replaces edited marker positions
+when explicitly requested. Native gateway arrival behavior is reused unchanged.
+
+`TownTerrainStyles` owns reusable Greyglass, green-slope and Snow atlas coordinates;
+plain ground stays separate from exposed slope detail. `TownTerrainLighting` owns
+an 8192-entry bounded normal cache reset for each terrain build. State belongs to
+`TownSurfaceRenderer`, with exact-coordinate checks preserving computed normals.
+TWN13 adds Snow; previous document formats remain readable. Prepared version 8 /
+Terrain8 invalidates old geometry. No compiler/native runtime extension was needed.
+
+`SurfaceContours3D` resolves the nonroad material beneath road junctions and
+bisects each exposed shore segment. Its prior probe could still fall inside the
+road and leave the reported pointed protrusions. `TownSurfaceRenderer` collects
+water across recipe pages in a bounded 8192-patch CPU buffer, then uploads exact-size
+ribbons grouped by flow. Triangles use three ribbon points; their collapsed ends
+isolate adjacent faces without a redundant fourth point. Before replacement it checks
+the shared point/batch budgets, retaining old water if admission fails. When two full
+water copies cannot coexist, it releases its old ribbons and publishes the complete
+replacement in the same update, after land and the CPU recipe are ready. The GPU test
+reserves 20480 points for other Studio effects and exercises both fresh and cached
+replacement of the actual Willowstep/Silverfall documents. The four ribbons and 8192
+points per ribbon remain the existing maximum; runtime limits were not increased.
+
+`TownMapLoads` owns connected-area selection, validated transforms and projected
+labels. `TownMapLoadTools` owns move/resize gesture state; editor history records
+one accepted change. `NerisTownCamera` owns north-up top view and the 700 ms return
+to perspective. Shared arena owners retain target easing but no cadence-based wheel
+acceleration. `TownFileDialog` renders the queued snapshot's current map name.
+`TownDocumentMap` owns its 256-pixel four-sample cache, built eight rows per frame
+and published together. It continues to use the existing 2D renderer.
+
+Campfire (template 39/chunk 37) reuses catalog loading and local-light ownership.
+`wilderness_campfire.py` authors the self-contained GLB; Blender export constructs
+the matching assembly. `bridge_seam.py` trims the Royal deck at the island edge,
+updates both catalog/GLB floor data and immutable Blender source checksums.
+
+Validation: landscape-final-native.log (foundations, routes, GPU, actual Studio
+session), landscape-v8-routes.log (all five authored landscape routes),
+landscape-v8-arrivals.log (all sixteen maps), landscape-final-codec.log (native /
+Python TWN11/13 compatibility), and landscape-v9-blender.log (actual Willowstep /
+Relief export/reopen). Repository formatter tests/check pass. VSIX 2.0.69 was rebuilt
+and installed; native publication validates 366 assets. UI evidence is in the
+landscape-final screenshots under artifacts. The final native build opened Willowstep
+in 487 ms and Silverfall in 459 ms. GUI Save All completed sixteen exports; every
+file reopened with a unique map name and valid document/prepared checksums. The
+current-map heading, smooth minimap and bridge threshold were inspected in Studio.
+No Web work was resumed.
+
+Growth review against b55bf923: focused new normal cache 81 lines; existing
+map-load owner +210 and gesture owner +232 lines for their own behavior; minimap
++35 net. Renderer +135 covers texture integration and bounded water replacement;
+camera +18, session +1. Bootstrap unchanged. No new
+libraries, dependency cycles, architecture exceptions or raised guardrails. The
+large existing editor/storage/session files remain pre-existing architectural debt.
+There is no separate Viewer architecture-check script; ownership/diff review is
+performed directly with the focused tests above.
+
 ## October 2 queued saves and continuous terrain surfaces
 
 `TownSaveQueue` owns a fixed set of at most sixteen click-time document snapshots.

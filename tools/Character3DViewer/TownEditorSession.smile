@@ -246,6 +246,7 @@ Public Function GestureActive() As Boolean
     Dim Result As Boolean
 
     Result = (Controls.Selected.Dragging Or Controls.MarkerGesture.Dragging Or
+        Controls.MapGesture.Moving Or Controls.MapGesture.Drawing Or
         Controls.CourtGesture.Dragging Or Controls.SectionGesture.Selecting Or
         Controls.SectionGesture.Dragging Or Controls.SectionGesture.Pending Or Controls.Rubber Or Controls.Anchored Or
         Controls.Ui.SunSlider.DragOwner > 0 Or World.Active())

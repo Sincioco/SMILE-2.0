@@ -31,7 +31,7 @@ for bad in (float('nan'), float('inf'), -10000.01):
         pass
     else:
         raise AssertionError('Invalid elevation accepted')
-for raw in (document['payload'][:-1], document['payload'][:3]+b'\x0d'+document['payload'][4:]):
+for raw in (document['payload'][:-1], document['payload'][:3]+b'\x0e'+document['payload'][4:]):
     try:
         decode(raw, catalog)
     except ValueError:
@@ -66,11 +66,11 @@ for relative in ('tools/Character3DViewer/Fixtures/DenseCanals.town',
 
 # Native local-style output uses the same mixed-style contract as the Blender worker.
 mixed = decode(unwrap(key_path(folder, 'Styles.Mixed').read_bytes()), catalog)
-assert mixed['payload'][3] == 12
+assert mixed['payload'][3] == 13
 assert mixed['terrain_style'] == 1 and mixed['appearance'][:3] == [1,4,0]
 assert decode(encode(mixed, catalog), catalog)['appearance'] == mixed['appearance']
 require_blender_support(mixed)
-for style in (-1, 5):
+for style in (-1, 6):
     bad = copy.deepcopy(mixed)
     bad['appearance'][0] = style
     try:
@@ -79,4 +79,8 @@ for style in (-1, 5):
         pass
     else:
         raise AssertionError('Invalid tile style accepted')
-print('PASS native/Python TWN12 explicit/inherited appearance and invalid-style rejection')
+mixed['terrain_style'] = 4
+mixed['appearance'][0] = 5
+snow = decode(encode(mixed, catalog), catalog)
+assert snow['terrain_style'] == 4 and snow['appearance'][0] == 5
+print('PASS native/Python TWN13 Snow and explicit/inherited appearance with invalid-style rejection')

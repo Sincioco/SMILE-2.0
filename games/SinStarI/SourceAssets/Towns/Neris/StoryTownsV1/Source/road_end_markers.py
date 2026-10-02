@@ -2,6 +2,110 @@
 import bisect
 import math
 from town_access import surface, contains
+from town_document_codec import curve_contains, raster_curves
+
+
+def boundary_exits(doc):
+    """Square boundary approaches; shared exits branch into separate labelled lanes."""
+    xs,zs=doc['xs'],doc['zs']
+    groups={}
+    for tile in doc['map_tiles']:
+        groups.setdefault(tile['destination'],[]).append(tile)
+    exits=[]
+    for name,tiles in groups.items():
+        x=sum((xs[t['x']]+xs[t['x']+1])/2 for t in tiles)/len(tiles)
+        z=sum((zs[t['z']]+zs[t['z']+1])/2 for t in tiles)/len(tiles)
+        side=min(range(4),key=lambda s:(x-xs[0],xs[-1]-x,z-zs[0],zs[-1]-z)[s])
+        roads=[b for b in doc.get('curves',[]) if b[1]==3 and b[0] in (4,8) and curve_contains(b,x,z)]
+        width=max((b[6] for b in roads),default=120)
+        if not doc.get('curves'):
+            # Measure the actual legacy grid causeway, including its nonuniform cells.
+            axis=(0,1) if side<2 else (1,0)
+            lo=hi=0
+            while lo<600 and surface(doc,x-axis[0]*(lo+5),z-axis[1]*(lo+5)) in (3,4):lo+=5
+            while hi<600 and surface(doc,x+axis[0]*(hi+5),z+axis[1]*(hi+5)) in (3,4):hi+=5
+            width=max(60,lo+hi)
+            if side<2:z+=(hi-lo)/2
+            else:x+=(hi-lo)/2
+        exits.append(dict(name=name,x=x,z=z,side=side,width=width,center=z if side<2 else x))
+    clusters=[]
+    for e in sorted(exits,key=lambda e:(e['side'],e['center'])):
+        if clusters and clusters[-1][-1]['side']==e['side'] and abs(clusters[-1][-1]['center']-e['center'])<max(e['width'],clusters[-1][-1]['width']):
+            clusters[-1].append(e)
+        else:clusters.append([e])
+    doc.setdefault('curves',[])
+    doc.setdefault('base_cells',doc['cells'].copy())
+    result=[]
+    for cluster in clusters:
+        mean=sum(e['center'] for e in cluster)/len(cluster)
+        lane=max(60,min(120,max(e['width'] for e in cluster)/len(cluster)))
+        for ordinal,e in enumerate(cluster):
+            side=e['side']; edges=zs if side<2 else xs
+            center=e['center'] if len(cluster)==1 else mean+(ordinal-(len(cluster)-1)/2)*(lane+40)
+            width=e['width'] if len(cluster)==1 else lane
+            indices=[i for i in range(len(edges)-1) if edges[i+1]>center-width/2 and edges[i]<center+width/2]
+            # Align paving and trigger widths so neither leaves a walkable bypass.
+            low,high=edges[indices[0]],edges[indices[-1]+1]
+            center=(low+high)/2; width=high-low
+            boundary=(xs if side<2 else zs)[0 if side%2==0 else -1]
+            inward=1 if side%2==0 else -1
+            axis=(xs if side<2 else zs)
+            approach=max(120,min(240,abs((e['x'] if side<2 else e['z'])-boundary)))
+            start=[e['x'],e['z']]
+            start[side//2]=boundary+inward*approach
+            bend=[boundary+inward*80,center] if side<2 else [center,boundary+inward*80]
+            # Join an existing lane before the fan-out, keeping the branch navigable.
+            original=[e['x'],e['z']]
+            if math.dist(original,start)>1:doc['curves'].append([4,3,*original,*start,width])
+            if math.dist(start,bend)>1:doc['curves'].append([4,3,*start,*bend,width])
+            if side<2: rectangle=[min(boundary,bend[0]),low,max(boundary,bend[0]),high]
+            else: rectangle=[low,min(boundary,bend[1]),high,max(boundary,bend[1])]
+            doc['curves'].append([1,3,*rectangle,0])
+            border_indices=[i for i in range(len(axis)-1) if
+                (axis[i]<boundary+60 if inward==1 else axis[i+1]>boundary-60)]
+            for j in border_indices:
+                for i in indices:
+                    col,row=(j,i) if side<2 else (i,j)
+                    assert not any(t['x']==col and t['z']==row for t in result),(doc['name'],'overlapping exit lanes')
+                    result.append(dict(x=col,z=row,destination=e['name']))
+    # Cover alternate roads reaching the same map edge too. Sampling the last
+    # two metres catches rounded legacy ends; the final rectangle squares them.
+    assigned={(t['x'],t['z']):t for t in result}
+    for side in range(4):
+        choices=[e for e in exits if e['side']==side]
+        if not choices:continue
+        edges=zs if side<2 else xs
+        axis=xs if side<2 else zs
+        boundary=axis[0 if side%2==0 else -1]
+        inward=1 if side%2==0 else -1
+        covered=[]
+        for i,(low,high) in enumerate(zip(edges,edges[1:])):
+            hit=any(surface(doc,*( (boundary+inward*d,low+(high-low)*u) if side<2 else
+                                   (low+(high-low)*u,boundary+inward*d))) in (3,4)
+                    for d in (1,20) for u in (.1,.5,.9))
+            if hit:covered.append(i)
+        runs=[]
+        for i in covered:
+            if runs and runs[-1][-1]+1==i:runs[-1].append(i)
+            else:runs.append([i])
+        for run in runs:
+            low,high=edges[run[0]],edges[run[-1]+1]
+            box=[min(boundary,boundary+inward*80),low,max(boundary,boundary+inward*80),high]
+            if side>=2:box=[box[1],box[0],box[3],box[2]]
+            doc['curves'].append([1,3,*box,0])
+            for i in run:
+                center=(edges[i]+edges[i+1])/2
+                destination=min(choices,key=lambda e:abs(center-e['center']))['name']
+                for j in range(len(axis)-1):
+                    if (axis[j]<boundary+60 if inward==1 else axis[j+1]>boundary-60):
+                        key=(j,i) if side<2 else (i,j)
+                        assigned.setdefault(key,dict(x=key[0],z=key[1],destination=destination))
+    result=list(assigned.values())
+    doc['map_tiles']=result
+    doc['cells']=raster_curves(doc)
+    if 'flows' in doc:doc['flows'] += [[0,0,0] for _ in range(len(doc['curves'])-len(doc['flows']))]
+    assert len(doc['curves'])<=256 and len(result)<=4096,(doc['name'],len(doc['curves']),len(result))
+    return doc
 
 
 def relocate(doc):

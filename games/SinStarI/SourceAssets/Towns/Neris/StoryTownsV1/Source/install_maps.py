@@ -17,16 +17,17 @@ def destinations(doc):
     return {tile['destination'] for tile in doc.get('map_tiles', [])}
 
 
-def plan_town(data, path, baseline, changes, replace_night=False):
+def plan_town(data, path, baseline, changes, replace_night=False, boundary_markers=False):
     raw = path.read_bytes()
     payload = unwrap(raw)
     incoming = decode(payload, CATALOG)
     name = incoming['name']
     records = prepared_records(raw)
-    if records.get('.PreparedVersion') not in (bytes([0, 0, 0, 3]), bytes([0, 0, 0, 4]), bytes([0, 0, 0, 5]), bytes([0, 0, 0, 6]), bytes([0, 0, 0, 7])):
+    if records.get('.PreparedVersion') not in (bytes([0, 0, 0, 3]), bytes([0, 0, 0, 4]), bytes([0, 0, 0, 5]), bytes([0, 0, 0, 6]), bytes([0, 0, 0, 7]), bytes([0, 0, 0, 8])):
         raise ValueError('Map must be prepared before installation: ' + name)
     original = name == 'Neris Town'
-    old = incoming if original else decode(unwrap((baseline / path.name).read_bytes()), CATALOG)
+    old_path = baseline / path.name
+    old = decode(unwrap(old_path.read_bytes()), CATALOG) if old_path.exists() else incoming
     keys = [('TownEditor.PermanentNeris' if original else 'TownEditor.Permanent.' + name),
             'TownEditor.Town.' + name, 'TownEditor.Recovery.' + name]
     # Original Neris uses the permanent key. Do not invent extra saved revisions.
@@ -54,6 +55,11 @@ def plan_town(data, path, baseline, changes, replace_night=False):
                 added_original_link = incoming_links - current_links <= atlas_links
             if current_links != incoming_links and not added_original_link:
                 raise ValueError('Retaining changed travel destinations; merge required: ' + key)
+            if not boundary_markers and current.get('map_tiles') != old.get('map_tiles'):
+                # Marker transforms are independent of landscape replacement.
+                if current['xs'] != incoming['xs'] or current['zs'] != incoming['zs']:
+                    raise ValueError('Retaining moved travel areas; grid merge required: ' + key)
+                doc['map_tiles'] = current['map_tiles']
             doc['sun'] = current['sun']
             if current.get('terrain_style', 0) != old.get('terrain_style', 0):
                 doc['terrain_style'] = current['terrain_style']
@@ -70,7 +76,7 @@ def plan_town(data, path, baseline, changes, replace_night=False):
 
 
 def install(data, backup, original=None, source=None, baseline=None, dry_run=False, maps=None,
-            night_presets=()):
+            night_presets=(), boundary_markers=False):
     folder = Path(__file__).resolve().parent.parent
     source = source or folder / 'Towns'
     baseline = baseline or source
@@ -83,12 +89,12 @@ def install(data, backup, original=None, source=None, baseline=None, dry_run=Fal
     changes, names = {}, []
     for record in manifest:
         path = source / record['file']
-        name = plan_town(data, path, baseline, changes, record['name'] in night_presets)
+        name = plan_town(data, path, baseline, changes, record['name'] in night_presets, boundary_markers)
         if name != record['name']:
             raise ValueError('Map name differs from manifest: ' + str(path))
         names.append(name)
     if original is not None:
-        name = plan_town(data, original, baseline, changes)
+        name = plan_town(data, original, baseline, changes, boundary_markers=boundary_markers)
         if name != 'Neris Town':
             raise ValueError('Original map must be Neris Town')
         names.append(name)
@@ -127,9 +133,11 @@ if __name__ == '__main__':
     parser.add_argument('--baseline', type=Path, help='Previous authored maps for detecting user layout edits')
     parser.add_argument('--original', type=Path, help='Prepared original Neris with relocated travel markers only')
     parser.add_argument('--dry-run', action='store_true')
+    parser.add_argument('--boundary-markers', action='store_true',
+                        help='Explicitly replace marker transforms with full-width boundary exits; retain destinations')
     parser.add_argument('--map', action='append', dest='maps', help='Install only this generated map; may repeat')
     parser.add_argument('--night-preset', action='append', default=[],
                         help='Explicitly replace only this map night preset; keep its day settings')
     args = parser.parse_args()
     install(args.data, args.backup, args.original, args.source, args.baseline, args.dry_run,
-            args.maps, args.night_preset)
+            args.maps, args.night_preset, args.boundary_markers)
