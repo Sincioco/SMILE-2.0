@@ -29,6 +29,10 @@ scripts/__pycache__/
 tools/Character3DViewer/__pycache__/
 games/SinStarI/SourceAssets/Towns/Neris/NerisHorizonV1/Source/__pycache__/
 games/SinStarI/SourceAssets/Towns/Neris/StoryTownsV1/Source/__pycache__/
+games/SinStarI/SourceAssets/Towns/Neris/NerisSpaceport01V1/Automation/__pycache__/
 # Local runtime envelopes are recoverable backups, not authored town assets.
 games/SinStarI/SourceAssets/Towns/Neris/NerisHorizonV1/Town/r005/Profile-Backup-*/
 tools/Character3DViewer/Character3DViewer.TownSessionTests.smileproj
+# Local diagnostic projects reference generated sources under artifacts/.
+tools/Character3DViewer/Character3DViewer.TerrainWaterPreview.smileproj
+tools/Character3DViewer/Character3DViewer.Trace.smileproj

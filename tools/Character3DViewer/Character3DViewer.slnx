@@ -1,0 +1,10 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Web" />
+    <Platform Name="Web - Optimized High" />
+    <Platform Name="Web - Optimized Low" />
+    <Platform Name="Web - Optimized Medium" />
+    <Platform Name="Windows 64-bit .exe" />
+  </Configurations>
+  <Project Path="Character3DViewer.smileproj" Type="4fbc4e72-6b0f-40d8-b758-bf8932926d5d" Id="e23146e6-43c3-2e02-1df1-cd045e6bc715" />
+</Solution>
