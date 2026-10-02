@@ -51,6 +51,7 @@
     <SmileSource Include="TerrainWater3D.smile" />
     <SmileSource Include="TerrainRamp3D.smile" />
     <SmileSource Include="SurfaceContours3D.smile" />
+    <SmileSource Include="SurfaceContourRefinement3D.smile" />
     <SmileSource Include="SurfaceGrid3D.smile" />
     <SmileSource Include="SurfaceSections3D.smile" />
     <SmileSource Include="StaticBackdrop3D.smile" />

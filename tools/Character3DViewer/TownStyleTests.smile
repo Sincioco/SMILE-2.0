@@ -110,7 +110,7 @@ Public Function Run() As Number
 
     Ok = Styles.Write(Copy.Appearance, 0, 3)
 
-    Call Check(Derived.ReadKey(Copy, "Terrain9", False) = "",
+    Call Check(Derived.ReadKey(Copy, "Terrain10", False) = "",
         "Changed Appearance Rejects Previous Prepared Terrain")
     Call Styles.Reset(Town.Appearance)
 

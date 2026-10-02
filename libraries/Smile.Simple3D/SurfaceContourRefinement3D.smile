@@ -1,0 +1,185 @@
+''' Bounded refinement of painted contours when a coarse triangle hides a surface.
+Module Smile.Simple3D.SurfaceContourRefinement3D
+
+Option Explicit
+
+Import Smile.Simple3D.SurfaceContours3D As Contours
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.Precision3D As P
+
+Public Type PendingTriangle
+    Face As Contours.Triangle
+    Depth As Number
+End Type
+
+Public Type State
+    Pending[16] As PendingTriangle
+    PendingCount As Number
+End Type
+
+Public Sub Begin(ByRef Value As State, PointA As P.Vector3, PointB As P.Vector3,
+    PointC As P.Vector3)
+
+    Value.PendingCount = 1
+    Value.Pending[0].Face.PointA = PointA
+    Value.Pending[0].Face.PointB = PointB
+    Value.Pending[0].Face.PointC = PointC
+    Value.Pending[0].Depth = 0
+
+End Sub
+
+Private Function Middle(First As P.Vector3, Last As P.Vector3) As P.Vector3
+
+    Dim Result As P.Vector3
+
+    Result = P.Vector((First.X + Last.X) * 0.5, 0.0, (First.Z + Last.Z) * 0.5)
+    Return Result
+
+End Function
+
+''' A quarter native unit is the shared curved-stroke chord tolerance.
+Private Function Matches(ByRef Surface As Grid.State, Point As P.Vector3,
+    Kind As Number, Base As Number) As Boolean
+
+    Dim X As Number
+    Dim Z As Number
+    Dim Probe As P.Vector3
+
+    If Min(3, Contours.Kind(Surface, Point, Base)) = Kind Then
+        Return True
+    End If
+
+    For Z = -1 To 1
+
+        For X = -1 To 1
+
+            Probe = P.Vector(Point.X + ToDouble(X) * 0.25, 0.0, Point.Z + ToDouble(Z) * 0.25)
+
+            If Min(3, Contours.Kind(Surface, Probe, Base)) = Kind Then
+                Return True
+            End If
+
+        End For
+    End For
+
+    Return False
+
+End Function
+
+Private Function Accurate(ByRef Surface As Grid.State, ByRef Slice As Contours.Slice,
+    Base As Number) As Boolean
+
+    Dim Index As Number
+    Dim Face As Contours.Triangle
+    Dim Center As P.Vector3
+
+    For Index = 0 To Slice.FaceCount - 1
+
+        Face = Slice.Faces[Index]
+        Center = P.Vector((Face.PointA.X + Face.PointB.X + Face.PointC.X) / 3.0, 0.0,
+            (Face.PointA.Z + Face.PointB.Z + Face.PointC.Z) / 3.0)
+
+        If (Not Matches(Surface, Center, Face.Kind, Base) Or
+            Not Matches(Surface, Middle(Face.PointA, Face.PointB), Face.Kind, Base) Or
+            Not Matches(Surface, Middle(Face.PointB, Face.PointC), Face.Kind, Base) Or
+            Not Matches(Surface, Middle(Face.PointC, Face.PointA), Face.Kind, Base)) Then
+            Return False
+        End If
+
+    End For
+
+    Return True
+
+End Function
+
+Private Sub Push(ByRef Value As State, PointA As P.Vector3, PointB As P.Vector3,
+    PointC As P.Vector3, Depth As Number)
+
+    Value.Pending[Value.PendingCount].Face.PointA = PointA
+    Value.Pending[Value.PendingCount].Face.PointB = PointB
+    Value.Pending[Value.PendingCount].Face.PointC = PointC
+    Value.Pending[Value.PendingCount].Depth = Depth
+    Value.PendingCount = Value.PendingCount + 1
+
+End Sub
+
+Private Sub Finish(ByRef Surface As Grid.State, ByRef Slice As Contours.Slice, Base As Number)
+
+    Dim Index As Number
+    Dim Kept As Number
+    Dim Actual As Number
+    Dim Face As Contours.Triangle
+    Dim Center As P.Vector3
+
+    ' At the bounded subcell size, never retain a phantom water sliver that
+    ' would be flattened to the distant lake datum below elevated ground.
+
+    For Index = 0 To Slice.FaceCount - 1
+
+        Face = Slice.Faces[Index]
+        Center = P.Vector((Face.PointA.X + Face.PointB.X + Face.PointC.X) / 3.0, 0.0,
+            (Face.PointA.Z + Face.PointB.Z + Face.PointC.Z) / 3.0)
+        Actual = Min(3, Contours.Kind(Surface, Center, Base))
+
+        If Actual <> Face.Kind Then
+            Slice.Rail = False
+            Face.Kind = Actual
+        End If
+
+        If Actual > 0 Then
+            Slice.Faces[Kept] = Face
+            Kept = Kept + 1
+        End If
+
+    End For
+
+    Slice.FaceCount = Kept
+
+End Sub
+
+''' Emit one small partition at a time; depth-first work needs at most sixteen entries.
+Public Function Next(ByRef Value As State, ByRef Surface As Grid.State,
+    ByRef Slice As Contours.Slice, Base As Number) As Boolean
+
+    Dim Current As PendingTriangle
+    Dim Ab As P.Vector3
+    Dim Bc As P.Vector3
+    Dim Ca As P.Vector3
+
+    Do
+
+        If Value.PendingCount = 0 Then
+            Return False
+        End If
+
+        Value.PendingCount = Value.PendingCount - 1
+        Current = Value.Pending[Value.PendingCount]
+        Slice = Contours.Split(Surface, Current.Face.PointA, Current.Face.PointB,
+            Current.Face.PointC, Base, True)
+
+        If Current.Depth >= 5 Then
+            Call Finish(Surface, Slice, Base)
+
+            Return True
+        End If
+
+        If Accurate(Surface, Slice, Base) Then
+            Return True
+        End If
+
+        Ab = Middle(Current.Face.PointA, Current.Face.PointB)
+        Bc = Middle(Current.Face.PointB, Current.Face.PointC)
+        Ca = Middle(Current.Face.PointC, Current.Face.PointA)
+
+        Call Push(Value, Current.Face.PointA, Ab, Ca, Current.Depth + 1)
+        Call Push(Value, Ab, Current.Face.PointB, Bc, Current.Depth + 1)
+        Call Push(Value, Ca, Bc, Current.Face.PointC, Current.Depth + 1)
+        Call Push(Value, Ab, Bc, Ca, Current.Depth + 1)
+
+    Loop
+
+    Return False
+
+End Function
+
+End Module

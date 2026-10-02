@@ -189,9 +189,6 @@ def save(design, folder):
         assert previous['xs'] == doc['xs'] and previous['zs'] == doc['zs']
         # The atlas owns destinations; a landscape refresh must retain its links.
         doc['map_tiles'] = previous['map_tiles']
-    if town.name == 'Neris Relief Quarter':
-        from relief_landscape import style
-        doc['appearance'] = [style((a+b)/20,(c+d)/20) for c,d in zip(doc['zs'],doc['zs'][1:]) for a,b in zip(doc['xs'],doc['xs'][1:])]
     doc['heights'] = [round(height(x/10, z/10)*1000)/100
                       for z in doc['zs'] for x in doc['xs']]
     from road_end_markers import boundary_exits

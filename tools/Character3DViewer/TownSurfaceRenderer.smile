@@ -163,7 +163,7 @@ Public Sub BeginBuild(ByRef Value As State, ByRef Town As Document.State)
     CacheTown = Town
     Value.CacheBatch = 0
     Value.CacheBatches = 0
-    Value.CacheKey = Derived.ReadKey(Town, "Terrain9", False)
+    Value.CacheKey = Derived.ReadKey(Town, "Terrain10", False)
     Value.CacheRead = Text_Length(Value.CacheKey) > 0
     Value.CacheOk = True
 
@@ -173,7 +173,7 @@ Public Sub BeginBuild(ByRef Value As State, ByRef Town As Document.State)
     End If
 
     If Not Value.CacheRead Then
-        Value.CacheKey = Derived.WriteKey(Town.Name, "Terrain9")
+        Value.CacheKey = Derived.WriteKey(Town.Name, "Terrain10")
     End If
 
     Value.WaterPatchCount = 0
@@ -224,7 +224,7 @@ Private Sub ReadCachedBatch(ByRef Value As State)
         Value.CacheRead = False
         Value.CacheOk = True
         Value.CacheBatch = 0
-        Value.CacheKey = Derived.WriteKey(CacheTown.Name, "Terrain9")
+        Value.CacheKey = Derived.WriteKey(CacheTown.Name, "Terrain10")
         Value.Recipe.Row = 0
         Value.Recipe.Buffer.PatchCount = 0
         Value.Stage = 1
@@ -410,10 +410,10 @@ Private Sub UploadNext(ByRef Value As State)
                     FaceNormal = M.Cross(P.Vector(Part.X1 - Part.X0, Part.Y1 - Part.Y0, Part.Z1 - Part.Z0),
                         P.Vector(Part.X2 - Part.X0, Part.Y2 - Part.Y0, Part.Z2 - Part.Z0))
 
-                    If Abs(FaceNormal.Y) < 0.000001 Then
+                    If Abs(FaceNormal.Y) < 0.000001 And M.TryNormalize(FaceNormal, FaceNormal) Then
 
                         ' Vertical curb faces retain their outward normal, not the ground gradient.
-                        Ok = M.TryNormalize(FaceNormal, FaceNormal) And Ok
+                        ' Coincident vertices after portable rounding have no visible face to normalize.
 
                         For NormalIndex = 0 To 3
                             Ok = G.SetMeshNormal3D(Mesh, Point + NormalIndex,
@@ -770,7 +770,7 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
                 Ok = Derived.WriteNumber(Value.CacheBatch, Value.CacheKey + ".Batches")
 
                 If Ok Then
-                    Ok = Derived.Commit(CacheTown, "Terrain9", Value.CacheKey)
+                    Ok = Derived.Commit(CacheTown, "Terrain10", Value.CacheKey)
                 End If
 
             End If

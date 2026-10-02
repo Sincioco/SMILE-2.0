@@ -28,6 +28,7 @@
     <SmileSource Include="TownSurfaceLayers.smile" />
     <SmileSource Include="NerisCastleRoute.smile" />
     <SmileSource Include="NerisSpaceportRoute.smile" />
+    <SmileSource Include="NerisSpaceportGround.smile" />
     <SmileSource Include="NerisSpaceportPreview.smile" />
     <SmileSource Include="NerisAlienFleet.smile" />
     <SmileSource Include="NerisOrbitalFleet.smile" />
@@ -113,6 +114,7 @@
     <SmileSource Include="TownTerrainLighting.smile" />
     <SmileSource Include="TownStyleContours.smile" />
     <SmileSource Include="TownTerrainBuilder.smile" />
+    <SmileSource Include="TownTerrainSeams.smile" />
     <SmileSource Include="TownTerrainCache.smile" />
     <SmileSource Include="TownTerrainStyles.smile" />
     <SmileSource Include="TownLighting.smile" />

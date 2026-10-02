@@ -1,5 +1,26 @@
 # SMILE 2.0 - Sin Star I - Game Engine and Studio
 
+## October 3 continuous road edges and Spaceport access
+
+Road sides now close down to the adjoining ground or water bed, including flat
+curves and merged straight road strips. This removes the blue underlay outlines
+and the backdrop gaps under elevated crossings. Shared contour refinement checks
+the actual painted surface before accepting triangles, preventing the reported
+pointed road and shoreline fragments. All sixteen portable maps use preparation 10.
+
+Neris Relief Quarter is rebuilt as a level symmetrical town: a central square and
+City Hall, mirrored residential streets, shops, garden pavilions, fountains, trees
+and lamps. Its existing travel destinations are retained.
+
+The party can use Neris Spaceport's ground-level aprons, terminal halls and hangars.
+The port no longer blocks the surrounding town inside an oversized rectangle;
+both City Halls retain their own entrance and stair collision. Terminal walls,
+tower bases and the opening entrance doors remain solid. Upper decks and lifts
+retain their existing behavior.
+
+These are native Studio changes. Rebuild/relaunch Studio; no .NET or VSIX rebuild
+and no browser refresh is required.
+
 ## October 3 landscape and travel fixes
 
 Willowstep's short central spur is removed. Three broad river bends feed a lake

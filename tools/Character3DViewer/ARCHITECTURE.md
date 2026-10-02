@@ -1,5 +1,55 @@
 # Character Viewer Architecture
 
+## October 3 road closure, contour refinement and Spaceport walking
+
+`SurfaceContourRefinement3D` owns a bounded caller-owned depth-first work stack.
+It checks painted surface classifications at face centroids and edge midpoints,
+subdividing only inaccurate partitions. Its maximum-depth classification removes
+phantom water slivers without expanding output arrays or resource budgets.
+`TownTerrainBuilder` feeds the resulting slices to `TownTerrainSeams`, which owns
+vertical road/ground/water closure using the actual partition boundaries. Uniform
+cells use the same closure even when top faces are merged into strips. Level walls
+use one quad; slopes use two triangles. Two canonical triangles per cell avoid
+the redundant flat fans that exhausted dense-map upload capacity during testing.
+
+`TownSurfaceRenderer` tolerates invisible triangles collapsed by portable coordinate
+rounding when choosing a vertical normal. Preparation 10/Terrain10 invalidates older
+derived geometry. The Blender recipe reader now accepts versions 9 and 10; its prior
+version ceiling incorrectly rejected the previous version 9 writer. Authored TWN
+formats, terrain ownership, collision elevations and GPU budgets are unchanged.
+
+`NerisSpaceportGround` owns the r09 model's bounded ground-level floor and obstacle
+footprint in local metres. `NerisSpaceportRoute` retains transform, activation,
+door and entry-event state; its Contains operation now claims actual deck coverage.
+Surrounding ground and City Hall access fall through to the existing edited-town
+navigation. The ground footprint is a conservative source-level proxy measured
+from r09 geometry, not a general mesh collider or an upper-floor/lift system.
+
+The existing `relief_landscape.py` authoring owner now creates a level symmetrical
+Relief town; native preparation and installation still use the existing shared
+owners. Only Relief's authored layout changes. The other fifteen maps retain their
+authored bytes and receive regenerated mesh recipes.
+
+Focused validation covers flat straight/curved road curbs, raised wet sides,
+hidden painted features, fresh/cached GPU replacement, and four party members
+crossing the old Spaceport boundary, both City Hall stairs, the main door, halls
+and a hangar. Actual prepared-mesh audits cover all 16 maps against their analytic
+surfaces. Relief's native route corridors and all retained exits pass. Full native
+town foundations/routes/render/session and formatter regressions pass.
+The rebuilt native Studio was relaunched after backing up replaced live saves.
+Manual review confirmed the new Relief layout and closed Neris road edges at
+party height, plus Willowstep's curved crossing/shore geometry. Native movement
+regressions provide the Spaceport side-entry, hall, hangar and City Hall evidence;
+this was not an exhaustive interactive walkthrough of every interior.
+
+Growth review: `TownTerrainBuilder` decreases from 688 to 587 lines; the focused
+seam owner has 292 lines and shared refinement has 185. `TownSurfaceRenderer`
+remains 837 lines. The Spaceport route grows from 133 to 136 lines and delegates
+its stateless footprint to the 103-line ground owner. Its regression is 152 lines.
+No bootstrap algorithms, dependency cycles, mutable global owners, resource-limit
+increases or guardrail exceptions were introduced. Existing renderer coordination
+remains legacy debt; this change does not undertake a broader extraction.
+
 ## October 3 terrain contours, elevation and campfires
 
 `TownStyleContours` partitions triangles by interpolated weights from existing

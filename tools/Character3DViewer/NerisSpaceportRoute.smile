@@ -1,10 +1,11 @@
-''' Full-scale southwest placement and conservative ground-level arrival path.
+''' Southwest placement, ground-level access and entrance lifecycle.
 Module Smile.Tools.NerisSpaceportRoute
 
 Option Explicit
 
 Import Smile.Tools.TownSurfaceLayers As Layers
 Import Smile.Simple3D.PartyTrail3D As Trail
+Import Smile.Tools.NerisSpaceportGround As Ground
 
 Public Const ORIGIN_X = -5500.0
 Public Const ORIGIN_Z = -7600.0
@@ -38,13 +39,13 @@ Public Function Contains(X As Double, Z As Double) As Boolean
 
     Dim Result As Boolean
 
-    Result = Enabled And X >= -9100.0 And X <= -1900.0 And Z >= -9900.0 And Z <= -3700.0
+    Result = Enabled And Ground.Contains((ORIGIN_X - X) / SCALE, (ORIGIN_Z - Z) / SCALE)
 
     Return Result
 
 End Function
 
-''' The central route narrows through the actual swinging entrance.
+''' Only the swinging doorway narrows the route; the halls and aprons stay open.
 Public Function CanStand(X As Double, Z As Double) As Boolean
 
     Dim LocalX As Double
@@ -53,9 +54,11 @@ Public Function CanStand(X As Double, Z As Double) As Boolean
 
     LocalX = (ORIGIN_X - X) / SCALE
     LocalZ = (ORIGIN_Z - Z) / SCALE
-    Result = Enabled And Abs(LocalX) <= 10.0 And LocalZ >= -390.0 And LocalZ <= 45.0
+    Result = Enabled And Ground.CanStand(LocalX, LocalZ)
 
-    If LocalZ > -47.0 And LocalZ < -32.0 Then
+    If (LocalZ > -47.0 And
+        LocalZ < -44.0 And
+        Abs(LocalX) < 6.7) Then
         Result = Result And Abs(LocalX) < 5.6 And DoorRotation >= 80.0
     End If
 

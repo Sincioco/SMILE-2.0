@@ -6,6 +6,7 @@ Option Explicit
 Import Smile.Simple3D.SurfaceGrid3D As Grid
 Import Smile.Simple3D.SurfacePaint3D As Paint
 Import Smile.Simple3D.SurfaceContours3D As Contours
+Import Smile.Simple3D.SurfaceContourRefinement3D As Refinement
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownDocumentStore As Storage
@@ -38,6 +39,8 @@ Public Function Run() As Number
     Dim RoadArea As Double
     Dim Face As Contours.Triangle
     Dim SelectedCurves As Paint.State
+
+    Call CheckHiddenSurface(Failures)
 
     Ok = Document.Blank(Town, "Smooth Circle Regression", 40, 40, 10.0)
 
@@ -295,5 +298,54 @@ Public Function Run() As Number
     Return Failures
 
 End Function
+
+Private Sub CheckHiddenSurface(ByRef Failures As Number)
+
+    Dim Pending As Refinement.State
+    Dim Slice As Contours.Slice
+    Dim Brush As Paint.Brush
+    Dim Face As Contours.Triangle
+    Dim Index As Number
+    Dim Total As Double
+    Dim WaterArea As Double
+    Dim Area As Double
+    Dim Ok As Boolean
+
+    Ok = Grid.Initialize(Town.Surface, 2, 2, 0.0, 0.0, 20.0, Grid.SURFACE_GROUND)
+    Brush.Form = Paint.FORM_CIRCLE
+    Brush.Surface = Grid.SURFACE_WATER
+    Brush.X0 = 6.666666
+    Brush.Z0 = 13.333333
+    Brush.X1 = 3.0
+    Ok = Grid.PaintBrush(Town.Surface, Brush) And Ok
+
+    Call Refinement.Begin(Pending, P.Vector(0.0, 0.0, 0.0),
+        P.Vector(0.0, 0.0, 20.0), P.Vector(20.0, 0.0, 20.0))
+
+    Do
+
+        If Not Refinement.Next(Pending, Town.Surface, Slice, Grid.SURFACE_GROUND) Then
+            Exit Do
+        End If
+
+        For Index = 0 To Slice.FaceCount - 1
+
+            Face = Slice.Faces[Index]
+            Area = Abs((Face.PointB.X - Face.PointA.X) * (Face.PointC.Z - Face.PointA.Z) -
+                (Face.PointB.Z - Face.PointA.Z) * (Face.PointC.X - Face.PointA.X)) * 0.5
+            Total = Total + Area
+
+            If Face.Kind = Grid.SURFACE_WATER Then
+                WaterArea = WaterArea + Area
+            End If
+
+        End For
+
+    Loop
+
+    Call Check(Ok And Abs(Total - 200.0) < 0.001 And WaterArea > 20.0,
+        "Hidden Surface Refines Without Losing Area Or Extending Ground Across Water", Failures)
+
+End Sub
 
 End Module

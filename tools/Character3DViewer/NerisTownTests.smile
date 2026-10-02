@@ -13,6 +13,7 @@ Import Smile.Tools.NerisHorizonRoute As Spaceport
 Import Smile.Tools.NerisSpaceportTraffic As Traffic
 Import Smile.Tools.NerisRunwayTraffic As Runway
 Import Smile.Tools.TownPartyInset As Inset
+Import Smile.Tools.TownSpaceportTests As PortTests
 
 Dim Path As Trail.State
 Dim Leader As P.Vector3
@@ -266,6 +267,8 @@ End For
 Call Check(Position.Z > -881.0 And Position.Y > 40.0, "Party Climbs City Hall Stairs To Its Door")
 
 Call CheckCastle()
+
+Failures = Failures + PortTests.Run()
 
 If Failures = 0 Then
     Print "PASS Neris Town Routes"

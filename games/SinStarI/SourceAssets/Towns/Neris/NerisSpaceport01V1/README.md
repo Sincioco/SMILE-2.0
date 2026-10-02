@@ -39,9 +39,13 @@ sources remain unchanged. The earlier standalone sources and both castle package
 
 NerisSpaceportPreview owns six models and 22 static draw objects. Entrance owns
 six objects borrowing the already loaded Royal Court door models. Glow owns one
-additive particle batch with thirteen anchors. Route owns placement, the bounded
-central path, proximity opening/closing and a one-shot ConsumeEntry() event for a
-cutscene owner. The leaves open to 95°, remain open around the party, then close
+additive particle batch with thirteen anchors. Route owns placement, proximity
+opening/closing and a one-shot ConsumeEntry() event for a cutscene owner.
+`NerisSpaceportGround` owns the r09 ground-level deck and obstacle footprint:
+approach and hangar aprons, terminal halls, side aisles and hangar interiors.
+Only the actual deck belongs to this navigation owner; surrounding town buildings,
+including both City Halls, retain their existing access and stair heights.
+The leaves open to 95°, remain open around the party, then close
 after it leaves. No cinematic content is authored by this package.
 
 O/C and the bottom Orbit button start from the displayed camera, target, height,
@@ -75,8 +79,11 @@ nine-file style check and 58-check Viewer hardening gate pass. Actual main-Viewe
 O and Orbit button checks retain the current panned target and zoom.
 
 Elevators and hangar panels remain static in the game. General collision-proxy
-loading is not implemented; navigation uses the controlled central route and door
-gate. Old collision exports describe the original shell, not the new facade.
+loading is not implemented; navigation uses a source-level ground footprint
+measured from r09 geometry and the existing door gate. Native regressions cover
+all four party members crossing the previous artificial boundary, both City Hall
+stairs, the entry door, side halls and a hangar. Old collision exports describe
+the original shell, not the new facade.
 The optional 14-model Tripo castle does not fit in the eight remaining model slots;
 separate asset consolidation would be needed. Fine distant trim can alias at
 subpixel sizes. Mobile chat-image visibility is unconfirmed; no public upload

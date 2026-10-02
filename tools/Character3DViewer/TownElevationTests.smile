@@ -43,6 +43,9 @@ Public Function Run() As Number
     Dim GroundCount As Number
     Dim CurbArea As Double
 
+    Call CheckCurvedWetSides(Failures)
+    Call CheckFlatRoadSides(Failures)
+
     Ok = Grid.Initialize(Town.Surface, 1, 1, 0.0, 0.0, 1.0, Grid.SURFACE_GROUND)
     Snapshot = Town.Surface
     Sample = Terrain.SamplePoint(Town.Surface, 0.25, 0.75)
@@ -108,6 +111,7 @@ Public Function Run() As Number
         ' must contain vertical faces, otherwise a low camera sees the backdrop.
 
         If (Part.Kind = Grid.SURFACE_ROAD And
+            Part.Plane = 5 And
             Part.X0 > 0.001 And
             Part.X0 < 0.999 And
             Abs(Part.X0 - Part.X1) < 0.001 And
@@ -116,6 +120,14 @@ Public Function Run() As Number
                 (Part.X2 - Part.X0) * (Part.Z1 - Part.Z0)) < 0.000000000001) Then
             CurbArea = CurbArea + Abs((Part.Z1 - Part.Z0) * (Part.Y2 - Part.Y0) -
                 (Part.Z2 - Part.Z0) * (Part.Y1 - Part.Y0)) * 0.5
+        End If
+
+        If (Part.Kind = Grid.SURFACE_ROAD And
+            Part.Plane = 4 And
+            Part.X0 > 0.001 And
+            Part.X0 < 0.999 And
+            Abs(Part.X0 - Part.X1) < 0.001) Then
+            CurbArea = CurbArea + Abs((Part.Z1 - Part.Z0) * (Part.Y1 - Part.Y0))
         End If
 
         BaseY = Layers.GROUND_Y
@@ -128,6 +140,7 @@ Public Function Run() As Number
         End If
 
         If ((Part.Kind = Grid.SURFACE_GROUND Or Part.Kind = Grid.SURFACE_ROAD) And
+            Part.Plane = 5 And
             Abs((Part.X1 - Part.X0) * (Part.Z2 - Part.Z0) -
                 (Part.X2 - Part.X0) * (Part.Z1 - Part.Z0)) > 0.000001) Then
             Sample = Terrain.SamplePoint(Town.Surface, (Part.X0 + Part.X1 + Part.X2) / 3.0,
@@ -180,5 +193,120 @@ Public Function Run() As Number
     Return Failures
 
 End Function
+
+Private Sub CheckCurvedWetSides(ByRef Failures As Number)
+
+    Dim X As Number
+    Dim Z As Number
+    Dim Index As Number
+    Dim Brush As Paint.Brush
+    Dim Part As Cache.Patch
+    Dim Walls As Number
+    Dim Ok As Boolean
+    Dim Area As Double
+
+    Ok = Document.Blank(Town, "Curved Raised Road Over Water", 8, 8, 10.0)
+
+    Call Grid.PaintRectangle(Town.Surface, 0, 0, 7, 7, Grid.SURFACE_WATER)
+
+    For Z = 0 To 8
+
+        For X = 0 To 8
+            Ok = Terrain.SetCorner(Town.Surface, X, Z, 100.0) And Ok
+        End For
+    End For
+
+    Brush.Form = Paint.FORM_CIRCLE
+    Brush.Surface = Grid.SURFACE_ROAD
+    Brush.X1 = 25.0
+    Ok = Grid.PaintBrush(Town.Surface, Brush) And Ok
+
+    Call Builder.Begin(Recipe, Town)
+
+    For Z = 0 To 7
+        Recipe.Row = Z
+
+        Call Builder.ScanRow(Recipe)
+    End For
+
+    For Index = 0 To Recipe.Buffer.PatchCount - 1
+
+        Part = Recipe.Buffer.Patches[Index]
+        Area = Abs((Part.X1 - Part.X0) * (Part.Z2 - Part.Z0) -
+            (Part.X2 - Part.X0) * (Part.Z1 - Part.Z0))
+
+        If (Part.Kind = Grid.SURFACE_ROAD And
+            (Part.Plane = 4 Or (Part.Plane = 5 And Area < 0.000001)) And
+            Max(Part.Y0, Max(Part.Y1, Part.Y2)) >= 123.119 And
+            Min(Part.Y0, Min(Part.Y1, Part.Y2)) < Layers.GROUND_Y) Then
+            Walls = Walls + 1
+        End If
+
+    End For
+
+    Call Check(Ok And Not Recipe.Failed And Walls >= 16,
+        "Curved Raised Road Closes Wet Sides Even When Chord Midpoints Remain On Road", Failures)
+
+End Sub
+
+Private Sub CheckFlatRoadSides(ByRef Failures As Number)
+
+    Dim Shape As Number
+    Dim Z As Number
+    Dim Index As Number
+    Dim Walls As Number
+    Dim Brush As Paint.Brush
+    Dim Part As Cache.Patch
+    Dim Ok As Boolean
+
+    For Shape = 1 To 2
+
+        Ok = Document.Blank(Town, "Flat Road Curbs", 8, 8, 10.0)
+        Brush.Form = Paint.FORM_RECTANGLE
+        Brush.Surface = Grid.SURFACE_ROAD
+        Brush.X0 = -10.0
+        Brush.Z0 = -40.0
+        Brush.X1 = 10.0
+        Brush.Z1 = 40.0
+
+        If Shape = 2 Then
+
+            Brush.Form = Paint.FORM_CIRCLE
+            Brush.X0 = 0.0
+            Brush.Z0 = 0.0
+            Brush.X1 = 25.0
+            Brush.Z1 = 0.0
+
+        End If
+
+        Ok = Grid.PaintBrush(Town.Surface, Brush) And Ok
+        Walls = 0
+
+        Call Builder.Begin(Recipe, Town)
+
+        For Z = 0 To 7
+            Recipe.Row = Z
+
+            Call Builder.ScanRow(Recipe)
+        End For
+
+        For Index = 0 To Recipe.Buffer.PatchCount - 1
+
+            Part = Recipe.Buffer.Patches[Index]
+
+            If (Part.Kind = Grid.SURFACE_ROAD And
+                Part.Plane = 4 And
+                Abs(Part.Y0 - Layers.GROUND_Y) < 0.000001 And
+                Abs(Part.Y1 - Layers.ROAD_Y) < 0.000001) Then
+                Walls = Walls + 1
+            End If
+
+        End For
+
+        Call Check(Ok And Not Recipe.Failed And Walls >= 8,
+            "Flat Curved And Cell-Aligned Roads Seal Blue Underlay At Ground Edges", Failures)
+    End For
+
+End Sub
 
 End Module

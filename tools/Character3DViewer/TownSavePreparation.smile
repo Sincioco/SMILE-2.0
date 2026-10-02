@@ -98,7 +98,7 @@ Public Sub Update(ByRef Value As State, ByRef Town As Document.State, Revision A
 
             Ok = Value.Roads.CacheSaved
             Ok = Derived.WriteNumber(Value.BatchCount, Value.Key + ".Terrain.Batches") And Ok
-            Ok = Derived.WriteNumber(9, Value.Key + ".PreparedVersion") And Ok
+            Ok = Derived.WriteNumber(10, Value.Key + ".PreparedVersion") And Ok
             Value.Failed = Not Ok
             Value.Stage = 0
             Value.Progress = 100

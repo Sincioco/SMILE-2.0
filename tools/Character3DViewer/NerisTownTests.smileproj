@@ -11,6 +11,8 @@
     <SmileSource Include="TownSurfaceLayers.smile" />
     <SmileSource Include="NerisCastleRoute.smile" />
     <SmileSource Include="NerisSpaceportRoute.smile" />
+    <SmileSource Include="TownSpaceportTests.smile" />
+    <SmileSource Include="NerisSpaceportGround.smile" />
     <SmileSource Include="NerisSpaceportTraffic.smile" />
     <SmileSource Include="NerisRunwayTraffic.smile" />
     <SmileSource Include="ProximityDrawbridge.smile" />

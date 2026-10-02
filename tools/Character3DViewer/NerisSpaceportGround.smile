@@ -1,0 +1,103 @@
+''' Ground-level floor and collision footprint measured from the r09 Spaceport model.
+Module Smile.Tools.NerisSpaceportGround
+
+Option Explicit
+
+''' Local metres, with the entrance at Z=-45.7. Scenery outside these decks belongs to the town.
+Public Function Contains(X As Double, Z As Double) As Boolean
+
+    Dim Across As Double
+    Dim Result As Boolean
+
+    Across = Abs(X)
+    Result = (Across <= 250.0 And Z >= -142.0 And Z <= 230.0 And
+        Across - Z <= 356.0 And Across + Z <= 444.0)
+    Result = Result Or (Z >= -390.0 And Z <= -142.0 And Across <= 76.0 And
+        Across <= 42.0 + (Z + 390.0) * 34.0 / 174.0)
+    Result = Result Or (Across >= 114.0 And Across <= 234.0 And
+        Z >= -236.0 And Z <= -136.0 And
+        Abs(Across - 174.0) + Abs(Z + 186.0) <= 98.0)
+    Return Result
+
+End Function
+
+Private Function Wall(X As Double, Z As Double, X0 As Double, Z0 As Double,
+    X1 As Double, Z1 As Double, Radius As Double) As Boolean
+
+    Dim Dx As Double
+    Dim Dz As Double
+    Dim Along As Double
+    Dim Result As Boolean
+
+    Dx = X1 - X0
+    Dz = Z1 - Z0
+    Along = Max(0.0, Min(1.0, ((X - X0) * Dx + (Z - Z0) * Dz) / (Dx * Dx + Dz * Dz)))
+    Dx = X - X0 - Along * Dx
+    Dz = Z - Z0 - Along * Dz
+    Result = Dx * Dx + Dz * Dz <= Radius * Radius
+    Return Result
+
+End Function
+
+''' Retain real walls, columns and closed service rooms; open halls and aprons are traversable.
+Public Function CanStand(X As Double, Z As Double) As Boolean
+
+    Dim Across As Double
+
+    If Not Contains(X, Z) Then
+        Return False
+    End If
+
+    Across = Abs(X)
+
+    ' Symmetric terminal shell, including the entrance vestibule and front glazing.
+
+    If (Wall(Across, Z, 16.0, -22.5, 75.0, -22.5, 1.9) Or
+        Wall(Across, Z, 75.0, -22.5, 106.5, 9.0, 1.9) Or
+        Wall(Across, Z, 106.5, 9.0, 106.5, 159.0, 1.9) Or
+        Wall(Across, Z, 106.5, 159.0, 75.0, 190.5, 1.9) Or
+        Wall(X, Z, -75.0, 190.5, 75.0, 190.5, 1.9) Or
+        Wall(Across, Z, 16.0, -45.5, 16.0, -22.5, 0.8) Or
+        Wall(Across, Z, 6.0, -45.2, 16.0, -45.2, 0.7)) Then
+        Return False
+    End If
+
+    ' Front facade buttresses, side service cabins and rear annex.
+
+    If ((Across >= 16.0 And Across <= 26.5 And Z >= -44.5 And Z <= -23.0) Or
+        (Across >= 78.0 And Across <= 98.5 And Z >= 34.0 And Z <= 54.0) Or
+        (Across <= 54.5 And Z >= 195.5 And Z <= 220.5)) Then
+        Return False
+    End If
+
+    ' Central hall and wing partitions; side aisles remain open around their ends.
+
+    If (Wall(X, Z, -56.0, 53.0, 56.0, 53.0, 1.4) Or
+        Wall(Across, Z, 55.0, -18.0, 55.0, 8.0, 1.4) Or
+        Wall(Across, Z, 55.0, 22.0, 55.0, 37.0, 1.4) Or
+        Wall(Across, Z, 54.0, 36.5, 80.0, 36.5, 0.9) Or
+        Wall(Across, Z, 54.0, 51.5, 80.0, 51.5, 0.9) Or
+        Wall(Across, Z, 80.5, 54.0, 80.5, 146.0, 0.9) Or
+        Wall(Across, Z, 95.5, 54.0, 95.5, 146.0, 0.9) Or
+        (Across >= 54.5 And Across <= 66.0 And Z >= 6.5 And Z <= 23.5)) Then
+        Return False
+    End If
+
+    ' Circular tower bases and the two hangars, whose wide front openings stay usable.
+
+    If (X * X + (Z - 84.0) * (Z - 84.0) <= 27.0 * 27.0 Or
+        (Across - 88.0) * (Across - 88.0) + (Z - 4.0) * (Z - 4.0) <= 12.5 * 12.5 Or
+        (Across - 88.0) * (Across - 88.0) + (Z - 156.0) * (Z - 156.0) <= 12.5 * 12.5 Or
+        (Across - 232.0) * (Across - 232.0) + (Z + 110.0) * (Z + 110.0) <= 8.8 * 8.8 Or
+        (Across - 232.0) * (Across - 232.0) + (Z - 192.0) * (Z - 192.0) <= 8.8 * 8.8 Or
+        Wall(Across, Z, 117.5, -129.0, 117.5, 12.5, 3.9) Or
+        Wall(Across, Z, 230.5, -129.0, 230.5, 12.5, 3.9) Or
+        Wall(Across, Z, 117.5, 12.5, 230.5, 12.5, 3.9)) Then
+        Return False
+    End If
+
+    Return True
+
+End Function
+
+End Module

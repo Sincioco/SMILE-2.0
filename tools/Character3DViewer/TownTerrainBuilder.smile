@@ -8,9 +8,11 @@ Import Smile.Tools.TownDecks As Decks
 Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownSurfaceStyles As Styles
 Import Smile.Tools.TownStyleContours As StyleContours
+Import Smile.Tools.TownTerrainSeams As Seams
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.SurfaceGrid3D As Grid
 Import Smile.Simple3D.SurfaceContours3D As Contours
+Import Smile.Simple3D.SurfaceContourRefinement3D As Refinement
 Import Smile.Simple3D.SurfacePaint3D As Paint
 Import Smile.Simple3D.TerrainSurface3D As Elevation
 Import Smile.Simple3D.TerrainWater3D As Flow
@@ -102,117 +104,8 @@ Private Sub TrianglePatch(ByRef Value As State, PointA As P.Vector3,
 
 End Sub
 
-''' A clipped ground edge may be only part of a road edge at a three-material junction.
-Private Function ContainsEdge(First As P.Vector3, Last As P.Vector3,
-    PointA As P.Vector3, PointB As P.Vector3) As Boolean
+Private Sub CurveSlice(ByRef Value As State, ByRef Slice As Contours.Slice)
 
-    Dim Delta As P.Vector3
-    Dim LengthSquared As Double
-    Dim AlongA As Double
-    Dim AlongB As Double
-    Dim Result As Boolean
-
-    Delta = P.Vector(Last.X - First.X, 0.0, Last.Z - First.Z)
-    LengthSquared = Delta.X * Delta.X + Delta.Z * Delta.Z
-
-    If LengthSquared <= 0.000000000001 Then
-        Return False
-    End If
-
-    AlongA = (PointA.X - First.X) * Delta.X + (PointA.Z - First.Z) * Delta.Z
-    AlongB = (PointB.X - First.X) * Delta.X + (PointB.Z - First.Z) * Delta.Z
-    Result = (AlongA >= -0.000001 And AlongA <= LengthSquared + 0.000001 And
-        AlongB >= -0.000001 And AlongB <= LengthSquared + 0.000001 And
-        Abs((PointA.X - First.X) * Delta.Z - (PointA.Z - First.Z) * Delta.X) <= 0.000001 And
-        Abs((PointB.X - First.X) * Delta.Z - (PointB.Z - First.Z) * Delta.X) <= 0.000001)
-
-    Return Result
-
-End Function
-
-''' Join the actual clipped faces, not an analytic midpoint that can miss a curved chord.
-Private Sub SealRoadEdge(ByRef Value As State, ByRef Slice As Contours.Slice,
-    PointA As P.Vector3, PointB As P.Vector3)
-
-    Dim Index As Number
-    Dim Face As Contours.Triangle
-    Dim TopA As P.Vector3
-    Dim TopB As P.Vector3
-
-    For Index = 0 To Slice.FaceCount - 1
-
-        Face = Slice.Faces[Index]
-
-        If Face.Kind = Grid.SURFACE_ROAD Then
-
-            If (ContainsEdge(Face.PointA, Face.PointB, PointA, PointB) Or
-                ContainsEdge(Face.PointB, Face.PointC, PointA, PointB) Or
-                ContainsEdge(Face.PointC, Face.PointA, PointA, PointB)) Then
-
-                TopA = P.Vector(PointA.X, PointA.Y + Layers.ROAD_Y - Layers.GROUND_Y, PointA.Z)
-                TopB = P.Vector(PointB.X, PointB.Y + Layers.ROAD_Y - Layers.GROUND_Y, PointB.Z)
-
-                Call TrianglePatch(Value, PointA, TopA, TopB, Grid.SURFACE_ROAD)
-                Call TrianglePatch(Value, PointA, TopB, PointB, Grid.SURFACE_ROAD)
-
-                Return
-
-            End If
-
-        End If
-
-    End For
-
-End Sub
-
-''' Seal exposed displaced edges; neighboring terrain triangles share their exact vertices.
-Private Sub ElevatedEdge(ByRef Value As State, PointA As P.Vector3,
-    PointB As P.Vector3, Kind As Number)
-
-    Dim DeltaX As Double
-    Dim DeltaZ As Double
-    Dim Length As Double
-    Dim MiddleX As Double
-    Dim MiddleZ As Double
-    Dim FirstKind As Number
-    Dim LastKind As Number
-    Dim LowA As P.Vector3
-    Dim LowB As P.Vector3
-    Dim BaseY As Double
-
-    DeltaX = PointB.X - PointA.X
-    DeltaZ = PointB.Z - PointA.Z
-    Length = Sqrt(DeltaX * DeltaX + DeltaZ * DeltaZ)
-
-    If Length <= 0.000001 Or Kind = Grid.SURFACE_WATER Then
-        Return
-    End If
-
-    MiddleX = (PointA.X + PointB.X) * 0.5
-    MiddleZ = (PointA.Z + PointB.Z) * 0.5
-    FirstKind = Grid.ReadPoint(Value.Surface, MiddleX - DeltaZ / Length * 0.001, MiddleZ + DeltaX / Length * 0.001)
-    LastKind = Grid.ReadPoint(Value.Surface, MiddleX + DeltaZ / Length * 0.001, MiddleZ - DeltaX / Length * 0.001)
-
-    If (FirstKind <> Grid.SURFACE_EMPTY And
-        FirstKind <> Grid.SURFACE_WATER And
-        LastKind <> Grid.SURFACE_EMPTY And
-        LastKind <> Grid.SURFACE_WATER) Then
-        Return
-    End If
-
-    BaseY = Min(Layers.GROUND_Y - 1.2, Min(PointA.Y, PointB.Y) - 1.2)
-    LowA = P.Vector(PointA.X, BaseY, PointA.Z)
-    LowB = P.Vector(PointB.X, BaseY, PointB.Z)
-
-    Call TrianglePatch(Value, PointA, LowA, LowB, Kind)
-    Call TrianglePatch(Value, PointA, LowB, PointB, Kind)
-
-End Sub
-
-Private Sub CurveTriangle(ByRef Value As State, PointA As P.Vector3, PointB As P.Vector3,
-    PointC As P.Vector3, Base As Number)
-
-    Dim Slice As Contours.Slice
     Dim Index As Number
     Dim Face As Contours.Triangle
     Dim Height As Double
@@ -220,97 +113,81 @@ Private Sub CurveTriangle(ByRef Value As State, PointA As P.Vector3, PointB As P
     Dim Group As Number
     Dim PatchIndex As Number
 
-    Slice = Contours.Split(Value.Surface, PointA, PointB, PointC, Base,
-        Value.Detailed)
-
     For Index = 0 To Slice.FaceCount - 1
 
         Face = Slice.Faces[Index]
 
-        Call AddPatch(Value, Face.PointA.X, Face.PointA.Z, Face.PointB.X, Face.PointB.Z, Face.Kind, 0.0, 0.0, 3)
+        If Face.Kind <> Grid.SURFACE_WATER Or Value.Detailed Then
 
-        If Value.Failed Then
-            Return
-        End If
+            Call AddPatch(Value, Face.PointA.X, Face.PointA.Z, Face.PointB.X, Face.PointB.Z, Face.Kind, 0.0, 0.0, 3)
 
-        Value.Buffer.Patches[Value.Buffer.PatchCount - 1].X2 = Face.PointC.X
-        Value.Buffer.Patches[Value.Buffer.PatchCount - 1].Z2 = Face.PointC.Z
-
-        If Value.Detailed Then
-
-            Height = Layers.GROUND_Y
-
-            If Face.Kind = Grid.SURFACE_ROAD Then
-                Height = Layers.ROAD_Y
+            If Value.Failed Then
+                Return
             End If
 
-            Sample = Elevation.SamplePoint(Value.Surface, Face.PointA.X, Face.PointA.Z)
-            Value.Buffer.Patches[Value.Buffer.PatchCount - 1].Y0 = Height + Sample.Offset
-            Sample = Elevation.SamplePoint(Value.Surface, Face.PointB.X, Face.PointB.Z)
-            Value.Buffer.Patches[Value.Buffer.PatchCount - 1].Y1 = Height + Sample.Offset
-            Sample = Elevation.SamplePoint(Value.Surface, Face.PointC.X, Face.PointC.Z)
-            Value.Buffer.Patches[Value.Buffer.PatchCount - 1].Y2 = Height + Sample.Offset
-            Value.Buffer.Patches[Value.Buffer.PatchCount - 1].Plane = 5
+            Value.Buffer.Patches[Value.Buffer.PatchCount - 1].X2 = Face.PointC.X
+            Value.Buffer.Patches[Value.Buffer.PatchCount - 1].Z2 = Face.PointC.Z
 
-            If Face.Kind = Grid.SURFACE_WATER Then
+            If Value.Detailed Then
 
-                PatchIndex = Value.Buffer.PatchCount - 1
-                Group = Flow.GroupAt(Value.SourceCurves, Value.Flows,
-                    (Face.PointA.X + Face.PointB.X + Face.PointC.X) / 3.0,
-                    (Face.PointA.Z + Face.PointB.Z + Face.PointC.Z) / 3.0)
+                Height = Layers.GROUND_Y
 
-                ' Clipped bank slivers can round their centroid just outside the brush.
-
-                If Group = 0 And Value.Flows.GroupCount > 0 Then
-                    Group = Max(Flow.GroupAt(Value.SourceCurves, Value.Flows, Face.PointA.X, Face.PointA.Z),
-                        Max(Flow.GroupAt(Value.SourceCurves, Value.Flows, Face.PointB.X, Face.PointB.Z),
-                        Flow.GroupAt(Value.SourceCurves, Value.Flows, Face.PointC.X, Face.PointC.Z)))
+                If Face.Kind = Grid.SURFACE_ROAD Then
+                    Height = Layers.ROAD_Y
                 End If
 
-                Value.Buffer.Patches[PatchIndex].FlowGroup = Group
-                Height = Layers.WATER_Y
+                Sample = Elevation.SamplePoint(Value.Surface, Face.PointA.X, Face.PointA.Z)
+                Value.Buffer.Patches[Value.Buffer.PatchCount - 1].Y0 = Height + Sample.Offset
+                Sample = Elevation.SamplePoint(Value.Surface, Face.PointB.X, Face.PointB.Z)
+                Value.Buffer.Patches[Value.Buffer.PatchCount - 1].Y1 = Height + Sample.Offset
+                Sample = Elevation.SamplePoint(Value.Surface, Face.PointC.X, Face.PointC.Z)
+                Value.Buffer.Patches[Value.Buffer.PatchCount - 1].Y2 = Height + Sample.Offset
+                Value.Buffer.Patches[Value.Buffer.PatchCount - 1].Plane = 5
 
-                If Value.SourceCurves.BrushCount > 0 Then
-                    Height = Layers.GROUND_Y - 1.0
-                End If
+                If Face.Kind = Grid.SURFACE_WATER Then
 
-                ' A level lake and its incoming flow share the same water datum.
+                    PatchIndex = Value.Buffer.PatchCount - 1
+                    Group = Flow.GroupAt(Value.SourceCurves, Value.Flows,
+                        (Face.PointA.X + Face.PointB.X + Face.PointC.X) / 3.0,
+                        (Face.PointA.Z + Face.PointB.Z + Face.PointC.Z) / 3.0)
 
-                If Value.Flows.GroupCount > 0 Then
-                    Height = Layers.GROUND_Y + 0.02 * Layers.UNITS_PER_METER
-                End If
+                    ' Clipped bank slivers can round their centroid just outside the brush.
 
-                If Group = 0 Then
+                    If Group = 0 And Value.Flows.GroupCount > 0 Then
+                        Group = Max(Flow.GroupAt(Value.SourceCurves, Value.Flows, Face.PointA.X, Face.PointA.Z),
+                            Max(Flow.GroupAt(Value.SourceCurves, Value.Flows, Face.PointB.X, Face.PointB.Z),
+                            Flow.GroupAt(Value.SourceCurves, Value.Flows, Face.PointC.X, Face.PointC.Z)))
+                    End If
 
-                    Value.Buffer.Patches[PatchIndex].Y0 = Height
-                    Value.Buffer.Patches[PatchIndex].Y1 = Height
-                    Value.Buffer.Patches[PatchIndex].Y2 = Height
+                    Value.Buffer.Patches[PatchIndex].FlowGroup = Group
+                    Height = Layers.WATER_Y
 
-                Else
-                    Value.Buffer.Patches[PatchIndex].Y0 = Value.Buffer.Patches[PatchIndex].Y0 + 0.02 * Layers.UNITS_PER_METER
-                    Value.Buffer.Patches[PatchIndex].Y1 = Value.Buffer.Patches[PatchIndex].Y1 + 0.02 * Layers.UNITS_PER_METER
-                    Value.Buffer.Patches[PatchIndex].Y2 = Value.Buffer.Patches[PatchIndex].Y2 + 0.02 * Layers.UNITS_PER_METER
+                    If Value.SourceCurves.BrushCount > 0 Then
+                        Height = Layers.GROUND_Y - 1.0
+                    End If
 
-                End If
+                    ' A level lake and its incoming flow share the same water datum.
 
-                Call TrianglePatch(Value, P.Vector(Face.PointA.X, Value.Buffer.Patches[PatchIndex].Y0 - 0.2, Face.PointA.Z),
-                    P.Vector(Face.PointB.X, Value.Buffer.Patches[PatchIndex].Y1 - 0.2, Face.PointB.Z),
-                    P.Vector(Face.PointC.X, Value.Buffer.Patches[PatchIndex].Y2 - 0.2, Face.PointC.Z), 6)
+                    If Value.Flows.GroupCount > 0 Then
+                        Height = Layers.GROUND_Y + 0.02 * Layers.UNITS_PER_METER
+                    End If
 
-            Else
-                Face.PointA.Y = Value.Buffer.Patches[Value.Buffer.PatchCount - 1].Y0
-                Face.PointB.Y = Value.Buffer.Patches[Value.Buffer.PatchCount - 1].Y1
-                Face.PointC.Y = Value.Buffer.Patches[Value.Buffer.PatchCount - 1].Y2
+                    If Group = 0 Then
 
-                Call ElevatedEdge(Value, Face.PointA, Face.PointB, Face.Kind)
-                Call ElevatedEdge(Value, Face.PointB, Face.PointC, Face.Kind)
-                Call ElevatedEdge(Value, Face.PointC, Face.PointA, Face.Kind)
+                        Value.Buffer.Patches[PatchIndex].Y0 = Height
+                        Value.Buffer.Patches[PatchIndex].Y1 = Height
+                        Value.Buffer.Patches[PatchIndex].Y2 = Height
 
-                If Face.Kind = Grid.SURFACE_GROUND Then
+                    Else
+                        Value.Buffer.Patches[PatchIndex].Y0 = Value.Buffer.Patches[PatchIndex].Y0 + 0.02 * Layers.UNITS_PER_METER
+                        Value.Buffer.Patches[PatchIndex].Y1 = Value.Buffer.Patches[PatchIndex].Y1 + 0.02 * Layers.UNITS_PER_METER
+                        Value.Buffer.Patches[PatchIndex].Y2 = Value.Buffer.Patches[PatchIndex].Y2 + 0.02 * Layers.UNITS_PER_METER
 
-                    Call SealRoadEdge(Value, Slice, Face.PointA, Face.PointB)
-                    Call SealRoadEdge(Value, Slice, Face.PointB, Face.PointC)
-                    Call SealRoadEdge(Value, Slice, Face.PointC, Face.PointA)
+                    End If
+
+                    Call TrianglePatch(Value, P.Vector(Face.PointA.X, Value.Buffer.Patches[PatchIndex].Y0 - 0.2, Face.PointA.Z),
+                        P.Vector(Face.PointB.X, Value.Buffer.Patches[PatchIndex].Y1 - 0.2, Face.PointB.Z),
+                        P.Vector(Face.PointC.X, Value.Buffer.Patches[PatchIndex].Y2 - 0.2, Face.PointC.Z), 6)
 
                 End If
 
@@ -320,10 +197,32 @@ Private Sub CurveTriangle(ByRef Value As State, PointA As P.Vector3, PointB As P
 
     End For
 
+    Value.Failed = Not Seams.Append(Value.Buffer, Value.Surface, Slice, Value.Detailed, Value.Style) Or Value.Failed
+
     If Slice.Rail Then
         Call AddPatch(Value, Slice.EdgeA.X, Slice.EdgeA.Z, Slice.EdgeB.X, Slice.EdgeB.Z,
             4, Layers.RAIL_BASE_Y, Layers.RAIL_TOP_Y, 4)
     End If
+
+End Sub
+
+Private Sub CurveTriangle(ByRef Value As State, PointA As P.Vector3, PointB As P.Vector3,
+    PointC As P.Vector3, Base As Number)
+
+    Dim Pending As Refinement.State
+    Dim Slice As Contours.Slice
+
+    Call Refinement.Begin(Pending, PointA, PointB, PointC)
+
+    Do
+
+        If Not Refinement.Next(Pending, Value.Surface, Slice, Base) Then
+            Exit Do
+        End If
+
+        Call CurveSlice(Value, Slice)
+
+    Loop Until Value.Failed
 
 End Sub
 
@@ -421,7 +320,11 @@ Private Sub CurveRow(ByRef Value As State)
         Uniform = (Min(3, Contours.Kind(Value.Surface, PointA, Base)) = Surface And
             Min(3, Contours.Kind(Value.Surface, PointB, Base)) = Surface And
             Min(3, Contours.Kind(Value.Surface, PointC, Base)) = Surface And
-            Min(3, Contours.Kind(Value.Surface, PointD, Base)) = Surface)
+            Min(3, Contours.Kind(Value.Surface, PointD, Base)) = Surface And
+            Min(3, Contours.Kind(Value.Surface, P.Vector(Center.X, 0.0, PointA.Z), Base)) = Surface And
+            Min(3, Contours.Kind(Value.Surface, P.Vector(Center.X, 0.0, PointC.Z), Base)) = Surface And
+            Min(3, Contours.Kind(Value.Surface, P.Vector(PointA.X, 0.0, Center.Z), Base)) = Surface And
+            Min(3, Contours.Kind(Value.Surface, P.Vector(PointC.X, 0.0, Center.Z), Base)) = Surface)
 
         If Value.Detailed Then
 
@@ -458,6 +361,9 @@ Private Sub CurveRow(ByRef Value As State)
 
         If Uniform Then
 
+            Value.Failed = Not Seams.Cell(Value.Buffer, Value.Surface, PointA, PointC,
+                Surface, Value.Detailed, Value.Style) Or Value.Failed
+
             If ((Surface = 1 Or Surface = 3 Or
                 (Value.Detailed And Surface = Grid.SURFACE_WATER)) And
                 First < 0) Then
@@ -465,20 +371,13 @@ Private Sub CurveRow(ByRef Value As State)
                 RunKind = Surface
             End If
 
-        Else If Value.Detailed Then
+        Else
 
             ' Use the terrain sampler's two canonical triangles. A four-way fan
             ' duplicates coplanar water and can exhaust the bounded ribbon pool.
 
             Call SmoothTriangle(Value, PointA, PointB, PointC, Base)
             Call SmoothTriangle(Value, PointA, PointC, PointD, Base)
-
-        Else
-
-            Call SmoothTriangle(Value, PointA, PointB, Center, Base)
-            Call SmoothTriangle(Value, PointB, PointC, Center, Base)
-            Call SmoothTriangle(Value, PointC, PointD, Center, Base)
-            Call SmoothTriangle(Value, PointD, PointA, Center, Base)
 
         End If
 

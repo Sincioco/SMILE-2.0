@@ -363,6 +363,10 @@ Do
 
 Loop Until Ground.Stage = 0 Or Ground.Failed Or Frames >= 1500
 
+If Ground.Failed Or Ground.Stage <> 0 Then
+    Call TerrainDiagnostics()
+End If
+
 Call Check(Not Ground.Failed And Ground.Stage = 0 And Ground.ObjectCount > 32,
     "Canal Terrain Streams Beyond One Scratch Buffer Within Existing Object Limits")
 
@@ -626,7 +630,7 @@ Sub CheckLandscape(Name As Text)
     End If
 
     Town.Name = "Fresh Water Regression " + Name
-    Ok = Derived.WriteNumber(0, "TownPrepared.Terrain9." + Town.Name) And Ok
+    Ok = Derived.WriteNumber(0, "TownPrepared.Terrain10." + Town.Name) And Ok
     Ok = Terrain.Create(Ground)
 
     Call Terrain.BeginBuild(Ground, Town)
@@ -660,6 +664,8 @@ Sub CheckLandscape(Name As Text)
 
     If Ground.Failed Then
 
+        Call TerrainDiagnostics()
+
         Print "Landscape Shared Capacity: " + Name
         Print Ground.WaterPatchCount
 
@@ -683,6 +689,21 @@ Sub CheckLandscape(Name As Text)
     Call G.DestroyRibbonBatch3D(GlowRibbon)
     Call G.DestroyRibbonBatch3D(CoreRibbon)
     Call G.DestroyMaterial3D(EffectMaterial)
+
+End Sub
+
+Sub TerrainDiagnostics()
+
+    Print "Terrain Stage / Row / Objects / Next / Cache Read / Batch / Batches / Patches / Error"
+    Print Ground.Stage
+    Print Ground.Recipe.Row
+    Print Ground.ObjectCount
+    Print Ground.NextCount
+    Print Ground.CacheRead
+    Print Ground.CacheBatch
+    Print Ground.CacheBatches
+    Print Ground.Recipe.Buffer.PatchCount
+    Print G.LastError()
 
 End Sub
 

@@ -17,7 +17,7 @@ catalog and terminal assemblies; no downloaded assets or new dependencies.
 | Sunglass Expanse | Dunes, sandstone mesas and an oasis loop |
 | Neris Waterworks | Five crescent basins and five round gardens around interlaced star service paths |
 | Ancient Relay | Weathered rock spires around concentric service paths |
-| Neris Relief Quarter | Civic plaza, homes, market, mountain terrace, lake and sandy district |
+| Neris Relief Quarter | Level symmetrical civic square, City Hall, mirrored streets, homes, shops and gardens |
 | Willowstep Highlands | Snowy massifs up to 154 m, graded trails, winding river, irregular lake and mountain landmarks |
 | Silverfall Basin | Three 14 m terrain terraces, a 42 m climb, encounter shelves and a cascading stream |
 
@@ -39,13 +39,19 @@ All props are grounded against the native terrain sampler.
 
 `Source/terrain_quests.py --output <new-folder>` authors the landscape set without
 overwriting existing output. `journey_layouts.relief` uses `relief_landscape` for
-the mixed town. Run `town_access.prepare` before saving a new building layout.
+the symmetrical town. Run `town_access.prepare` before saving a new building layout.
 Use `prepare_maps.py` to bake a separate prepared folder, then
 `validate_terrain_quests.py --maps <prepared-folder> --manifest <source-manifest>
 --work <new-work-folder>` for native round trips, downhill flow and sampled 4 m
 route corridors in both directions. The current full landscape pass is recorded
 in `artifacts/landscape-v8-routes.log`; all sixteen actual native gateway arrivals
 also pass standability, clear forward travel and trigger exclusion.
+
+October 3: all sixteen documents have preparation 10 mesh recipes with refined
+surface contours and closed road/shore sides. `scripts/test-town-surface-mesh.py`
+checks the actual prepared faces against authored surfaces and checks shared wet
+edges for missing side walls. Relief alone has a new authored layout; its symmetry,
+native routes and existing travel destinations are checked before installation.
 
 The installer accepts `--map` to limit the selection. It requires Studio closed,
 a fresh backup folder and a matching baseline, rejecting newer user layout edits.

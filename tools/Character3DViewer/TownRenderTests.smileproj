@@ -53,11 +53,13 @@
     <SmileSource Include="TownTerrainLighting.smile" />
     <SmileSource Include="TownStyleContours.smile" />
     <SmileSource Include="TownTerrainBuilder.smile" />
+    <SmileSource Include="TownTerrainSeams.smile" />
     <SmileSource Include="TownTerrainCache.smile" />
     <SmileSource Include="TownTerrainStyles.smile" />
     <SmileSource Include="TownLighting.smile" />
     <SmileSource Include="NerisSpaceportGlow.smile" />
     <SmileSource Include="NerisSpaceportRoute.smile" />
+    <SmileSource Include="NerisSpaceportGround.smile" />
     <SmileSource Include="NerisHorizonRoute.smile" />
     <SmileSource Include="NerisHorizonLighting.smile" />
     <SmileSource Include="TownAttachments.smile" />

@@ -1,0 +1,292 @@
+''' Close height differences using the emitted partition, without internal wall fans.
+Module Smile.Tools.TownTerrainSeams
+
+Option Explicit
+
+Import Smile.Tools.TownTerrainCache As Cache
+Import Smile.Tools.TownSurfaceLayers As Layers
+Import Smile.Simple3D.SurfaceContours3D As Contours
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.TerrainSurface3D As Terrain
+Import Smile.Simple3D.Precision3D As P
+
+Private Function ContainsEdge(First As P.Vector3, Last As P.Vector3,
+    PointA As P.Vector3, PointB As P.Vector3) As Boolean
+
+    Dim Dx As Double
+    Dim Dz As Double
+    Dim LengthSquared As Double
+    Dim AlongA As Double
+    Dim AlongB As Double
+    Dim Result As Boolean
+
+    Dx = Last.X - First.X
+    Dz = Last.Z - First.Z
+    LengthSquared = Dx * Dx + Dz * Dz
+
+    If LengthSquared <= 0.000000000001 Then
+        Return False
+    End If
+
+    AlongA = (PointA.X - First.X) * Dx + (PointA.Z - First.Z) * Dz
+    AlongB = (PointB.X - First.X) * Dx + (PointB.Z - First.Z) * Dz
+    Result = (AlongA >= -0.000001 And AlongA <= LengthSquared + 0.000001 And
+        AlongB >= -0.000001 And AlongB <= LengthSquared + 0.000001 And
+        Abs((PointA.X - First.X) * Dz - (PointA.Z - First.Z) * Dx) <= 0.000001 And
+        Abs((PointB.X - First.X) * Dz - (PointB.Z - First.Z) * Dx) <= 0.000001)
+    Return Result
+
+End Function
+
+Private Function AtHeight(ByRef Surface As Grid.State, Point As P.Vector3,
+    Kind As Number, Detailed As Boolean) As P.Vector3
+
+    Dim Sample As Terrain.Sample
+
+    Point.Y = Layers.GROUND_Y
+
+    If Kind = Grid.SURFACE_ROAD Then
+        Point.Y = Layers.ROAD_Y
+    End If
+
+    If Detailed Then
+        Sample = Terrain.SamplePoint(Surface, Point.X, Point.Z)
+        Point.Y = Point.Y + Sample.Offset
+    End If
+
+    Return Point
+
+End Function
+
+Private Function Wall(ByRef Buffer As Cache.Batch, PointA As P.Vector3,
+    PointB As P.Vector3, LowA As Double, LowB As Double, Kind As Number, Style As Number) As Boolean
+
+    Dim Part As Cache.Patch
+
+    If Abs(PointA.X - PointB.X) + Abs(PointA.Z - PointB.Z) < 0.00001 Then
+        Return True
+    End If
+
+    If Buffer.PatchCount > 65534 Then
+        Return False
+    End If
+
+    Part.Kind = Kind
+    Part.Style = Style
+
+    If PointA.Y = PointB.Y And LowA = LowB Then
+
+        Part.Plane = 4
+        Part.X0 = PointA.X
+        Part.Z0 = PointA.Z
+        Part.X1 = PointB.X
+        Part.Z1 = PointB.Z
+        Part.Y0 = LowA
+        Part.Y1 = PointA.Y
+        Buffer.Patches[Buffer.PatchCount] = Part
+        Buffer.PatchCount = Buffer.PatchCount + 1
+        Return True
+
+    End If
+
+    Part.Plane = 5
+    Part.X0 = PointA.X
+    Part.Z0 = PointA.Z
+    Part.Y0 = PointA.Y
+    Part.X1 = PointA.X
+    Part.Z1 = PointA.Z
+    Part.Y1 = LowA
+    Part.X2 = PointB.X
+    Part.Z2 = PointB.Z
+    Part.Y2 = LowB
+    Buffer.Patches[Buffer.PatchCount] = Part
+    Buffer.PatchCount = Buffer.PatchCount + 1
+    Part.X1 = PointB.X
+    Part.Z1 = PointB.Z
+    Part.Y1 = LowB
+    Part.Y2 = PointB.Y
+    Buffer.Patches[Buffer.PatchCount] = Part
+    Buffer.PatchCount = Buffer.PatchCount + 1
+    Return True
+
+End Function
+
+Private Function Join(ByRef Buffer As Cache.Batch, ByRef Surface As Grid.State,
+    ByRef Slice As Contours.Slice, PointA As P.Vector3, PointB As P.Vector3,
+    Kind As Number, Detailed As Boolean, Style As Number) As Boolean
+
+    Dim Index As Number
+    Dim Face As Contours.Triangle
+    Dim TopA As P.Vector3
+    Dim TopB As P.Vector3
+    Dim LowA As P.Vector3
+    Dim LowB As P.Vector3
+    Dim Ok As Boolean
+
+    For Index = 0 To Slice.FaceCount - 1
+
+        Face = Slice.Faces[Index]
+
+        If (Face.Kind <> Kind And
+            Face.Kind <> Grid.SURFACE_WATER And
+            (Kind = Grid.SURFACE_WATER Or Face.Kind = Grid.SURFACE_ROAD)) Then
+
+            If (ContainsEdge(Face.PointA, Face.PointB, PointA, PointB) Or
+                ContainsEdge(Face.PointB, Face.PointC, PointA, PointB) Or
+                ContainsEdge(Face.PointC, Face.PointA, PointA, PointB)) Then
+
+                TopA = AtHeight(Surface, PointA, Face.Kind, Detailed)
+                TopB = AtHeight(Surface, PointB, Face.Kind, Detailed)
+                LowA = AtHeight(Surface, PointA, Kind, Detailed)
+                LowB = AtHeight(Surface, PointB, Kind, Detailed)
+
+                If Kind = Grid.SURFACE_WATER Then
+                    LowA.Y = Min(Layers.GROUND_Y - 1.2, TopA.Y - 1.2)
+                    LowB.Y = Min(Layers.GROUND_Y - 1.2, TopB.Y - 1.2)
+                End If
+
+                Ok = Wall(Buffer, TopA, TopB, LowA.Y, LowB.Y, Face.Kind, Style)
+                Return Ok
+
+            End If
+
+        End If
+
+    End For
+
+    Return True
+
+End Function
+
+Private Function Outer(ByRef Buffer As Cache.Batch, ByRef Surface As Grid.State,
+    ByRef Slice As Contours.Slice, Owner As Number,
+    PointA As P.Vector3, PointB As P.Vector3, Kind As Number,
+    Detailed As Boolean, Style As Number) As Boolean
+
+    Dim Dx As Double
+    Dim Dz As Double
+    Dim Length As Double
+    Dim X As Double
+    Dim Z As Double
+    Dim First As Number
+    Dim Last As Number
+    Dim Ok As Boolean
+    Dim Index As Number
+    Dim Face As Contours.Triangle
+
+    ' Shared edges are already closed by Join. Only partition boundaries need probes.
+
+    For Index = 0 To Slice.FaceCount - 1
+
+        If Index <> Owner Then
+
+            Face = Slice.Faces[Index]
+
+            If (ContainsEdge(Face.PointA, Face.PointB, PointA, PointB) Or
+                ContainsEdge(Face.PointB, Face.PointC, PointA, PointB) Or
+                ContainsEdge(Face.PointC, Face.PointA, PointA, PointB)) Then
+                Return True
+            End If
+
+        End If
+
+    End For
+
+    Dx = PointB.X - PointA.X
+    Dz = PointB.Z - PointA.Z
+    Length = Sqrt(Dx * Dx + Dz * Dz)
+
+    If Length <= 0.000001 Then
+        Return True
+    End If
+
+    X = (PointA.X + PointB.X) * 0.5
+    Z = (PointA.Z + PointB.Z) * 0.5
+    First = Grid.ReadPoint(Surface, X - Dz / Length * 0.25, Z + Dx / Length * 0.25)
+    Last = Grid.ReadPoint(Surface, X + Dz / Length * 0.25, Z - Dx / Length * 0.25)
+
+    If Kind = Grid.SURFACE_ROAD And (First = Grid.SURFACE_GROUND Or Last = Grid.SURFACE_GROUND) Then
+
+        PointA = AtHeight(Surface, PointA, Kind, Detailed)
+        PointB = AtHeight(Surface, PointB, Kind, Detailed)
+        Ok = Wall(Buffer, PointA, PointB, PointA.Y - Layers.ROAD_Y + Layers.GROUND_Y,
+            PointB.Y - Layers.ROAD_Y + Layers.GROUND_Y, Kind, Style)
+        Return Ok
+
+    End If
+
+    If (First <> Grid.SURFACE_EMPTY And
+        First <> Grid.SURFACE_WATER And
+        Last <> Grid.SURFACE_EMPTY And
+        Last <> Grid.SURFACE_WATER) Then
+        Return True
+    End If
+
+    PointA = AtHeight(Surface, PointA, Kind, Detailed)
+    PointB = AtHeight(Surface, PointB, Kind, Detailed)
+    Ok = Wall(Buffer, PointA, PointB, Min(Layers.GROUND_Y - 1.2, PointA.Y - 1.2),
+        Min(Layers.GROUND_Y - 1.2, PointB.Y - 1.2), Kind, Style)
+    Return Ok
+
+End Function
+
+''' Uniform cells use the same edge closure even when their top faces merge into strips.
+Public Function Cell(ByRef Buffer As Cache.Batch, ByRef Surface As Grid.State,
+    PointA As P.Vector3, PointC As P.Vector3, Kind As Number,
+    Detailed As Boolean, Style As Number) As Boolean
+
+    Dim Empty As Contours.Slice
+    Dim PointB As P.Vector3
+    Dim PointD As P.Vector3
+    Dim Ok As Boolean
+
+    If Kind <> Grid.SURFACE_GROUND And Kind <> Grid.SURFACE_ROAD Then
+        Return True
+    End If
+
+    PointB = P.Vector(PointA.X, 0.0, PointC.Z)
+    PointD = P.Vector(PointC.X, 0.0, PointA.Z)
+    Ok = Outer(Buffer, Surface, Empty, -1, PointA, PointB, Kind, Detailed, Style)
+    Ok = Outer(Buffer, Surface, Empty, -1, PointB, PointC, Kind, Detailed, Style) And Ok
+    Ok = Outer(Buffer, Surface, Empty, -1, PointC, PointD, Kind, Detailed, Style) And Ok
+    Ok = Outer(Buffer, Surface, Empty, -1, PointD, PointA, Kind, Detailed, Style) And Ok
+    Return Ok
+
+End Function
+
+Public Function Append(ByRef Buffer As Cache.Batch, ByRef Surface As Grid.State,
+    ByRef Slice As Contours.Slice, Detailed As Boolean, Style As Number) As Boolean
+
+    Dim Index As Number
+    Dim Face As Contours.Triangle
+    Dim Ok As Boolean
+
+    Ok = True
+
+    For Index = 0 To Slice.FaceCount - 1
+
+        Face = Slice.Faces[Index]
+
+        If Face.Kind <> Grid.SURFACE_ROAD Then
+
+            Ok = Join(Buffer, Surface, Slice, Face.PointA, Face.PointB, Face.Kind, Detailed, Style) And Ok
+            Ok = Join(Buffer, Surface, Slice, Face.PointB, Face.PointC, Face.Kind, Detailed, Style) And Ok
+            Ok = Join(Buffer, Surface, Slice, Face.PointC, Face.PointA, Face.Kind, Detailed, Style) And Ok
+
+        End If
+
+        If Face.Kind <> Grid.SURFACE_WATER Then
+
+            Ok = Outer(Buffer, Surface, Slice, Index, Face.PointA, Face.PointB, Face.Kind, Detailed, Style) And Ok
+            Ok = Outer(Buffer, Surface, Slice, Index, Face.PointB, Face.PointC, Face.Kind, Detailed, Style) And Ok
+            Ok = Outer(Buffer, Surface, Slice, Index, Face.PointC, Face.PointA, Face.Kind, Detailed, Style) And Ok
+
+        End If
+
+    End For
+
+    Return Ok
+
+End Function
+
+End Module

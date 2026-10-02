@@ -1,0 +1,152 @@
+''' Regression for the broad spaceport rectangle blocking exterior town buildings.
+Module Smile.Tools.TownSpaceportTests
+
+Option Explicit
+
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownDocumentNavigation As Edited
+Import Smile.Tools.TownCatalogFeatures As Features
+Import Smile.Tools.TownGeometry As Geometry
+Import Smile.Tools.NerisTownNavigation As Navigation
+Import Smile.Tools.NerisSpaceportRoute As Port
+Import Smile.Simple3D.PartyTrail3D As Trail
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+
+Private Dim Town As Document.State
+Private Dim Party As Trail.State
+Private Dim Failures As Number
+
+Private Sub Check(Ok As Boolean, Label As Text)
+
+    If Not Ok Then
+        Print "FAIL Spaceport " + Label
+        Failures = Failures + 1
+    End If
+
+End Sub
+
+Private Function World(X As Double, Z As Double) As P.Vector3
+
+    Dim Result As P.Vector3
+
+    Result = P.Vector(Port.ORIGIN_X - X * Port.SCALE, Port.DECK_Y,
+        Port.ORIGIN_Z - Z * Port.SCALE)
+    Return Result
+
+End Function
+
+Private Sub WalkTo(ByRef Position As P.Vector3, Goal As P.Vector3)
+
+    Dim Index As Number
+    Dim Member As Number
+    Dim Delta As P.Vector3
+    Dim Length As Double
+
+    For Index = 1 To 1800
+
+        Delta = M.Subtract(Goal, Position)
+        Length = Sqrt(Delta.X * Delta.X + Delta.Z * Delta.Z)
+
+        If Length < 0.1 Then
+            Exit For
+        End If
+
+        Position = Navigation.Move(Position, Delta.X / Max(1.0, Length) * Min(2.0, Length),
+            Delta.Z / Max(1.0, Length) * Min(2.0, Length))
+
+        Call Trail.Advance(Party, Position, 25, 80.0)
+        Call Port.Update(Party, 4, 25)
+
+        For Member = 0 To 3
+            Call Check(Navigation.CanStand(Party.Positions[Member].X, Party.Positions[Member].Z),
+                "Every Party Member Remains On Traversable Ground")
+        End For
+    End For
+
+    Call Check(Abs(Position.X - Goal.X) + Abs(Position.Z - Goal.Z) < 0.2,
+        "Party Reaches Exterior And Interior Waypoint")
+
+End Sub
+
+Public Function Run() As Number
+
+    Dim Ok As Boolean
+    Dim Side As Number
+    Dim Position As P.Vector3
+    Dim Goal As P.Vector3
+    Dim Door As Features.Door
+
+    Failures = 0
+    Ok = Document.Blank(Town, "Spaceport Access Regression", 100, 100, 120.0)
+    Town.Surface.OriginX = -11500.0
+    Town.Surface.OriginZ = -12500.0
+
+    For Side = 0 To 100
+        Town.Surface.XEdges[Side] = -11500.0 + ToDouble(Side) * 120.0
+        Town.Surface.ZEdges[Side] = -12500.0 + ToDouble(Side) * 120.0
+    End For
+
+    Town.ItemCount = 1
+    Town.Items[0].Active = True
+    Town.Items[0].Template = 9
+    Town.Items[0].Scale = P.Vector(1700.0, 1700.0, 1700.0)
+    Town.Items[0].Yaw = 180.0
+    Door = Features.DoorAt(9, 0)
+
+    Call Port.Enable(True)
+
+    For Side = 0 To 1
+
+        Town.Items[0].Position = P.Vector(-2950.0 - ToDouble(Side) * 5100.0, 23.0, -4000.0)
+
+        Call Edited.Rebuild(Town)
+
+        Goal = Geometry.ToWorld(Town.Items[0], Door.Position)
+        Position = P.Vector(Goal.X, 22.5, -3680.0)
+
+        Call Check(Not Port.Contains(Goal.X, Goal.Z), "City Hall Keeps Its Own Collision And Stair Height")
+        Call Trail.Reset(Party, Position, 4, 22.0)
+        Call WalkTo(Position, Goal)
+        Call Check(Position.Y > 23.0, "City Hall Stairs Raise Arin Above Exterior Ground")
+    End For
+
+    Town.ItemCount = 0
+
+    Call Edited.Rebuild(Town)
+
+    Position = World(90.0, -150.0)
+
+    Call Trail.Reset(Party, Position, 4, 22.0)
+    Call WalkTo(Position, World(60.0, -150.0))
+    Call WalkTo(Position, World(0.0, -150.0))
+    Call WalkTo(Position, World(0.0, -52.0))
+
+    Goal = World(0.0, -45.7)
+
+    Call Port.Enable(True)
+    Call Check(Not Navigation.CanStand(Goal.X, Goal.Z), "Closed Entry Door Remains Solid")
+    Call WalkTo(Position, World(0.0, 20.0))
+    Call WalkTo(Position, World(40.0, 20.0))
+    Call WalkTo(Position, World(-40.0, 20.0))
+    Call WalkTo(Position, World(0.0, 20.0))
+    Call WalkTo(Position, World(0.0, -150.0))
+    Call WalkTo(Position, World(174.0, -150.0))
+    Call WalkTo(Position, World(174.0, -60.0))
+
+    Goal = World(106.5, 80.0)
+
+    Call Check(Not Navigation.CanStand(Goal.X, Goal.Z), "Terminal Side Wall Remains Solid")
+
+    Goal = World(0.0, 84.0)
+
+    Call Check(Not Navigation.CanStand(Goal.X, Goal.Z), "Central Spire Remains Solid")
+    Call Port.Enable(False)
+    Call Edited.Disable()
+    Call Check(Ok, "Regression Document Initializes")
+
+    Return Failures
+
+End Function
+
+End Module

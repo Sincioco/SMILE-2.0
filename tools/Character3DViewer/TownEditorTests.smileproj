@@ -35,6 +35,7 @@
     <SmileSource Include="TownSavePreparation.smile" />
     <SmileSource Include="TownStyleContours.smile" />
     <SmileSource Include="TownTerrainBuilder.smile" />
+    <SmileSource Include="TownTerrainSeams.smile" />
     <SmileSource Include="TownTerrainCache.smile" />
     <SmileSource Include="TownRoadSearch.smile" />
     <SmileSource Include="TownRoadStops.smile" />
