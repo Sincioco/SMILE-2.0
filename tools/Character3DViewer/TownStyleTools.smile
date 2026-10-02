@@ -1,0 +1,156 @@
+''' A local style stroke changes only appearance and publishes once, on release.
+Module Smile.Tools.TownStyleTools
+
+Option Explicit
+
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownSurfaceStyles As Styles
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.Precision3D As P
+
+Public Type State
+    Before As Styles.State
+    Working As Styles.State
+    OriginName As Text
+    BeforeRevision As Number
+    BeforeSurfaceRevision As Number
+    First As P.Vector3
+    Last As P.Vector3
+    Active As Boolean
+    Pending As Boolean
+    Changed As Boolean
+End Type
+
+Public Sub Cancel(ByRef Value As State, ByRef Town As Document.State)
+
+    If Value.Pending And Town.Name = Value.OriginName Then
+
+        Town.Appearance = Value.Before
+        Town.Revision = Value.BeforeRevision
+        Town.Surface.Revision = Value.BeforeSurfaceRevision
+
+    End If
+
+    Value.Active = False
+    Value.Pending = False
+
+End Sub
+
+Public Function Publish(ByRef Value As State, Ready As Boolean) As Boolean
+
+    If Value.Pending And Ready Then
+        Value.Pending = False
+        Return True
+    End If
+
+    Return False
+
+End Function
+
+''' Inclusive tile rectangle; surface kinds and heights are deliberately untouched.
+Public Function PaintRectangle(ByRef Value As Styles.State, ByRef Surface As Grid.State,
+    First As P.Vector3, Last As P.Vector3, Style As Number) As Boolean
+
+    Dim X0 As Number
+    Dim X1 As Number
+    Dim Z0 As Number
+    Dim Z1 As Number
+    Dim X As Number
+    Dim Z As Number
+    Dim Changed As Boolean
+
+    X0 = Max(0, Grid.CellX(Surface, Min(First.X, Last.X)))
+    X1 = Min(Surface.Columns - 1, Grid.CellX(Surface, Max(First.X, Last.X)))
+    Z0 = Max(0, Grid.CellZ(Surface, Min(First.Z, Last.Z)))
+    Z1 = Min(Surface.Rows - 1, Grid.CellZ(Surface, Max(First.Z, Last.Z)))
+
+    For Z = Z0 To Z1
+
+        For X = X0 To X1
+            Changed = Styles.Write(Value, Z * Surface.Columns + X, Style) Or Changed
+        End For
+    End For
+
+    Return Changed
+
+End Function
+
+Public Sub Gesture(ByRef Value As State, ByRef Town As Document.State,
+    Point As P.Vector3, Allowed As Boolean, Pressed As Boolean, Held As Boolean,
+    Area As Boolean, Style As Number)
+
+    Dim FirstX As Number
+    Dim FirstZ As Number
+    Dim LastX As Number
+    Dim LastZ As Number
+    Dim Steps As Number
+    Dim Step As Number
+    Dim X As Number
+    Dim Z As Number
+
+    If Value.Pending Then
+        Return
+    End If
+
+    If Pressed And Allowed Then
+
+        Value.Before = Town.Appearance
+        Value.Working = Town.Appearance
+        Value.BeforeRevision = Town.Revision
+        Value.BeforeSurfaceRevision = Town.Surface.Revision
+        Value.OriginName = Town.Name
+        Value.First = Point
+        Value.Last = Point
+        Value.Changed = False
+        Value.Active = True
+
+    End If
+
+    If Not Value.Active Then
+        Return
+    End If
+
+    If Allowed Then
+
+        If Not Area Then
+
+            FirstX = Grid.CellX(Town.Surface, Value.Last.X)
+            FirstZ = Grid.CellZ(Town.Surface, Value.Last.Z)
+            LastX = Grid.CellX(Town.Surface, Point.X)
+            LastZ = Grid.CellZ(Town.Surface, Point.Z)
+            Steps = Max(1, Max(Abs(LastX - FirstX), Abs(LastZ - FirstZ)))
+
+            For Step = 0 To Steps
+                X = FirstX + (LastX - FirstX) * Step / Steps
+                Z = FirstZ + (LastZ - FirstZ) * Step / Steps
+                Value.Changed = Styles.Write(Value.Working, Z * Town.Surface.Columns + X, Style) Or Value.Changed
+            End For
+
+        End If
+
+        Value.Last = Point
+
+    End If
+
+    If Not Held Then
+
+        If Area Then
+            Value.Changed = PaintRectangle(Value.Working, Town.Surface, Value.First, Value.Last, Style)
+        End If
+
+        Value.Active = False
+
+        If Value.Changed Then
+
+            Town.Appearance = Value.Working
+            Town.Surface.Revision = Town.Surface.Revision + 1
+            Town.Revision = Town.Revision + 1
+            Value.Pending = True
+
+        End If
+
+    End If
+
+End Sub
+
+End Module

@@ -6,6 +6,7 @@ Option Explicit
 Import Smile.Tools.TownSurfaceLayers As Layers
 Import Smile.Tools.TownDecks As Decks
 Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownSurfaceStyles As Styles
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.SurfaceGrid3D As Grid
 Import Smile.Simple3D.SurfaceContours3D As Contours
@@ -15,6 +16,8 @@ Import Smile.Simple3D.TerrainWater3D As Flow
 Import Smile.Tools.TownTerrainCache As Cache
 
 Public Type State
+    Appearance As Styles.State
+    Style As Number
     Surface As Grid.State
     SourceCurves As Paint.State
     Flows As Flow.Groups
@@ -27,6 +30,8 @@ End Type
 
 Public Sub Begin(ByRef Value As State, ByRef Town As Document.State)
 
+    Value.Appearance = Town.Appearance
+    Value.Style = 0
     Value.Surface = Town.Surface
     Value.SourceCurves = Town.Surface.Curves
     Value.Buffer.PatchCount = 0
@@ -53,6 +58,12 @@ Private Sub AddPatch(ByRef Value As State, X0 As Double, Z0 As Double,
     Value.Buffer.Patches[Value.Buffer.PatchCount].X1 = X1
     Value.Buffer.Patches[Value.Buffer.PatchCount].Z1 = Z1
     Value.Buffer.Patches[Value.Buffer.PatchCount].Kind = Kind
+    Value.Buffer.Patches[Value.Buffer.PatchCount].Style = 0
+
+    If Kind = 1 Or Kind = 3 Then
+        Value.Buffer.Patches[Value.Buffer.PatchCount].Style = Value.Style
+    End If
+
     Value.Buffer.Patches[Value.Buffer.PatchCount].Y0 = Y0
     Value.Buffer.Patches[Value.Buffer.PatchCount].Y1 = Y1
     Value.Buffer.Patches[Value.Buffer.PatchCount].Plane = Plane
@@ -233,11 +244,26 @@ Private Sub CurveTriangle(ByRef Value As State, PointA As P.Vector3, PointB As P
                 Group = Flow.GroupAt(Value.SourceCurves, Value.Flows,
                     (Face.PointA.X + Face.PointB.X + Face.PointC.X) / 3.0,
                     (Face.PointA.Z + Face.PointB.Z + Face.PointC.Z) / 3.0)
+
+                ' Clipped bank slivers can round their centroid just outside the brush.
+
+                If Group = 0 And Value.Flows.GroupCount > 0 Then
+                    Group = Max(Flow.GroupAt(Value.SourceCurves, Value.Flows, Face.PointA.X, Face.PointA.Z),
+                        Max(Flow.GroupAt(Value.SourceCurves, Value.Flows, Face.PointB.X, Face.PointB.Z),
+                        Flow.GroupAt(Value.SourceCurves, Value.Flows, Face.PointC.X, Face.PointC.Z)))
+                End If
+
                 Value.Buffer.Patches[PatchIndex].FlowGroup = Group
                 Height = Layers.WATER_Y
 
                 If Value.SourceCurves.BrushCount > 0 Then
                     Height = Layers.GROUND_Y - 1.0
+                End If
+
+                ' A level lake and its incoming flow share the same water datum.
+
+                If Value.Flows.GroupCount > 0 Then
+                    Height = Layers.GROUND_Y + 0.02 * Layers.UNITS_PER_METER
                 End If
 
                 If Group = 0 Then
@@ -298,6 +324,7 @@ Private Sub CurveRow(ByRef Value As State)
     Dim PointD As P.Vector3
     Dim Center As P.Vector3
     Dim Uniform As Boolean
+    Dim Style As Number
     Dim RunKind As Number
     Dim Base As Number
     Dim RowCurves As Paint.State
@@ -345,11 +372,15 @@ Private Sub CurveRow(ByRef Value As State)
                 Elevation.Corner(Value.Surface, X + 1, Value.Row + 1) = 0.0)
         End If
 
-        If First >= 0 And (Not Uniform Or Surface <> RunKind) Then
+        Style = Styles.Read(Value.Appearance, Value.Row * Value.Surface.Columns + X)
+
+        If First >= 0 And (Not Uniform Or Surface <> RunKind Or Style <> Value.Style) Then
             Call AddPatch(Value, Value.Surface.XEdges[First], PointA.Z, PointA.X, PointC.Z, RunKind)
 
             First = -1
         End If
+
+        Value.Style = Style
 
         If Uniform Then
 
@@ -357,6 +388,14 @@ Private Sub CurveRow(ByRef Value As State)
                 First = X
                 RunKind = Surface
             End If
+
+        Else If Value.Detailed Then
+
+            ' Use the terrain sampler's two canonical triangles. A four-way fan
+            ' duplicates coplanar water and can exhaust the bounded ribbon pool.
+
+            Call CurveTriangle(Value, PointA, PointB, PointC, Base)
+            Call CurveTriangle(Value, PointA, PointC, PointD, Base)
 
         Else
 
@@ -496,6 +535,7 @@ Public Sub ScanRow(ByRef Value As State)
 
     Do
         StartX = X
+        Value.Style = Styles.Read(Value.Appearance, Z * Value.Surface.Columns + X)
         Surface = Grid.ReadCell(Value.Surface, X, Z)
         Kind = Surface
 
@@ -506,7 +546,9 @@ Public Sub ScanRow(ByRef Value As State)
         Do
             X = X + 1
 
-        Loop Until X >= Value.Surface.Columns Or Grid.ReadCell(Value.Surface, X, Z) <> Surface
+        Loop Until (X >= Value.Surface.Columns Or Grid.ReadCell(Value.Surface, X, Z) <> Surface Or
+
+            Styles.Read(Value.Appearance, Z * Value.Surface.Columns + X) <> Value.Style)
 
         If Kind = Grid.SURFACE_WATER Then
             ' PointA submerged opaque bed seals the height gap and receives building shadows.
@@ -523,6 +565,7 @@ Public Sub ScanRow(ByRef Value As State)
 
     For X = 0 To Value.Surface.Columns - 1
 
+        Value.Style = Styles.Read(Value.Appearance, Z * Value.Surface.Columns + X)
         Surface = Grid.ReadCell(Value.Surface, X, Z)
         X0 = Value.Surface.XEdges[X]
         X1 = Value.Surface.XEdges[X + 1]

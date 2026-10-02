@@ -5,6 +5,7 @@ Option Explicit
 
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Tools.TownSurfaceStyles As SurfaceStyles
 
 Public Const MAX_ITEMS = 1024
 Public Const MAX_MAP_TILES = 4096
@@ -54,6 +55,7 @@ End Type
 Public Type State
     Landmark As Number
     TerrainStyle As Number
+    Appearance As SurfaceStyles.State
     CourtOffsetX As Double
     CourtOffsetZ As Double
     CourtPlaced As Boolean
@@ -246,6 +248,9 @@ Public Function Blank(ByRef Value As State, Name As Text, Columns As Number,
     Value.CourtOffsetX = 0.0
     Value.CourtOffsetZ = 0.0
     Value.CourtPlaced = False
+
+    Call SurfaceStyles.Reset(Value.Appearance)
+
     Value.TerrainStyle = 0
     Value.Name = Name
     Value.Landmark = LegacyLandmark(Name)
@@ -313,10 +318,14 @@ Public Function RemoveItem(ByRef Value As State, Index As Number) As Boolean
 
 End Function
 
-''' The current Blender converter preserves legacy geometry, not terrain elevations/flow.
-Public Function SupportsBlender(ByRef Value As State) As Boolean
+''' Elevated exports require the native prepared mesh, never a flat fallback.
+Public Function SupportsBlender(ByRef Value As State, Optional Prepared As Boolean = False) As Boolean
 
     Dim Index As Number
+
+    If Prepared Then
+        Return True
+    End If
 
     If Value.Surface.Heights.Nonzero > 0 Then
         Return False

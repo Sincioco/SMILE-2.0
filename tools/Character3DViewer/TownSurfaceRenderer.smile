@@ -12,6 +12,7 @@ Import Smile.Simple3D.Graphics3D As G
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PrecisionMath3D As M
 Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.TerrainSurface3D As Terrain
 Import Smile.Simple3D.SurfaceContours3D As Contours
 Import Smile.Simple3D.SurfacePaint3D As Paint
 Import Smile.Tools.TownTerrainCache As Cache
@@ -31,6 +32,7 @@ Public Type State
     NextFlowMaterials[3] As Core.Material3D
     FlowGroup As Number
     PendingStyle As Number
+    StyleGroup As Number
     Textures[2] As Core.Texture3D
     LiveRevision As Number
     PendingRevision As Number
@@ -107,6 +109,12 @@ Public Sub BeginBuild(ByRef Value As State, ByRef Town As Document.State)
 
     Ok = Not Value.Recipe.Failed
 
+    If Value.Recipe.Flows.GroupCount > 0 Then
+        Ok = G.SetEffectMaterial3D(Value.Materials[2], G.MATERIAL_ALPHA_BLEND, 30, 100, 140, 100, 100) And Ok
+    Else
+        Ok = G.SetEffectMaterial3D(Value.Materials[2], G.MATERIAL_ALPHA_BLEND, 30, 100, 240, 100, 100) And Ok
+    End If
+
     For Index = 0 To 2
 
         Call G.DestroyMaterial3D(Value.NextFlowMaterials[Index])
@@ -127,7 +135,7 @@ Public Sub BeginBuild(ByRef Value As State, ByRef Town As Document.State)
     CacheTown = Town
     Value.CacheBatch = 0
     Value.CacheBatches = 0
-    Value.CacheKey = Derived.ReadKey(Town, "Terrain5", False)
+    Value.CacheKey = Derived.ReadKey(Town, "Terrain7", False)
     Value.CacheRead = Text_Length(Value.CacheKey) > 0
     Value.CacheOk = True
 
@@ -137,13 +145,14 @@ Public Sub BeginBuild(ByRef Value As State, ByRef Town As Document.State)
     End If
 
     If Not Value.CacheRead Then
-        Value.CacheKey = Derived.WriteKey(Town.Name, "Terrain5")
+        Value.CacheKey = Derived.WriteKey(Town.Name, "Terrain7")
     End If
 
     Value.PendingStyle = Town.TerrainStyle
     Value.Recipe.Buffer.PatchCount = 0
     Value.PendingRevision = Town.Surface.Revision
     Value.Recipe.Row = 0
+    Value.StyleGroup = 0
     Value.Kind = 1
     Value.FlowGroup = 0
     Value.Cursor = 0
@@ -185,7 +194,7 @@ Private Sub ReadCachedBatch(ByRef Value As State)
         Value.CacheRead = False
         Value.CacheOk = True
         Value.CacheBatch = 0
-        Value.CacheKey = Derived.WriteKey(CacheTown.Name, "Terrain5")
+        Value.CacheKey = Derived.WriteKey(CacheTown.Name, "Terrain7")
         Value.Recipe.Row = 0
         Value.Recipe.Buffer.PatchCount = 0
         Value.Stage = 1
@@ -215,6 +224,51 @@ Private Function Vertex(Mesh As Number, Index As Number, X As Double,
 
 End Function
 
+''' Continuous lighting across triangle boundaries; collision retains the exact height mesh.
+Public Function ShadingNormal(ByRef Surface As Grid.State, X As Double, Z As Double) As P.Vector3
+
+    Dim LowX As Double
+    Dim HighX As Double
+    Dim LowZ As Double
+    Dim HighZ As Double
+    Dim First As Terrain.Sample
+    Dim Last As Terrain.Sample
+    Dim GradientX As Double
+    Dim GradientZ As Double
+    Dim Result As P.Vector3
+    Dim Ok As Boolean
+
+    LowX = Max(Surface.XEdges[0], X - Surface.CellSize)
+    HighX = Min(Surface.XEdges[Surface.Columns], X + Surface.CellSize)
+    LowZ = Max(Surface.ZEdges[0], Z - Surface.CellSize)
+    HighZ = Min(Surface.ZEdges[Surface.Rows], Z + Surface.CellSize)
+    First = Terrain.SamplePoint(Surface, LowX, Z)
+    Last = Terrain.SamplePoint(Surface, HighX, Z)
+    GradientX = (Last.Offset - First.Offset) / Max(0.001, HighX - LowX)
+    First = Terrain.SamplePoint(Surface, X, LowZ)
+    Last = Terrain.SamplePoint(Surface, X, HighZ)
+    GradientZ = (Last.Offset - First.Offset) / Max(0.001, HighZ - LowZ)
+    Ok = M.TryNormalize(P.Vector(-GradientX, 1.0, -GradientZ), Result)
+
+    Return Result
+
+End Function
+
+Private Function TerrainVertex(ByRef Surface As Grid.State, Mesh As Number, Index As Number,
+    X As Double, Y As Double, Z As Double, Kind As Number) As Boolean
+
+    Dim Normal As P.Vector3
+    Dim Ok As Boolean
+
+    Normal = ShadingNormal(Surface, X, Z)
+    Ok = Vertex(Mesh, Index, X, Y, Z, Kind)
+    Ok = G.SetMeshNormal3D(Mesh, Index, ToNumber(Normal.X * 1000.0),
+        ToNumber(Normal.Y * 1000.0), ToNumber(Normal.Z * 1000.0)) And Ok
+
+    Return Ok
+
+End Function
+
 Private Sub UploadNext(ByRef Value As State)
 
     Dim Index As Number
@@ -226,8 +280,9 @@ Private Sub UploadNext(ByRef Value As State)
     Dim Height As Double
     Dim WaterHeight As Double
     Dim Ok As Boolean
-    Dim Normal As P.Vector3
     Dim NormalIndex As Number
+    Dim FaceNormal As P.Vector3
+    Dim Style As Number
 
     StopIndex = Value.Cursor
 
@@ -238,7 +293,8 @@ Private Sub UploadNext(ByRef Value As State)
         End If
 
         If (Value.Recipe.Buffer.Patches[StopIndex].Kind = Value.Kind And
-            (Value.Kind <> 2 Or Value.Recipe.Buffer.Patches[StopIndex].FlowGroup = Value.FlowGroup)) Then
+            (Value.Kind <> 2 Or Value.Recipe.Buffer.Patches[StopIndex].FlowGroup = Value.FlowGroup) And
+            Value.Recipe.Buffer.Patches[StopIndex].Style = Value.StyleGroup) Then
             Total = Total + 1
         End If
 
@@ -287,7 +343,9 @@ Private Sub UploadNext(ByRef Value As State)
 
             Part = Value.Recipe.Buffer.Patches[Index]
 
-            If Part.Kind = Value.Kind And (Value.Kind <> 2 Or Part.FlowGroup = Value.FlowGroup) Then
+            If (Part.Kind = Value.Kind And
+                (Value.Kind <> 2 Or Part.FlowGroup = Value.FlowGroup) And
+                Part.Style = Value.StyleGroup) Then
 
                 If Value.Kind = 2 And Part.Plane = 5 Then
 
@@ -324,19 +382,23 @@ Private Sub UploadNext(ByRef Value As State)
 
                 Else If Part.Plane = 5 Then
 
-                    Ok = Vertex(Mesh, Point, Part.X0, Part.Y0, Part.Z0, Value.Kind) And Ok
-                    Ok = Vertex(Mesh, Point + 1, Part.X1, Part.Y1, Part.Z1, Value.Kind) And Ok
-                    Ok = Vertex(Mesh, Point + 2, Part.X2, Part.Y2, Part.Z2, Value.Kind) And Ok
-                    Ok = Vertex(Mesh, Point + 3, Part.X2, Part.Y2, Part.Z2, Value.Kind) And Ok
-                    Normal = M.Cross(P.Vector(Part.X1 - Part.X0, Part.Y1 - Part.Y0, Part.Z1 - Part.Z0),
+                    Ok = TerrainVertex(Value.Recipe.Surface, Mesh, Point, Part.X0, Part.Y0, Part.Z0, Value.Kind) And Ok
+                    Ok = TerrainVertex(Value.Recipe.Surface, Mesh, Point + 1, Part.X1, Part.Y1, Part.Z1, Value.Kind) And Ok
+                    Ok = TerrainVertex(Value.Recipe.Surface, Mesh, Point + 2, Part.X2, Part.Y2, Part.Z2, Value.Kind) And Ok
+                    Ok = TerrainVertex(Value.Recipe.Surface, Mesh, Point + 3, Part.X2, Part.Y2, Part.Z2, Value.Kind) And Ok
+
+                    FaceNormal = M.Cross(P.Vector(Part.X1 - Part.X0, Part.Y1 - Part.Y0, Part.Z1 - Part.Z0),
                         P.Vector(Part.X2 - Part.X0, Part.Y2 - Part.Y0, Part.Z2 - Part.Z0))
 
-                    If M.TryNormalize(Normal, Normal) Then
+                    If Abs(FaceNormal.Y) < 0.000001 Then
+
+                        ' Vertical curb faces retain their outward normal, not the ground gradient.
+                        Ok = M.TryNormalize(FaceNormal, FaceNormal) And Ok
 
                         For NormalIndex = 0 To 3
                             Ok = G.SetMeshNormal3D(Mesh, Point + NormalIndex,
-                                ToNumber(Normal.X * 1000.0), ToNumber(Normal.Y * 1000.0),
-                                ToNumber(Normal.Z * 1000.0)) And Ok
+                                ToNumber(FaceNormal.X * 1000.0), ToNumber(FaceNormal.Y * 1000.0),
+                                ToNumber(FaceNormal.Z * 1000.0)) And Ok
                         End For
 
                     End If
@@ -408,7 +470,13 @@ Private Sub UploadNext(ByRef Value As State)
         Else
             Ok = G.CommitMesh3D(Mesh) And Ok
             Value.NextObjects[Value.NextCount] = G.CreateObjectFromMesh3D(Mesh)
-            Ok = G.SetObjectMaterial3D(Value.NextObjects[Value.NextCount], Value.Materials[Styles.Slot(Value.Kind, Value.PendingStyle)]) And Ok
+            Style = Value.PendingStyle
+
+            If Value.StyleGroup > 0 Then
+                Style = Value.StyleGroup - 1
+            End If
+
+            Ok = G.SetObjectMaterial3D(Value.NextObjects[Value.NextCount], Value.Materials[Styles.Slot(Value.Kind, Style)]) And Ok
             Ok = G.SetObjectCullMode3D(Value.NextObjects[Value.NextCount], G.OBJECT_CULL_NONE) And Ok
 
             ' Flat terrain receives scenery shadows. Casting onto itself creates
@@ -426,11 +494,21 @@ Private Sub UploadNext(ByRef Value As State)
 
     If Value.Cursor >= Value.Recipe.Buffer.PatchCount Then
 
-        If Value.Kind = 2 And Value.FlowGroup < Value.Recipe.Flows.GroupCount Then
+        If ((Value.Kind = 1 Or Value.Kind = 3) And
+            Value.StyleGroup < 4 And
+            Value.Recipe.Appearance.Nonzero > 0) Then
+
+            Value.StyleGroup = Value.StyleGroup + 1
+
+        Else If Value.Kind = 2 And Value.FlowGroup < Value.Recipe.Flows.GroupCount Then
+
             Value.FlowGroup = Value.FlowGroup + 1
+
         Else
             Value.Kind = Value.Kind + 1
+            Value.StyleGroup = 0
             Value.FlowGroup = 0
+
         End If
 
         Value.Cursor = 0
@@ -504,6 +582,7 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
 
             If Value.CacheRead And Value.CacheBatch < Value.CacheBatches Then
 
+                Value.StyleGroup = 0
                 Value.Kind = 1
                 Value.Cursor = 0
 
@@ -516,6 +595,7 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
             If Value.Recipe.Row < Value.Recipe.Surface.Rows Then
 
                 Value.Recipe.Buffer.PatchCount = 0
+                Value.StyleGroup = 0
                 Value.Kind = 1
                 Value.Cursor = 0
                 Value.Stage = 1
@@ -555,7 +635,7 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
                 Ok = Derived.WriteNumber(Value.CacheBatch, Value.CacheKey + ".Batches")
 
                 If Ok Then
-                    Ok = Derived.Commit(CacheTown, "Terrain5", Value.CacheKey)
+                    Ok = Derived.Commit(CacheTown, "Terrain7", Value.CacheKey)
                 End If
 
             End If

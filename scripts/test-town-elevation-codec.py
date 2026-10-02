@@ -31,7 +31,7 @@ for bad in (float('nan'), float('inf'), -10000.01):
         pass
     else:
         raise AssertionError('Invalid elevation accepted')
-for raw in (document['payload'][:-1], document['payload'][:3]+b'\x0c'+document['payload'][4:]):
+for raw in (document['payload'][:-1], document['payload'][:3]+b'\x0d'+document['payload'][4:]):
     try:
         decode(raw, catalog)
     except ValueError:
@@ -50,7 +50,7 @@ patches = read_prepared(lambda suffix: unwrap(key_path(
     folder, 'Preparation.Snapshot' + suffix).read_bytes()))
 vertices, faces, materials = mesh_data(patches)
 assert vertices and faces and len(materials) == len(faces)
-print('PASS Blender reader accepts legacy terrain in the new prepared version4')
+print('PASS Blender reader accepts legacy terrain in the current prepared version')
 
 # Current TWN9 curves and an older supported fixture stay on their legacy versions.
 for relative in ('tools/Character3DViewer/Fixtures/DenseCanals.town',
@@ -63,3 +63,20 @@ for relative in ('tools/Character3DViewer/Fixtures/DenseCanals.town',
     assert reopened.get('curves') == legacy.get('curves')
     require_blender_support(reopened)
     print('PASS legacy TWN%d: %s' % (legacy['payload'][3], path.name))
+
+# Native local-style output uses the same mixed-style contract as the Blender worker.
+mixed = decode(unwrap(key_path(folder, 'Styles.Mixed').read_bytes()), catalog)
+assert mixed['payload'][3] == 12
+assert mixed['terrain_style'] == 1 and mixed['appearance'][:3] == [1,4,0]
+assert decode(encode(mixed, catalog), catalog)['appearance'] == mixed['appearance']
+require_blender_support(mixed)
+for style in (-1, 5):
+    bad = copy.deepcopy(mixed)
+    bad['appearance'][0] = style
+    try:
+        encode(bad, catalog)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError('Invalid tile style accepted')
+print('PASS native/Python TWN12 explicit/inherited appearance and invalid-style rejection')

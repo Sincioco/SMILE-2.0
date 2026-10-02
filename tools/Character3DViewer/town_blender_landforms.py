@@ -45,17 +45,22 @@ def populate(item, matrix, output):
 
 
 def terrain_style(document, mesh):
+    # Reserve explicit Meadow before replacing the map-wide default slots.
+    defaults = (mesh.materials[0], mesh.materials[2])
+    mesh.materials.append(defaults[0])
+    mesh.materials.append(defaults[1])
+    for style, rgb in enumerate(((9,26,6),(45,52,41),(127,83,34)), 1):
+        for road in (False, True):
+            mat=bpy.data.materials.new('Town Terrain Style %d-%d'%(style,road))
+            mat.use_nodes=True
+            node=next(n for n in mat.node_tree.nodes if n.type=='BSDF_PRINCIPLED')
+            values=tuple((c*f//100 if road else c)/255 for c,f in zip(rgb,(72,64,57)))
+            if road and style == 1:
+                values=tuple(c/255 for c in (33,22,10))
+            node.inputs['Base Color'].default_value=values+(1,)
+            node.inputs['Roughness'].default_value=1
+            mesh.materials.append(mat)
     style=document.get('terrain_style',0)
-    if not style:
-        return
-    rgb=((9,26,6),(45,52,41),(127,83,34))[style-1]
-    for slot,road in ((0,False),(2,True)):
-        mat=bpy.data.materials.new('Town Terrain Style %d-%d'%(style,slot))
-        mat.use_nodes=True
-        node=next(n for n in mat.node_tree.nodes if n.type=='BSDF_PRINCIPLED')
-        values=tuple((c*f//100 if road else c)/255 for c,f in zip(rgb,(72,64,57)))
-        if road and style == 1:
-            values=tuple(c/255 for c in (33,22,10))
-        node.inputs['Base Color'].default_value=values+(1,)
-        node.inputs['Roughness'].default_value=1
-        mesh.materials[slot]=mat
+    if style:
+        mesh.materials[0]=mesh.materials[6+style*2]
+        mesh.materials[2]=mesh.materials[7+style*2]

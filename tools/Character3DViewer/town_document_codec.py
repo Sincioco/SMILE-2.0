@@ -1,4 +1,4 @@
-"""Bounded TWN1–TWN11 codec shared by the existing Blender document worker."""
+"""Bounded TWN1–TWN12 codec shared by the existing Blender document worker."""
 import math
 from functools import lru_cache
 import hashlib
@@ -152,9 +152,10 @@ def landmark(document):
     return document.get('landmark', legacy_landmark(document['name']))
 
 
-def require_blender_support(document):
-    if any(document.get('heights', [])) or any(flow[0] for flow in document.get('flows', [])):
-        raise ValueError('Blender elevations/directed flow unsupported. Use Save For Viewer; destination retained.')
+def require_blender_support(document, patches=None):
+    if patches is None and (any(document.get('heights', [])) or
+                            any(flow[0] for flow in document.get('flows', []))):
+        raise ValueError('Elevated Blender export requires prepared Studio geometry; destination retained.')
 
 
 def decode(payload, catalog, request=False):
@@ -162,7 +163,7 @@ def decode(payload, catalog, request=False):
     if bytes(r.byte() for _ in range(3)) != b'TWN':
         raise ValueError('Unsupported town format')
     version = r.byte()
-    if not 1 <= version <= 11:
+    if not 1 <= version <= 12:
         raise ValueError('Unsupported town format')
     fingerprint = catalog.get('document_fingerprint') or hashlib.sha256(json.dumps(catalog, sort_keys=True).encode()).hexdigest()
     if r.name() != fingerprint:
@@ -286,6 +287,17 @@ def decode(payload, catalog, request=False):
         if len(groups) > 3:
             raise ValueError('More than three distinct flow directions/speeds')
         result['flows'] = flows
+    if version >= 12:
+        total = r.integer()
+        if total != columns * rows:
+            raise ValueError('Invalid appearance cell count')
+        appearance = []
+        while len(appearance) < total:
+            length, style = r.integer(), r.integer()
+            if not 1 <= length <= total-len(appearance) or not 0 <= style <= 4:
+                raise ValueError('Invalid tile appearance run')
+            appearance.extend([style]*length)
+        result['appearance'] = appearance
     result['payload'] = payload[:r.offset]
     if request:
         result['mode'], result['request_id'] = r.integer(), r.integer()
@@ -414,6 +426,13 @@ def encode(document, catalog):
         raise ValueError('Invalid water metadata count')
     if any(heights) or any(any(flow) for flow in flows):
         version = 11
+    appearance = document.get('appearance', [])
+    if appearance and len(appearance) != document['columns'] * document['rows']:
+        raise ValueError('Invalid appearance cell count')
+    if any(not isinstance(style, int) or not 0 <= style <= 4 for style in appearance):
+        raise ValueError('Invalid tile appearance')
+    if any(appearance):
+        version = 12
     result = bytearray(b'TWN') + bytes([version]) + name(fingerprint) + name(document['name']) + b'\0'
     precise = lambda value: integer(round(value * 1000000))
     result += integer(document['columns']) + integer(document['rows']) + precise(document['cell_size'])
@@ -473,6 +492,15 @@ def encode(document, catalog):
             if len(flow) != 3 or any(not isinstance(value, int) for value in flow):
                 raise ValueError('Invalid water metadata')
             result += b''.join(integer(value) for value in flow)
+    if version >= 12:
+        result += integer(len(appearance))
+        start = 0
+        while start < len(appearance):
+            end = start+1
+            while end < len(appearance) and appearance[end] == appearance[start]:
+                end += 1
+            result += integer(end-start) + integer(appearance[start])
+            start = end
     if len(result) > 524288:
         raise ValueError('Town exceeds the native 512 KiB document limit')
     decode(result, catalog)  # Same format/range checks apply in both directions.

@@ -14,6 +14,9 @@
     <SmileSource Include="TownWaterTests.smile" />
     <SmileSource Include="TownTerrainPersistenceTests.smile" />
     <SmileSource Include="TownDocument.smile" />
+    <SmileSource Include="TownSurfaceStyles.smile" />
+    <SmileSource Include="TownStyleTools.smile" />
+    <SmileSource Include="TownStyleTests.smile" />
     <SmileSource Include="TownMapLoads.smile" />
     <SmileSource Include="TownGeometry.smile" />
     <SmileSource Include="TownDecks.smile" />

@@ -38,6 +38,8 @@ Public Type State
     RecentLabels[10] As Text
     RecentCount As Number
     Pending As Document.State
+    SuppressReveal As Boolean
+    BatchLabel As Text
 End Type
 
 Public Function BlocksEditing(ByRef Value As State) As Boolean
@@ -53,7 +55,7 @@ End Function
 Private Dim Bytes[170000] As Number
 Private Dim Offset As Number
 
-Private Function IdText(Id As Number) As Text
+Public Function IdText(Id As Number) As Text
 
     Dim Result As Text
 
@@ -100,7 +102,7 @@ Private Sub PutInteger(Value As Number)
 End Sub
 
 Public Function Queue(ByRef Value As State, ByRef Town As Document.State,
-    Operation As Number, Path As Text) As Boolean
+    Operation As Number, Path As Text, Optional RememberCurrent As Boolean = True) As Boolean
 
     Dim Id As Number
     Dim Ok As Boolean
@@ -116,11 +118,13 @@ Public Function Queue(ByRef Value As State, ByRef Town As Document.State,
     Value.DialogVisible = Operation = SAVE_VIEWER Or Operation = SAVE_BLENDER Or Operation = SAVE_PERMANENT
     Value.Failed = False
     Value.Progress = 0
+    Value.SuppressReveal = False
+    Value.BatchLabel = ""
 
-    If Operation = SAVE_BLENDER And Not Document.SupportsBlender(Town) Then
+    If Operation = SAVE_BLENDER And Not Document.SupportsBlender(Town, True) Then
 
         Value.Failed = True
-        Value.Message = "Blender: elevations/directed flow unsupported. Use Save For Viewer."
+        Value.Message = "Blender: elevations/directed flow unsupported. Use Save for Viewer."
         Return False
 
     End If
@@ -128,7 +132,11 @@ Public Function Queue(ByRef Value As State, ByRef Town As Document.State,
     Load Id From "TownEditor.File.Sequence" Default 0
     Id = Id + 1
     Save Id To "TownEditor.File.Sequence"
-    Ok = Library.Remember(Town)
+    Ok = True
+
+    If RememberCurrent Then
+        Ok = Library.Remember(Town)
+    End If
 
     If (Ok And
         (Operation = SAVE_VIEWER Or Operation = SAVE_BLENDER Or Operation = SAVE_PERMANENT)) Then
@@ -266,10 +274,10 @@ Public Sub Choose(ByRef Value As State, ByRef Town As Document.State, Operation 
 
     Saving = Operation = SAVE_VIEWER Or Operation = SAVE_BLENDER
     Extension = "town"
-    Title = "Open Town For Viewer"
+    Title = "Open Town for Viewer"
 
     If Saving Then
-        Title = "Save Town For Viewer"
+        Title = "Save Town for Viewer"
     End If
 
     If Operation = SAVE_BLENDER Or Operation = OPEN_BLENDER Then
@@ -278,7 +286,7 @@ Public Sub Choose(ByRef Value As State, ByRef Town As Document.State, Operation 
         Title = "Open Blender File"
 
         If Saving Then
-            Title = "Save Town For Blender"
+            Title = "Save Town for Blender"
         End If
 
     End If
@@ -461,7 +469,10 @@ Public Function Update(ByRef Value As State, ByRef Town As Document.State, Elaps
                 Ok = RememberFile(Value) And Ok
             End If
 
-            Ok = File_Reveal(Value.Path) And Ok
+            If Not Value.SuppressReveal Then
+                Ok = File_Reveal(Value.Path) And Ok
+            End If
+
             Ok = Locations.Remember(Value.Path, Value.Operation = SAVE_BLENDER) And Ok
             Opened = Value.SaveAsCopy
 
@@ -520,7 +531,7 @@ Public Function FileLabel(Path As Text) As Text
 
 End Function
 
-Private Function SafeName(Name As Text) As Text
+Public Function SafeName(Name As Text) As Text
 
     Dim Index As Number
     Dim Letter As Number

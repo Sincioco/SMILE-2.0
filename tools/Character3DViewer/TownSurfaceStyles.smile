@@ -1,0 +1,234 @@
+''' Optional tile appearance. Zero inherits the map style; 1..4 explicitly select a style.
+Module Smile.Tools.TownSurfaceStyles
+
+Option Explicit
+
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.SurfaceSections3D As Regions
+
+Public Type State
+    Pages[1024] As Text
+    Nonzero As Number
+End Type
+
+Public Sub Reset(ByRef Value As State)
+
+    Dim Index As Number
+
+    For Index = 0 To 1023
+        Value.Pages[Index] = ""
+    End For
+
+    Value.Nonzero = 0
+
+End Sub
+
+Public Function Read(ByRef Value As State, Index As Number) As Number
+
+    Dim Page As Text
+    Dim Result As Number
+
+    If (Index < 0 Or
+        Index >= 262144 Or
+        Value.Nonzero = 0) Then
+        Return 0
+    End If
+
+    Page = Value.Pages[Index / 256]
+
+    If Text_Length(Page) = 256 Then
+        Result = Text_Code_At(Page, Index Mod 256) - 48
+    End If
+
+    Return Result
+
+End Function
+
+''' Immutable text shares unchanged pages across undo snapshots.
+Public Function Write(ByRef Value As State, Index As Number, Style As Number) As Boolean
+
+    Dim Previous As Number
+    Dim Page As Text
+    Dim Position As Number
+    Dim Step As Number
+
+    If (Index < 0 Or
+        Index >= 262144 Or
+        Style < 0 Or
+        Style > 4) Then
+        Return False
+    End If
+
+    Previous = Read(Value, Index)
+
+    If Previous = Style Then
+        Return False
+    End If
+
+    Page = Value.Pages[Index / 256]
+
+    If Text_Length(Page) = 0 Then
+
+        Page = "0"
+
+        For Step = 1 To 8
+            Page = Page + Page
+        End For
+
+    End If
+
+    Position = Index Mod 256
+    Page = (Text_Slice(Page, 0, Position) + Text_From_Code(48 + Style) +
+        Text_Slice(Page, Position + 1, 255 - Position))
+
+    If Style = 0 Then
+
+        For Step = 0 To 255
+
+            If Text_Code_At(Page, Step) <> 48 Then
+                Exit For
+            End If
+
+        End For
+
+        If Step = 256 Then
+            Page = ""
+        End If
+
+    End If
+
+    Value.Pages[Index / 256] = Page
+
+    If Previous = 0 Then
+        Value.Nonzero = Value.Nonzero + 1
+    Else If Style = 0 Then
+        Value.Nonzero = Value.Nonzero - 1
+    End If
+
+    Return True
+
+End Function
+
+Public Function Same(ByRef First As State, ByRef Second As State) As Boolean
+
+    Dim Index As Number
+
+    If First.Nonzero <> Second.Nonzero Then
+        Return False
+    End If
+
+    For Index = 0 To 1023
+
+        If First.Pages[Index] <> Second.Pages[Index] Then
+            Return False
+        End If
+
+    End For
+
+    Return True
+
+End Function
+
+Public Function Valid(ByRef Value As State, CellCount As Number) As Boolean
+
+    Dim Page As Number
+    Dim Offset As Number
+    Dim Code As Number
+    Dim Nonzero As Number
+
+    If CellCount < 1 Or CellCount > 262144 Then
+        Return False
+    End If
+
+    For Page = 0 To 1023
+
+        If Text_Length(Value.Pages[Page]) <> 0 Then
+
+            If Text_Length(Value.Pages[Page]) <> 256 Then
+                Return False
+            End If
+
+            For Offset = 0 To 255
+
+                Code = Text_Code_At(Value.Pages[Page], Offset) - 48
+
+                If (Code < 0 Or
+                    Code > 4 Or
+                    (Page * 256 + Offset >= CellCount And Code <> 0)) Then
+                    Return False
+                End If
+
+                If Code > 0 Then
+                    Nonzero = Nonzero + 1
+                End If
+
+            End For
+
+        End If
+
+    End For
+
+    Dim Result As Boolean
+
+    Result = Nonzero = Value.Nonzero
+
+    Return Result
+
+End Function
+
+''' Section transfer may split grid edges. Remap from the immutable source grid.
+Public Sub Transfer(ByRef Source As State, ByRef SourceGrid As Grid.State,
+    ByRef Target As State, ByRef TargetGrid As Grid.State, Area As Regions.Region,
+    DeltaX As Double, DeltaZ As Double, Move As Boolean)
+
+    Dim Destination As Regions.Region
+    Dim X As Number
+    Dim Z As Number
+    Dim Px As Double
+    Dim Pz As Double
+    Dim Style As Number
+    Dim Changed As Boolean
+
+    Call Reset(Target)
+
+    If Source.Nonzero = 0 Then
+        Return
+    End If
+
+    Destination = Regions.Shift(Area, DeltaX, DeltaZ)
+
+    For Z = 0 To TargetGrid.Rows - 1
+
+        For X = 0 To TargetGrid.Columns - 1
+
+            Px = (TargetGrid.XEdges[X] + TargetGrid.XEdges[X + 1]) * 0.5
+            Pz = (TargetGrid.ZEdges[Z] + TargetGrid.ZEdges[Z + 1]) * 0.5
+            Style = -1
+
+            If Regions.Contains(Destination, Px, Pz) Then
+                Px = Px - DeltaX
+                Pz = Pz - DeltaZ
+            Else If Move And Regions.Contains(Area, Px, Pz) Then
+                Style = 0
+            End If
+
+            If Style < 0 Then
+
+                Style = 0
+
+                If (Px >= SourceGrid.XEdges[0] And
+                    Px < SourceGrid.XEdges[SourceGrid.Columns] And
+                    Pz >= SourceGrid.ZEdges[0] And
+                    Pz < SourceGrid.ZEdges[SourceGrid.Rows]) Then
+                    Style = Read(Source, Grid.CellZ(SourceGrid, Pz) * SourceGrid.Columns + Grid.CellX(SourceGrid, Px))
+                End If
+
+            End If
+
+            Changed = Write(Target, Z * TargetGrid.Columns + X, Style)
+        End For
+    End For
+
+End Sub
+
+End Module

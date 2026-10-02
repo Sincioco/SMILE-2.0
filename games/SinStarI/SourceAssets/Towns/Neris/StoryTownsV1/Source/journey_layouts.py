@@ -43,18 +43,35 @@ def forest_height(x, z):
     return height
 
 
-MOUNTAIN_RAMPS = [([(-140, -100), (-140, 110), (-185, 220)], 54),
-                  ([(115, -90), (185, -165), (205, -265)], 38)]
+MOUNTAIN_PASS = [(-388,0),(-300,0),(-240,-100),(-140,-100),(-75,55),
+                 (30,55),(115,-90),(225,-90),(300,0),(388,0)]
+MOUNTAIN_RAMPS = [([(0, 55), (0, 140), (-90, 170), (-185, 220)], 116),
+                  ([(180, -90), (140, -165), (150, -255), (205, -265)], 98)]
 
 
-def mountain_height(x, z):
-    hills = [(-185, 220, 122, 108, 54), (205, -265, 106, 91, 38),
-             (235, 235, 128, 105, 68), (-285, -260, 95, 110, 31)]
-    height = max(peak*smooth((1-math.hypot((x-cx)/rx, (z-cz)/rz))/.55)
-                 for cx, cz, rx, rz, peak in hills)
-    # Carve broad, steady-grade approaches into the mountain field. Each ends
-    # inside a genuinely flat summit; the native validator checks a 4 m corridor.
-    for points, peak in MOUNTAIN_RAMPS:
+def mountain_height(x, z, valley, ramps):
+    # Overlapping asymmetric massifs form connected ridges and saddles. Fluted
+    # slopes use continuous, deterministic functions, not repeated mountain props.
+    hills = [(-310,235,185,175,132,.4),(-185,220,205,180,116,1.2),
+             (-5,285,205,195,166,2.1),(210,260,220,200,148,.8),
+             (340,170,175,185,112,1.7),(-285,-285,225,215,142,2.8),
+             (-70,-300,215,220,174,1.5),(205,-265,220,210,98,.2),
+             (340,-270,180,205,128,2.4)]
+    height = 0
+    for cx,cz,rx,rz,peak,phase in hills:
+        dx,dz=(x-cx)/rx,(z-cz)/rz
+        radius=math.hypot(dx,dz)
+        angle=math.atan2(dz,dx)
+        ribs=1+.12*math.sin(angle*7+phase)+.055*math.sin(angle*13-phase)
+        radius*=1+(ribs-1)*smooth(radius*4)
+        flank=max(0,1-radius)**1.18
+        height=max(height,peak*flank)
+    # Broad green lower slopes surround a navigable winding valley floor.
+    height *= smooth((distance(x,z,valley)-28)/65)
+    # Retain two flat accessible lookouts and wide, steady-grade approaches.
+    for points, peak in ramps:
+        summit=math.dist((x,z),points[-1])
+        height+=(peak-height)*(1-smooth((summit-18)/35))
         lengths = [math.dist(a,b) for a,b in zip(points, points[1:])]
         total, travelled = sum(lengths), 0
         best = (1e9, 0)
@@ -64,7 +81,7 @@ def mountain_height(x, z):
             if d < best[0]:
                 best = (d, peak*(travelled+t*length)/total)
             travelled += length
-        blend = 1-smooth((best[0]-11)/40)
+        blend = 1-smooth((best[0]-18)/40)
         height += (best[1]-height)*blend
     return height
 
@@ -100,9 +117,9 @@ def forest():
 def mountains():
     t=base('Greyglass Pass',800,2)
     t.wilderness=True
-    path=[(-388,0),(-300,0),(-240,-100),(-140,-100),(-75,55),(30,55),(115,-90),(225,-90),(300,0),(388,0)]
+    path=MOUNTAIN_PASS
     path=t.path(path,18)
-    # Four different terrain masses replace the repeated wall of identical props.
+    # Small rocky outcrops add scale below the continuous authored mountain field.
     for x,z,scale,yaw in [(-325,190,.65,20),(-265,285,.8,120),(-35,250,.55,210),
                            (305,155,.9,65),(300,-270,.6,175),(-275,-285,.75,285)]:
         t.place(35,x,z,scale,yaw)
@@ -113,11 +130,11 @@ def mountains():
     t.place(5,-240,-150,1.25,180)
     t.lamps([(-305,22),(-190,-74),(2,85),(221,-58),(320,25)],1.5)
     t.gates(destinations=('Verdant Reach','East Valley'))
-    t.height=mountain_height
+    t.height=lambda x,z: mountain_height(x,z,path,list(zip(ramps,[p for _,p in MOUNTAIN_RAMPS])))
     t.acceptance_paths=[path]+ramps+[[(0,0),(0,55)]]
     t.path(t.acceptance_paths[-1],12)
     t.notes=['Rocky switchback route linking the forest to East Valley.',
-             'Varied terrain mountains include flat 54 m and 38 m summits reached by broad ramps.']
+             'Connected fluted ridgelines enclose a winding valley; broad ramps reach 116 m and 98 m lookouts.']
     return t
 
 

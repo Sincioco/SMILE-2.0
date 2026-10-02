@@ -1,5 +1,78 @@
 # Character Viewer Architecture
 
+## October 2 queued saves and continuous terrain surfaces
+
+`TownSaveQueue` owns a fixed set of at most sixteen click-time document snapshots.
+The editor session owns that state and feeds one job at a time to `TownFileJobs`.
+The latter retains preparation, worker communication and progress ownership.
+Batch jobs do not overwrite recovery from an older snapshot or open Explorer for
+each map. Only matching name/revision snapshots receive a saved revision. No
+queue logic or state was added to bootstrap. The session regression exercises
+failure continuation, snapshot isolation, newer edits and actual portable reopen.
+
+`TownTerrainBuilder` aligns static and flowing water at a common datum when flow
+exists. Clipped bank slivers whose centroid falls outside a flow use their vertices
+to resolve group ownership. This fixes both the 12 cm outlet gap and isolated flat
+water vertices on elevated banks. Prepared version 7 / Terrain7 invalidates older
+geometry; TWN12 authored data remains compatible. `TownSurfaceRenderer` computes
+continuous height-sampled normals for land/roads while retaining vertical curb
+normals. Collision and traversal still use the unchanged canonical triangles.
+
+The Python prepared recipe reader exports plane-5 elevation vertices and retains
+flow/style metadata. `TownDocument.SupportsBlender` explicitly distinguishes this
+prepared path from the unsupported legacy unprepared export. Actual Blender
+export/reopen compares every exported vertex and material, including elevated maps.
+
+Focused evidence: artifacts/queue-session-v3.log, surface-final-render.log,
+final-map-seams.log, final-codec-check.log and final-blender-acceptance.log.
+Native Save All produced sixteen distinct Viewer files and sixteen Blender files,
+with the application reporting successful completion. A rectangle paint gesture
+and its undo were checked in Studio. Close-up native inspection confirmed the
+stream/lake join is continuous. Greyglass's automatic stepped appearance layer
+was removed while retaining its authored geometry, paths and placed objects.
+No compiler/runtime capability, resource budget or architecture limit was changed.
+
+Growth review against 5b1ee641: new style data owner 234 lines, style gesture owner
+156, queue owner 172 and focused style regressions 168. Existing document storage
+grows 90 lines for TWN12 encoding/decoding; renderer +80, terrain builder +43,
+editor +52 and session +33 for their existing responsibilities. Bootstrap is
+unchanged. The large existing storage/editor/session owners remain architectural
+debt; this change adds no dependency cycles or reverse dependencies into bootstrap.
+No separate Viewer architecture-check script exists; ownership and growth were
+reviewed directly, alongside focused native checks and the repository formatter.
+
+## October 2 local terrain-style ownership and Silverfall load repair
+
+`TownSurfaceStyles` owns optional paged appearance data on `TownDocument` and its
+section remapping. Zero inherits the map default; 1–4 explicitly select Meadow,
+Forest, Highland or Desert. Immutable text pages share unchanged content across
+undo snapshots. `TownStyleTools` owns the caller-supplied staged stroke and publishes
+once on release. The existing editor delegates commands/history and the session
+acknowledges an atomic terrain replacement or restores the previous appearance.
+Neither owner depends on UI, renderer or bootstrap. No entry-point behavior moved.
+
+`TownDocumentStore` and the matching Python codec use optional TWN12 RLE data.
+Prepared bundles and derived terrain use version 7 / Terrain7 so older recipes
+cannot supply missing material fields. The builder separates material boundaries;
+the renderer reuses its existing thirteen material slots. Blender's existing mesh
+export preserves mixed styles and prepared elevations/flow.
+Whole-map undo previously omitted TerrainStyle; history now restores that field
+and the local layer together. Whole-map styling resets the local layer explicitly.
+
+Actual native viewing exposed Silverfall's enlarged lake exceeding four water
+batches. Detailed terrain had emitted a redundant four-triangle fan per cell.
+The builder now clips the two canonical 00-to-11 triangles already used by the
+height sampler. The failing saved-map fixture now loads without increasing any
+resource budget, renderer pool, architecture threshold or exclusion. The native
+render test imports the actual canonical Silverfall document to protect this fix.
+
+Focused validation includes TownStyleTests (explicit/inherited persistence,
+recipe boundaries/cache invalidation, section remapping, gesture rollback, and
+whole-map undo), native material uploads and actual Blender save/reopen. Logs:
+artifacts/terrain-style-native-final-v3.log,
+terrain-style-blender-acceptance.log and silverfall-render-native[-v2].log.
+Native visual evidence and final builds are recorded in the current handoff.
+
 ## October 2 wilderness refinement ownership
 
 `TownTerrainBuilder` now closes actual clipped ground/road boundaries with

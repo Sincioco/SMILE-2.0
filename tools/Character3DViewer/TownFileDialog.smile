@@ -10,7 +10,7 @@ Private Function Expanded(ShowDetails As Boolean) As Boolean
 
     Dim Result As Boolean
 
-    Result = ShowDetails And Window_Height() >= 980
+    Result = ShowDetails And Window_Height() >= 1120
 
     Return Result
 
@@ -21,7 +21,7 @@ Private Function TopEdge(ShowDetails As Boolean) As Number
     Dim Result As Number
 
     If Expanded(ShowDetails) Then
-        Return 530
+        Return 615
     End If
 
     Result = Window_Height() - 205
@@ -88,6 +88,10 @@ Public Sub Draw(ByRef Value As Files.State, ShowDetails As Boolean)
 
     If Value.Operation = Files.SAVE_BLENDER Then
         Title = "Blender Save"
+    End If
+
+    If Text_Length(Value.BatchLabel) > 0 Then
+        Title = Value.BatchLabel
     End If
 
     If Value.RequestId = 0 Then

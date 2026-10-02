@@ -43,6 +43,7 @@
     <SmileSource Include="NerisHorizonEntrance.smile" />
     <SmileSource Include="ProximityDrawbridge.smile" />
     <SmileSource Include="TownDocument.smile" />
+    <SmileSource Include="TownSurfaceStyles.smile" />
     <SmileSource Include="TownMapLoads.smile" />
     <SmileSource Include="TownGatewayJourney.smile" />
     <SmileSource Include="TownResidents.smile" />
@@ -56,6 +57,7 @@
     <SmileSource Include="TownEditorPanel.smile" />
     <SmileSource Include="TownSunControls.smile" />
     <SmileSource Include="TownEditor.smile" />
+    <SmileSource Include="TownStyleTools.smile" />
     <SmileSource Include="TownLibrary.smile" />
     <SmileSource Include="TownDocumentMap.smile" />
     <SmileSource Include="TownMinimapInput.smile" />
@@ -73,6 +75,7 @@
     <SmileSource Include="TownWorldEditor.smile" />
     <SmileSource Include="TownEditorSession.smile" />
     <SmileSource Include="TownFileJobs.smile" />
+    <SmileSource Include="TownSaveQueue.smile" />
     <SmileSource Include="TownSavePreparation.smile" />
     <SmileSource Include="TownFileLocations.smile" />
     <SmileSource Include="TownFileDialog.smile" />

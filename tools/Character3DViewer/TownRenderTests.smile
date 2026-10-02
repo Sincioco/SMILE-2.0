@@ -26,6 +26,7 @@ Import Smile.Tools.TownSelection As Selection
 Import Smile.Tools.TownHistory As History
 Import Smile.Tools.TownEditorPanel As Panel
 Import Smile.Tools.TownSurfaceTools As SurfaceTools
+Import Smile.Tools.TownSurfaceStyles As SurfaceStyles
 
 Dim Town As Document.State
 Dim CanalTown As Document.State
@@ -89,6 +90,7 @@ For Index = 0 To Assets.Required - 1
 End For
 
 Call Check(Not Assets.Failed, "Catalog Loads Within Resource Limits")
+Call CheckSmoothTerrain()
 
 Ok = Terrain.Create(Ground)
 
@@ -488,6 +490,7 @@ End For
 Call Check(Ok, "The Sixteenth Destination Has A Visible Control Without Overflow")
 Call Panel.Release(Controls.Ui)
 Call CheckElevatedTerrain()
+Call CheckSilverfall()
 Call Scene.Shutdown()
 
 If Failures = 0 Then
@@ -530,6 +533,8 @@ Sub CheckElevatedTerrain()
     Ok = Flow.Prepare(Town.Surface, P.Vector(-250.0, 0.0, -200.0), P.Vector(-250.0, 0.0, -600.0), 40.0, Brush) And Ok
     Ok = Grid.PaintBrush(Town.Surface, Brush) And Ok
     Ok = Terrain.Create(Ground) And Ok
+    Ok = SurfaceStyles.Write(Town.Appearance, 0, 2) And Ok
+    Ok = SurfaceStyles.Write(Town.Appearance, 1, 4) And Ok
 
     Call Terrain.BeginBuild(Ground, Town)
 
@@ -567,9 +572,81 @@ Sub CheckElevatedTerrain()
     Ok = Scene.EndScene() And Ok
 
     Call Check(Ok, "Elevated Terrain Renders With Geometric Normals")
+
+    Dim ForestSeen As Boolean
+    Dim DesertSeen As Boolean
+
+    For Index = 0 To Ground.ObjectCount - 1
+        ForestSeen = ForestSeen Or Ground.Objects[Index].MaterialHandle = Ground.Materials[7].Handle
+        DesertSeen = DesertSeen Or Ground.Objects[Index].MaterialHandle = Ground.Materials[11].Handle
+    End For
+
+    Call Check(ForestSeen And DesertSeen, "Local Forest And Desert Upload As Distinct Terrain Materials")
     Call Terrain.Destroy(Ground)
     Call Check(G.LiveMeshCount3D() = 0 And G.LiveObjectCount3D() = 0 And
         G.LiveMaterialCount3D() = 0, "Elevated Terrain Resources Release Cleanly")
+
+End Sub
+
+''' The enlarged lake exhausted four water batches with redundant four-way cell fans.
+Sub CheckSilverfall()
+
+    Dim Deadline As Number
+
+    Ok = Store.LoadDocument(Town, "TownRender.Silverfall")
+
+    Call Check(Ok, "Silverfall Portable Regression Fixture Imports")
+
+    If Not Ok Then
+        Return
+    End If
+
+    Ok = Terrain.Create(Ground)
+
+    Call Terrain.BeginBuild(Ground, Town)
+
+    Deadline = Timer() + 15000
+
+    Do
+
+        Call Terrain.Update(Ground, 16)
+
+    Loop Until Ground.Stage = 0 Or Ground.Failed Or Timer() >= Deadline
+
+    Call Check(Ok And Not Ground.Failed And Ground.Stage = 0 And Ground.WaterCount <= 4,
+        "Silverfall Enlarged Lake And Stream Fit The Unchanged Native Water Budget")
+    Call Terrain.Destroy(Ground)
+
+End Sub
+
+Sub CheckSmoothTerrain()
+
+    Dim Draft As Document.State
+    Dim X As Number
+    Dim Z As Number
+    Dim First As P.Vector3
+    Dim Last As P.Vector3
+    Dim Ok As Boolean
+
+    Ok = Document.Blank(Draft, "Smooth Shading", 4, 4, 30.0)
+
+    For Z = 0 To 4
+
+        For X = 0 To 4
+            Ok = Elevation.SetCorner(Draft.Surface, X, Z, ToDouble(X * X * 4 + Z * Z * 2)) And Ok
+        End For
+    End For
+
+    First = Terrain.ShadingNormal(Draft.Surface, Draft.Surface.XEdges[2] - 0.001,
+        Draft.Surface.ZEdges[2])
+    Last = Terrain.ShadingNormal(Draft.Surface, Draft.Surface.XEdges[2] + 0.001,
+        Draft.Surface.ZEdges[2])
+
+    Call Check(Ok And First.Y > 0.0 And Abs(First.X - Last.X) < 0.001 And
+        Abs(First.Y - Last.Y) < 0.001 And Abs(First.Z - Last.Z) < 0.001,
+        "Terrain Lighting Is Continuous Across Cell And Triangle Seams")
+    Call Check(Elevation.Corner(Draft.Surface, 2, 2) = 24.0,
+        "Smooth Shading Preserves The Authored Collision Heights")
 
 End Sub
 

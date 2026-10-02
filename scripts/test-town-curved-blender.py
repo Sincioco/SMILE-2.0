@@ -23,7 +23,7 @@ for index, name in enumerate(sys.argv[sys.argv.index('--') + 1:]):
     document = decode(unwrap(raw), catalog)
     records = prepared_records(raw)
     patches = read_prepared(records.__getitem__)
-    assert any(p[-1] == 3 for p in patches), 'Fixture must have native curve triangles'
+    assert any(p[9] in (3,5) for p in patches), 'Fixture must have native surface triangles'
     # Exercise an arbitrary name, not only the automatic numeric copy suffix.
     identity = landmark(document)
     document['landmark'] = identity
@@ -47,5 +47,7 @@ for index, name in enumerate(sys.argv[sys.argv.index('--') + 1:]):
     assert landmark(reopened) == identity
     assert reopened['sun'] == document['sun']
     assert reopened['curves'] == document['curves']
+    for field in ('heights', 'flows', 'appearance'):
+        assert reopened.get(field) == document.get(field), field
     assert len(reopened['items']) == len(document['items'])
-    print('PASS exact native contour geometry, landmark, lighting and Blender reopen:', target, flush=True)
+    print('PASS exact native geometry, heights, flow, appearance, landmark and Blender reopen:', target, flush=True)

@@ -29,6 +29,7 @@ Public Type State
     Template As Number
     Page As Number
     TerrainStyle As Number
+    PaintStyle As Number
     Surface As Number
     Width As Number
     Message As Text
@@ -247,7 +248,21 @@ Private Sub Library(ByRef Value As State, X As Number)
 
         Call Button(Value, 46, X, 240 + StepY, 283, "Map Load (Yellow Border)", Value.Surface = 5, True, StepY - 3)
 
-        If Value.Surface = 5 Then
+        If Value.Surface = 6 Then
+
+            Call Button(Value, 751, X, 240 + StepY * 2, 139, "Meadow", Value.PaintStyle = 1, True, StepY - 3)
+            Call Button(Value, 752, X + 144, 240 + StepY * 2, 139, "Forest", Value.PaintStyle = 2, True, StepY - 3)
+            Call Button(Value, 753, X, 240 + StepY * 3, 139, "Highland", Value.PaintStyle = 3, True, StepY - 3)
+            Call Button(Value, 754, X + 144, 240 + StepY * 3, 139, "Desert", Value.PaintStyle = 4, True, StepY - 3)
+            Call Button(Value, 755, X, 240 + StepY * 4, 139, "Paint Tiles", Value.Tool = 750, True, StepY - 3)
+            Call Button(Value, 756, X + 144, 240 + StepY * 4, 139, "Paint Rectangle", Value.Tool = 751, True, StepY - 3)
+            Call Button(Value, 757, X, 240 + StepY * 5, 283, "Erase Local Style", Value.PaintStyle = 0, True, StepY - 3)
+            Call Button(Value, 49, X, 240 + StepY * 6, 283, "Whole Map: " + Styles.Label(Value.TerrainStyle), False, True, StepY - 3)
+
+            Draw Text "Click or drag to paint; release to apply." At X, 244 + StepY * 7 Size 11 Color WHITE
+            Draw Text "Esc cancels. Ctrl+Z undoes the stroke." At X, 258 + StepY * 7 Size 11 Color WHITE
+
+        Else If Value.Surface = 5 Then
 
             Call Button(Value, 17, X, 240 + StepY * 2, 91, "Draw Area", Value.Tool = 17, True, StepY - 3)
             Call Button(Value, 18, X + 96, 240 + StepY * 2, 91, "Reassign", Value.Tool = 18, True, StepY - 3)
@@ -273,10 +288,9 @@ Private Sub Library(ByRef Value As State, X As Number)
             Call Button(Value, 411, X + 144, 240 + StepY * 5, 139, "Curve", Value.Tool = 411, True, StepY - 3)
             Call Button(Value, 412, X, 240 + StepY * 6, 139, "Edit Shape Points", Value.Tool = 412, True, StepY - 3)
 
-            Draw Text "Triangle: three corners. Curve: start," At X, 244 + StepY * 7 Size 11 Color WHITE
-            Draw Text "bend, end. Esc cancels. Ctrl+Z undoes." At X, 258 + StepY * 7 Size 11 Color WHITE
+            Call Button(Value, 750, X, 240 + StepY * 7, 283, "Paint Terrain Styles...", False, True, StepY - 3)
 
-            Call Button(Value, 49, X + 144, 240 + StepY * 6, 139, Styles.Label(Value.TerrainStyle), False, True, StepY - 3)
+            Call Button(Value, 49, X + 144, 240 + StepY * 6, 139, "Map: " + Styles.Label(Value.TerrainStyle), False, True, StepY - 3)
 
         End If
 
@@ -428,7 +442,7 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State,
 
     X = LeftEdge() + 10
     LightBottom = 212 + 8 * Min(32, Max(16, (Window_Height() - 572) / 8))
-    FileStep = Min(32, Max(20, (Window_Height() - 525) / 9))
+    FileStep = Min(32, Max(16, (Window_Height() - 530) / 11))
 
     If Not Value.AtlasLoaded Then
         Load Image Value.Atlas From "Assets/Neris/Town-Palette.png"
@@ -508,22 +522,24 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State,
 
         Draw Text "Viewer (.town)" At X, 212 Size 15 Color WHITE
 
-        Call Button(Value, 300, X, 237, 139, "Save For Viewer", False, True, FileStep - 3)
+        Call Button(Value, 300, X, 237, 139, "Save for Viewer", False, True, FileStep - 3)
         Call Button(Value, 302, X + 144, 237, 139, "Save As...", False, True, FileStep - 3)
-        Call Button(Value, 305, X, 237 + FileStep, 139, "Open For Viewer", False, True, FileStep - 3)
-        Call Button(Value, 310, X + 144, 237 + FileStep, 139, "Recent Versions", False, True, FileStep - 3)
-        Call Button(Value, 311, X, 237 + FileStep * 2, 283, "Show Last Town File In Explorer", False, True, FileStep - 3)
-        Call Button(Value, 312, X, 237 + FileStep * 3, 283, "Update Permanent Map...", False, True, FileStep - 3)
+        Call Button(Value, 313, X, 237 + FileStep, 283, "Save All for Viewer", False, True, FileStep - 3)
+        Call Button(Value, 305, X, 237 + FileStep * 2, 139, "Open for Viewer", False, True, FileStep - 3)
+        Call Button(Value, 310, X + 144, 237 + FileStep * 2, 139, "Recent Versions", False, True, FileStep - 3)
+        Call Button(Value, 311, X, 237 + FileStep * 3, 283, "Show Last Town File In Explorer", False, True, FileStep - 3)
+        Call Button(Value, 312, X, 237 + FileStep * 4, 283, "Update Permanent Map...", False, True, FileStep - 3)
 
-        Draw Text "Blender (.blend)" At X, 241 + FileStep * 4 Size 15 Color WHITE
+        Draw Text "Blender (.blend)" At X, 241 + FileStep * 5 Size 15 Color WHITE
 
-        Call Button(Value, 301, X, 237 + FileStep * 5, 139, "Save For Blender", False, True, FileStep - 3)
-        Call Button(Value, 307, X + 144, 237 + FileStep * 5, 139, "Open Blender...", False, True, FileStep - 3)
-        Call Button(Value, 309, X, 237 + FileStep * 6, 283, "Show Last Blender File In Explorer", False, True, FileStep - 3)
-        Call Button(Value, 303, X, 237 + FileStep * 7, 139, "New Town", False, True, FileStep - 3)
-        Call Button(Value, 308, X + 144, 237 + FileStep * 7, 139, "Open Recovery...", False, True, FileStep - 3)
-        Call Button(Value, 304, X, 237 + FileStep * 8, 139, "New World", False, True, FileStep - 3)
-        Call Button(Value, 306, X + 144, 237 + FileStep * 8, 139, "Open World", False, True, FileStep - 3)
+        Call Button(Value, 301, X, 237 + FileStep * 6, 139, "Save for Blender", False, True, FileStep - 3)
+        Call Button(Value, 307, X + 144, 237 + FileStep * 6, 139, "Open Blender...", False, True, FileStep - 3)
+        Call Button(Value, 314, X, 237 + FileStep * 7, 283, "Save All for Blender", False, True, FileStep - 3)
+        Call Button(Value, 309, X, 237 + FileStep * 8, 283, "Show Last Blender File In Explorer", False, True, FileStep - 3)
+        Call Button(Value, 303, X, 237 + FileStep * 9, 139, "New Town", False, True, FileStep - 3)
+        Call Button(Value, 308, X + 144, 237 + FileStep * 9, 139, "Open Recovery...", False, True, FileStep - 3)
+        Call Button(Value, 304, X, 237 + FileStep * 10, 139, "New World", False, True, FileStep - 3)
+        Call Button(Value, 306, X + 144, 237 + FileStep * 10, 139, "Open World", False, True, FileStep - 3)
 
     End If
 

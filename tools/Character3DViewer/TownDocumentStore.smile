@@ -9,6 +9,7 @@ Import Smile.Simple3D.TerrainHeights3D As Heights
 Import Smile.Simple3D.TerrainSurface3D As Terrain
 Import Smile.Simple3D.TerrainWater3D As Water
 Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownSurfaceStyles As Styles
 Import Smile.Tools.TownCatalogData As Catalog
 
 Private Const CAPACITY = 524288
@@ -317,6 +318,10 @@ Private Function DocumentVersion(ByRef Value As Document.State) As Number
 
     Version = 7
 
+    If Value.Appearance.Nonzero > 0 Then
+        Return 12
+    End If
+
     If Value.Surface.Heights.Nonzero > 0 Then
         Return 11
     End If
@@ -441,6 +446,80 @@ Private Function ReadTerrain(ByRef Surface As Grid.State) As Boolean
 
 End Function
 
+Private Sub WriteAppearance(ByRef Value As Styles.State, Total As Number)
+
+    Dim Index As Number
+    Dim Finish As Number
+    Dim Style As Number
+
+    Call WriteInteger(Total)
+
+    Do
+        Style = Styles.Read(Value, Index)
+        Finish = Index + 1
+
+        Do
+
+            If Finish >= Total Or Styles.Read(Value, Finish) <> Style Then
+                Exit Do
+            End If
+
+            Finish = Finish + 1
+
+        Loop
+
+        Call WriteInteger(Finish - Index)
+        Call WriteInteger(Style)
+
+        Index = Finish
+
+    Loop Until Index = Total Or Not Valid
+
+End Sub
+
+Private Function ReadAppearance(ByRef Value As Styles.State, Expected As Number) As Boolean
+
+    Dim Total As Number
+    Dim Index As Number
+    Dim Length As Number
+    Dim Style As Number
+    Dim Cell As Number
+    Dim Changed As Boolean
+
+    Total = ReadInteger()
+
+    If Total <> Expected Then
+        Return False
+    End If
+
+    Do
+        Length = ReadInteger()
+        Style = ReadInteger()
+
+        If (Not Valid Or
+            Length < 1 Or
+            Length > Total - Index Or
+            Style < 0 Or
+            Style > 4) Then
+            Return False
+        End If
+
+        If Style > 0 Then
+
+            For Cell = Index To Index + Length - 1
+                Changed = Styles.Write(Value, Cell, Style)
+            End For
+
+        End If
+
+        Index = Index + Length
+
+    Loop Until Index = Total
+
+    Return Valid
+
+End Function
+
 Private Sub Encode(ByRef Value As Document.State, MarkSaved As Boolean)
 
     Dim Index As Number
@@ -451,7 +530,8 @@ Private Sub Encode(ByRef Value As Document.State, MarkSaved As Boolean)
     Offset = 0
     Valid = True
 
-    If (Not Terrain.Valid(Value.Surface) Or
+    If (Not Styles.Valid(Value.Appearance, Value.Surface.Columns * Value.Surface.Rows) Or
+        Not Terrain.Valid(Value.Surface) Or
         Not Heights.Valid(Value.Surface.Heights, (Value.Surface.Columns + 1) * (Value.Surface.Rows + 1)) Or
         Not Water.Collect(Value.Surface.Curves, Groups)) Then
         Valid = False
@@ -587,6 +667,10 @@ Private Sub Encode(ByRef Value As Document.State, MarkSaved As Boolean)
         Call WriteTerrain(Value.Surface)
     End If
 
+    If DocumentVersion(Value) >= 12 Then
+        Call WriteAppearance(Value.Appearance, Value.Surface.Columns * Value.Surface.Rows)
+    End If
+
     ByteCount = Offset
 
 End Sub
@@ -612,13 +696,15 @@ Private Function Decode() As Boolean
 
     Version = ReadByte()
 
-    If Version < 1 Or Version > 11 Then
+    If Version < 1 Or Version > 12 Then
         Return False
     End If
 
     If ReadName() <> Catalog.FINGERPRINT Then
         Return False
     End If
+
+    Call Styles.Reset(Candidate.Appearance)
 
     Candidate.Name = ReadName()
     Candidate.Landmark = Document.LegacyLandmark(Candidate.Name)
@@ -841,6 +927,10 @@ Private Function Decode() As Boolean
 
     If Version >= 11 Then
         Valid = ReadTerrain(Candidate.Surface) And Valid
+    End If
+
+    If Version >= 12 Then
+        Valid = ReadAppearance(Candidate.Appearance, Candidate.Surface.Columns * Candidate.Surface.Rows) And Valid
     End If
 
     If Offset <> ByteCount Then

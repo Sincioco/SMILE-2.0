@@ -82,7 +82,7 @@ def import_document(path, catalog):
 
 
 def export_document(document, catalog, target, request_id, status, patches=None):
-    require_blender_support(document)
+    require_blender_support(document, patches)
     source = TOWN / catalog.get('blend_source', 'Authoring/Catalog.blend')
     if hashlib.sha256(source.read_bytes()).hexdigest() != catalog['source_sha256']:
         raise ValueError('Immutable template scene checksum differs.')
@@ -128,7 +128,8 @@ def main():
             payload = unwrap(key_path(folder, 'TownEditor.File.Snapshot.%d' % request_id).read_bytes())
             document = decode(payload, catalog)
             patches = None
-            if document.get('curves'):
+            if (document.get('curves') or any(document.get('heights', [])) or
+                    any(document.get('appearance', []))):
                 patches = read_prepared(lambda suffix: unwrap(key_path(
                     folder, 'TownEditor.File.Snapshot.%d%s' % (request_id, suffix)).read_bytes()))
             export_document(document, catalog, path, request_id, status, patches)

@@ -6,6 +6,7 @@ Import Smile.Simple3D.SurfaceGrid3D As Grid
 Import Smile.Tools.TownSurfaceLayers As Layers
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownStyleTests As StyleTests
 Import Smile.Tools.TownSectionTests As SectionTests
 Import Smile.Tools.TownCurvesTests As CurveTests
 Import Smile.Tools.TownElevationTests As ElevationTests
@@ -432,6 +433,8 @@ Failures = Failures + RampTests.Run()
 
 Call WaterTests.Run(Failures)
 Call TerrainPersistenceTests.Run(Failures)
+
+Failures = Failures + StyleTests.Run()
 
 Failures = Failures + WorldTests.Run()
 Failures = Failures + GatewayTests.Run()

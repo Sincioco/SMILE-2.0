@@ -44,11 +44,11 @@ def east_valley():
         for turn in (-60,60):
             dx,dz=point(19,angle+30+turn)
             t.place(15,x+dx,z+dz,1.45)
-    # Twelve small ponds repeat the reference's inner dotted circle.
-    for angle in range(0,360,30):
-        x,z=point(28,angle+15)
-        t.disk(x,z,3.5,WATER)
+    # The civic island retains City Hall inside one circular lake and grassy shore.
+    t.disk(0,0,31,WATER)
+    t.disk(0,0,18)
     t.place(9,0,0,1.1)
+    t.path([(0,-12.8408),(0,-37.69)],8.6)
     for angle in range(0,360,15):
         x,z=point(194,angle+7.5)
         t.place(19,x,z,.85)
@@ -60,7 +60,7 @@ def east_valley():
             t.place(19,x,z,1.35)
     t.gates()
     t.notes=['Six-point star inside a circular waterfront promenade',
-        'Six round memorial gardens and twelve small ponds around the civic center',
+        'Six memorial gardens and a circular lake around City Hall, linked to the inner promenade',
         'Road-facing homes along six clear avenues with connected ring paths']
     return t
 

@@ -22,6 +22,7 @@ Import Smile.Tools.TownTabs As Tabs
 Import Smile.Tools.TownLibrary As Library
 Import Smile.Tools.TownDocumentStore As Storage
 Import Smile.Tools.TownFileJobs As Files
+Import Smile.Tools.TownSaveQueue As SaveQueue
 Import Smile.Tools.TownLighting As Lighting
 Import Smile.Tools.TownMapLoadTools As MapLoadTools
 Import Smile.Tools.TownMapLoads As MapLoads
@@ -80,6 +81,9 @@ Dim BeforeSaveCamera As P.Camera3D
 Dim BeforeSaveLeader As P.Vector3
 Dim DelayedJob As Files.State
 Dim DemoLightingDocument As Document.State
+Dim QueueFixture As SaveQueue.State
+Dim QueueMaps As Tabs.State
+Dim QueueJob As Files.State
 
 Game Window "Town Editor Session Check" Size 1100 By 720
 
@@ -93,8 +97,19 @@ Call CheckDecorPalette()
 Call CheckDemoChoices()
 Call CheckShapeGestures()
 Call CheckLateBlenderResponse()
+Call CheckQueuedSaves()
 Call CheckDemoLighting()
 Call CheckTerrainCamera()
+
+Action = Commands.Command(Controls, Draft, 700)
+
+Call Check(Action = 700, "Permanent Map Command Is Not Consumed By Terrain Style Controls")
+
+Action = Commands.Command(Controls, Draft, 750)
+Action = Commands.Command(Controls, Draft, 756)
+
+Call Check(Action = 0 And Controls.Ui.Surface = 6 And Controls.Ui.Tool = 751,
+    "Terrain Rectangle Command Selects Its Own Tool Without Starting A File Operation")
 
 Action = Commands.Command(Controls, Draft, 3)
 
@@ -516,6 +531,72 @@ Sub CheckDemoLighting()
     Light = Lighting.DisplayedSun(DemoLightingDocument, False)
 
     Call Check(Light.Intensity = 34, "Demo Restores The Original Lighting After The Alternate Phase")
+
+End Sub
+
+Sub CheckQueuedSaves()
+
+    Dim Current As Document.State
+    Dim Loaded As Document.State
+    Dim LastPath As Text
+    Dim Deadline As Number
+    Dim ImportJob As Number
+    Dim Ok As Boolean
+    Dim Changed As Boolean
+
+    Ok = Document.Blank(Current, "QueueFixture Active Snapshot", 8, 8, 20.0)
+    Current.Revision = 3
+    Current.TerrainStyle = 1
+    Current.SavedRevision = 0
+    QueueMaps.TabCount = 3
+    QueueMaps.Documents[0] = Current
+    QueueMaps.Documents[1] = Current
+    QueueMaps.Documents[1].Name = "QueueFixture Invalid Snapshot"
+    QueueMaps.Documents[1].Surface.Columns = 0
+    QueueMaps.Documents[2] = Current
+    QueueMaps.Documents[2].Name = "QueueFixture Inactive Snapshot"
+
+    Call SaveQueue.Begin(QueueFixture, QueueMaps, Current,
+        "D:\SMILE 2.0\artifacts\tests\SaveQueueFirst.town", Files.SAVE_VIEWER)
+
+    LastPath = SaveQueue.OutputPath(QueueFixture, 2)
+    Current.Revision = 4
+    Current.TerrainStyle = 3
+    QueueMaps.Documents[2].Revision = 4
+    QueueMaps.Documents[2].TerrainStyle = 3
+    Deadline = Timer() + 15000
+
+    Do
+
+        Changed = Files.Update(QueueJob, Current, 16)
+
+        Call SaveQueue.Update(QueueFixture, QueueJob, QueueMaps)
+
+        Show Screen
+
+    Loop Until Not QueueFixture.Active Or Timer() > Deadline
+
+    Call Check(Not QueueFixture.Active And QueueFixture.MapCount = 3 And QueueFixture.Failed = 1 And QueueJob.Progress = 100,
+        "Save All Finishes Later Maps After One Snapshot Fails")
+    Call Check(Current.Revision = 4 And Current.SavedRevision = 0 And
+        QueueMaps.Documents[2].Revision = 4 And QueueMaps.Documents[2].SavedRevision = 0,
+        "Save All Does Not Mark Newer Active Or Inactive Edits Saved")
+    Call Check(QueueJob.SuppressReveal And QueueFixture.Documents[0].Revision = 3 And
+        QueueFixture.Documents[2].Revision = 3,
+        "Save All Uses Click Time Snapshots Without Opening Explorer Per Map")
+
+    ImportJob = Data_BundleStart(False, "QueueFixture.Reopened", LastPath, "")
+    Deadline = Timer() + 5000
+
+    Do
+        Show Screen
+
+    Loop Until Data_FileStatus(ImportJob) <> 0 Or Timer() > Deadline
+
+    Ok = Storage.LoadDocument(Loaded, "QueueFixture.Reopened")
+
+    Call Check(Data_FileStatus(ImportJob) = 1 And Ok And Loaded.Name = "QueueFixture Inactive Snapshot" And
+        Loaded.TerrainStyle = 1, "Queued Viewer File Reopens With Its Saved Content")
 
 End Sub
 

@@ -182,6 +182,62 @@ Public Sub Run(ByRef Failures As Number)
     Ok = Water.Collect(Town.Surface.Curves, Groups)
 
     Call Check(Not Ok, "Existing Four-Batch Budget Enforced", Failures)
+    Call CheckLakeJoin(Failures)
+
+End Sub
+
+Private Sub CheckLakeJoin(ByRef Failures As Number)
+
+    Dim Brush As Paint.Brush
+    Dim Index As Number
+    Dim LakeCount As Number
+    Dim StreamCount As Number
+    Dim Level As Double
+    Dim Ok As Boolean
+
+    Ok = Document.Blank(Town, "Stream Lake Join", 16, 16, 20.0)
+    Ok = Water.Prepare(Town.Surface, P.Vector(-120.0, 0.0, 0.0),
+        P.Vector(40.0, 0.0, 0.0), 40.0, Brush) And Ok
+    Ok = Grid.PaintBrush(Town.Surface, Brush) And Ok
+    Brush.Form = Paint.FORM_CIRCLE
+    Brush.X0 = 70.0
+    Brush.X1 = 60.0
+    Brush.WaterMode = 0
+    Brush.FlowSign = 0
+    Brush.FlowSpeed = 0
+    Brush.Width = 0.0
+    Ok = Grid.PaintBrush(Town.Surface, Brush) And Ok
+
+    Call Builder.Begin(Recipe, Town)
+
+    For Index = 0 To Town.Surface.Rows - 1
+        Recipe.Row = Index
+
+        Call Builder.ScanRow(Recipe)
+    End For
+
+    Level = Layers.GROUND_Y + 0.02 * Layers.UNITS_PER_METER
+
+    For Index = 0 To Recipe.Buffer.PatchCount - 1
+
+        If Recipe.Buffer.Patches[Index].Kind = Grid.SURFACE_WATER Then
+
+            Ok = (Abs(Recipe.Buffer.Patches[Index].Y0 - Level) < 0.00001 And
+                Abs(Recipe.Buffer.Patches[Index].Y1 - Level) < 0.00001 And
+                Abs(Recipe.Buffer.Patches[Index].Y2 - Level) < 0.00001 And Ok)
+
+            If Recipe.Buffer.Patches[Index].FlowGroup = 0 Then
+                LakeCount = LakeCount + 1
+            Else
+                StreamCount = StreamCount + 1
+            End If
+
+        End If
+
+    End For
+
+    Call Check(Ok And Not Recipe.Failed And LakeCount > 0 And StreamCount > 0,
+        "Stream And Lake Share An Exact Outlet Level Without A See Through Gap", Failures)
 
 End Sub
 

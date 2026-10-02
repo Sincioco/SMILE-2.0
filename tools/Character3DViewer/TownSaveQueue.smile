@@ -1,0 +1,172 @@
+''' Bounded click-time snapshots of open maps, exported by the existing background job.
+Module Smile.Tools.TownSaveQueue
+
+Option Explicit
+
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownTabs As Tabs
+Import Smile.Tools.TownFileJobs As Files
+
+Public Type State
+    Documents[16] As Document.State
+    MapCount As Number
+    NextIndex As Number
+    Failed As Number
+    Operation As Number
+    Active As Boolean
+    Waiting As Boolean
+    FirstPath As Text
+    Prefix As Text
+    Errors As Text
+End Type
+
+Public Function OutputPath(ByRef Value As State, Index As Number) As Text
+
+    Dim ReturnValue As Text
+
+    Dim Result As Text
+    Dim Extension As Text
+
+    If Index = 0 Then
+        ReturnValue = Value.FirstPath
+
+        Return ReturnValue
+    End If
+
+    Extension = ".town"
+
+    If Value.Operation = Files.SAVE_BLENDER Then
+        Extension = ".blend"
+    End If
+
+    Result = (Value.Prefix + Files.IdText(Index + 1) + " - " +
+        Files.SafeName(Value.Documents[Index].Name) + Extension)
+
+    Return Result
+
+End Function
+
+Public Sub Begin(ByRef Value As State, ByRef OpenTabs As Tabs.State,
+    ByRef Town As Document.State, Path As Text, Operation As Number)
+
+    Dim Index As Number
+    Dim Separator As Number
+    Dim Sequence As Number
+
+    If Value.Active Or Text_Length(Path) = 0 Then
+        Return
+    End If
+
+    Value.MapCount = 1
+    Value.Documents[0] = Town
+
+    For Index = 0 To OpenTabs.TabCount - 1
+
+        If Index <> OpenTabs.Active And Value.MapCount < Tabs.CAPACITY Then
+            Value.Documents[Value.MapCount] = OpenTabs.Documents[Index]
+            Value.MapCount = Value.MapCount + 1
+        End If
+
+    End For
+
+    For Index = 0 To Text_Length(Path) - 1
+
+        If Text_Code_At(Path, Index) = 92 Or Text_Code_At(Path, Index) = 47 Then
+            Separator = Index + 1
+        End If
+
+    End For
+
+    Load Sequence From "TownEditor.File.BatchSequence" Default 0
+    Sequence = Sequence + 1
+    Save Sequence To "TownEditor.File.BatchSequence"
+    Value.FirstPath = Path
+    Value.Prefix = (Text_Slice(Path, 0, Separator) + Local_Timestamp() + " - Batch " +
+        Files.IdText(Sequence) + " - ")
+    Value.Operation = Operation
+    Value.NextIndex = 0
+    Value.Failed = 0
+    Value.Errors = ""
+    Value.Waiting = False
+    Value.Active = True
+
+End Sub
+
+Public Sub Choose(ByRef Value As State, ByRef OpenTabs As Tabs.State,
+    ByRef Town As Document.State, Operation As Number)
+
+    Dim Path As Text
+    Dim Extension As Text
+    Dim Title As Text
+
+    Extension = "town"
+    Title = "Save All for Viewer - Choose First File (Others Use This Folder)"
+
+    If Operation = Files.SAVE_BLENDER Then
+        Extension = "blend"
+        Title = "Save All for Blender - Choose First File (Others Use This Folder)"
+    End If
+
+    Path = File_Pick(True, Title, Extension,
+        Local_Timestamp() + " - " + Files.SafeName(Town.Name) + "." + Extension)
+
+    Call Begin(Value, OpenTabs, Town, Path, Operation)
+
+End Sub
+
+Public Sub Update(ByRef Value As State, ByRef Job As Files.State,
+    ByRef OpenTabs As Tabs.State)
+
+    Dim Index As Number
+    Dim Ok As Boolean
+
+    If Not Value.Active Or Job.RequestId > 0 Then
+        Return
+    End If
+
+    If Value.Waiting Then
+
+        If Job.Failed Then
+
+            Value.Failed = Value.Failed + 1
+            Value.Errors = Value.Errors + Value.Documents[Value.NextIndex].Name + ": " + Job.Message + " "
+
+        Else
+
+            For Index = 0 To OpenTabs.TabCount - 1
+
+                If (OpenTabs.Documents[Index].Name = Value.Documents[Value.NextIndex].Name And
+                    OpenTabs.Documents[Index].Revision = Value.Documents[Value.NextIndex].Revision) Then
+                    OpenTabs.Documents[Index].SavedRevision = OpenTabs.Documents[Index].Revision
+                End If
+
+            End For
+
+        End If
+
+        Value.NextIndex = Value.NextIndex + 1
+        Value.Waiting = False
+
+    End If
+
+    If Value.NextIndex >= Value.MapCount Then
+
+        Value.Active = False
+        Job.Failed = Value.Failed > 0
+        Job.Progress = 100
+        Job.BatchLabel = "All Maps"
+        Job.Message = ("Saved " + Files.IdText(Value.MapCount - Value.Failed) + " of " +
+            Files.IdText(Value.MapCount) + " maps. " + Value.Errors)
+        Return
+
+    End If
+
+    Ok = Files.Queue(Job, Value.Documents[Value.NextIndex], Value.Operation,
+        OutputPath(Value, Value.NextIndex), False)
+    Job.SuppressReveal = True
+    Job.BatchLabel = "Map " + Files.IdText(Value.NextIndex + 1) + "/" + Files.IdText(Value.MapCount)
+    Value.Waiting = True
+
+End Sub
+
+End Module

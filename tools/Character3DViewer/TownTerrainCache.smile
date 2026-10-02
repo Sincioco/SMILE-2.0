@@ -11,6 +11,7 @@ Public Type Patch
     X1 As Double
     Z1 As Double
     Kind As Number
+    Style As Number
     Y0 As Double
     Y1 As Double
     Plane As Number
@@ -144,6 +145,7 @@ Public Function SaveBatch(ByRef Value As Batch, Key As Text, BatchIndex As Numbe
             End If
 
             Call Write(Part.FlowGroup)
+            Call Write(Part.Style)
         End For
 
         If Not Valid Then
@@ -218,8 +220,11 @@ Public Function LoadBatch(ByRef Value As Batch, Key As Text, BatchIndex As Numbe
             End If
 
             Part.FlowGroup = Read()
+            Part.Style = Read()
 
-            If (Part.Kind < 1 Or
+            If (Part.Style < 0 Or
+                Part.Style > 4 Or
+                Part.Kind < 1 Or
                 Part.Kind > 6 Or
                 Part.Plane < 0 Or
                 Part.Plane > 5 Or

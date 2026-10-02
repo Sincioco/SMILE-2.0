@@ -6,6 +6,7 @@ Option Explicit
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.Graphics3D As G
 Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownSurfaceStyles As SurfaceStyles
 Import Smile.Tools.TownCatalogData As Catalog
 Import Smile.Tools.TownInitialSurface As Initial
 Import Smile.Tools.TownGuideList As GuideList
@@ -22,6 +23,7 @@ Import Smile.Tools.TownDocumentNavigation As Navigation
 Import Smile.Tools.TownDocumentStore As Storage
 Import Smile.Tools.TownLibrary As Library
 Import Smile.Tools.TownFileJobs As Files
+Import Smile.Tools.TownSaveQueue As SaveQueue
 Import Smile.Tools.TownFileDialog As FileDialog
 Import Smile.Tools.TownFileLocations As FileLocations
 Import Smile.Tools.TownGuideFiles As GuideFiles
@@ -47,6 +49,7 @@ Import Smile.Simple3D.ArenaCamera3D As Motion
 Private Dim Town As Document.State
 Private Dim MinimapGesture As MinimapInput.State
 Private Dim Transfers As Files.State
+Private Dim QueuedSaves As SaveQueue.State
 Private Dim MapLoadOccupied As Boolean
 Private Dim MapLoadCooldown As Number
 Private Dim GatewayJourney As Journey.State
@@ -71,6 +74,8 @@ Private Dim TeleportPending As Boolean
 Private Dim TravelPending As Boolean
 Private Dim TravelArrival As P.Vector3
 Private Dim TabOverviewPending As Boolean
+Private Dim LiveAppearance As SurfaceStyles.State
+Private Dim LiveStyle As Number
 Private Dim LiveSurface As Grid.State
 
 Public Function Available() As Boolean
@@ -364,6 +369,8 @@ Public Function LoadNext() As Boolean
         Ready = True
         AppliedRevision = Town.Revision
         RecoveryRevision = Town.Revision
+        LiveAppearance = Town.Appearance
+        LiveStyle = Town.TerrainStyle
         LiveSurface = Town.Surface
 
         Call Navigation.Rebuild(Town)
@@ -524,7 +531,7 @@ Private Sub FileCommand(Action As Number)
     Dim Mode As Number
     Dim OldName As Text
 
-    If ((Transfers.RequestId > 0 Or Controls.GuideTransfer.Job > 0) And
+    If ((Transfers.RequestId > 0 Or QueuedSaves.Active Or Controls.GuideTransfer.Job > 0) And
         Action <> 309 And
         Action <> 311) Then
         Controls.Ui.Message = "A file operation is still running."
@@ -540,6 +547,20 @@ Private Sub FileCommand(Action As Number)
         Action <> 311) Then
         Controls.Ui.Message = "Finishing terrain; try saving when ready."
         Return
+    End If
+
+    If Action = 313 Or Action = 314 Then
+
+        Mode = Files.SAVE_VIEWER
+
+        If Action = 314 Then
+            Mode = Files.SAVE_BLENDER
+        End If
+
+        Call SaveQueue.Choose(QueuedSaves, OpenTabs, Town, Mode)
+
+        Return
+
     End If
 
     If (Action = 300 Or
@@ -571,7 +592,7 @@ Private Sub FileCommand(Action As Number)
 
         Else If Action = 302 Then
 
-            Name = Text_Prompt("Save For Viewer As", "Name the new town.", Town.Name + " Copy")
+            Name = Text_Prompt("Save for Viewer As", "Name the new town.", Town.Name + " Copy")
 
             If Not Document.ValidName(Name) Then
                 Return
@@ -1086,7 +1107,7 @@ Public Sub Update(Leader As P.Vector3, Elapsed As Number)
         Call Renderer.LoadNext(Assets)
     End If
 
-    Controls.Ui.Busy = Ground.Stage <> 0 Or Transfers.RequestId > 0 Or Assets.Loaded < Assets.Required
+    Controls.Ui.Busy = Ground.Stage <> 0 Or Transfers.RequestId > 0 Or QueuedSaves.Active Or Assets.Loaded < Assets.Required
 
     If Assets.Loaded < Assets.Required Then
         Controls.Ui.ProgressPercent = (Assets.Loaded - Catalog.CHUNK_COUNT) * 100 / 14
@@ -1099,13 +1120,17 @@ Public Sub Update(Leader As P.Vector3, Elapsed As Number)
 
     If Ground.Failed Then
 
-        If Controls.TerrainGesture.Active Or Controls.TerrainGesture.Pending Then
+        If (Controls.TerrainGesture.Active Or
+            Controls.TerrainGesture.Pending Or
+            Controls.StyleGesture.Pending) Then
 
             Call Editor.Cancel(Controls, Town)
 
             Controls.Ui.Message = "Terrain limit reached; stroke restored."
 
         Else
+            Town.Appearance = LiveAppearance
+            Town.TerrainStyle = LiveStyle
             Town.Surface = LiveSurface
             Town.Revision = Town.Revision + 1
             Controls.Ui.Message = "Terrain limit reached; edit reverted."
@@ -1119,6 +1144,8 @@ Public Sub Update(Leader As P.Vector3, Elapsed As Number)
     Else If (Ground.LiveRevision = Town.Surface.Revision And
         LiveSurface.Revision <> Town.Surface.Revision) Then
 
+        LiveAppearance = Town.Appearance
+        LiveStyle = Town.TerrainStyle
         LiveSurface = Town.Surface
 
         Call Navigation.Rebuild(Town)
@@ -1208,6 +1235,12 @@ Public Sub Update(Leader As P.Vector3, Elapsed As Number)
 
         End If
 
+    End If
+
+    If QueuedSaves.Active Then
+        Call SaveQueue.Update(QueuedSaves, Transfers, OpenTabs)
+
+        Controls.Ui.Message = Transfers.BatchLabel + " " + Transfers.Message
     End If
 
 End Sub

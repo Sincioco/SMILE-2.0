@@ -7,6 +7,7 @@ Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.SurfaceGrid3D As Grid
 Import Smile.Simple3D.SurfaceSections3D As Regions
 Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownSurfaceStyles As Styles
 Import Smile.Tools.TownCatalogData As Catalog
 Import Smile.Tools.TownGeometry As Geometry
 Import Smile.Tools.TownMapLoads As Links
@@ -231,6 +232,8 @@ Public Function Prepare(ByRef Source As Document.State, ByRef Candidate As Docum
     If Not Ok Then
         Return "Tile boundary limit; section unchanged."
     End If
+
+    Call Styles.Transfer(Source.Appearance, Source.Surface, Candidate.Appearance, Candidate.Surface, Area, DeltaX, DeltaZ, Move)
 
     If Not Links.Transfer(Source, Candidate, Area, DeltaX, DeltaZ, Move) Then
         Return "Map Load limit; section unchanged."

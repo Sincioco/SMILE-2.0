@@ -8,6 +8,8 @@ Import Smile.Simple3D.PrecisionCamera3D As Camera
 Import Smile.Simple3D.SurfaceGrid3D As Grid
 Import Smile.Simple3D.SurfacePaint3D As SurfacePaint
 Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownSurfaceStyles As SurfaceStyles
+Import Smile.Tools.TownStyleTools As StyleTools
 Import Smile.Tools.TownSelection As Selection
 Import Smile.Tools.TownCatalogData As Catalog
 Import Smile.Tools.TownGeometry As Geometry
@@ -31,6 +33,7 @@ Import Smile.Tools.TownRampTools As RampTools
 Import Smile.Tools.TownWaterTools As WaterTools
 
 Public Type State
+    StyleGesture As StyleTools.State
     ViewRequest As Number
     FocusPoint As P.Vector3
     Ui As Panel.State
@@ -112,6 +115,7 @@ Public Sub Cancel(ByRef Value As State, ByRef Town As Document.State)
     Call CourtTools.Cancel(Value.CourtGesture, Town)
     Call SurfaceTools.Cancel(Value.SurfaceGesture)
     Call TerrainTools.Cancel(Value.TerrainGesture, Town)
+    Call StyleTools.Cancel(Value.StyleGesture, Town)
 
     Value.RampGesture.Stage = 0
     Value.WaterGesture.Stage = 0
@@ -137,6 +141,12 @@ Public Sub ResetHistory(ByRef Value As State, ByRef Town As Document.State)
 End Sub
 
 Public Sub AcceptTerrain(ByRef Value As State, ByRef Town As Document.State, Ready As Boolean)
+
+    If StyleTools.Publish(Value.StyleGesture, Ready) Then
+        Call History.Record(Value.HistoryState, Town, Value.Guide.Ink)
+
+        Value.Ui.Message = "Terrain style painted. Ctrl+Z to undo."
+    End If
 
     If TerrainTools.Publish(Value.TerrainGesture, Town, Ready, False) Then
         Call History.Record(Value.HistoryState, Town, Value.Guide.Ink)
@@ -171,7 +181,7 @@ Public Function Command(ByRef Value As State, ByRef Town As Document.State, Acti
         Return Action
     End If
 
-    If Value.TerrainGesture.Pending Then
+    If Value.TerrainGesture.Pending Or Value.StyleGesture.Pending Then
         Value.Ui.Message = "Preparing terrain; Esc cancels it."
         Return 0
     End If
@@ -371,7 +381,26 @@ Public Function Command(ByRef Value As State, ByRef Town As Document.State, Acti
             Value.Ui.Message = "Drag a triangle or curve control point."
         End If
 
+    Else If Action >= 750 And Action <= 757 Then
+
+        Value.Ui.Surface = 6
+
+        If Action = 750 Then
+            Value.Ui.PaintStyle = Town.TerrainStyle + 1
+            Value.Ui.Tool = 750
+        Else If Action <= 754 Then
+            Value.Ui.PaintStyle = Action - 750
+        Else If Action = 757 Then
+            Value.Ui.PaintStyle = 0
+        Else
+            Value.Ui.Tool = Action - 5
+        End If
+
+        Value.Ui.Message = "Click or drag to paint terrain style."
+
     Else If Action = 49 Then
+
+        Call SurfaceStyles.Reset(Town.Appearance)
 
         Town.TerrainStyle = (Town.TerrainStyle + 1) Mod 4
         Town.Surface.Revision = Town.Surface.Revision + 1
@@ -752,6 +781,23 @@ Public Function Input(ByRef Value As State, ByRef Town As Document.State,
 
     End If
 
+    If Value.Ui.Category = 2 And Value.Ui.Surface = 6 Then
+
+        OnGround = Picking.TerrainPoint(Town, View, Pointer_X(), Pointer_Y(), Window_Width(), Window_Height(), Value.Current)
+
+        Call StyleTools.Gesture(Value.StyleGesture, Town, Value.Current,
+            OnGround And Not Blocked And Not Panel.Hovered() And Not Key_Held(KEY_SHIFT),
+            Pointer_Pressed(POINTER_PRIMARY) And Key <> KEY_ESCAPE, Pointer_Held(POINTER_PRIMARY),
+            Value.Ui.Tool = 751, Value.Ui.PaintStyle)
+
+        If Value.StyleGesture.Pending Then
+            Value.Ui.Message = "Applying terrain style..."
+        End If
+
+        Return Action
+
+    End If
+
     OnGround = Picking.Ground(View, Pointer_X(), Pointer_Y(), Window_Width(), Window_Height(), Value.Current)
     OnGround = (OnGround And Value.Current.X >= Town.Surface.XEdges[0] And
         Value.Current.X < Town.Surface.XEdges[Town.Surface.Columns] And
@@ -1077,6 +1123,12 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State, View As P.Ca
 
     If Value.Rubber Then
         Call Outline(Value.StartX, Value.StartY, Pointer_X(), Pointer_Y())
+    End If
+
+    If Value.StyleGesture.Active Then
+        Preview = TileGuides.CellRectangle(Town.Surface, Value.StyleGesture.First, Value.StyleGesture.Last)
+
+        Call Guides.DrawMarker(Preview, View, RGB(70, 230, 215))
     End If
 
     If Value.Anchored And (Value.Ui.Tool < 15 Or Not Value.Ui.HideGuides) Then

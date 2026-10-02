@@ -133,6 +133,8 @@ Public Function Restore(ByRef Value As State, ByRef Town As Document.State,
 
         End If
 
+        Town.TerrainStyle = Value.Entries[Index].Town.TerrainStyle
+        Town.Appearance = Value.Entries[Index].Town.Appearance
         Town.MapTileCount = Value.Entries[Index].Town.MapTileCount
         Town.CourtOffsetX = Value.Entries[Index].Town.CourtOffsetX
         Town.CourtOffsetZ = Value.Entries[Index].Town.CourtOffsetZ

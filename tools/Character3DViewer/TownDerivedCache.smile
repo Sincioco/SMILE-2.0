@@ -4,6 +4,7 @@ Module Smile.Tools.TownDerivedCache
 Option Explicit
 
 Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownSurfaceStyles As Styles
 Import Smile.Tools.TownDocumentStore As Store
 Import Smile.Tools.TownDecks As Decks
 Import Smile.Simple3D.SurfaceGrid3D As Grid
@@ -114,7 +115,7 @@ Public Function ReadKey(ByRef Town As Document.State, Category As Text,
         Return ""
     End If
 
-    If Category = "Terrain5" Then
+    If Category = "Terrain7" Then
         Key = Key + ".Terrain"
     Else If Category = "Roads1" Then
         Key = Key + ".Roads"
@@ -151,7 +152,7 @@ Private Function BundleKey(Name As Text) As Text
         Key = Key + Text_From_Code(Reference[Index])
     End For
 
-    If ReadNumber(Key + ".PreparedVersion") <> 5 Then
+    If ReadNumber(Key + ".PreparedVersion") <> 7 Then
         Return ""
     End If
 
@@ -188,6 +189,10 @@ Private Function Matches(ByRef Town As Document.State, Key As Text, AllItems As 
     End If
 
     If Not SameSurface(Town.Surface, Saved.Surface) Then
+        Return False
+    End If
+
+    If Not AllItems And Not Styles.Same(Town.Appearance, Saved.Appearance) Then
         Return False
     End If
 
@@ -236,7 +241,7 @@ Public Function BindBundle(ByRef Town As Document.State, Key As Text) As Boolean
     Dim Status As Number
     Dim Ok As Boolean
 
-    If ReadNumber(Key + ".PreparedVersion") <> 5 Then
+    If ReadNumber(Key + ".PreparedVersion") <> 7 Then
         Return True
     End If
 

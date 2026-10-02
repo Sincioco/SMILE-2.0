@@ -134,7 +134,7 @@ def terrain(document, catalog=None, patches=None):
     if patches is not None:
         from town_blender_terrain import mesh_data
         vertices, faces, materials = mesh_data(patches)
-    elif document.get('curves'):
+    elif document.get('curves') or any(document.get('appearance', [])):
         raise ValueError('Curved terrain needs its prepared Studio geometry; export canceled.')
     else:
         for z in range(rows):
@@ -188,6 +188,15 @@ def terrain(document, catalog=None, patches=None):
                             node.image = replacement
     for name in ('Town Grass', 'Royal Deep Blue Water', 'Town Paving', 'Pale Carved Stone', 'Aged Gold', 'Town Submerged Water Bed'):
         mesh.materials.append(bpy.data.materials[name])
+    if any(flow[0] for flow in document.get('flows', [])):
+        water = bpy.data.materials['Royal Deep Blue Water']
+        water.diffuse_color = (30/255, 100/255, 140/255, 1)
+        if water.node_tree:
+            for node in water.node_tree.nodes:
+                if node.type == 'BSDF_PRINCIPLED':
+                    for link in list(node.inputs['Base Color'].links):
+                        water.node_tree.links.remove(link)
+                    node.inputs['Base Color'].default_value = water.diffuse_color
     for poly, material in zip(mesh.polygons, materials):
         poly.material_index = material
     # Preserve the same two-metre grid as the native surface without per-tile meshes.

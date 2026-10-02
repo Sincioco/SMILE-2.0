@@ -1,0 +1,168 @@
+''' Mixed appearance persistence, stroke isolation and the observed whole-map undo bug.
+Module Smile.Tools.TownStyleTests
+
+Option Explicit
+
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownSurfaceStyles As Styles
+Import Smile.Tools.TownStyleTools As Tools
+Import Smile.Tools.TownDocumentStore As Store
+Import Smile.Tools.TownHistory As History
+Import Smile.Tools.TownGuides As Guides
+Import Smile.Tools.TownTerrainBuilder As Builder
+Import Smile.Tools.TownTerrainCache As Cache
+Import Smile.Tools.TownSections As Sections
+Import Smile.Tools.TownSavePreparation As Preparation
+Import Smile.Tools.TownDerivedCache As Derived
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.SurfaceSections3D As Regions
+Import Smile.Simple3D.Precision3D As P
+
+Private Dim Town As Document.State
+Private Dim Copy As Document.State
+Private Dim Journal As History.State
+Private Dim Ink As Guides.Drawing
+Private Dim Gesture As Tools.State
+Private Dim Recipe As Builder.State
+Private Dim LoadedRecipe As Cache.Batch
+Private Dim Prepared As Preparation.State
+Private Dim Failures As Number
+
+Private Sub Check(Ok As Boolean, Label As Text)
+
+    If Not Ok Then
+        Print "FAIL Terrain Style " + Label
+        Failures = Failures + 1
+    End If
+
+End Sub
+
+Public Function Run() As Number
+
+    Dim Ok As Boolean
+    Dim Index As Number
+    Dim DefaultSeen As Boolean
+    Dim DesertSeen As Boolean
+    Dim MeadowSeen As Boolean
+    Dim Area As Regions.Region
+    Dim Message As Text
+
+    Failures = 0
+    Ok = Document.Blank(Town, "Mixed Terrain Acceptance", 6, 4, 10.0)
+    Town.TerrainStyle = 1
+    Ok = Store.SaveDocument(Town, "Styles.Legacy")
+
+    Call History.Reset(Journal, Town, Ink)
+
+    Ok = Styles.Write(Town.Appearance, 0, 1)
+    Ok = Styles.Write(Town.Appearance, 1, 4)
+    Town.Revision = Town.Revision + 1
+    Town.Surface.Revision = Town.Surface.Revision + 1
+
+    Call History.Record(Journal, Town, Ink)
+
+    Ok = Store.SaveDocument(Town, "Styles.Mixed")
+    Ok = Store.LoadDocument(Copy, "Styles.Mixed") And Ok
+
+    Call Check(Ok And Copy.TerrainStyle = 1 And Styles.Read(Copy.Appearance, 0) = 1 And
+        Styles.Read(Copy.Appearance, 1) = 4 And Styles.Read(Copy.Appearance, 2) = 0,
+        "Explicit Meadow And Desert With Inherited Forest Round Trip")
+
+    Call Builder.Begin(Recipe, Copy)
+
+    For Index = 0 To Copy.Surface.Rows - 1
+        Recipe.Row = Index
+
+        Call Builder.ScanRow(Recipe)
+    End For
+
+    Ok = Cache.SaveBatch(Recipe.Buffer, "Styles.Recipe", 0)
+    Ok = Cache.LoadBatch(LoadedRecipe, "Styles.Recipe", 0) And Ok
+
+    For Index = 0 To LoadedRecipe.PatchCount - 1
+        DefaultSeen = DefaultSeen Or LoadedRecipe.Patches[Index].Style = 0
+        DesertSeen = DesertSeen Or LoadedRecipe.Patches[Index].Style = 4
+        MeadowSeen = MeadowSeen Or LoadedRecipe.Patches[Index].Style = 1
+    End For
+
+    Call Check(Ok And DefaultSeen And DesertSeen And MeadowSeen, "Material Boundaries Survive Recipe Cache")
+
+    Call Preparation.Begin(Prepared, Copy, "Styles.Mixed", 901)
+
+    For Index = 0 To 1000
+
+        Call Preparation.Update(Prepared, Copy, 901)
+
+        If Prepared.Stage = 0 Or Prepared.Failed Then
+            Exit For
+        End If
+
+    End For
+
+    Ok = Derived.BindBundle(Copy, "Styles.Mixed")
+
+    Call Check(Ok And Not Prepared.Failed And Prepared.Stage = 0,
+        "Mixed Styles Prepare For Portable Save And Blender")
+
+    Ok = Styles.Write(Copy.Appearance, 0, 3)
+
+    Call Check(Derived.ReadKey(Copy, "Terrain7", False) = "",
+        "Changed Appearance Rejects Previous Prepared Terrain")
+    Call Styles.Reset(Town.Appearance)
+
+    Town.TerrainStyle = 3
+    Town.Revision = Town.Revision + 1
+    Town.Surface.Revision = Town.Surface.Revision + 1
+
+    Call History.Record(Journal, Town, Ink)
+
+    Ok = History.Restore(Journal, Town, Ink, False)
+
+    Call Check(Ok And Town.TerrainStyle = 1 And Styles.Read(Town.Appearance, 1) = 4,
+        "Whole Map Undo Restores Both Default And Painted Tiles")
+
+    Ok = History.Restore(Journal, Town, Ink, True)
+
+    Call Check(Ok And Town.TerrainStyle = 3 And Town.Appearance.Nonzero = 0,
+        "Whole Map Redo Reapplies Its Style")
+
+    Call Tools.Gesture(Gesture, Town, P.Vector(-25.0, 20.9, -15.0), True, True, True, False, 2)
+    Call Tools.Gesture(Gesture, Town, P.Vector(25.0, 20.9, -15.0), True, False, True, False, 2)
+    Call Check(Town.Appearance.Nonzero = 0, "Live Stroke Leaves Published Document Unchanged")
+    Call Tools.Gesture(Gesture, Town, P.Vector(25.0, 20.9, -15.0), True, False, False, False, 2)
+    Call Check(Town.Appearance.Nonzero = 6 And Gesture.Pending, "Fast Stroke Fills Intervening Tiles Once On Release")
+    Call Tools.Cancel(Gesture, Town)
+    Call Check(Town.Appearance.Nonzero = 0 And Not Gesture.Pending, "Cancelled Pending Stroke Restores Appearance")
+
+    Ok = Store.LoadDocument(Town, "Styles.Mixed")
+    Area.MinX = -30.0
+    Area.MaxX = -10.0
+    Area.MinZ = -20.0
+    Area.MaxZ = -10.0
+    Message = Sections.Prepare(Town, Copy, Area, 35.0, 20.0, False)
+
+    Call Check(Message = "", "Mixed Style Section Can Be Copied Across Inserted Grid Edges")
+    Call Check(Styles.Read(Copy.Appearance, Grid.CellZ(Copy.Surface, 5.0) * Copy.Surface.Columns +
+        Grid.CellX(Copy.Surface, 20.0)) = 4, "Copied Desert Tile Survives Grid Remapping")
+
+    Ok = Styles.Write(Town.Appearance, 5, 4)
+    Ok = Document.Blank(Copy, "Expanded Appearance", 8, 4, 10.0)
+
+    Call Styles.Transfer(Town.Appearance, Town.Surface, Copy.Appearance, Copy.Surface, Area, 0.0, 0.0, False)
+    Call Check(Styles.Read(Copy.Appearance, 8) = 0 And Styles.Read(Copy.Appearance, 2) = 4,
+        "Expanded Grid Does Not Wrap Paint From A Previous Row")
+
+    Ok = Store.LoadDocument(Copy, "Styles.Legacy")
+
+    Call Check(Ok And Copy.Appearance.Nonzero = 0, "Legacy Reopen Clears Previous Local Styles")
+
+    Town.Appearance.Pages[0] = "invalid"
+    Ok = Store.SaveDocument(Town, "Styles.Mixed")
+
+    Call Check(Not Ok, "Malformed Appearance Cannot Replace Saved Map")
+
+    Return Failures
+
+End Function
+
+End Module

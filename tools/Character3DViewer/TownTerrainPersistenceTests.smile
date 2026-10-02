@@ -81,12 +81,12 @@ Public Sub Run(ByRef Failures As Number)
     Call Check(Document.Dirty(Loaded), "Recovery Restores Dirty Snapshot", Failures)
 
     Ok = Derived.BindBundle(Loaded, "Terrain.Save.A")
-    Key = Derived.ReadKey(Loaded, "Terrain5", False)
+    Key = Derived.ReadKey(Loaded, "Terrain7", False)
     Ok = Cache.LoadBatch(Recipe, Key, 0) And Ok
 
     Call Check(Ok And Text_Length(Key) > 0 And Recipe.PatchCount > 0,
         "Prepared Terrain5 Is Bound To Saved Heights And Flow", Failures)
-    Call Check(Derived.ReadKey(Current, "Terrain5", False) = "",
+    Call Check(Derived.ReadKey(Current, "Terrain7", False) = "",
         "B Cannot Reuse A Geometry", Failures)
 
     Loaded.Name = "Terrain Save As"
@@ -97,7 +97,9 @@ Public Sub Run(ByRef Failures As Number)
         "Save As Preserves Elevation And Flow", Failures)
 
     Call Check(Not Document.SupportsBlender(Current),
-        "Blender Preflight Rejects Terrain And Flow", Failures)
+        "Blender Preflight Requires Prepared Terrain And Flow", Failures)
+    Call Check(Document.SupportsBlender(Current, True),
+        "Prepared Blender Export Supports Terrain And Flow", Failures)
     Call Check(Store.QueueBlender(Current, 1) = 0 And Store.QueueBlender(Current, 2) = 0,
         "Legacy Blender Queue Rejects Terrain Before Request Publication", Failures)
 
@@ -118,9 +120,9 @@ Public Sub Run(ByRef Failures As Number)
 
     Call Check(Not Ok And Current.Revision = 11, "Future Version Rejected Atomically", Failures)
 
-    Ok = Derived.WriteNumber(4, "Terrain.Save.A.PreparedVersion")
+    Ok = Derived.WriteNumber(5, "Terrain.Save.A.PreparedVersion")
 
-    Call Check(Ok And Derived.ReadKey(Snapshot, "Terrain5", False) = "",
+    Call Check(Ok And Derived.ReadKey(Snapshot, "Terrain7", False) = "",
         "Old Prepared Recipe Rejected", Failures)
 
     Ok = Document.Blank(Current, "Legacy After Terrain", 8, 8, 20.0)

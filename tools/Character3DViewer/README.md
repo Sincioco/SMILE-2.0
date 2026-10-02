@@ -1,5 +1,46 @@
 # SMILE 2.0 - Sin Star I - Game Engine and Studio
 
+## October 2 queued exports and landscape corrections
+
+**Edit Town → Files → Save All for Viewer / Save All for Blender** captures every
+open map when clicked. Choose the first output file; the remaining maps use unique
+batch filenames in that folder. The existing background save worker processes one
+map at a time and reports progress and any failures. Editing can continue; newer
+changes are not marked saved by an older snapshot. A failed map does not discard
+the remaining queue, and Explorer does not open once per map.
+
+Blender export now uses the prepared native terrain triangles for elevations,
+directed water and local styles. Reopening retains the authored terrain and flow
+metadata. Blender does not reproduce Studio's animated water shader. Legacy
+unprepared exports still reject elevated terrain instead of flattening it.
+
+East Valley retains its original City Hall on a grassy island inside the circular
+pond, with its front-door path connected to the inner road ring. Silverfall has
+two winding trails reaching the map edges and a rounded crossing on the broader
+shelf between its cascades. The upper fall is farther upstream. Its lake and stream
+share a water level and color; terrain shading is smooth without the former stepped
+rock-color boundary. Greyglass has asymmetric mountain ridges and climbable lookouts.
+
+## October 2 local terrain appearance and outdoor refinements
+
+Use **Edit Town → Items → Surfaces → Paint Terrain Styles...** to paint Meadow,
+Forest, Highland or Desert on individual tiles or a rectangle. Drag, then release
+to apply one undoable stroke. **Erase Local Style** restores the map's default in
+that area. Escape cancels; Ctrl+Z/Y undo/redo. Water and elevations are retained;
+the selected style changes the appearance of land and roads, not their walkability.
+**Whole Map** keeps the existing one-click style cycle and clears local overrides;
+undo restores both the previous map style and its painted areas.
+
+Local styles survive save/reopen, recovery and prepared Blender export. Maps with
+local overrides use TWN12; maps without them retain their earlier file version.
+The existing authored-save and renderer budgets still apply.
+
+Verdant Reach, Greyglass Pass, Willowstep Highlands, Silverfall Basin and Sunglass
+Expanse now use broad wilderness trail bends. The first four have no road circles.
+Verdant has irregular lakes and hills; Greyglass has varied walkable plateaus;
+Silverfall has a wider cascade, larger lake, mostly grass and more trees. Directed
+water uses subtle blue-green movement without repeating white crest stripes.
+
 ## October 2 terrain, ramps and flowing water
 
 **Maps** now includes **Willowstep Highlands** and **Silverfall Basin**, two
@@ -30,9 +71,9 @@ There are at most three independent direction/speed groups per map.
 Viewer saves, Save As, recovery and portable imports retain terrain and flow in
 TWN11. Existing maps retain their previous format until they need the new data.
 The existing 512 KiB authored-document budget still applies; complex saves fail
-explicitly if they exceed it. **Save For Blender** and section transfer currently
-reject elevated/directed-water content before replacing any destination. They do
-not silently flatten it. Ordinary flat map exports remain supported.
+explicitly if they exceed it. **Save for Blender** exports the prepared native
+geometry. Section transfer still rejects elevated/directed-water content before
+replacing a destination; it does not silently flatten it.
 
 Run `pwsh -NoProfile -File scripts/create-terrain-acceptance.ps1` from the repository
 to create a separate **Terrain-and-Flowing-Water-MVP.town** under a new artifacts/tests

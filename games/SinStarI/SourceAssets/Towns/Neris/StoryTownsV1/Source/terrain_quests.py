@@ -28,9 +28,13 @@ def highlands_height(x, z):
 
 
 def basin_height(x, z):
-    # Three broad 14 m terraces; each transition remains below 30 degrees.
-    height = sum(14 * smooth((x - start) / 54) for start in (-132, -42, 48))
-    return height * smooth((math.hypot(x+126, z-24)-44)/30)
+    # Two steep falls descend 42 m with a broad crossing shelf between them. Away from
+    # the river, wide shoulders blend into a gradual side-trail climb.
+    falls = 26*smooth((x+20)/14) + 16*smooth((x-55)/14)
+    trail = 42*smooth((x+150)/300)
+    river = 1-smooth((abs(z-24)-20)/28)
+    height = trail + (falls-trail)*river
+    return height*smooth((math.hypot(x+128,z-30)-60)/25)
 
 
 def start(name, style):
@@ -108,21 +112,27 @@ def highlands():
 
 def basin():
     town = start('Silverfall Basin', 0)
-    route = [(-174, -54), (-126, -54), (-90, -84), (-36, -54),
-             (0, -84), (54, -54), (90, -84), (144, -54), (174, -54)]
-    side_route = [(-174, -54), (-174, 105), (0, 105), (144, 105)]
-    spawn_route = [(0, 0), (0, -84)]
-    clearings = [(-90, -84), (0, -84), (90, -84)]
+    route = [(-192, -54), (-144, -54), (-90, -84), (-36, -70),
+             (36, -70), (90, -84), (144, -54), (192, -54)]
+    side_route = [(-192, 105), (-126, 120), (-60, 102), (-30, 105),
+                  (30, 105), (90, 123), (144, 105), (192, 105)]
+    crossing = [(0, -70), (0, 105)]
+    clearings = [(-90, -84), (0, -70), (90, -84)]
     flow = stream(town, (150, 24), (-102, 24), 24)
-    town.disk(-126, 24, 42, WATER)
+    town.curve([(-141, 4), (-139, 64), (-106, 30)], 48, WATER)
     town.gates(-54, ('Willowstep Highlands', 'Greyglass Pass'), join_x=156, width=8)
     route = town.path(route, 8)
     side_route = town.path(side_route, 7)
-    spawn_route = town.path(spawn_route, 7)
-    paths = [route, side_route, spawn_route]
+    crossing = town.path(crossing, 7)
+    paths = [route, side_route, crossing]
+    # The paving reaches the boundary; acceptance keeps the party's footprint inside it.
+    for path in paths[:2]:
+        path[0] = (-188, path[0][1])
+        path[-1] = (188, path[-1][1])
     decorate(town, basin_height, paths, clearings + [(0, 0)], 6103, True)
-    town.notes = ['Three 14 m terraces form a 42 m climb, with open encounter shelves.',
-                  'A 24 m stream descends grassy terraces into an 84 m lake, surrounded by woodland.',
+    town.notes = ['Two steep cascades descend 42 m, separated by a broad river-crossing shelf.',
+                  'Winding side trails reach both map edges with rounded junctions and no enclosing loop.',
+                  'A 24 m stream feeds a broad irregular lake, surrounded by grassy woodland.',
                   'Draped cascades, not vertical free-fall water simulation; no enemies are added.']
     return town, basin_height, flow, paths
 
@@ -138,6 +148,11 @@ def save(design, folder):
         doc['map_tiles'] = previous['map_tiles']
     doc['heights'] = [round(height(x/10, z/10)*1000)/100
                       for z in doc['zs'] for x in doc['xs']]
+    # Keep natural mountain slopes in their continuous Highland palette. A hard
+    # per-cell height/slope color threshold creates visible stair-step boundaries.
+    if town.name == 'Silverfall Basin':
+        from road_junctions import round_junctions
+        round_junctions(doc)
     doc['flows'] = [[0, 0, 0] for _ in doc['curves']]
     if flow is not None:
         doc['flows'][flow] = [1, 1, 100]
