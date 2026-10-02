@@ -1887,25 +1887,26 @@
       18
     ],
     "campfires": 2,
-    "sha256": "cdfde3254fd17758ab18498bafd417ec95cf65546730040aa1b8410775534d69"
+    "sha256": "1b02aa23283f431db04a65c38b756ab6583161ff30a69c38a5ae0de53989a3a3"
   },
   {
     "name": "Willowstep Highlands",
     "file": "Willowstep Highlands.town",
     "size_m": 384.0,
-    "items": 39,
+    "items": 37,
     "trees": 0,
     "lamps": 0,
     "houses": 3,
     "castles": 0,
     "city_halls": 0,
-    "draw_cost": 183,
-    "local_lights": 31,
-    "water_percent": 6.0,
+    "draw_cost": 175,
+    "local_lights": 29,
+    "water_percent": 10.9,
     "story_spaces": [
       "Rebuilt as a snowy mountain pass with broad alpine ridges and exposed rock on steep slopes.",
       "Packed snow trails climb the west lookout and cross the meltwater to a second alpine slope.",
-      "A descending meltwater stream opens into an irregular pool; broad clearings support future encounters."
+      "Three broad meltwater bends feed a much larger irregular lake open across the south map edge.",
+      "The central dead-end road spur is removed; broad clearings support future encounters."
     ],
     "terrain_height_m": 153.584,
     "acceptance_paths": [
@@ -2406,16 +2407,6 @@
           105.58378335625781,
           61.40056322718499
         ]
-      ],
-      [
-        [
-          0,
-          0
-        ],
-        [
-          -63,
-          0
-        ]
       ]
     ],
     "acceptance_goal": [
@@ -2424,20 +2415,76 @@
     ],
     "acceptance_gates": [
       [
+        -190.5,
+        139.5
+      ],
+      [
+        -190.5,
+        142.5
+      ],
+      [
+        -190.5,
+        145.5
+      ],
+      [
+        -190.5,
+        148.5
+      ],
+      [
         -187.5,
         139.5
       ],
       [
+        -187.5,
+        142.5
+      ],
+      [
+        -187.5,
+        145.5
+      ],
+      [
+        -187.5,
+        148.5
+      ],
+      [
+        187.5,
+        139.5
+      ],
+      [
+        187.5,
+        142.5
+      ],
+      [
+        187.5,
+        145.5
+      ],
+      [
+        187.5,
+        148.5
+      ],
+      [
         190.5,
         139.5
+      ],
+      [
+        190.5,
+        142.5
+      ],
+      [
+        190.5,
+        145.5
+      ],
+      [
+        190.5,
+        148.5
       ]
     ],
     "acceptance_spawn": [
-      0,
-      0
+      -10.16919511709414,
+      -67.36301500900724
     ],
-    "campfires": 27,
-    "sha256": "760db581be42d00336da1c9b8a7415aa8d5049f779d0f99f9aa472757f99d6f0"
+    "campfires": 25,
+    "sha256": "cac1780ba564d0a17b651da78c891eb0da875d6df16555f041624497cabf64a8"
   },
   {
     "name": "Silverfall Basin",
@@ -2942,6 +2989,6 @@
       0
     ],
     "campfires": 32,
-    "sha256": "b7d6a2f5abf44450ddc167ccb5fcd4e124f3b3e637ae38d240c9fb830569d129"
+    "sha256": "a0b00d1ac73ef050ecc4658211f8c06965fa6e5576f56947b9a4029fa8b723ae"
   }
 ]

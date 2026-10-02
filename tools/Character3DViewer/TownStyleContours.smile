@@ -1,0 +1,231 @@
+''' Continuous material boundaries from existing painted cells, independent of map identity.
+Module Smile.Tools.TownStyleContours
+
+Option Explicit
+
+Import Smile.Tools.TownSurfaceStyles As Styles
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.Precision3D As P
+
+Private Type Vertex
+    Position As P.Vector3
+    Weight[6] As Double
+End Type
+
+Private Type Polygon
+    Points[9] As Vertex
+    Size As Number
+End Type
+
+Public Type Triangle
+    PointA As P.Vector3
+    PointB As P.Vector3
+    PointC As P.Vector3
+    Style As Number
+End Type
+
+Public Type Slice
+    Faces[36] As Triangle
+    FaceCount As Number
+End Type
+
+Public Function Mixed(ByRef Appearance As Styles.State, ByRef Surface As Grid.State,
+    X As Number, Z As Number) As Boolean
+
+    Dim Column As Number
+    Dim Row As Number
+    Dim Current As Number
+
+    If Appearance.Nonzero = 0 Then
+        Return False
+    End If
+
+    Current = Styles.Read(Appearance, Z * Surface.Columns + X)
+
+    For Row = Max(0, Z - 1) To Min(Surface.Rows - 1, Z + 1)
+
+        For Column = Max(0, X - 1) To Min(Surface.Columns - 1, X + 1)
+
+            If Styles.Read(Appearance, Row * Surface.Columns + Column) <> Current Then
+                Return True
+            End If
+
+        End For
+    End For
+
+    Return False
+
+End Function
+
+Private Function Sample(ByRef Appearance As Styles.State, ByRef Surface As Grid.State,
+    Point As P.Vector3) As Vertex
+
+    Dim Result As Vertex
+    Dim X As Number
+    Dim Z As Number
+    Dim Column As Number
+    Dim Row As Number
+    Dim Style As Number
+    Dim GridX As Double
+    Dim GridZ As Double
+    Dim Amount As Double
+
+    Result.Position = Point
+    X = Max(0, Min(Surface.Columns - 1, Grid.CellX(Surface, Point.X)))
+    Z = Max(0, Min(Surface.Rows - 1, Grid.CellZ(Surface, Point.Z)))
+    GridX = (ToDouble(X) + (Point.X - Surface.XEdges[X]) /
+        (Surface.XEdges[X + 1] - Surface.XEdges[X]) - 0.5)
+    GridZ = (ToDouble(Z) + (Point.Z - Surface.ZEdges[Z]) /
+        (Surface.ZEdges[Z + 1] - Surface.ZEdges[Z]) - 0.5)
+    X = ToNumber(Floor(GridX))
+    Z = ToNumber(Floor(GridZ))
+
+    For Row = Z To Z + 1
+
+        For Column = X To X + 1
+
+            Style = Styles.Read(Appearance, Max(0, Min(Surface.Rows - 1, Row)) *
+                Surface.Columns + Max(0, Min(Surface.Columns - 1, Column)))
+            Amount = ((1.0 - Abs(GridX - ToDouble(Column))) *
+                (1.0 - Abs(GridZ - ToDouble(Row))))
+            Result.Weight[Style] = Result.Weight[Style] + Amount
+        End For
+    End For
+
+    Return Result
+
+End Function
+
+Private Function Between(First As Vertex, Last As Vertex, Amount As Double) As Vertex
+
+    Dim Result As Vertex
+    Dim Index As Number
+
+    Result.Position = P.Vector(First.Position.X + (Last.Position.X - First.Position.X) * Amount,
+        First.Position.Y + (Last.Position.Y - First.Position.Y) * Amount,
+        First.Position.Z + (Last.Position.Z - First.Position.Z) * Amount)
+
+    For Index = 0 To 5
+        Result.Weight[Index] = First.Weight[Index] + (Last.Weight[Index] - First.Weight[Index]) * Amount
+    End For
+
+    Return Result
+
+End Function
+
+Private Function Clip(Value As Polygon, Style As Number, Other As Number) As Polygon
+
+    Dim Result As Polygon
+    Dim First As Vertex
+    Dim Last As Vertex
+    Dim DifferenceA As Double
+    Dim DifferenceB As Double
+    Dim Index As Number
+    Dim Tied As Boolean
+
+    If Value.Size = 0 Then
+        Return Result
+    End If
+
+    Tied = True
+
+    For Index = 0 To Value.Size - 1
+        Tied = Tied And Value.Points[Index].Weight[Style] = Value.Points[Index].Weight[Other]
+    End For
+
+    If Tied And Style > Other Then
+        Return Result
+    End If
+
+    First = Value.Points[Value.Size - 1]
+    DifferenceA = First.Weight[Style] - First.Weight[Other]
+
+    For Index = 0 To Value.Size - 1
+
+        Last = Value.Points[Index]
+        DifferenceB = Last.Weight[Style] - Last.Weight[Other]
+
+        If ((DifferenceA >= 0.0 And DifferenceB < 0.0) Or
+            (DifferenceA < 0.0 And DifferenceB >= 0.0)) Then
+            Result.Points[Result.Size] = Between(First, Last, DifferenceA / (DifferenceA - DifferenceB))
+            Result.Size = Result.Size + 1
+        End If
+
+        If DifferenceB >= 0.0 Then
+            Result.Points[Result.Size] = Last
+            Result.Size = Result.Size + 1
+        End If
+
+        First = Last
+        DifferenceA = DifferenceB
+    End For
+
+    Return Result
+
+End Function
+
+''' Pairwise weight clipping partitions each triangle without overlaps or open seams.
+Public Function Split(ByRef Appearance As Styles.State, ByRef Surface As Grid.State,
+    PointA As P.Vector3, PointB As P.Vector3, PointC As P.Vector3) As Slice
+
+    Dim Result As Slice
+    Dim Source As Polygon
+    Dim Piece As Polygon
+    Dim Style As Number
+    Dim Other As Number
+    Dim Index As Number
+    Dim First As P.Vector3
+    Dim Second As P.Vector3
+    Dim Third As P.Vector3
+    Dim Area As Double
+
+    Source.Size = 3
+    Source.Points[0] = Sample(Appearance, Surface, PointA)
+    Source.Points[1] = Sample(Appearance, Surface, PointB)
+    Source.Points[2] = Sample(Appearance, Surface, PointC)
+
+    For Style = 0 To 5
+
+        If (Source.Points[0].Weight[Style] > 0.0 Or
+            Source.Points[1].Weight[Style] > 0.0 Or
+            Source.Points[2].Weight[Style] > 0.0) Then
+
+            Piece = Source
+
+            For Other = 0 To 5
+
+                If Other <> Style Then
+                    Piece = Clip(Piece, Style, Other)
+                End If
+
+            End For
+
+            For Index = 1 To Piece.Size - 2
+
+                First = Piece.Points[0].Position
+                Second = Piece.Points[Index].Position
+                Third = Piece.Points[Index + 1].Position
+                Area = ((Second.X - First.X) * (Third.Z - First.Z) -
+                    (Second.Z - First.Z) * (Third.X - First.X))
+
+                If Abs(Area) > 0.000001 Then
+
+                    Result.Faces[Result.FaceCount].PointA = First
+                    Result.Faces[Result.FaceCount].PointB = Second
+                    Result.Faces[Result.FaceCount].PointC = Third
+                    Result.Faces[Result.FaceCount].Style = Style
+                    Result.FaceCount = Result.FaceCount + 1
+
+                End If
+
+            End For
+
+        End If
+
+    End For
+
+    Return Result
+
+End Function
+
+End Module

@@ -1259,6 +1259,7 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
     Call Drone.Compose(Value.Flight, Value.View, Value.BaseCamera, Value.Follow And Not Value.Keys.FlyInspect, Elapsed,
         Drone.GroundShot(Value.Flight, Value.PartyCamera) Or Value.Cinematic,
         Value.Keys.FlyInspect)
+    Call Authoring.UpdateEffects(Value.View.LiveCamera, Elapsed)
 
 End Sub
 

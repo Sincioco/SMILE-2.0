@@ -10,6 +10,7 @@ Import Smile.Tools.TownDocumentStore As Store
 Import Smile.Tools.TownHistory As History
 Import Smile.Tools.TownGuides As Guides
 Import Smile.Tools.TownTerrainBuilder As Builder
+Import Smile.Tools.TownStyleContours As Contours
 Import Smile.Tools.TownTerrainCache As Cache
 Import Smile.Tools.TownSections As Sections
 Import Smile.Tools.TownSavePreparation As Preparation
@@ -48,6 +49,9 @@ Public Function Run() As Number
     Dim Message As Text
 
     Failures = 0
+
+    Call CheckContours()
+
     Ok = Document.Blank(Town, "Mixed Terrain Acceptance", 6, 4, 10.0)
     Town.TerrainStyle = 1
     Ok = Store.SaveDocument(Town, "Styles.Legacy")
@@ -106,7 +110,7 @@ Public Function Run() As Number
 
     Ok = Styles.Write(Copy.Appearance, 0, 3)
 
-    Call Check(Derived.ReadKey(Copy, "Terrain8", False) = "",
+    Call Check(Derived.ReadKey(Copy, "Terrain9", False) = "",
         "Changed Appearance Rejects Previous Prepared Terrain")
     Call Styles.Reset(Town.Appearance)
 
@@ -172,5 +176,52 @@ Public Function Run() As Number
     Return Failures
 
 End Function
+
+Private Sub CheckContours()
+
+    Dim Result As Contours.Slice
+    Dim PointA As P.Vector3
+    Dim PointB As P.Vector3
+    Dim PointC As P.Vector3
+    Dim First As P.Vector3
+    Dim Second As P.Vector3
+    Dim Third As P.Vector3
+    Dim Index As Number
+    Dim Total As Double
+    Dim Slanted As Boolean
+    Dim Meadow As Boolean
+    Dim Desert As Boolean
+    Dim Ok As Boolean
+
+    Ok = Document.Blank(Town, "Material Contours", 2, 2, 10.0)
+    Ok = Styles.Write(Town.Appearance, 0, 1) And Ok
+    Ok = Styles.Write(Town.Appearance, 1, 4) And Ok
+    Ok = Styles.Write(Town.Appearance, 2, 4) And Ok
+    Ok = Styles.Write(Town.Appearance, 3, 4) And Ok
+    PointA = P.Vector(-5.0, 10.0, -5.0)
+    PointB = P.Vector(-5.0, 10.0, 5.0)
+    PointC = P.Vector(5.0, 20.0, 5.0)
+    Result = Contours.Split(Town.Appearance, Town.Surface, PointA, PointB, PointC)
+
+    For Index = 0 To Result.FaceCount - 1
+
+        First = Result.Faces[Index].PointA
+        Second = Result.Faces[Index].PointB
+        Third = Result.Faces[Index].PointC
+        Total = (Total + Abs((Second.X - First.X) * (Third.Z - First.Z) -
+            (Second.Z - First.Z) * (Third.X - First.X)) * 0.5)
+        Meadow = Meadow Or Result.Faces[Index].Style = 1
+        Desert = Desert Or Result.Faces[Index].Style = 4
+        Slanted = Slanted Or (First.X = 0.0 And First.Z = 0.0)
+        Ok = Ok And Abs(First.Y - First.X - 15.0) < 0.00001
+        Ok = Ok And Abs(Second.Y - Second.X - 15.0) < 0.00001
+        Ok = Ok And Abs(Third.Y - Third.X - 15.0) < 0.00001
+    End For
+
+    Call Check(Ok And Abs(Total - 50.0) < 0.00001 And Meadow And Desert,
+        "Contour Partition Retains Materials Area And Original Height Plane")
+    Call Check(Slanted, "Stepped Painted Corner Becomes A Diagonal Contour")
+
+End Sub
 
 End Module

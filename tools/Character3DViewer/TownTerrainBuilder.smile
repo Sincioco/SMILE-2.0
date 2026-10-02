@@ -7,6 +7,7 @@ Import Smile.Tools.TownSurfaceLayers As Layers
 Import Smile.Tools.TownDecks As Decks
 Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownSurfaceStyles As Styles
+Import Smile.Tools.TownStyleContours As StyleContours
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.SurfaceGrid3D As Grid
 Import Smile.Simple3D.SurfaceContours3D As Contours
@@ -22,6 +23,7 @@ Public Type State
     SourceCurves As Paint.State
     Flows As Flow.Groups
     Detailed As Boolean
+    MixedStyle As Boolean
     Openings As Decks.State
     Buffer As Cache.Batch
     Row As Number
@@ -51,6 +53,18 @@ Private Sub AddPatch(ByRef Value As State, X0 As Double, Z0 As Double,
     If Value.Buffer.PatchCount >= 65536 Then
         Value.Failed = True
         Return
+    End If
+
+    If (Kind = Grid.SURFACE_WATER And
+        Plane = 0 And
+        Value.Detailed) Then
+
+        Y0 = Layers.GROUND_Y - 1.0
+
+        If Value.Flows.GroupCount > 0 Then
+            Y0 = Layers.GROUND_Y + 0.02 * Layers.UNITS_PER_METER
+        End If
+
     End If
 
     Value.Buffer.Patches[Value.Buffer.PatchCount].X0 = X0
@@ -313,6 +327,51 @@ Private Sub CurveTriangle(ByRef Value As State, PointA As P.Vector3, PointB As P
 
 End Sub
 
+Private Sub StyleTriangle(ByRef Value As State, PointA As P.Vector3,
+    PointB As P.Vector3, PointC As P.Vector3, Base As Number)
+
+    Dim Slice As StyleContours.Slice
+    Dim Index As Number
+    Dim OriginalStyle As Number
+
+    OriginalStyle = Value.Style
+    Slice = StyleContours.Split(Value.Appearance, Value.Surface, PointA, PointB, PointC)
+
+    For Index = 0 To Slice.FaceCount - 1
+        Value.Style = Slice.Faces[Index].Style
+
+        Call CurveTriangle(Value, Slice.Faces[Index].PointA, Slice.Faces[Index].PointB,
+            Slice.Faces[Index].PointC, Base)
+    End For
+
+    Value.Style = OriginalStyle
+
+End Sub
+
+Private Sub SmoothTriangle(ByRef Value As State, PointA As P.Vector3,
+    PointB As P.Vector3, PointC As P.Vector3, Base As Number)
+
+    Dim MiddleAB As P.Vector3
+    Dim MiddleBC As P.Vector3
+    Dim MiddleCA As P.Vector3
+
+    If Not Value.MixedStyle Then
+        Call CurveTriangle(Value, PointA, PointB, PointC, Base)
+
+        Return
+    End If
+
+    MiddleAB = P.Vector((PointA.X + PointB.X) * 0.5, 0.0, (PointA.Z + PointB.Z) * 0.5)
+    MiddleBC = P.Vector((PointB.X + PointC.X) * 0.5, 0.0, (PointB.Z + PointC.Z) * 0.5)
+    MiddleCA = P.Vector((PointC.X + PointA.X) * 0.5, 0.0, (PointC.Z + PointA.Z) * 0.5)
+
+    Call StyleTriangle(Value, PointA, MiddleAB, MiddleCA, Base)
+    Call StyleTriangle(Value, MiddleAB, PointB, MiddleBC, Base)
+    Call StyleTriangle(Value, MiddleCA, MiddleBC, PointC, Base)
+    Call StyleTriangle(Value, MiddleAB, MiddleBC, MiddleCA, Base)
+
+End Sub
+
 Private Sub CurveRow(ByRef Value As State)
 
     Dim X As Number
@@ -365,14 +424,29 @@ Private Sub CurveRow(ByRef Value As State)
             Min(3, Contours.Kind(Value.Surface, PointD, Base)) = Surface)
 
         If Value.Detailed Then
-            Uniform = (Uniform And Surface <> Grid.SURFACE_WATER And
+
+            Uniform = (Uniform And
                 Elevation.Corner(Value.Surface, X, Value.Row) = 0.0 And
                 Elevation.Corner(Value.Surface, X + 1, Value.Row) = 0.0 And
                 Elevation.Corner(Value.Surface, X, Value.Row + 1) = 0.0 And
                 Elevation.Corner(Value.Surface, X + 1, Value.Row + 1) = 0.0)
+
+            ' Merge only flat lake interiors. Keep banks and directed streams triangulated.
+
+            If Surface = Grid.SURFACE_WATER Then
+                Uniform = (Uniform And
+                    Flow.GroupAt(Value.SourceCurves, Value.Flows, PointA.X, PointA.Z) = 0 And
+                    Flow.GroupAt(Value.SourceCurves, Value.Flows, PointB.X, PointB.Z) = 0 And
+                    Flow.GroupAt(Value.SourceCurves, Value.Flows, PointC.X, PointC.Z) = 0 And
+                    Flow.GroupAt(Value.SourceCurves, Value.Flows, PointD.X, PointD.Z) = 0 And
+                    Flow.GroupAt(Value.SourceCurves, Value.Flows, Center.X, Center.Z) = 0)
+            End If
+
         End If
 
         Style = Styles.Read(Value.Appearance, Value.Row * Value.Surface.Columns + X)
+        Value.MixedStyle = StyleContours.Mixed(Value.Appearance, Value.Surface, X, Value.Row)
+        Uniform = Uniform And Not Value.MixedStyle
 
         If First >= 0 And (Not Uniform Or Surface <> RunKind Or Style <> Value.Style) Then
             Call AddPatch(Value, Value.Surface.XEdges[First], PointA.Z, PointA.X, PointC.Z, RunKind)
@@ -384,7 +458,9 @@ Private Sub CurveRow(ByRef Value As State)
 
         If Uniform Then
 
-            If (Surface = 1 Or Surface = 3) And First < 0 Then
+            If ((Surface = 1 Or Surface = 3 Or
+                (Value.Detailed And Surface = Grid.SURFACE_WATER)) And
+                First < 0) Then
                 First = X
                 RunKind = Surface
             End If
@@ -394,15 +470,15 @@ Private Sub CurveRow(ByRef Value As State)
             ' Use the terrain sampler's two canonical triangles. A four-way fan
             ' duplicates coplanar water and can exhaust the bounded ribbon pool.
 
-            Call CurveTriangle(Value, PointA, PointB, PointC, Base)
-            Call CurveTriangle(Value, PointA, PointC, PointD, Base)
+            Call SmoothTriangle(Value, PointA, PointB, PointC, Base)
+            Call SmoothTriangle(Value, PointA, PointC, PointD, Base)
 
         Else
 
-            Call CurveTriangle(Value, PointA, PointB, Center, Base)
-            Call CurveTriangle(Value, PointB, PointC, Center, Base)
-            Call CurveTriangle(Value, PointC, PointD, Center, Base)
-            Call CurveTriangle(Value, PointD, PointA, Center, Base)
+            Call SmoothTriangle(Value, PointA, PointB, Center, Base)
+            Call SmoothTriangle(Value, PointB, PointC, Center, Base)
+            Call SmoothTriangle(Value, PointC, PointD, Center, Base)
+            Call SmoothTriangle(Value, PointD, PointA, Center, Base)
 
         End If
 
@@ -536,6 +612,7 @@ Public Sub ScanRow(ByRef Value As State)
     Do
         StartX = X
         Value.Style = Styles.Read(Value.Appearance, Z * Value.Surface.Columns + X)
+        Value.MixedStyle = StyleContours.Mixed(Value.Appearance, Value.Surface, X, Z)
         Surface = Grid.ReadCell(Value.Surface, X, Z)
         Kind = Surface
 
@@ -548,7 +625,8 @@ Public Sub ScanRow(ByRef Value As State)
 
         Loop Until (X >= Value.Surface.Columns Or Grid.ReadCell(Value.Surface, X, Z) <> Surface Or
 
-            Styles.Read(Value.Appearance, Z * Value.Surface.Columns + X) <> Value.Style)
+            Styles.Read(Value.Appearance, Z * Value.Surface.Columns + X) <> Value.Style Or
+            Value.MixedStyle Or StyleContours.Mixed(Value.Appearance, Value.Surface, X, Z))
 
         If Kind = Grid.SURFACE_WATER Then
             ' PointA submerged opaque bed seals the height gap and receives building shadows.
@@ -557,7 +635,12 @@ Public Sub ScanRow(ByRef Value As State)
                 Value.Surface.XEdges[X] + 1.0, Z1 + 1.0, 6, Layers.GROUND_Y - 1.2)
         End If
 
-        If Kind > 0 Then
+        If Value.MixedStyle And (Kind = Grid.SURFACE_GROUND Or Kind = Grid.SURFACE_ROAD) Then
+            Call SmoothTriangle(Value, P.Vector(Value.Surface.XEdges[StartX], 0.0, Z0),
+                P.Vector(Value.Surface.XEdges[StartX], 0.0, Z1), P.Vector(Value.Surface.XEdges[X], 0.0, Z1), Surface)
+            Call SmoothTriangle(Value, P.Vector(Value.Surface.XEdges[StartX], 0.0, Z0),
+                P.Vector(Value.Surface.XEdges[X], 0.0, Z1), P.Vector(Value.Surface.XEdges[X], 0.0, Z0), Surface)
+        Else If Kind > 0 Then
             Call AddPatch(Value, Value.Surface.XEdges[StartX], Z0, Value.Surface.XEdges[X], Z1, Kind)
         End If
 

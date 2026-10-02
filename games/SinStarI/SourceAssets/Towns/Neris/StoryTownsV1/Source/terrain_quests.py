@@ -20,7 +20,12 @@ def smooth(value):
     return value * value * (3 - 2 * value)
 
 
-HIGHLAND_RIVER = [(-65,-192),(-12,-78),(-38,28),(45,130)]
+HIGHLAND_RIVER_BENDS = [((-65,-192),(55,-155),(-15,-75)),
+                       ((-15,-75),(-85,-10),(-35,35)),
+                       ((-35,35),(45,65),(45,135))]
+HIGHLAND_RIVER = [tuple((1-t)**2*a+2*t*(1-t)*b+t*t*c for a,b,c in zip(*bend))
+                  for index,bend in enumerate(HIGHLAND_RIVER_BENDS)
+                  for t in (step/24 for step in range(25) if index == 0 or step > 0)]
 HIGHLAND_BUILDINGS = [(2,-135,-117,1.7,180), (5,142,-30,1.4,270), (2,-130,90,1.8,90)]
 HIGHLAND_ROUTE = [(-192,144),(-140,144),(-104,108),(-84,46),(-56,-24),
                  (-12,-72),(66,-66),(112,-8),(102,62),(144,144),(192,144)]
@@ -33,7 +38,7 @@ def highlands_height(x, z, lookout=()):
                                        (-152,58,95,85,76), (150,66,98,110,92)])
     hills *= smooth((distance(x,z,HIGHLAND_RIVER)-18)/100)
     hills *= smooth((distance(x,z,HIGHLAND_ROUTE)-14)/46)
-    height = (bed+hills)*smooth((math.hypot(x-48,z-148)-56)/45)
+    height = (bed+hills)*smooth((math.hypot((x-28)/105,(z-174)/85)-1)/.45)
     if lookout:
         lengths = [math.dist(a,b) for a,b in zip(lookout,lookout[1:])]
         total, travelled, best = sum(lengths), 0, (1e9,0)
@@ -116,15 +121,17 @@ def highlands():
     route = [(-192,144),(-140,144),(-104,108),(-84,46),(-56,-24),
              (-12,-72),(66,-66),(112,-8),(102,62),(144,144),(192,144)]
     lookout = [(-56,-24),(-110,-20),(-146,-64),(-118,-108)]
-    spawn_route = [(0,0),(-63,0)]
-    flows = [stream(town,a,b,11) for a,b in zip(HIGHLAND_RIVER,HIGHLAND_RIVER[1:])]
-    town.lake((46,148),[(3,133),(24,112),(42,122),(72,108),(94,136),
-        (79,155),(93,180),(56,184),(39,169),(16,184),(-2,161),(10,151)])
+    flows = []
+    for bend, width in zip(HIGHLAND_RIVER_BENDS, (11,13,16)):
+        town.curve(bend,width,WATER)
+        flows.append(len(town.curves)-1)
+    town.lake((28,172),[(-25,125),(10,110),(30,119),(60,105),(83,124),
+        (101,140),(107,175),(86,212),(40,220),(-12,214),(-50,189),(-35,166),(-58,151)])
     main = town.path(route,8)
     start_join = min(main,key=lambda p:math.dist(p,(-84,46)))
     end_join = min(main,key=lambda p:math.dist(p,(103,62)))
     riverside = [start_join,(-36,90),(40,110),end_join]
-    paths = [main,town.path(lookout,7),town.path(riverside,7),town.path(spawn_route,7)]
+    paths = [main,town.path(lookout,7),town.path(riverside,7)]
     height = lambda x,z: highlands_height(x,z,paths[1])
     town.gates(144, ('Neris Relief Quarter', 'Silverfall Basin'), join_x=156, width=8)
     paths[0][0]=(-188,144)
@@ -140,7 +147,8 @@ def highlands():
         town.items[-1]['scale'][1] *= .45
     town.notes = ['Rebuilt as a snowy mountain pass with broad alpine ridges and exposed rock on steep slopes.',
                   'Packed snow trails climb the west lookout and cross the meltwater to a second alpine slope.',
-                  'A descending meltwater stream opens into an irregular pool; broad clearings support future encounters.']
+                  'Three broad meltwater bends feed a much larger irregular lake open across the south map edge.',
+                  'The central dead-end road spur is removed; broad clearings support future encounters.']
     return town, height, flows, paths
 
 
@@ -203,7 +211,7 @@ def save(design, folder):
             if item['template'] == 15:
                 item['template'] = 39
                 item['scale'] = [1000,1000,1000]
-    doc['items'] = [item for item in doc['items'] if item['template'] not in (15, 18, 19) or
+    doc['items'] = [item for item in doc['items'] if item['template'] not in (15, 18, 19, 39) or
                     all(surface(doc, x*10, z*10) == GROUND for x, z in outline(item))]
     town.items = doc['items']
     payload = encode(doc, CATALOG)
@@ -230,6 +238,7 @@ def save(design, folder):
                           for t in doc['map_tiles']],
         acceptance_spawn=((-40,-95) if town.name == 'Sunglass Expanse' else
                           (28,0) if town.name == 'Silverfall Basin' else
+                          paths[0][len(paths[0])//2] if town.name == 'Willowstep Highlands' else
                           (0,18) if town.name == 'Neris Relief Quarter' else (0,0)))
     print(town.name, len(payload), 'authored bytes;', record['trees'], 'trees;',
           record['lamps'], 'lamps;', record['terrain_height_m'], 'm high', flush=True)

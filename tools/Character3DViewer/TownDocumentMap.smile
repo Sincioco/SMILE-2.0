@@ -169,7 +169,10 @@ Public Sub DrawResidents(ByRef Value As Residents.State, Opacity As Number)
     Dim Index As Number
     Dim ColorValue As Number
 
-    If Not Value.Enabled Or Opacity <= 0 Then
+    If (Not Value.Enabled Or
+        Opacity <= 0 Or
+        Revision < 0 Or
+        Building) Then
         Return
     End If
 
@@ -230,6 +233,10 @@ Public Sub DrawDestination(ByRef Town As Document.State, Destination As P.Vector
     Dim Index As Number
     Dim Point As P.Vector3
     Dim SplitAt As Number
+
+    If Not Ready(Town) Then
+        Return
+    End If
 
     If Active And Inside(Destination) Then
 
@@ -426,6 +433,34 @@ Private Sub Rebuild(ByRef Town As Document.State)
 
 End Sub
 
+''' Preparation belongs to town updates, including loading frames and hidden minimaps.
+Public Sub Update(ByRef Town As Document.State)
+
+    If MapName <> Town.Name Or ZoomLevel = 0 Then
+        Call SetZoom(Town, P.Vector(0.0, 0.0, 0.0), 1)
+    End If
+
+    If Revision <> Town.Revision Then
+
+        If Revision >= 0 And Not Building Then
+            Call SetZoom(Town, P.Vector((LowX + HighX) * 0.5, 0.0, (LowZ + HighZ) * 0.5), Max(1, ZoomLevel))
+        End If
+
+        Call Rebuild(Town)
+
+    End If
+
+End Sub
+
+Public Function Ready(ByRef Town As Document.State) As Boolean
+
+    Dim Result As Boolean
+
+    Result = MapName = Town.Name And Revision = Town.Revision And Revision >= 0 And Not Building
+    Return Result
+
+End Function
+
 Public Sub Draw(ByRef Town As Document.State, Position As P.Vector3,
     Opacity As Number, LeaderName As Text, LandmarkName As Text, LandmarkPosition As P.Vector3,
     AirportName As Text, AirportPosition As P.Vector3, Headlight As Image, Yaw As Double)
@@ -442,20 +477,6 @@ Public Sub Draw(ByRef Town As Document.State, Position As P.Vector3,
         Return
     End If
 
-    If MapName <> Town.Name Or ZoomLevel = 0 Then
-        Call SetZoom(Town, Position, 1)
-    End If
-
-    If Revision <> Town.Revision Then
-
-        If Revision >= 0 And Not Building Then
-            Call SetZoom(Town, P.Vector((LowX + HighX) * 0.5, 0.0, (LowZ + HighZ) * 0.5), Max(1, ZoomLevel))
-        End If
-
-        Call Rebuild(Town)
-
-    End If
-
     MapLeft = Window_Width() - 276
     Fill Rectangle MapLeft - 6, 237, 268, 294, RGB(10, 22, 35) Opacity Opacity
     Draw Text Text_Slice(Town.Name, 0, 21) At MapLeft, 243 Size 12 Color WHITE
@@ -464,6 +485,16 @@ Public Sub Draw(ByRef Town As Document.State, Position As P.Vector3,
     Fill Rectangle MapLeft + 224, 239, 28, 18, RGB(25, 70, 85)
     Draw Text "-" At MapLeft + 201, 240 Size 14 Color WHITE
     Draw Text "+" At MapLeft + 233, 240 Size 14 Color WHITE
+
+    If Not Ready(Town) Then
+
+        Draw Text "Preparing Map..." At MapLeft + 64, 369 Size 13 Color WHITE
+        Fill Rectangle MapLeft + 24, 397, 208, 4, RGB(25, 70, 85)
+        Fill Rectangle MapLeft + 24, 397, Min(256, BuildRow) * 208 / 256, 4, CYAN
+
+        Return
+
+    End If
 
     Clip Rectangle MapLeft, 259, 256, 256
 

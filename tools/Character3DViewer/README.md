@@ -1,5 +1,25 @@
 # SMILE 2.0 - Sin Star I - Game Engine and Studio
 
+## October 3 landscape and travel fixes
+
+Willowstep's short central spur is removed. Three broad river bends feed a lake
+roughly twice its previous southern area, open to the south map edge. Terrain
+painting now produces smooth material contours automatically, including Relief's
+desert/grass and mountain/grass boundaries, and works across other maps.
+
+Arin and the party keep the visible road height at elevated stream crossings in
+Willowstep and Silverfall; camera clearance uses the same corrected height. The
+minimap prepares on entry while hidden and never shows the previous town's image.
+
+Campfires use the existing animated BrazierFire VFX and a gentle warm glow during
+day and night. The eight nearest fires receive particle emitters within the shared
+budget; distant fires retain their bases and local lighting. Moving, deleting or
+leaving a town updates/releases its effects.
+
+Rebuild/relaunch native Studio to adopt these changes. Prepared version 9 rejects
+old derived geometry; the three affected portable maps are already prepared. No
+.NET compiler or VSIX rebuild is required. Browser work remains paused.
+
 ## October 2 landscape and editor refinement
 
 Willowstep Highlands is a snowy mountain pass with four broad massifs (about

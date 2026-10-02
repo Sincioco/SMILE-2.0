@@ -1,5 +1,58 @@
 # Character Viewer Architecture
 
+## October 3 terrain contours, elevation and campfires
+
+`TownStyleContours` partitions triangles by interpolated weights from existing
+painted cells. `TownTerrainBuilder` subdivides only cells near material changes
+before road/water clipping. Both grass/desert and mountain/grass edges become
+continuous contours without changing authored cells, heights or collision. Flat
+lake interiors merge into row rectangles; banks and flows retain terrain triangles.
+Prepared version 9 / Terrain9 invalidates older derived geometry.
+
+`TerrainWater3D` accepts quadratic water brushes and checks each sampled segment
+for uphill flow. Each authored span retains uniform drift in its endpoint direction;
+this is not a per-vertex flow shader. Willowstep authoring owns its three bends,
+removed central spur and larger lake open to the south edge. Relief, Willowstep
+and Silverfall have refreshed portable preparation.
+
+`TownDocumentNavigation` now adds terrain elevation to bridge cells as it does
+roads. Rendering already draped them; the former flat-deck exception dropped
+actors and the camera beneath elevated stream crossings. `TownCollisionWorld`
+also applies the rendered slope limit. Flat bridges remain traversable. Party
+placement and final camera clearance reuse these owners unchanged.
+
+`TownDocumentMap.Update` advances its double buffer during loading and normal town
+updates, including while hidden. Drawing checks name/revision readiness and shows
+preparation progress until the complete new image is ready.
+
+`TownCampfires` owns eight nearest placed emitters using the shared BrazierFire
+preset, resource admission and scene VFX clock. Identity retention avoids restarting
+fires when their distance order changes; four emitter slots remain available.
+Draw/POV replay does not advance simulation. Catalog drawing omits static flame
+mesh parts, retaining the portable model for existing authoring exports. Distant
+fires retain their stone/log bases and local lighting. `TownLighting` owns the
+subtle flickering glow during daylight and night, and removes deleted prop lights.
+
+Validation: `scripts/test-town-editor.ps1` passes foundations, routes, GPU and actual
+Studio session checks. Regressions cover elevated bridge/camera height, four loaded
+party members crossing both ways, minimap preparation without Draw, contour area
+and height preservation, curved downhill flow, fresh/cached landscape water under
+shared resource pressure, and fire animation/move/delete/light cleanup. Native
+preparation/reimport and both wilderness maps' route/bridge-height checks pass.
+The supplied video shows the previous Willowstep height drop to 23 at a crossing.
+The rebuilt native Studio was also inspected directly: both Relief material edges,
+Willowstep's curved river/open lake/removed spur, hidden-map preparation followed by
+Silverfall's correct first visible minimap, animated flames and warm lighting, and
+party travel across raised stream crossings in both wilderness maps. Arin stayed
+on the displayed roads and the follow camera stayed above the ground.
+
+Growth from 151176ff: contour owner 231 lines, campfire owner 209; terrain builder
+605 to 688, minimap 552 to 583, editor session 1679 to 1697, Neris coordinator +1;
+navigation/collision shrink by three lines combined. No new compiler/runtime
+dependency, raised resource limit, architecture exception, or bootstrap algorithm.
+Existing oversized coordinators remain architectural debt; ownership/diff review
+and focused tests remain the available architecture checks.
+
 ## October 2 mountain refresh and editor interaction
 
 Landscape shape/layout remains in StoryTownsV1 authoring helpers and the sixteen

@@ -182,7 +182,52 @@ Public Sub Run(ByRef Failures As Number)
     Ok = Water.Collect(Town.Surface.Curves, Groups)
 
     Call Check(Not Ok, "Existing Four-Batch Budget Enforced", Failures)
+    Call CheckCurvedFlow(Failures)
     Call CheckLakeJoin(Failures)
+
+End Sub
+
+Private Sub CheckCurvedFlow(ByRef Failures As Number)
+
+    Dim Brush As Paint.Brush
+    Dim Flow As P.Vector3
+    Dim X As Number
+    Dim Z As Number
+    Dim Ok As Boolean
+
+    Ok = Document.Blank(Town, "Curved Downhill Water", 32, 32, 20.0)
+
+    For Z = 0 To Town.Surface.Rows
+
+        For X = 0 To Town.Surface.Columns
+            Ok = Terrain.SetCorner(Town.Surface, X, Z, -Town.Surface.XEdges[X] * 0.1) And Ok
+        End For
+    End For
+
+    Ok = Water.Prepare(Town.Surface, P.Vector(-100.0, 0.0, 0.0),
+        P.Vector(100.0, 0.0, 0.0), 10.0, Brush) And Ok
+    Brush.Form = Paint.FORM_CURVE
+    Brush.X1 = 0.0
+    Brush.Z1 = 160.0
+    Brush.X2 = 100.0
+    Brush.Z2 = 0.0
+    Flow = Water.Direction(Brush)
+
+    Call Check(Ok And Paint.Valid(Brush) And Flow.X > 0.99 And Abs(Flow.Z) < 0.00001,
+        "Curved Flow Uses Endpoints Rather Than Control Point", Failures)
+    Call Check(Paint.Contains(Brush, 0.0, 80.0) And Not Paint.Contains(Brush, 0.0, 0.0),
+        "Water Follows The Bend Rather Than Its Straight Chord", Failures)
+    Call Check(Not Water.Uphill(Town.Surface, Brush), "Curved Downhill Bed", Failures)
+
+    Brush.FlowSign = -1
+
+    Call Check(Water.Uphill(Town.Surface, Brush), "Reversed Curved Flow Warns", Failures)
+
+    Brush.FlowSign = 1
+    Ok = Terrain.SetCorner(Town.Surface, 16, 20, 100.0)
+
+    Call Check(Ok And Water.Uphill(Town.Surface, Brush),
+        "Uphill Inside The Bend Is Checked Away From The Endpoint Chord", Failures)
 
 End Sub
 
@@ -222,9 +267,12 @@ Private Sub CheckLakeJoin(ByRef Failures As Number)
 
         If Recipe.Buffer.Patches[Index].Kind = Grid.SURFACE_WATER Then
 
-            Ok = (Abs(Recipe.Buffer.Patches[Index].Y0 - Level) < 0.00001 And
-                Abs(Recipe.Buffer.Patches[Index].Y1 - Level) < 0.00001 And
-                Abs(Recipe.Buffer.Patches[Index].Y2 - Level) < 0.00001 And Ok)
+            Ok = Abs(Recipe.Buffer.Patches[Index].Y0 - Level) < 0.00001 And Ok
+
+            If Recipe.Buffer.Patches[Index].Plane = 5 Then
+                Ok = (Abs(Recipe.Buffer.Patches[Index].Y1 - Level) < 0.00001 And
+                    Abs(Recipe.Buffer.Patches[Index].Y2 - Level) < 0.00001 And Ok)
+            End If
 
             If Recipe.Buffer.Patches[Index].FlowGroup = 0 Then
                 LakeCount = LakeCount + 1

@@ -169,6 +169,11 @@ Public Function Draw(ByRef Value As State, ByRef Town As Document.State) As Bool
 
             Shape = Catalog.TemplateAt(Item.Template)
 
+            If Item.Template = 39 Then
+                ' Only stones and logs: animated fire belongs to TownCampfires.
+                Shape.PartCount = 2
+            End If
+
             For Part = 0 To Shape.PartCount - 1
 
                 Slot = Shape.Parts[Part]

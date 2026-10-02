@@ -183,6 +183,21 @@ Blender export/reopen, and expanded World coordinates save/reopen. New maps are
 visually checked in Studio before release; screenshots are progress evidence, not
 evidence that combat or encounters exist.
 
+## October 3 waterways and shared terrain fixes
+
+Willowstep's central dead-end spur is removed. Three quadratic meltwater bends
+feed a larger irregular lake open across approximately 141 m of the south edge.
+The southern lake footprint is about 10,890 m² (previously 5,211 m²). Travel marker
+placements/destinations are preserved; campfires overlapping the changed water
+are excluded and retained props remain terrain-grounded.
+
+Relief's desert/grass and mountain/grass boundaries use the shared material contour
+builder. Willowstep, Relief and Silverfall documents carry version 9 preparation.
+Reusable navigation adds elevation at road-over-water cells, fixing the party and
+camera drop in both wilderness maps. `validate_terrain_quests.py` checks road and
+bridge heights against canonical terrain along authored routes. Placed campfires
+use Studio's animated Fire VFX without additional model or texture dependencies.
+
 ## Prepared installation
 
 Run `Source/prepare_maps.py` against a separate authored-map directory. It invokes

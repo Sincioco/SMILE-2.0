@@ -1,0 +1,209 @@
+''' Placed campfires reuse the shared fire family; the town owns only emitter lifetimes.
+Module Smile.Tools.TownCampfires
+
+Option Explicit
+
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownGeometry As Geometry
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Simple3D.FireEmitter3D As Fire
+Import Smile.Simple3D.SceneVfx3D As Vfx
+
+' Leave four shared emitter slots available to other effect families/actors.
+Public Const MAX_FIRES = 8
+
+Public Type State
+    Flames[MAX_FIRES] As Fire.FireEmitter
+    Identities[MAX_FIRES] As Number
+    Radii[MAX_FIRES] As Number
+    Clock As Vfx.Clock
+    MapName As Text
+End Type
+
+Public Sub Destroy(ByRef Value As State)
+
+    Dim Index As Number
+    Dim Ok As Boolean
+
+    For Index = 0 To MAX_FIRES - 1
+
+        If Value.Flames[Index].Slot <> 0 Then
+            Ok = Fire.Destroy(Value.Flames[Index])
+        End If
+
+        Value.Identities[Index] = 0
+    End For
+
+    Value.MapName = ""
+
+End Sub
+
+Private Function SlotFor(ByRef Value As State, Identity As Number) As Number
+
+    Dim ReturnValue As Number
+
+    Dim Index As Number
+
+    For Index = 0 To MAX_FIRES - 1
+
+        If Value.Identities[Index] = Identity Then
+            Return Index
+        End If
+
+    End For
+    ReturnValue = -1
+
+    Return ReturnValue
+
+End Function
+
+''' Retain the nearest fires without reallocating when their distance order changes.
+Public Sub Update(ByRef Value As State, ByRef Town As Document.State,
+    View As P.Camera3D, Elapsed As Number)
+
+    Dim Selected[MAX_FIRES] As Number
+    Dim Taken[1024] As Boolean
+    Dim Kept[MAX_FIRES] As Boolean
+    Dim Pick As Number
+    Dim Index As Number
+    Dim Slot As Number
+    Dim BestIndex As Number
+    Dim Radius As Number
+    Dim Distance As Double
+    Dim Best As Double
+    Dim Point As P.Vector3
+    Dim Item As Document.Item
+    Dim Ok As Boolean
+
+    If Value.MapName <> Town.Name Then
+        Call Destroy(Value)
+
+        Value.MapName = Town.Name
+    End If
+
+    For Pick = 0 To MAX_FIRES - 1
+
+        BestIndex = -1
+        Best = 1.0E+20
+
+        For Index = 0 To Town.ItemCount - 1
+
+            If (Town.Items[Index].Active And
+                Town.Items[Index].Template = 39 And
+                Not Taken[Index]) Then
+
+                Distance = M.Distance(Town.Items[Index].Position, View.Position)
+
+                If SlotFor(Value, Town.Items[Index].Identity) >= 0 Then
+                    Distance = Distance * 0.85
+                End If
+
+                If Distance < Best Then
+                    Best = Distance
+                    BestIndex = Index
+                End If
+
+            End If
+
+        End For
+
+        Selected[Pick] = BestIndex
+
+        If BestIndex >= 0 Then
+
+            Taken[BestIndex] = True
+            Slot = SlotFor(Value, Town.Items[BestIndex].Identity)
+
+            If Slot >= 0 Then
+                Kept[Slot] = True
+            End If
+
+        End If
+
+    End For
+
+    For Slot = 0 To MAX_FIRES - 1
+
+        If Not Kept[Slot] And Value.Flames[Slot].Slot <> 0 Then
+
+            Ok = Fire.Destroy(Value.Flames[Slot])
+
+            If Ok Then
+                Value.Identities[Slot] = 0
+            End If
+
+        End If
+
+    End For
+
+    For Pick = 0 To MAX_FIRES - 1
+
+        If Selected[Pick] >= 0 Then
+
+            Item = Town.Items[Selected[Pick]]
+            Slot = SlotFor(Value, Item.Identity)
+
+            If Slot < 0 Then
+                Slot = SlotFor(Value, 0)
+            End If
+
+            If Slot >= 0 Then
+
+                Point = Geometry.ToWorld(Item, P.Vector(0.0, 3.2, 0.0))
+                Radius = Max(2, Min(24, ToNumber(5.0 * Max(Item.Scale.X, Item.Scale.Z) / 1000.0)))
+
+                If Value.Flames[Slot].Slot <> 0 And Value.Radii[Slot] <> Radius Then
+                    Ok = Fire.Destroy(Value.Flames[Slot])
+                End If
+
+                If Value.Flames[Slot].Slot = 0 And Fire.Initialize("Assets/Fire") Then
+                    Value.Flames[Slot] = Fire.StartAtPrecise("BrazierFire", Point, Item.Identity + 3917,
+                        Fire.QUALITY_MEDIUM, Fire.SIMULATION_AUTO, Radius)
+                    Value.Radii[Slot] = Radius
+                End If
+
+                If Value.Flames[Slot].Slot <> 0 Then
+
+                    Value.Identities[Slot] = Item.Identity
+                    Ok = Fire.SetPositionPrecise(Value.Flames[Slot], Point)
+
+                    Call Fire.SetSourceVelocityInheritance(Value.Flames[Slot], 0)
+                    Call Fire.SetIntensity(Value.Flames[Slot], 75)
+
+                End If
+
+            End If
+
+        End If
+
+    End For
+
+    If Not Value.Clock.Ready Then
+        Call Vfx.Initialize(Value.Clock)
+    End If
+
+    Ok = Vfx.BeginFrame(Value.Clock, Max(0, Elapsed), False, False)
+    Ok = Vfx.AdvancePrecise(Value.Clock, View, True, False) And Ok
+
+End Sub
+
+Public Function Draw(ByRef Value As State) As Boolean
+
+    Dim Index As Number
+    Dim Ok As Boolean
+
+    Ok = True
+
+    For Index = 0 To MAX_FIRES - 1
+
+        If Value.Flames[Index].Slot <> 0 Then
+            Ok = Fire.Draw(Value.Flames[Index]) And Ok
+        End If
+
+    End For
+    Return Ok
+
+End Function
+
+End Module

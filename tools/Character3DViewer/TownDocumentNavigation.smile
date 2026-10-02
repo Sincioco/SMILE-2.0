@@ -213,10 +213,9 @@ Public Function GroundHeight(X As Double, Z As Double) As Double
         Height = Layers.ROAD_Y
     End If
 
-    If Cell <> Grid.SURFACE_BRIDGE Then
-        Ground = Terrain.SamplePoint(Snapshot.Surface, X, Z)
-        Height = Height + Ground.Offset
-    End If
+    ' Road-over-water cells follow the same terrain triangles as their visible deck.
+    Ground = Terrain.SamplePoint(Snapshot.Surface, X, Z)
+    Height = Height + Ground.Offset
 
     For Index = 0 To Snapshot.ItemCount - 1
 

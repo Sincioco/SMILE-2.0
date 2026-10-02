@@ -158,9 +158,7 @@ Public Function CanStand(ByRef Value As State, X As Double, Z As Double) As Bool
 
     Supported = Cell <> Grid.SURFACE_EMPTY And Cell <> Grid.SURFACE_WATER
 
-    If (Supported And
-        Cell <> Grid.SURFACE_BRIDGE And
-        Value.Surface.Heights.Nonzero > 0) Then
+    If Supported And Value.Surface.Heights.Nonzero > 0 Then
         Ground = Terrain.SamplePoint(Value.Surface, X, Z)
         Supported = Ground.Supported And Ground.Normal.Y >= Cos(M.Radians(30.0))
     End If

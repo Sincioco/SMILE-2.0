@@ -23,7 +23,7 @@ def plan_town(data, path, baseline, changes, replace_night=False, boundary_marke
     incoming = decode(payload, CATALOG)
     name = incoming['name']
     records = prepared_records(raw)
-    if records.get('.PreparedVersion') not in (bytes([0, 0, 0, 3]), bytes([0, 0, 0, 4]), bytes([0, 0, 0, 5]), bytes([0, 0, 0, 6]), bytes([0, 0, 0, 7]), bytes([0, 0, 0, 8])):
+    if records.get('.PreparedVersion') not in (bytes([0, 0, 0, 3]), bytes([0, 0, 0, 4]), bytes([0, 0, 0, 5]), bytes([0, 0, 0, 6]), bytes([0, 0, 0, 7]), bytes([0, 0, 0, 8]), bytes([0, 0, 0, 9])):
         raise ValueError('Map must be prepared before installation: ' + name)
     original = name == 'Neris Town'
     old_path = baseline / path.name

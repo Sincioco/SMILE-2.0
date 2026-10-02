@@ -91,6 +91,7 @@ Sub CheckSegment(X0 As Double, Z0 As Double, X1 As Double, Z1 As Double)
     Dim Ok As Boolean
     Dim High As Double
     Dim Low As Double
+    Dim Ground As Terrain.Sample
 
     Length = Sqrt((X1 - X0) * (X1 - X0) + (Z1 - Z0) * (Z1 - Z0))
     Dx = -(Z1 - Z0) / Length
@@ -108,6 +109,8 @@ Sub CheckSegment(X0 As Double, Z0 As Double, X1 As Double, Z1 As Double)
             Last = P.Vector(X0 + (X1 - X0) * ToDouble(Step) / ToDouble(SampleCount) + Dx * ToDouble(Side) * 20.0,
                 0.0, Z0 + (Z1 - Z0) * ToDouble(Step) / ToDouble(SampleCount) + Dz * ToDouble(Side) * 20.0)
             Last.Y = Navigation.GroundHeight(Last.X, Last.Z)
+            Ground = Terrain.SamplePoint(Town.Surface, Last.X, Last.Z)
+            Ok = Ok And Abs(Last.Y - Ground.Offset - 23.12) < 0.011
             High = Max(High, Last.Y)
             Low = Min(Low, Last.Y)
             Ok = (Navigation.CanStand(Last.X, Last.Z) And
@@ -116,7 +119,7 @@ Sub CheckSegment(X0 As Double, Z0 As Double, X1 As Double, Z1 As Double)
         End For
     End For
 
-    Call Check(Ok, "Four Metre Usable Route Both Directions")
+    Call Check(Ok, "Four Metre Route Both Directions Matches Rendered Road And Bridge Height")
 
     Print ("Route " + Text_From_Double(X0) + "," + Text_From_Double(Z0) + " -> " + Text_From_Double(X1) + "," + Text_From_Double(Z1) +
         " heights " + Text_From_Double(Low) + " .. " + Text_From_Double(High))

@@ -33,6 +33,7 @@
     <SmileSource Include="TownRoadGraph.smile" />
     <SmileSource Include="TownPreparationTests.smile" />
     <SmileSource Include="TownSavePreparation.smile" />
+    <SmileSource Include="TownStyleContours.smile" />
     <SmileSource Include="TownTerrainBuilder.smile" />
     <SmileSource Include="TownTerrainCache.smile" />
     <SmileSource Include="TownRoadSearch.smile" />

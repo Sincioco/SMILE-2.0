@@ -647,6 +647,7 @@ Sub CheckGuideAndMapControls()
     Dim Other As P.Vector3
     Dim InkCount As Number
     Dim Ignored As Number
+    Dim Frame As Number
 
     Chosen = Document.Blank(Draft, "Map Choice Fixture", 12, 12, 20.0)
     InkCount = Controls.Guide.Ink.EntryCount
@@ -751,6 +752,38 @@ Sub CheckGuideAndMapControls()
 
     Call Check(Other.X = -120.0 And Other.Z = -120.0,
         "Minimap Pan Remains Bounded At The Map Edges")
+
+    ' Rebuild through updates alone: a hidden minimap must not depend on Draw.
+
+    For Frame = 1 To 32
+        Call DocumentMap.Update(Draft)
+    End For
+
+    Call Check(DocumentMap.Ready(Draft), "Hidden Minimap Finishes Without Drawing")
+
+    Draft.Name = "Second Hidden Town"
+
+    Call Check(Not DocumentMap.Ready(Draft),
+        "Different Town With Same Revision Cannot Display The Previous Map")
+    Call DocumentMap.Update(Draft)
+    Call Check(Not DocumentMap.Ready(Draft), "Unfinished Minimap Is Not Published")
+
+    For Frame = 1 To 31
+        Call DocumentMap.Update(Draft)
+    End For
+
+    Call Check(DocumentMap.Ready(Draft), "New Hidden Town Is Ready Before First Draw")
+
+    Draft.Revision = Draft.Revision + 1
+
+    Call DocumentMap.Update(Draft)
+    Call Check(Not DocumentMap.Ready(Draft), "Document Edits Invalidate Published Pixels")
+
+    For Frame = 1 To 31
+        Call DocumentMap.Update(Draft)
+    End For
+
+    Call Check(DocumentMap.Ready(Draft), "Edited Hidden Minimap Publishes Together")
 
 End Sub
 
@@ -1918,6 +1951,7 @@ Sub CheckTerrainParty()
     Dim Previous As P.Vector3
     Dim Position As P.Vector3
     Dim ActorPosition As P.Vector3
+    Dim Ground As Terrain.Sample
 
     Accepted = Document.Blank(Draft, "Terrain Party Fixture", 64, 64, 20.0)
     Grounded = True
@@ -1931,6 +1965,8 @@ Sub CheckTerrainParty()
         End For
     End For
 
+    Call Grid.PaintRectangle(Draft.Surface, 30, 0, 34, 63, Grid.SURFACE_ROAD)
+    Call Grid.PaintRectangle(Draft.Surface, 30, 30, 34, 34, Grid.SURFACE_BRIDGE)
     Call DocumentNavigation.Rebuild(Draft)
 
     Leader = P.Vector(0.0, Navigation.GroundHeight(0.0, 450.0), 450.0)
@@ -1950,7 +1986,8 @@ Sub CheckTerrainParty()
 
             For MemberIndex = 0 To Value.People.MemberCount - 1
                 Position = Value.People.Path.Positions[MemberIndex]
-                Grounded = Grounded And Abs(Position.Y - Navigation.GroundHeight(Position.X, Position.Z)) < 0.011
+                Ground = Terrain.SamplePoint(Draft.Surface, Position.X, Position.Z)
+                Grounded = Grounded And Abs(Position.Y - Ground.Offset - 23.12) < 0.011
                 Accepted = Character.TryPosition(Value.People.Members[MemberIndex].Body.Actor, ActorPosition) And Accepted
             End For
         End For
@@ -1965,6 +2002,6 @@ Sub CheckTerrainParty()
     End For
 
     Call Check(Accepted And Grounded And Continuous And Value.People.Ready,
-        "Four Loaded Actors Stay Grounded Through Both Continuous Ramp Journeys")
+        "Four Loaded Actors Stay Grounded Across Elevated Roads And Bridges In Both Directions")
 
 End Sub

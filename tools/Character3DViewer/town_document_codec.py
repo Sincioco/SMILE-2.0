@@ -275,9 +275,10 @@ def decode(payload, catalog, request=False):
                 if sign != 0 or speed != 0:
                     raise ValueError('Flat water has directed-flow metadata')
             elif mode == 1:
-                dx, dz = brush[4]-brush[2], brush[5]-brush[3]
+                end = 7 if brush[0] == 8 else 4
+                dx, dz = brush[end]-brush[2], brush[end+1]-brush[3]
                 length = math.hypot(dx, dz)
-                if (brush[0] != 4 or brush[1] != 2 or brush[6] <= 0 or
+                if (brush[0] not in (4, 8) or brush[1] != 2 or brush[6] <= 0 or
                         length <= .000001 or sign not in (-1, 1) or not 0 <= speed <= 400):
                     raise ValueError('Invalid following-water brush')
                 groups.add((round(sign*dx/length, 6), round(sign*dz/length, 6), speed))

@@ -7,6 +7,7 @@ Import Smile.Simple3D.SurfaceGrid3D As Grid
 Import Smile.Simple3D.SurfacePaint3D As Paint
 Import Smile.Simple3D.TerrainSurface3D As Terrain
 Import Smile.Simple3D.TerrainTraversal3D As Traversal
+Import Smile.Simple3D.SurfacePath3D As Paths
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PrecisionMath3D As M
 
@@ -20,9 +21,17 @@ End Type
 Public Function Direction(Value As Paint.Brush) As P.Vector3
 
     Dim Result As P.Vector3
+    Dim Last As P.Vector3
     Dim Ok As Boolean
 
-    Ok = M.TryNormalize(P.Vector(Value.X1 - Value.X0, 0.0, Value.Z1 - Value.Z0), Result)
+    Last = P.Vector(Value.X1, 0.0, Value.Z1)
+
+    If Value.Form = Paint.FORM_CURVE Then
+        Last = P.Vector(Value.X2, 0.0, Value.Z2)
+    End If
+
+    ' One average drift per authored span keeps the existing bounded flow groups.
+    Ok = M.TryNormalize(M.Subtract(Last, P.Vector(Value.X0, 0.0, Value.Z0)), Result)
     Result = M.Scale(Result, ToDouble(Value.FlowSign))
     Return Result
 
@@ -57,24 +66,23 @@ Public Function Prepare(ByRef Surface As Grid.State, First As P.Vector3,
 
 End Function
 
-''' Test every crossed canonical triangle, including uphill intervals between lower endpoints.
-Public Function Uphill(ByRef Surface As Grid.State, Brush As Paint.Brush) As Boolean
+Private Function SegmentUphill(ByRef Surface As Grid.State, First As P.Vector3,
+    Last As P.Vector3, Sign As Number) As Boolean
 
-    Dim First As P.Vector3
-    Dim Last As P.Vector3
     Dim Point As P.Vector3
     Dim Flow As P.Vector3
     Dim Sample As Terrain.Sample
     Dim Cursor As Double
     Dim Index As Number
+    Dim Ok As Boolean
 
-    If Brush.WaterMode <> 1 Then
+    Ok = M.TryNormalize(M.Subtract(Last, First), Flow)
+
+    If Not Ok Then
         Return False
     End If
 
-    First = P.Vector(Brush.X0, 0.0, Brush.Z0)
-    Last = P.Vector(Brush.X1, 0.0, Brush.Z1)
-    Flow = Direction(Brush)
+    Flow = M.Scale(Flow, ToDouble(Sign))
 
     For Index = 0 To 2 * (Surface.Columns + Surface.Rows) + 2
 
@@ -92,6 +100,50 @@ Public Function Uphill(ByRef Surface As Grid.State, Brush As Paint.Brush) As Boo
     End For
 
     Return True
+
+End Function
+
+''' Check every crossed terrain triangle along the same chords used by the curved shore.
+Public Function Uphill(ByRef Surface As Grid.State, Brush As Paint.Brush) As Boolean
+
+    Dim First As P.Vector3
+    Dim Control As P.Vector3
+    Dim Last As P.Vector3
+    Dim Previous As P.Vector3
+    Dim Current As P.Vector3
+    Dim SegmentCount As Number
+    Dim Index As Number
+    Dim Result As Boolean
+
+    If Brush.WaterMode <> 1 Then
+        Return False
+    End If
+
+    First = P.Vector(Brush.X0, 0.0, Brush.Z0)
+    Last = P.Vector(Brush.X1, 0.0, Brush.Z1)
+
+    If Brush.Form <> Paint.FORM_CURVE Then
+        Result = SegmentUphill(Surface, First, Last, Brush.FlowSign)
+        Return Result
+    End If
+
+    Control = Last
+    Last = P.Vector(Brush.X2, 0.0, Brush.Z2)
+    SegmentCount = Paths.Segments(First, Control, Last)
+    Previous = First
+
+    For Index = 1 To SegmentCount
+
+        Current = Paths.PointAt(First, Control, Last, ToDouble(Index) / ToDouble(SegmentCount))
+
+        If SegmentUphill(Surface, Previous, Current, Brush.FlowSign) Then
+            Return True
+        End If
+
+        Previous = Current
+    End For
+
+    Return False
 
 End Function
 

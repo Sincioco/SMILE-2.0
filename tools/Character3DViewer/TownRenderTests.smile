@@ -19,6 +19,9 @@ Import Smile.Tools.TownSurfaceRenderer As Terrain
 Import Smile.Tools.TownTerrainLighting As TerrainLighting
 Import Smile.Tools.TownLighting As Lighting
 Import Smile.Tools.TownAttachments As Attachments
+Import Smile.Tools.TownCampfires As Campfires
+Import Smile.Tools.TownDerivedCache As Derived
+Import Smile.Simple3D.FireEmitter3D As Fire
 Import Smile.Tools.TownDocumentNavigation As Navigation
 Import Smile.Tools.TownEditor As Editor
 Import Smile.Tools.TownGuides As Guides
@@ -495,6 +498,7 @@ Call Panel.Release(Controls.Ui)
 Call CheckElevatedTerrain()
 Call CheckLandscape("Silverfall")
 Call CheckLandscape("Willowstep")
+Call CheckCampfires()
 Call Scene.Shutdown()
 
 If Failures = 0 Then
@@ -602,6 +606,8 @@ Sub CheckLandscape(Name As Text)
     Dim GlowRibbon As Core.RibbonBatch3D
     Dim CoreRibbon As Core.RibbonBatch3D
     Dim Reserved As Number
+    Dim WaterIndex As Number
+    Dim Groups[4] As Number
 
     EffectMaterial = G.CreateEffectMaterial3D(EmptyTexture, G.MATERIAL_ALPHA_BLEND, 100)
     EffectRibbon = G.CreateRibbonBatch3D(8192, EffectMaterial)
@@ -619,6 +625,8 @@ Sub CheckLandscape(Name As Text)
         Return
     End If
 
+    Town.Name = "Fresh Water Regression " + Name
+    Ok = Derived.WriteNumber(0, "TownPrepared.Terrain9." + Town.Name) And Ok
     Ok = Terrain.Create(Ground)
 
     Call Terrain.BeginBuild(Ground, Town)
@@ -653,6 +661,16 @@ Sub CheckLandscape(Name As Text)
     If Ground.Failed Then
 
         Print "Landscape Shared Capacity: " + Name
+        Print Ground.WaterPatchCount
+
+        For WaterIndex = 0 To Ground.WaterPatchCount - 1
+            Groups[Ground.PendingWater[WaterIndex].FlowGroup] = Groups[Ground.PendingWater[WaterIndex].FlowGroup] + 1
+        End For
+
+        For WaterIndex = 0 To 3
+            Print Groups[WaterIndex]
+        End For
+
         Print Reserved
         Print G.VfxValue3D(G.VFX_QUERY_STAGED_RIBBON_CAPACITY)
         Print Ground.NextWaterCount
@@ -665,6 +683,70 @@ Sub CheckLandscape(Name As Text)
     Call G.DestroyRibbonBatch3D(GlowRibbon)
     Call G.DestroyRibbonBatch3D(CoreRibbon)
     Call G.DestroyMaterial3D(EffectMaterial)
+
+End Sub
+
+Sub CheckCampfires()
+
+    Dim Fires As Campfires.State
+    Dim Empty As Fire.FireEmitter
+    Dim Frame As Number
+    Dim Original As Fire.FireEmitter
+    Dim Position As P.Vector3
+
+    Ok = Document.Blank(Town, "Campfire Animation", 8, 8, 20.0)
+    Town.ItemCount = 2
+
+    For Frame = 0 To 1
+
+        Town.Items[Frame].Active = True
+        Town.Items[Frame].Identity = Frame + 1
+        Town.Items[Frame].Template = 39
+        Town.Items[Frame].Scale = P.Vector(1000.0, 1000.0, 1000.0)
+        Town.Items[Frame].Position = P.Vector(ToDouble(Frame) * 50.0, 23.0, 0.0)
+    End For
+
+    Camera.Position = P.Vector(0.0, 60.0, -120.0)
+    Camera.Target = P.Vector(0.0, 32.0, 0.0)
+    Camera.NearPlane = 1.0
+    Camera.OrthographicHeight = 0.0
+
+    For Frame = 1 To 20
+
+        Call Campfires.Update(Fires, Town, Camera, 33)
+
+        Ok = Scene.BeginPrecise(Camera, 12, 20, 32) And Ok
+        Ok = Campfires.Draw(Fires) And Ok
+        Ok = Scene.EndScene() And Ok
+        Show Screen
+    End For
+
+    Call Check(Ok And Fire.Value(1, Empty) = 2 And Fire.Value(4, Fires.Flames[0]) > 0 And
+        Fire.Value(10, Fires.Flames[0]) = 660,
+        "Placed Fires Emit Animated Particles Once Per Frame")
+
+    Original = Fires.Flames[0]
+    Town.Items[0].Position.X = 12.0
+
+    Call Campfires.Update(Fires, Town, Camera, 33)
+
+    Position = Fire.LightPositionPrecise(Fires.Flames[0])
+    Ok = Lighting.ApplyLocal(Town)
+
+    Call Check(Ok And Position.X = 12.0 And G.ActiveLightCount3D() = 4,
+        "Campfire Emitter And Subtle Daylight Glow Follow Placement")
+
+    Town.Items[0].Active = False
+
+    Call Campfires.Update(Fires, Town, Camera, 33)
+
+    Ok = Lighting.ApplyLocal(Town)
+
+    Call Check(Ok And Fire.Value(1, Empty) = 1 And Fire.Value(10, Original) = 0 And
+        G.ActiveLightCount3D() = 3, "Deleted Campfire Releases Its Flame And Light")
+    Call Campfires.Destroy(Fires)
+    Call Check(Fire.Value(1, Empty) = 0, "Leaving Town Releases Campfire Emitters")
+    Call Fire.Shutdown()
 
 End Sub
 

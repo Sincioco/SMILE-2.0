@@ -42,6 +42,8 @@ Public Function Run() As Number
     Dim Last As P.Vector3
     Dim Anchor As P.Vector3
 
+    Call CheckElevatedCrossing(Failures)
+
     Ok = Document.Blank(Town, "Terrain Ramp Fixture", 64, 64, 20.0)
 
     For Z = 0 To Town.Surface.Rows
@@ -137,11 +139,53 @@ Public Function Run() As Number
     Call Check(Not Collision.CanStand(World, 0.5, 10.0), "Submerged Bed Does Not Make Water Walkable", Failures)
     Call Grid.PaintRectangle(Town.Surface, 0, 0, 3, 0, Grid.SURFACE_ROAD)
     Call Collision.Build(World, Town)
-    Call Check(Collision.CanTraverse(World, First, Last), "Existing Bridge Deck Overrides Terrain Slope", Failures)
+    Call Check(Not Collision.CanTraverse(World, First, Last),
+        "Elevated Bridge Cannot Bypass Its Visible Terrain Slope", Failures)
+    Call Heights.Reset(Town.Surface.Heights, 0)
+    Call Collision.Build(World, Town)
+    Call Check(Collision.CanTraverse(World, First, Last), "Legacy Flat Bridge Remains Traversable", Failures)
     Call Navigation.Disable()
 
     Return Failures
 
 End Function
+
+Private Sub CheckElevatedCrossing(ByRef Failures As Number)
+
+    Dim X As Number
+    Dim Z As Number
+    Dim Ok As Boolean
+    Dim Sample As Terrain.Sample
+    Dim Camera As P.Camera3D
+
+    Ok = Document.Blank(Town, "Elevated Stream Crossing", 8, 8, 20.0)
+
+    For Z = 0 To Town.Surface.Rows
+
+        For X = 0 To Town.Surface.Columns
+            Ok = Terrain.SetCorner(Town.Surface, X, Z, 220.0 + Town.Surface.XEdges[X] * 0.1) And Ok
+        End For
+    End For
+
+    Call Grid.PaintRectangle(Town.Surface, 0, 3, 7, 4, Grid.SURFACE_ROAD)
+    Call Grid.PaintRectangle(Town.Surface, 3, 3, 4, 4, Grid.SURFACE_BRIDGE)
+    Call Navigation.Rebuild(Town)
+
+    For X = -30 To 30
+        Sample = Terrain.SamplePoint(Town.Surface, ToDouble(X), 0.0)
+
+        Call Check(Ok And Abs(Navigation.GroundHeight(ToDouble(X), 0.0) -
+            Layers.ROAD_Y - Sample.Offset) < 0.00001,
+            "Road And Bridge Share Their Rendered Elevation", Failures)
+    End For
+
+    Camera.Target = P.Vector(-30.0, 280.0, 0.0)
+    Camera.Position = P.Vector(0.0, 50.0, 0.0)
+    Camera = Navigation.ClearTerrainSight(Camera)
+
+    Call Check(Camera.Position.Y >= Layers.ROAD_Y + 220.0 + 18.0,
+        "Camera Clears Elevated Bridge Instead Of Original Flat Deck", Failures)
+
+End Sub
 
 End Module
