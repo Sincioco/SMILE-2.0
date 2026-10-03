@@ -1,5 +1,59 @@
 # SMILE 2.0 - Sin Star I - Game Engine and Studio
 
+## October 3 21:00 handoff: export identity and native acceptance
+
+Save All for Viewer now freezes each available matching photograph when it captures
+the document queue. Later edits, replacement of both thumbnail generations, and
+cache eviction cannot redirect an accepted pair. Save As retains the source photo
+while writing the requested copy name. A PNG write failure still leaves the
+successfully written `.town` and reports partial success. Pure Blender export
+does not require a photograph. Queue completion/cancellation releases snapshot
+text pages and fixed photograph payloads without increasing capture limits.
+
+**R04 remains incomplete for a map without a matching photograph.** Such a save
+now reports that no file was written and asks for that revision to be previewed,
+instead of polling a mutable cache for ten seconds. It does not silently pair a
+newer image with an older document. The existing active-scene preview path cannot
+render an inactive frozen town without sharing terrain build state and landmark
+navigation state with the live editor. Completing this case requires a bounded
+snapshot scene lifecycle with isolated terrain/cache and landmark transforms;
+temporarily switching the user's active town is not an acceptable substitute.
+No cold-rendering success is claimed by the native regression.
+
+Run these native checks sequentially from the repository root:
+
+```powershell
+pwsh -NoProfile -File scripts/test-town-export-photographs.ps1
+pwsh -NoProfile -File scripts/test-neris-acceptance-policy.ps1
+pwsh -NoProfile -File scripts/test-neris-town.ps1
+pwsh -NoProfile -File scripts/test-town-editor.ps1
+```
+
+The Neris and town-session runners accept `-PublicationDirectory` to reuse an
+already verified native publication. Test processes use isolated ApplicationIds
+and current Saved Games location resolution. They never publish over the running
+Studio. `Invoke-TownNativeCheck.ps1` requires zero exit status, the exact expected
+PASS line, no FAIL marker in either output stream, and bounded completion. Its
+negative controls include nonzero exit after PASS, missing PASS, PASS plus FAIL,
+a hanging process, and a real failed native draw after successful Begin/Draw.
+Only the process started by the check may be terminated on timeout.
+
+The former static Neris scene bootstrap has been replaced with the accepted r009
+authored document. Coverage is mapped as follows; old layout assumptions are not
+implemented in production just to satisfy historical tests:
+
+| Previous assertion area | Current coverage or scope |
+| --- | --- |
+| Party arrival through a fixed kingdom-sign camera | Authored spawn and authored initial overview; absent-camera documents fit actual map bounds. Inspection tests cover follow/orbit/zoom/reset. |
+| Static wall positions, load timing and arena draw | Existing inspection wall-clearance and failed-load recovery checks run against the authored session; normal scene and reload draws must succeed. |
+| Static entrance table | Current catalog attachment metadata drives real open/close assertions; town-session tests retain entry interactions. |
+| Royal Court moving leaves | Existing loaded Court resources, current center transform, and all seven approach/departure leaf poses are checked. |
+| Party clips, spacing, gather, speed, leader selection and minimap timing | Retained in the authored scene fixture; canonical calibration key count is read at test time. Legacy minimap projection and static route tests remain separate contracts. |
+| Static `NerisTownAppearance` gardens, crystal counts, old moat rectangles and fixed light constants | These belong to the superseded static scene composition, not current authored loading. No full static-scene acceptance is claimed. Current rendering tests cover terrain/water/material lifecycle; session tests cover authored lighting, fountains and transitions. |
+
+These changes require a native Studio rebuild/relaunch. No .NET compiler rebuild,
+VSIX reinstall, Blender recook, Web work or browser refresh is required.
+
 ## October 3 authored maps, resident spawns and exports
 
 World Map connections now come only from the maps' yellow Map Load areas. Card

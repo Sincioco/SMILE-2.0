@@ -3,67 +3,75 @@ param([string]$PublicationDirectory)
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
-$viewer = Join-Path $root 'tools\Character3DViewer'
-$compiler = Join-Path $root 'artifacts\compiler\smilec.exe'
-$output = Join-Path $viewer 'bin\Release'
-if ($PublicationDirectory) { $output = [IO.Path]::GetFullPath($PublicationDirectory) }
-$logs = Join-Path $root 'artifacts\tests\neris-town'
-$null = New-Item -ItemType Directory -Path $logs -Force
-if (-not (Test-Path -LiteralPath (Join-Path $output 'Assets\Neris\Neris-00.sm3d'))) {
-    throw 'Build Character3DViewer with -Target Native before running town acceptance.'
-}
-foreach ($image in @('Neris-Minimap.png', 'Neris-Minimap-Arin.png', 'Neris-Minimap-Heading.png')) {
-    if (-not (Test-Path -LiteralPath (Join-Path $output "Assets\Neris\$image"))) {
-        throw "Published town map is missing: $image. Rebuild the native Viewer."
+$viewer = Join-Path $root 'tools/Character3DViewer'
+$compiler = Join-Path $root 'artifacts/compiler/smilec.exe'
+$publication = Join-Path $viewer 'bin/Release'
+if ($PublicationDirectory) { $publication = [IO.Path]::GetFullPath($PublicationDirectory) }
+$logs = Join-Path $root ('artifacts/tests/neris-town-' + [Guid]::NewGuid().ToString('N'))
+$null = New-Item -ItemType Directory -Path $logs
+$check = Join-Path $PSScriptRoot 'Invoke-TownNativeCheck.ps1'
+& (Join-Path $viewer 'Check-Publication.ps1') -Directory $publication
+
+# Retain the bounded legacy/static route contract separately from authored scene setup.
+[xml]$routes = Get-Content (Join-Path $viewer 'NerisTownTests.smileproj') -Raw
+$identity = $routes.CreateElement('ApplicationId')
+$null = $routes.SmileProject.PropertyGroup.AppendChild($identity)
+$routes.SmileProject.PropertyGroup.ApplicationId = 'smile.tests.neris-routes.run-' + [Guid]::NewGuid().ToString('N')
+$routes.SmileProject.PropertyGroup.StartupFile = Join-Path $viewer 'NerisTownTests.smile'
+foreach ($node in $routes.SmileProject.ItemGroup.ChildNodes) {
+    if ($node.HasAttribute('Include')) {
+        $node.SetAttribute('Include', [IO.Path]::GetFullPath((Join-Path $viewer $node.GetAttribute('Include'))))
     }
 }
+$routeProject = Join-Path $logs 'Routes.smileproj'
+$sceneProject = Join-Path $logs 'Scene.smileproj'
+$routes.Save($routeProject)
+try {
+    $routeExe = Join-Path $logs 'Routes.exe'
+    & $compiler --project $routeProject --target windows-x64 -o $routeExe *> "$routeExe.compile.log"
+    if ($LASTEXITCODE -ne 0) { throw "Town route compilation failed: $routeExe.compile.log" }
+    $text = & $check -Executable $routeExe -Expected 'PASS Neris Town Routes' -LogPrefix "$logs/routes" -TimeoutSeconds 20
+    Write-Host $text.Trim()
 
-& $compiler --project (Join-Path $viewer 'NerisTownTests.smileproj') --target windows-x64 `
-    -o (Join-Path $logs 'Routes.exe')
-if ($LASTEXITCODE -ne 0) { throw 'Town route compilation failed.' }
-$routes = & (Join-Path $logs 'Routes.exe') | Out-String
-Write-Host $routes.Trim()
-if ($routes -notmatch 'PASS Neris Town Routes' -or $routes -match 'FAIL') {
-    throw 'Town route acceptance failed.'
+    # Reuse the verified publication, without publishing into the running Studio folder.
+    [xml]$project = Get-Content (Join-Path $viewer 'Character3DViewer.smileproj') -Raw
+    $manifest = Join-Path $publication ($project.SmileProject.PropertyGroup.ApplicationId + '.smile-assets.json')
+    foreach ($asset in (Get-Content $manifest -Raw | ConvertFrom-Json).assets) {
+        $target = Join-Path $logs $asset
+        $null = New-Item -ItemType Directory -Path (Split-Path $target -Parent) -Force
+        Copy-Item -LiteralPath (Join-Path $publication $asset) -Destination $target
+    }
+    $source = Join-Path $logs 'Scene.smile'
+    $town = Join-Path $root 'games/SinStarI/SourceAssets/Towns/Neris/NerisHorizonV1/Town/r009/Neris-Town-r009.town'
+    [IO.File]::WriteAllText($source, [IO.File]::ReadAllText((Join-Path $viewer 'NerisTownSceneTests.smile')).Replace('@NERIS_TOWN@', $town))
+    $project.SmileProject.PropertyGroup.StartupFile = $source
+    $project.SmileProject.PropertyGroup.ApplicationId = 'smile.tests.neris-town.run-' + [Guid]::NewGuid().ToString('N')
+    $project.SmileProject.PropertyGroup.RememberWindowPlacement = 'false'
+    foreach ($node in @($project.SelectNodes('//NativeWorkerScript | //Model3DAsset | //Asset'))) {
+        $null = $node.ParentNode.RemoveChild($node)
+    }
+    foreach ($node in $project.SmileProject.ItemGroup.ChildNodes) {
+        if ($node.HasAttribute('Include')) {
+            $path = [IO.Path]::GetFullPath((Join-Path $viewer $node.GetAttribute('Include')))
+            if ($node.GetAttribute('StartupOnly') -eq 'true') { $path = $source }
+            $node.SetAttribute('Include', $path)
+        }
+    }
+    $inspection = $project.CreateElement('SmileSource')
+    $inspection.SetAttribute('Include', (Join-Path $viewer 'NerisTownInspectionTests.smile'))
+    $null = $project.SmileProject.ItemGroup.AppendChild($inspection)
+    $project.Save($sceneProject)
+    $executable = Join-Path $logs 'Scene.exe'
+    & $compiler --project $sceneProject --target windows-x64 --graphics DirectX -o $executable *> "$executable.compile.log"
+    if ($LASTEXITCODE -ne 0) { Get-Content "$executable.compile.log" -Tail 15; throw 'Town scene compilation failed.' }
+    $scene = & $check -Executable $executable -Expected 'PASS Neris Town Scene' -LogPrefix "$logs/scene"
+    Write-Host $scene.Trim()
+    $snapshot = Get-Content (Join-Path $root 'games/SinStarI/SourceAssets/Characters/Paladin/ArinV57/Calibration/arin-v5.7-pose-calibration.json') -Raw | ConvertFrom-Json
+    $keys = @($snapshot.clips | Where-Object index -ge 0 | ForEach-Object keyframes).Count
+    if ($scene -notmatch "Arin Pose Keys $keys(?:\r?\n|$)") { throw 'Town did not load current accepted Arin calibration.' }
+    Write-Host "PASS Neris native route, authored scene, calibration and resource acceptance. Evidence: $logs"
+} finally {
+    foreach ($path in @($routeProject, $sceneProject)) {
+        Remove-Item -LiteralPath $path -ErrorAction SilentlyContinue
+    }
 }
-
-# Reuse the existing native publication, avoiding another large asset mirror.
-[xml]$project = Get-Content -LiteralPath (Join-Path $viewer 'Character3DViewer.smileproj') -Raw
-$project.SmileProject.PropertyGroup.StartupFile = 'NerisTownSceneTests.smile'
-$project.SmileProject.PropertyGroup.ApplicationId = 'smile.tests.neris-town.run-' + [Guid]::NewGuid().ToString('N')
-$project.SmileProject.PropertyGroup.RememberWindowPlacement = 'false'
-    $workerNode = $project.SmileProject.PropertyGroup.NativeWorkerScript
-    $workerElement = $project.SmileProject.PropertyGroup.SelectSingleNode('NativeWorkerScript')
-    if ($null -ne $workerElement) { $null = $workerElement.ParentNode.RemoveChild($workerElement) }
-$entry = $project.SmileProject.ItemGroup.SmileSource | Where-Object StartupOnly -eq 'true'
-$entry.SetAttribute('Include', 'NerisTownSceneTests.smile')
-$inspectionTests = $project.CreateElement('SmileSource')
-$inspectionTests.SetAttribute('Include', 'NerisTownInspectionTests.smile')
-$null = $project.SmileProject.ItemGroup.AppendChild($inspectionTests)
-foreach ($item in @($project.SmileProject.ItemGroup.ChildNodes)) {
-    if ($item.Name -in @('Model3DAsset', 'Asset')) { $null = $item.ParentNode.RemoveChild($item) }
-}
-$projectPath = Join-Path $viewer 'Character3DViewer.NerisTests.smileproj'
-$project.Save($projectPath)
-$executable = Join-Path $output 'NerisTownSceneTests.exe'
-& $compiler --project $projectPath --target windows-x64 --graphics DirectX -o $executable
-if ($LASTEXITCODE -ne 0) { throw 'Town scene compilation failed.' }
-$stdout = Join-Path $logs 'scene.txt'
-$stderr = Join-Path $logs 'scene-errors.txt'
-$process = Start-Process -FilePath $executable -WorkingDirectory $output -WindowStyle Hidden `
-    -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru
-if (-not $process.WaitForExit(60000)) {
-    # This process is the isolated fixture created above; it owns no user edits.
-    $process.Kill()
-    throw 'Town scene acceptance exceeded 60 seconds.'
-}
-$scene = Get-Content -LiteralPath $stdout -Raw
-Write-Host $scene.Trim()
-if ($process.ExitCode -ne 0 -or $scene -notmatch 'PASS Neris Town Scene' -or $scene -match 'FAIL') {
-    throw 'Town scene acceptance failed. See artifacts/tests/neris-town.'
-}
-$snapshot = Get-Content -LiteralPath (Join-Path $root `
-    'games\SinStarI\SourceAssets\Characters\Paladin\ArinV57\Calibration\arin-v5.7-pose-calibration.json') -Raw | ConvertFrom-Json
-$keys = @($snapshot.clips | Where-Object index -ge 0 | ForEach-Object keyframes).Count
-if ($scene -notmatch "Arin Pose Keys $keys(?:\r?\n|$)") { throw 'Town did not load the accepted Arin pose key count.' }
-Write-Host 'PASS Neris native route, scene, calibration and resource acceptance.'

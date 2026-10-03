@@ -22,7 +22,7 @@ Public Const SAVE_PERMANENT = 6
 Public Type State
     Preparation As Preparation.State
     WithPreview As Boolean
-    WaitingPhoto As Boolean
+    PhotoKey As Text
     SavingPng As Boolean
     Preparing As Boolean
     SaveAsCopy As Boolean
@@ -51,8 +51,7 @@ Public Function BlocksEditing(ByRef Value As State) As Boolean
 
     Dim Result As Boolean
 
-    Result = Value.RequestId > 0 And (Value.WaitingPhoto Or
-        Value.Operation = OPEN_VIEWER Or Value.Operation = OPEN_BLENDER)
+    Result = Value.RequestId > 0 And (Value.Operation = OPEN_VIEWER Or Value.Operation = OPEN_BLENDER)
 
     Return Result
 
@@ -109,10 +108,12 @@ End Sub
 
 Public Function Queue(ByRef Value As State, ByRef Town As Document.State,
     Operation As Number, Path As Text, Optional RememberCurrent As Boolean = True,
-    Optional WithPreview As Boolean = False) As Boolean
+    Optional WithPreview As Boolean = False, Optional PreviewKey As Text = "",
+    Optional SourceName As Text = "") As Boolean
 
     Dim Id As Number
     Dim Ok As Boolean
+    Dim SavedName As Text
 
     If (Value.RequestId > 0 Or
         Text_Length(Path) = 0 Or
@@ -160,7 +161,38 @@ Public Function Queue(ByRef Value As State, ByRef Town As Document.State,
 
     Value.NativeJob = 0
     Value.WithPreview = WithPreview And Operation = SAVE_VIEWER
-    Value.WaitingPhoto = Value.WithPreview
+    Value.PhotoKey = ""
+
+    If Value.WithPreview Then
+
+        Value.PhotoKey = "TownEditor.ExportPhoto.Single"
+        SavedName = Town.Name
+
+        If Text_Length(SourceName) > 0 Then
+            Town.Name = SourceName
+        End If
+
+        If Text_Length(PreviewKey) = 0 Then
+            Ok = Previews.Freeze(Town, Value.PhotoKey)
+        Else
+            Ok = Previews.CopyFrozen(Town, PreviewKey, Value.PhotoKey)
+        End If
+
+        Town.Name = SavedName
+
+        If Not Ok Then
+
+            Call Previews.ReleaseFrozen(Value.PhotoKey)
+
+            Value.PhotoKey = ""
+            Value.Failed = True
+            Value.Message = "Matching preview unavailable; no file written. Preview this revision and retry."
+            Return False
+
+        End If
+
+    End If
+
     Value.SavingPng = False
     Value.Preparing = False
 
@@ -268,7 +300,8 @@ Private Function SubmitBlender(Operation As Number, Id As Number, Path As Text, 
 
 End Function
 
-Public Sub Choose(ByRef Value As State, ByRef Town As Document.State, Operation As Number)
+Public Sub Choose(ByRef Value As State, ByRef Town As Document.State, Operation As Number,
+    Optional SourceName As Text = "")
 
     Dim Saving As Boolean
     Dim Extension As Text
@@ -312,7 +345,7 @@ Public Sub Choose(ByRef Value As State, ByRef Town As Document.State, Operation 
         Return
     End If
 
-    Ok = Queue(Value, Town, Operation, Path, True, Operation = SAVE_VIEWER)
+    Ok = Queue(Value, Town, Operation, Path, True, Operation = SAVE_VIEWER, "", SourceName)
 
 End Sub
 
@@ -323,36 +356,6 @@ Public Function Update(ByRef Value As State, ByRef Town As Document.State, Elaps
     Dim Ok As Boolean
     Dim Opened As Boolean
     Dim Photo As Number
-    Dim SavedName As Text
-
-    If Value.WaitingPhoto Then
-
-        SavedName = Value.Pending.Name
-        Value.Pending.Name = Value.OriginName
-        Value.WaitingPhoto = Not Previews.CopyTo(Value.Pending, SnapshotKey(Value.RequestId) + ".Preview")
-        Value.Pending.Name = SavedName
-        Value.WaitingTime = Value.WaitingTime + Elapsed
-        Value.Message = "Capturing town preview..."
-
-        If Value.WaitingPhoto Then
-
-            If Value.WaitingTime >= 10000 Then
-
-                Value.Failed = True
-                Value.Message = "Preview unavailable. Open this map, wait for it to load, then save again."
-                Value.WaitingPhoto = False
-                Value.Preparing = False
-                Value.RequestId = 0
-
-            End If
-
-            Return False
-
-        End If
-
-        Value.WaitingTime = 0
-
-    End If
 
     If Value.Preparing Then
 
@@ -401,6 +404,9 @@ Public Function Update(ByRef Value As State, ByRef Town As Document.State, Elaps
                 Value.Message = "An NPC Spawn is blocked. Move it to walkable ground and save again."
             End If
 
+            Call Previews.ReleaseFrozen(Value.PhotoKey)
+
+            Value.PhotoKey = ""
             Value.Preparing = False
             Value.RequestId = 0
 
@@ -471,7 +477,7 @@ Public Function Update(ByRef Value As State, ByRef Town As Document.State, Elaps
         Value.WithPreview And
         Not Value.SavingPng) Then
 
-        Photo = G.LoadViewportCapture3D(SnapshotKey(Value.RequestId) + ".Preview")
+        Photo = G.LoadViewportCapture3D(Value.PhotoKey + ".Image")
         Value.NativeJob = G.ExportViewportCapturePng3D(Photo, PngPath(Value.Path))
 
         Call G.ReleaseViewportCapture3D(Photo)
@@ -571,6 +577,9 @@ Public Function Update(ByRef Value As State, ByRef Town As Document.State, Elaps
 
     End If
 
+    Call Previews.ReleaseFrozen(Value.PhotoKey)
+
+    Value.PhotoKey = ""
     Value.RequestId = 0
     Value.NativeJob = 0
 

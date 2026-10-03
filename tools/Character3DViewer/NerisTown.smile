@@ -1411,7 +1411,7 @@ Public Sub Draw(ByRef Value As State)
 
         Ok = DrawContents(Value) And Ok
 
-        Call WorldPreviews.Finish()
+        Call WorldPreviews.Finish(Ok)
 
         Value.PointOfView.UpdatedAt = 0
 

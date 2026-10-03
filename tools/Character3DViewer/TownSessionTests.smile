@@ -595,9 +595,9 @@ Sub CheckQueuedSaves()
     Call Check(Current.Revision = 4 And Current.SavedRevision = 0 And
         QueueMaps.Documents[2].Revision = 4 And QueueMaps.Documents[2].SavedRevision = 0,
         "Save All Does Not Mark Newer Active Or Inactive Edits Saved")
-    Call Check(QueueJob.SuppressReveal And QueueFixture.Documents[0].Revision = 3 And
-        QueueFixture.Documents[2].Revision = 3,
-        "Save All Uses Click Time Snapshots Without Opening Explorer Per Map")
+    Call Check(QueueJob.SuppressReveal And QueueFixture.Documents[0].Name = "" And
+        QueueFixture.Documents[2].Name = "",
+        "Save All Releases Completed Snapshots Without Opening Explorer Per Map")
 
     ImportJob = Data_BundleStart(False, "QueueFixture.Reopened", LastPath, "")
     Deadline = Timer() + 5000

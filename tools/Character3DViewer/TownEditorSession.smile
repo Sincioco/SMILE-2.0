@@ -627,7 +627,7 @@ Private Sub FileCommand(Action As Number)
 
         End If
 
-        Call Files.Choose(Transfers, Town, Mode)
+        Call Files.Choose(Transfers, Town, Mode, OldName)
 
         Town.Name = OldName
         Transfers.OriginName = OldName
@@ -1552,6 +1552,8 @@ Public Sub Release()
 
     Call Panel.Release(Controls.Ui)
     Call World.Close()
+    Call SaveQueue.Release(QueuedSaves)
+    Call Previews.ReleaseFrozen(Transfers.PhotoKey)
     Call Previews.Destroy()
     Call Attachments.Destroy(Details)
     Call Campfires.Destroy(Fires)

@@ -8,6 +8,7 @@ Import Smile.Simple3D.PrecisionMath3D As M
 Import Smile.Simple3D.SurfaceGrid3D As Grid
 Import Smile.Tools.TownSurfaceStyles As SurfaceStyles
 Import Smile.Tools.TownNpcLayout As NpcLayout
+Import Smile.Simple3D.TerrainHeights3D As Heights
 
 Public Const MAX_ITEMS = 1024
 Public Const MAX_MAP_TILES = 4096
@@ -80,6 +81,27 @@ Public Type State
     Revision As Number
     SavedRevision As Number
 End Type
+
+''' Release snapshot text pages and invalidate its fixed storage without a full stack copy.
+Public Sub ReleaseSnapshot(ByRef Value As State)
+
+    Dim Index As Number
+
+    For Index = 0 To MAX_MAP_TILES - 1
+        Value.MapTiles[Index].Destination = ""
+    End For
+
+    Call SurfaceStyles.Reset(Value.Appearance)
+    Call Heights.Reset(Value.Surface.Heights, 0)
+
+    Value.Name = ""
+    Value.ItemCount = 0
+    Value.MapTileCount = 0
+    Value.Surface.Rows = 0
+    Value.Surface.Columns = 0
+    Value.Surface.Curves.BrushCount = 0
+
+End Sub
 
 ''' Capture the displayed perspective without moving it or beginning orbit.
 Public Function SetInitialCamera(ByRef Town As State, Camera As P.Camera3D) As Boolean

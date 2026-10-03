@@ -1,0 +1,335 @@
+''' Native queued documents and their real viewport captures in disposable storage.
+
+Option Explicit
+
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownDocumentStore As Store
+Import Smile.Tools.TownWorldPreviews As Photos
+Import Smile.Tools.TownSaveQueue As Saves
+Import Smile.Tools.TownFileJobs As Files
+Import Smile.Tools.TownTabs As Tabs
+Import Smile.Tools.TownStartingCamera As Starting
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.Core As Core
+
+Dim Current As Document.State
+Dim Loaded As Document.State
+Dim OpenMaps As Tabs.State
+Dim Queue As Saves.State
+Dim Job As Files.State
+Dim Camera As P.Camera3D
+Dim Marker As Core.Object3D
+Dim Handles[32] As Number
+Dim Paths[16] As Text
+Dim Ok As Boolean
+Dim Changed As Boolean
+Dim Deadline As Number
+Dim Index As Number
+Dim Transfer As Number
+Dim Failures As Number
+Dim Output As Text
+
+Game Window "Town Export Photograph Check" Size 640 By 480
+
+Output = "@OUTPUT@\"
+Marker = G.CreateCube3D(240)
+Ok = Document.Blank(Current, "Export Active", 8, 8, 20.0)
+
+Call Photograph(Current)
+
+OpenMaps.TabCount = 2
+OpenMaps.Documents[0] = Current
+OpenMaps.Documents[1] = Current
+OpenMaps.Documents[1].Name = "Export Later"
+
+Call Photograph(OpenMaps.Documents[1])
+
+Ok = Photos.Freeze(OpenMaps.Documents[1], "Expected")
+
+Call ExportImage("Expected", Output + "Expected.png")
+Call Saves.Begin(Queue, OpenMaps, Current, Output + "Edited-A.town", Files.SAVE_VIEWER, True)
+
+Paths[1] = Saves.OutputPath(Queue, 1)
+
+Call Saves.Update(Queue, Job, OpenMaps)
+
+Changed = Files.Update(Job, Current, 16)
+
+Call Check(Job.RequestId > 0 And Job.Preparing, "First Export Remains In Flight")
+
+' Advance the real document camera owner twice, replacing both mutable generations.
+Camera = Starting.Frame(OpenMaps.Documents[1])
+Camera.Position.X = Camera.Position.X + 450.0
+Ok = Document.SetInitialCamera(OpenMaps.Documents[1], Camera)
+
+Call Photograph(OpenMaps.Documents[1])
+
+Camera.Position.Z = Camera.Position.Z + 650.0
+Ok = Document.SetInitialCamera(OpenMaps.Documents[1], Camera)
+
+Call Photograph(OpenMaps.Documents[1])
+Call Check(Store.MatchesDocument(Queue.Documents[1], Saves.PhotoKey(1) + ".Input"),
+    "Queued Capture Retains Its Exact Old Input")
+
+Ok = Photos.Freeze(OpenMaps.Documents[1], "Newer")
+
+Call ExportImage("Newer", Output + "Newer.png")
+Call Drain()
+Call Check(Queue.Failed = 0 And Not Job.Failed, "Edited Later Map Still Exports Its Old Pair")
+Call Check(OpenMaps.Documents[1].Revision <> OpenMaps.Documents[1].SavedRevision,
+    "Newer Inactive Edits Stay Dirty")
+Call ImportTown(Paths[1])
+Call Check(Not Loaded.HasInitialCamera, "Parsed Export Contains Old Camera Content")
+
+Print "PAIR " + Files.PngPath(Paths[1])
+
+' Same name/revision is not enough to identify a photograph.
+Current = OpenMaps.Documents[1]
+Current.Light.Ambient = Current.Light.Ambient + 1
+Ok = Photos.Freeze(Current, "Mismatch")
+
+Call Check(Not Ok, "Same Revision Different Content Is Rejected")
+
+Current = OpenMaps.Documents[0]
+OpenMaps.TabCount = 16
+
+For Index = 0 To 15
+    OpenMaps.Documents[Index] = Current
+    OpenMaps.Documents[Index].Name = "Export " + Files.IdText(Index)
+
+    Call Photograph(OpenMaps.Documents[Index])
+End For
+
+Current = OpenMaps.Documents[0]
+
+Call Saves.Begin(Queue, OpenMaps, Current, Output + "Sixteen.town", Files.SAVE_VIEWER, True)
+
+For Index = 0 To 15
+    Paths[Index] = Saves.OutputPath(Queue, Index)
+End For
+
+' Evict the whole live photograph cache after all request pairs were frozen.
+
+Call Photos.Destroy()
+Call Drain()
+Call Check(Queue.Failed = 0 And Queue.MapCount = 16, "All Sixteen Pairs Survive Cache Eviction")
+
+For Index = 0 To 15
+    Call ImportTown(Paths[Index])
+    Call Check(Loaded.Name = OpenMaps.Documents[Index].Name, "Parsed Sixteen Map Identity")
+
+    Print "PNG " + Files.PngPath(Paths[Index])
+End For
+
+Call Photograph(Current)
+
+Current.Name = "Saved Copy"
+Ok = Files.Queue(Job, Current, Files.SAVE_VIEWER, Output + "Copy.town", False, True, "", "Export 0")
+Job.OriginName = "Export 0"
+Job.SaveAsCopy = True
+Job.SuppressReveal = True
+Current.Name = "Export 0"
+
+Call DrainJob()
+Call Check(Not Job.Failed And Current.Name = "Export 0", "Save As Uses Source Photo Without Renaming Source")
+Call ImportTown(Output + "Copy.town")
+Call Check(Loaded.Name = "Saved Copy", "Save As Writes Requested Copy Name")
+
+Ok = Files.Queue(Job, Current, Files.SAVE_VIEWER, Output + "Broken.town", False, True)
+Job.SuppressReveal = True
+
+Call DrainJob()
+Call Check(Job.Failed And Job.SavingPng, "PNG Failure Is Reported After Town Success")
+Call ImportTown(Output + "Broken.town")
+Call Check(Loaded.Name = Current.Name, "PNG Failure Retains Valid Town")
+
+Ok = Files.Queue(Job, Current, Files.SAVE_VIEWER, Output + "Retry.town", False, True)
+Job.SuppressReveal = True
+Camera = Starting.Frame(Current)
+Camera.Position.X = Camera.Position.X + 100.0
+Ok = Document.SetInitialCamera(Current, Camera)
+
+Call DrainJob()
+Call Check(Not Job.Failed And Current.Revision <> Current.SavedRevision,
+    "Retry Cannot Mark Newer Live Revision Saved")
+
+Ok = Document.Blank(Current, "Cold Unrendered", 8, 8, 20.0)
+Ok = Files.Queue(Job, Current, Files.SAVE_VIEWER, Output + "Cold.town", False, True)
+
+Call Check(Not Ok And Job.RequestId = 0 And Job.Failed,
+    "Cold Missing Photograph Fails Explicitly Without Writing A Mismatched Pair")
+
+Print "LIMITATION Cold snapshot rendering remains unavailable."
+
+Deadline = Timer() + 1500
+
+Do
+
+    Ok = Photos.Begin(Current)
+    Show Screen
+
+Loop Until Ok Or Timer() > Deadline
+
+Call Check(Ok, "Failed Capture Starts Its Native Scene")
+
+If Ok Then
+    Call Photos.Finish(False)
+End If
+
+Call Check(Not Photos.Freeze(Current, "FailedCapture"), "Failed Draw Cannot Publish A Photograph")
+
+Ok = Files.Queue(Job, Current, Files.SAVE_BLENDER, Output + "Blender.blend", False, True)
+
+Call Check(Ok And Not Job.WithPreview And Job.Preparing, "Blender Preparation Is Independent Of Photos")
+
+Job.RequestId = 0
+
+Current = OpenMaps.Documents[0]
+
+Call Photograph(Current)
+Call Saves.Begin(Queue, OpenMaps, Current, Output + "Canceled.town", Files.SAVE_VIEWER, True)
+Call Saves.Update(Queue, Job, OpenMaps)
+Call Check(Job.RequestId > 0, "Cancellation Has An In Flight Request")
+Call Saves.Release(Queue)
+Call Check(Not Queue.Active And Queue.MapCount = 0, "Cancellation Clears Queued Requests")
+Call DrainJob()
+Call Check(Not Job.Failed, "In Flight Photograph Survives Queue Cancellation")
+Call Check(Queue.Documents[0].Name = "", "Cancellation Releases Document Snapshots")
+Call Photos.ReleaseFrozen(Job.PhotoKey)
+Call Photos.ReleaseFrozen("Expected")
+Call Photos.ReleaseFrozen("Newer")
+Call Photos.Destroy()
+
+For Index = 0 To 31
+    Handles[Index] = G.CaptureViewport3D()
+
+    Call Check(Handles[Index] > 0, "All Capture Slots Available After Cleanup")
+End For
+
+Call Check(G.CaptureViewport3D() = 0, "Existing Thirty Two Capture Limit Is Unchanged")
+
+For Index = 0 To 31
+    Call G.ReleaseViewportCapture3D(Handles[Index])
+End For
+
+Call G.DestroyObject3D(Marker)
+
+If Failures = 0 Then
+    Print "PASS Town Export Photographs"
+Else
+    Print "FAIL Town Export Photographs"
+End If
+
+Sub Check(Condition As Boolean, Label As Text)
+
+    If Not Condition Then
+        Print "FAIL " + Label
+        Failures = Failures + 1
+    End If
+
+End Sub
+
+Sub Photograph(ByRef Map As Document.State)
+
+    Dim Done As Boolean
+    Dim Limit As Number
+    Dim Drawn As Boolean
+
+    Limit = Timer() + 1500
+
+    Do
+
+        Done = Photos.Begin(Map)
+
+        If Done Then
+
+            Drawn = P.SetPosition(Marker, 0.0, 120.0, 0.0)
+            Drawn = G.DrawObject3D(Marker) And Drawn
+
+            Call Photos.Finish()
+            Call Check(Drawn, "Native Photograph Draw Succeeds")
+
+        End If
+
+        Show Screen
+
+    Loop Until Done Or Timer() > Limit
+
+    Call Check(Photos.Check(Map), "Matching Photograph Captured")
+
+End Sub
+
+Sub Drain()
+
+    Deadline = Timer() + 20000
+
+    Do
+
+        Changed = Files.Update(Job, Current, 16)
+
+        Call Saves.Update(Queue, Job, OpenMaps)
+
+        Show Screen
+
+    Loop Until Not Queue.Active Or Timer() > Deadline
+
+    Print Queue.Errors
+
+    Call Check(Not Queue.Active, "Save All Finishes Within Its Bound")
+
+End Sub
+
+Sub DrainJob()
+
+    Deadline = Timer() + 10000
+
+    Do
+
+        Changed = Files.Update(Job, Current, 16)
+
+        Show Screen
+
+    Loop Until Job.RequestId = 0 Or Timer() > Deadline
+
+    Call Check(Job.RequestId = 0, "Native Transfer Finishes Within Its Bound")
+
+End Sub
+
+Sub ImportTown(Path As Text)
+
+    Transfer = Data_BundleStart(False, "Check.Import", Path, "")
+    Deadline = Timer() + 5000
+
+    Do
+        Show Screen
+
+    Loop Until Data_FileStatus(Transfer) <> 0 Or Timer() > Deadline
+
+    Ok = Store.LoadDocument(Loaded, "Check.Import")
+
+    Call Check(Data_FileStatus(Transfer) = 1 And Ok, "Exported Document Parses")
+
+End Sub
+
+Sub ExportImage(Key As Text, Path As Text)
+
+    Dim Capture As Number
+
+    Capture = G.LoadViewportCapture3D(Key + ".Image")
+    Transfer = G.ExportViewportCapturePng3D(Capture, Path)
+
+    Call G.ReleaseViewportCapture3D(Capture)
+
+    Deadline = Timer() + 5000
+
+    Do
+        Show Screen
+
+    Loop Until Data_FileStatus(Transfer) <> 0 Or Timer() > Deadline
+
+    Print Data_FileMessage(Transfer)
+
+    Call Check(Data_FileStatus(Transfer) = 1, "Reference Native PNG Export Succeeds")
+
+End Sub

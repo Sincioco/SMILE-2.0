@@ -1,5 +1,96 @@
 # Character Viewer Architecture
 
+## October 3 21:00 review handoff: R04 partial, R05/R06 repaired
+
+Reviewed baseline: `3feda1527fd1c61012fb0917673e0354c4eb1759`, matching the clean
+checkout at intake. The Downloads ZIP's nine payload hashes were verified in an
+ignored confined extraction directory. All seven numbered Markdown files were
+read. The Water audio, Mira checksum and Fire assertion findings closed by
+`1b80ef67` were not replayed.
+
+R04 reproduced through the real native WithPreview=True queue: map B's document
+was frozen while its mutable photograph generations were subsequently replaced.
+The later file job could no longer find its old photograph and timed out. The
+queue now captures verified image/input pairs in sixteen fixed request slots;
+the transfer takes its own single-slot copy before preparation. Strong serialized
+input comparison guards same-name/same-revision content mismatches. Native PNG
+byte comparison proves the old queued image survives two newer photographs and
+complete live-cache eviction, including the sixteen-map bound. Failed draw results
+cannot publish a photograph. Cancellation frees the remaining queue while the
+already-started transfer retains its owned pair. Capture limits remain 32.
+
+`TownSaveQueue` owns request capture/identity and cancellation, `TownWorldPreviews`
+owns frozen capture/input resources, and `TownFileJobs` owns preparation/transfers
+and partial-write reporting. `TownDocument.ReleaseSnapshot` releases dynamic text
+pages and invalidates fixed snapshot storage in place. A full-size local empty
+document in cleanup caused a native stack overflow in the full session fixture;
+in-place release fixes that counterexample without increasing stack budgets.
+The scene and editor session only delegate success/cleanup. No renderer, graph,
+clock or transfer algorithm was added to either coordinator or NativeProgram.
+
+**Remaining R04 blocker:** cold request-snapshot rendering is not implemented.
+The native fixture reproduces this case and labels it as a limitation, not a
+successful cold export. A missing matching preview is rejected before file output.
+`TownSurfaceRenderer.CacheTown` is shared build state, and landmark creation changes
+global route transforms. Rendering the frozen town through the active editor would
+violate camera/tab/navigation isolation. The next scoped repair must isolate those
+existing owners for one bounded snapshot scene and validate cold maps while the
+live document, camera, NPCs, lighting and recovery remain unchanged. This handoff
+does not add a replacement renderer or silently switch the user's town.
+
+R05's old stdout-only route predicate demonstrably accepted a native process that
+printed PASS then exited 7. `Invoke-TownNativeCheck.ps1` now bounds route, scene,
+and town-group execution and validates immediate exit status plus stdout/stderr.
+Compiled native negative controls reject exit 7 after PASS, missing PASS, FAIL after
+PASS, timeout, and an actual failed graphics draw after successful operations.
+No source-model result substitutes for these executions.
+
+R06 reproduced the documented old bootstrap failures once, then used current
+authored import/preparation with read-only canonical publication assets. The
+route test retains its legacy/static contract. The scene uses the accepted authored
+Neris fixture, existing inspection checks, actual door metadata, Court transforms,
+reload and complete native resource release. README maps each retired static-scene
+assertion category to current coverage or explicit unsupported composition scope.
+The old static-bootstrap debt recorded below is historical and superseded by this
+authored scene result; production movement/rendering was not changed to mimic it.
+
+Actual validation: native export fixture, native negative controls, repaired Neris
+route/scene, and all four town integration groups pass. The session was rerun after
+the cleanup correction. Arin's count was read from current canonical JSON (24), not
+forced into assets. Reference JavaScript models were inspected but not executed or
+reported as native validation. Historical arena/hardening results below were not
+rerun because no shared native renderer, compiler or runtime changed.
+
+Final evidence under ignored `artifacts/`: export regression
+`tests/town-export-828733f53d944411b242b8134da2f5a9`, negative controls
+`tests/neris-policy-ee4144b0cc1d4fe78d1e7ea132a62911`, and Neris route/scene
+`tests/neris-town-b1f98be7f84b416385f8ccc51da8ccb4`. The four-group transcript
+is `temp/codex-handoff/r04-native/final-town-editor.log`; the corrected final
+session rerun is `final-session.log` beside it. The normal NativeProgram UI,
+compiled with an isolated ApplicationId and a read-only copy of live saved data,
+completed single Save for Viewer and Save All for Viewer (16/16). All seventeen
+town bundles and prepared-record checksums verified with corresponding PNGs;
+`ui-output-verification.json` records their hashes. Native regression assertions,
+not that artifact-only check, prove immutable document/photo provenance.
+
+The production Studio was rebuilt with all 155 model preparations served from
+cache, its 367 published runtime assets verified, and the old process closed
+gracefully. The standard native executable was replaced and relaunched through
+Launch.ps1. No debugger, Blender recook, compiler rebuild or VSIX install was used.
+Arin and Orin calibration export reported unchanged canonical JSON bytes.
+Final SHA-256 comparison preserves all 1,819 protected canonical source files and
+the sixteen October 3 19:40 Luma town/PNG pairs. Isolated tests created no production
+records. The subsequent normal close/relaunch updated only the active Working
+record/backup, Waterworks recovery/permanent backups, and the file-worker heartbeat;
+the actual permanent maps, named recoveries and calibration records are unchanged.
+
+Owner growth against the reviewed baseline: TownDocument 403→425 (+22), previews
+288→362 (+74), queue 176→235 (+59), file jobs 797→806 (+9), editor session
+1734→1736 (+2); NerisTown stays 1599 lines. The scene fixture shrinks 741→500.
+New imports stay within document/preview/job responsibilities. No guardrail,
+baseline, renderer budget, dependency or NativeProgram change was made. The large
+legacy editor remains existing debt; this repair does not refactor it broadly.
+
 ## October 3 resident loading, authored connections and editor additions
 
 Measured root cause: synchronous resident nearest-road searches cost 10-22ms
@@ -64,8 +155,8 @@ grows 102 lines; editor 58, document storage 59 and residents 45. World canvas
 shrinks 114 lines and the editor session shrinks 15. These extend each owner's
 existing responsibility; large legacy owners remain debt. No separate architecture
 checker exists, so ownership, imports, entry-point growth and diff were reviewed
-directly. The older static Neris fixture's documented layout mismatch remains;
-the accepted editable-map integration suite is the passing current validation.
+directly. At that checkpoint the older static Neris fixture's layout mismatch
+remained; the later 21:00 handoff section records its authored-bootstrap repair.
 
 ## October 3 predictable magnification and authored initial camera
 
@@ -110,7 +201,8 @@ Camera persistence covers native/Python round trips, per-town
 isolation, invalid-camera rejection and Undo/Redo. No compiler/runtime extension,
 dependency, architecture exclusion or limit increase is required.
 
-Validation debt discovered during this change: the older `test-neris-town.ps1`
+Historical validation debt, subsequently repaired in the 21:00 handoff above:
+the older `test-neris-town.ps1`
 static-chunk scene fixture fails its arrival-start, authored-wall, reload timing,
 arena rendering and moving Royal Court leaf assertions. An isolated build of
 pre-change commit `eae26d6e` reproduces those failures. That fixture starts the

@@ -6,6 +6,8 @@ Option Explicit
 Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownTabs As Tabs
 Import Smile.Tools.TownFileJobs As Files
+Import Smile.Tools.TownWorldPreviews As Previews
+Import Smile.Tools.TownDocumentStore As Store
 
 Public Type State
     Documents[16] As Document.State
@@ -48,11 +50,13 @@ Public Function OutputPath(ByRef Value As State, Index As Number) As Text
 End Function
 
 Public Sub Begin(ByRef Value As State, ByRef OpenTabs As Tabs.State,
-    ByRef Town As Document.State, Path As Text, Operation As Number)
+    ByRef Town As Document.State, Path As Text, Operation As Number,
+    Optional WithPreview As Boolean = False)
 
     Dim Index As Number
     Dim Separator As Number
     Dim Sequence As Number
+    Dim Ok As Boolean
 
     If Value.Active Or Text_Length(Path) = 0 Then
         Return
@@ -89,7 +93,16 @@ Public Sub Begin(ByRef Value As State, ByRef OpenTabs As Tabs.State,
     Value.Failed = 0
     Value.Errors = ""
     Value.Waiting = False
-    Value.WithPreview = False
+    Value.WithPreview = WithPreview And Operation = Files.SAVE_VIEWER
+
+    If Value.WithPreview Then
+
+        For Index = 0 To Value.MapCount - 1
+            Ok = Previews.Freeze(Value.Documents[Index], PhotoKey(Index))
+        End For
+
+    End If
+
     Value.Active = True
 
 End Sub
@@ -112,9 +125,7 @@ Public Sub Choose(ByRef Value As State, ByRef OpenTabs As Tabs.State,
     Path = File_Pick(True, Title, Extension,
         Local_Timestamp() + " - " + Files.SafeName(Town.Name) + "." + Extension)
 
-    Call Begin(Value, OpenTabs, Town, Path, Operation)
-
-    Value.WithPreview = Operation = Files.SAVE_VIEWER
+    Call Begin(Value, OpenTabs, Town, Path, Operation, Operation = Files.SAVE_VIEWER)
 
 End Sub
 
@@ -123,6 +134,7 @@ Public Sub Update(ByRef Value As State, ByRef Job As Files.State,
 
     Dim Index As Number
     Dim Ok As Boolean
+    Dim Preview As Text
 
     If Not Value.Active Or Job.RequestId > 0 Then
         Return
@@ -140,13 +152,17 @@ Public Sub Update(ByRef Value As State, ByRef Job As Files.State,
             For Index = 0 To OpenTabs.TabCount - 1
 
                 If (OpenTabs.Documents[Index].Name = Value.Documents[Value.NextIndex].Name And
-                    OpenTabs.Documents[Index].Revision = Value.Documents[Value.NextIndex].Revision) Then
+                    OpenTabs.Documents[Index].Revision = Value.Documents[Value.NextIndex].Revision And
+                    (Not Value.WithPreview Or Store.MatchesDocument(OpenTabs.Documents[Index],
+                    PhotoKey(Value.NextIndex) + ".Input"))) Then
                     OpenTabs.Documents[Index].SavedRevision = OpenTabs.Documents[Index].Revision
                 End If
 
             End For
 
         End If
+
+        Call Previews.ReleaseFrozen(PhotoKey(Value.NextIndex))
 
         Value.NextIndex = Value.NextIndex + 1
         Value.Waiting = False
@@ -161,15 +177,58 @@ Public Sub Update(ByRef Value As State, ByRef Job As Files.State,
         Job.BatchLabel = "All Maps"
         Job.Message = ("Saved " + Files.IdText(Value.MapCount - Value.Failed) + " of " +
             Files.IdText(Value.MapCount) + " maps. " + Value.Errors)
+
+        Call ClearDocuments(Value)
+
         Return
 
     End If
 
+    If Value.WithPreview Then
+        Preview = PhotoKey(Value.NextIndex)
+    End If
+
     Ok = Files.Queue(Job, Value.Documents[Value.NextIndex], Value.Operation,
-        OutputPath(Value, Value.NextIndex), False, Value.WithPreview)
+        OutputPath(Value, Value.NextIndex), False, Value.WithPreview, Preview)
     Job.SuppressReveal = True
     Job.BatchLabel = "Map " + Files.IdText(Value.NextIndex + 1) + "/" + Files.IdText(Value.MapCount)
     Value.Waiting = True
+
+End Sub
+
+Public Function PhotoKey(Index As Number) As Text
+
+    Dim Result As Text
+
+    Result = "TownEditor.ExportPhoto.Queue." + Files.IdText(Index)
+
+    Return Result
+
+End Function
+
+Public Sub Release(ByRef Value As State)
+
+    Dim Index As Number
+
+    For Index = 0 To 15
+        Call Previews.ReleaseFrozen(PhotoKey(Index))
+    End For
+
+    Call ClearDocuments(Value)
+
+    Value.Active = False
+    Value.Waiting = False
+    Value.MapCount = 0
+
+End Sub
+
+Private Sub ClearDocuments(ByRef Value As State)
+
+    Dim Index As Number
+
+    For Index = 0 To 15
+        Call Document.ReleaseSnapshot(Value.Documents[Index])
+    End For
 
 End Sub
 

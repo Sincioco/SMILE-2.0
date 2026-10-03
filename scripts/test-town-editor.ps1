@@ -19,15 +19,24 @@ if (-not $AirportTown) { $AirportTown = Join-Path $acceptedMaps 'Horizon-Airport
 function Invoke-Check([string]$Project, [string]$Executable, [string]$Expected) {
     & $compiler --project $Project --target windows-x64 -o $Executable *> "$Executable.compile.log"
     if ($LASTEXITCODE -ne 0) { Get-Content "$Executable.compile.log" -Tail 20; throw 'Town fixture compile failed.' }
-    $process = Start-Process -FilePath $Executable -WorkingDirectory (Split-Path $Executable -Parent) `
-        -WindowStyle Hidden -RedirectStandardOutput "$Executable.log" -RedirectStandardError "$Executable.errors.log" -PassThru
-    if (-not $process.WaitForExit(45000)) { throw "Town fixture did not finish: $Executable (PID $($process.Id))" }
-    $text = [string](Get-Content "$Executable.log" -Raw)
+    $text = & (Join-Path $PSScriptRoot 'Invoke-TownNativeCheck.ps1') -Executable $Executable `
+        -Expected $Expected -LogPrefix $Executable -TimeoutSeconds 45
     if ($text) { Write-Host $text.Trim() }
-    if ($process.ExitCode -ne 0 -or $text -match 'FAIL' -or $text -notmatch $Expected) { throw "Town fixture failed: $Executable (exit $($process.ExitCode))" }
 }
 
-Invoke-Check (Join-Path $viewer 'TownEditorTests.smileproj') (Join-Path $output 'Foundations.exe') 'PASS Town Editor Foundations'
+[xml]$foundation = Get-Content (Join-Path $viewer 'TownEditorTests.smileproj') -Raw
+$foundation.SmileProject.PropertyGroup.ApplicationId = 'smile.tests.town-editor.run-' + [Guid]::NewGuid().ToString('N')
+$foundation.SmileProject.PropertyGroup.StartupFile = Join-Path $viewer 'TownEditorTests.smile'
+foreach ($node in $foundation.SmileProject.ItemGroup.ChildNodes) {
+    if ($node.HasAttribute('Include')) {
+        $node.SetAttribute('Include', [IO.Path]::GetFullPath((Join-Path $viewer $node.GetAttribute('Include'))))
+    }
+}
+$foundationProject = Join-Path $output 'Foundations.smileproj'
+$foundation.Save($foundationProject)
+try {
+    Invoke-Check $foundationProject (Join-Path $output 'Foundations.exe') 'PASS Town Editor Foundations'
+} finally { Remove-Item -LiteralPath $foundationProject -ErrorAction SilentlyContinue }
 
 # Exercise the existing demonstrated route regressions against the editable document.
 # This generated fixture shares the same assertions; it is not a second route-test owner.
@@ -57,6 +66,9 @@ Call Edited.Rebuild(Town)
 $generatedSource = Join-Path $output 'EditedRoutes.smile'
 [IO.File]::WriteAllText($generatedSource, $source)
 $project.SmileProject.PropertyGroup.StartupFile = $generatedSource
+$identity = $project.CreateElement('ApplicationId')
+$identity.InnerText = 'smile.tests.town-routes.run-' + [Guid]::NewGuid().ToString('N')
+$null = $project.SmileProject.PropertyGroup.AppendChild($identity)
 foreach ($node in @($project.SmileProject.ItemGroup.ChildNodes)) {
     if ($node.LocalName -eq 'SmileSource' -and $node.GetAttribute('StartupOnly') -eq 'true') {
         $node.SetAttribute('Include', $generatedSource)
@@ -69,12 +81,14 @@ $initial.SetAttribute('Include', (Join-Path $viewer 'TownInitialSurface.smile'))
 $null = $project.SmileProject.ItemGroup.AppendChild($initial)
 $generatedProject = Join-Path $output 'EditedRoutes.smileproj'
 $project.Save($generatedProject)
-Invoke-Check $generatedProject (Join-Path $output 'EditedRoutes.exe') 'PASS Neris Town Routes'
+try { Invoke-Check $generatedProject (Join-Path $output 'EditedRoutes.exe') 'PASS Neris Town Routes' }
+finally { Remove-Item -LiteralPath $generatedProject -ErrorAction SilentlyContinue }
 
 if (-not $SkipRendering) {
     # Reproduce the real canal document that exhausted the bounded terrain scratch buffer.
+    $renderIdentity = 'smile.tests.town-render.run-' + [Guid]::NewGuid().ToString('N')
     $renderHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData(
-        [Text.Encoding]::UTF8.GetBytes('smile.tests.town-render'))).ToLowerInvariant()
+        [Text.Encoding]::UTF8.GetBytes($renderIdentity))).ToLowerInvariant()
     $canalHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData(
         [Text.Encoding]::UTF8.GetBytes('TownRender.Canals'))).ToLowerInvariant()
     $renderData = Join-Path (& (Join-Path $PSScriptRoot 'get-smile-data-root.ps1')) "$renderHash\Data"
@@ -95,6 +109,7 @@ if (-not $SkipRendering) {
     $renderSource = Join-Path $output 'TownRenderTests.smile'
     [IO.File]::WriteAllText($renderSource, [IO.File]::ReadAllText((Join-Path $viewer 'TownRenderTests.smile')).Replace('@TOWN_PREVIEW_PNG@', $pngPath))
     $renderProject.SmileProject.PropertyGroup.StartupFile = $renderSource
+    $renderProject.SmileProject.PropertyGroup.ApplicationId = $renderIdentity
     foreach ($node in @($renderProject.SmileProject.ItemGroup.ChildNodes)) {
         if ($node.GetAttribute('StartupOnly') -eq 'true') {
             $node.SetAttribute('Include', $renderSource)
@@ -104,7 +119,8 @@ if (-not $SkipRendering) {
     }
     $renderProjectPath = Join-Path $viewer 'Character3DViewer.TownRenderTests.smileproj'
     $renderProject.Save($renderProjectPath)
-    Invoke-Check $renderProjectPath (Join-Path $output 'TownRenderTests.exe') 'PASS Town Editor Rendering'
+    try { Invoke-Check $renderProjectPath (Join-Path $output 'TownRenderTests.exe') 'PASS Town Editor Rendering' }
+    finally { Remove-Item -LiteralPath $renderProjectPath -ErrorAction SilentlyContinue }
     Add-Type -AssemblyName System.Drawing
     $png = [Drawing.Image]::FromFile($pngPath)
     try {
@@ -198,6 +214,7 @@ End Sub
     foreach ($name in @('Town-Palette.png', 'Neris-Grass-Color.png')) {
         Copy-Item -LiteralPath (Join-Path $viewer ('Assets/Neris/' + $name)) -Destination $images -Force
     }
-    Invoke-Check $sessionProject (Join-Path $sessionOutput 'TownSessionTests.exe') 'PASS Town Editor Session'
+    try { Invoke-Check $sessionProject (Join-Path $sessionOutput 'TownSessionTests.exe') 'PASS Town Editor Session' }
+    finally { Remove-Item -LiteralPath $sessionProject -ErrorAction SilentlyContinue }
 }
 Write-Host 'PASS Native Town Editor'

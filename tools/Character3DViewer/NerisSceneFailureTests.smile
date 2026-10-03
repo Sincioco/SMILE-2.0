@@ -1,0 +1,42 @@
+''' Actual native draw failure after a successful scene begin and draw.
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Scene3D As Scene
+Import Smile.Simple3D.Precision3D As P
+
+Dim Camera As P.Camera3D
+Dim Cube As Core.Object3D
+Dim Missing As Core.Object3D
+Dim Ok As Boolean
+Dim Drawn As Boolean
+
+Game Window "Neris Negative Draw Control" Size 320 By 240
+
+Camera.Position = P.Vector(0.0, 100.0, -300.0)
+Camera.Target = P.Vector(0.0, 0.0, 0.0)
+Camera.UpDirection = P.Vector(0.0, 1.0, 0.0)
+Camera.FovDegrees = 45.0
+Camera.NearPlane = 1.0
+Camera.FarPlane = 1000.0
+Cube = G.CreateCube3D(50)
+Ok = Scene.BeginPrecise(Camera, 10, 20, 30)
+Ok = G.DrawObject3D(Cube) And Ok
+
+If Not Ok Then
+    Print "INVALID Negative Control Setup"
+End If
+
+Print "PASS Neris Town Scene"
+Drawn = G.DrawObject3D(Missing)
+Ok = Scene.EndScene() And Ok
+
+If Not Drawn And Ok Then
+    Print "FAIL Native Draw After Successful Begin And Draw"
+Else
+    Print "INVALID Missing Draw Did Not Produce The Intended Failure"
+End If
+
+Call G.DestroyObject3D(Cube)

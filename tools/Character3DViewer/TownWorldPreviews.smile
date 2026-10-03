@@ -20,6 +20,7 @@ Private Type Photograph
     Revision As Number
     Handle As Number
     Refresh As Boolean
+    InputKey As Text
 End Type
 
 Private Dim Photos[16] As Photograph
@@ -100,6 +101,7 @@ Public Function Check(ByRef Map As Town.State) As Boolean
 
             If Store.MatchesDocument(Map, Key + ".Input") Then
                 Photos[Slot].Handle = G.LoadViewportCapture3D(Key + ".Image")
+                Photos[Slot].InputKey = Key + ".Input"
             End If
 
         End If
@@ -123,10 +125,74 @@ Public Function CopyTo(ByRef Map As Town.State, Key As Text) As Boolean
     End If
 
     Slot = Find(Map.Name)
+
+    If Not Store.MatchesDocument(Map, Photos[Slot].InputKey) Then
+        Return False
+    End If
+
     Ok = G.SaveViewportCapture3D(Photos[Slot].Handle, Key)
     Return Ok
 
 End Function
+
+''' Persist a bounded request-owned pair before a mutable cache can replace it.
+Public Function Freeze(ByRef Map As Town.State, Key As Text) As Boolean
+
+    Dim Ok As Boolean
+
+    Call ReleaseFrozen(Key)
+
+    Ok = CopyTo(Map, Key + ".Image")
+
+    If Ok Then
+        Ok = Store.SaveDocument(Map, Key + ".Input", False)
+    End If
+
+    If Not Ok Then
+        Call ReleaseFrozen(Key)
+    End If
+
+    Return Ok
+
+End Function
+
+Public Function CopyFrozen(ByRef Map As Town.State, Source As Text, Target As Text) As Boolean
+
+    Dim Handle As Number
+    Dim Ok As Boolean
+
+    If Not Store.MatchesDocument(Map, Source + ".Input") Then
+        Return False
+    End If
+
+    Handle = G.LoadViewportCapture3D(Source + ".Image")
+    Ok = Handle > 0
+
+    If Ok Then
+        Ok = G.SaveViewportCapture3D(Handle, Target + ".Image")
+        Ok = Store.SaveDocument(Map, Target + ".Input", False) And Ok
+    End If
+
+    Call G.ReleaseViewportCapture3D(Handle)
+
+    Return Ok
+
+End Function
+
+''' Erase payloads in the fixed request slots; no capture handles survive a transfer.
+Public Sub ReleaseFrozen(Key As Text)
+
+    Dim Bytes[1] As Number
+    Dim Status As Number
+
+    If Text_Length(Key) = 0 Then
+        Return
+    End If
+
+    Save Data Bytes Count 0 To Key + ".Image" Status Status
+    Save Data Bytes Count 0 To Key + ".Input" Status Status
+
+End Sub
 
 Public Sub Refresh(Name As Text)
 
@@ -190,7 +256,7 @@ Public Function Begin(ByRef Map As Town.State) As Boolean
 
 End Function
 
-Public Sub Finish()
+Public Sub Finish(Optional DrawSucceeded As Boolean = True)
 
     Dim Ok As Boolean
     Dim Handle As Number
@@ -198,7 +264,7 @@ Public Sub Finish()
     Dim Key As Text
     Dim Generation As Number
 
-    Ok = Scene.EndScene()
+    Ok = Scene.EndScene() And DrawSucceeded
 
     If Ok Then
 
@@ -222,6 +288,7 @@ Public Sub Finish()
 
             If Ok Then
                 Ok = Cache.WriteNumber(Generation, Prefix)
+                Photos[PendingSlot].InputKey = Key + ".Input"
             End If
 
         End If
@@ -229,6 +296,9 @@ Public Sub Finish()
     End If
 
     Call G.ResetViewport3D()
+    Call Town.ReleaseSnapshot(PendingMap)
+
+    PendingName = ""
 
 End Sub
 
@@ -282,6 +352,10 @@ Public Sub Destroy()
         Photos[Index].Handle = 0
         Photos[Index].Revision = -1
     End For
+
+    Call Town.ReleaseSnapshot(PendingMap)
+
+    PendingName = ""
 
 End Sub
 
