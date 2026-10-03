@@ -19,6 +19,7 @@ Import Smile.Tools.TownSurfaceRenderer As Terrain
 Import Smile.Tools.TownDecks As Decks
 Import Smile.Tools.TownAttachments As Attachments
 Import Smile.Tools.TownCampfires As Campfires
+Import Smile.Tools.TownFountains As Fountains
 Import Smile.Tools.TownLighting As Lighting
 Import Smile.Tools.TownDocumentNavigation As Navigation
 Import Smile.Tools.TownDocumentStore As Storage
@@ -79,6 +80,7 @@ Private Dim TabOverviewPending As Boolean
 Private Dim LiveAppearance As SurfaceStyles.State
 Private Dim LiveStyle As Number
 Private Dim LiveSurface As Grid.State
+Private Dim LiveTown As Text
 
 Public Function Available() As Boolean
 
@@ -110,6 +112,8 @@ Public Sub BeginEditing()
 
         Town.Name = "Neris Town"
         Town.CourtPlaced = True
+        Town.HasTeleportSpawn = True
+        Town.TeleportSpawn = P.Vector(0.0, 0.0, -2780.0)
 
         Call Initial.Populate(Town.Surface)
         Call Document.DefaultSun(Town.Light)
@@ -302,6 +306,7 @@ Public Function LoadNext() As Boolean
     Call Map.Update(Town)
 
     If (Ready And
+        LiveTown = Town.Name And
         AppliedRevision = Town.Revision And
         Ground.LiveRevision = Town.Surface.Revision And
         Not Assets.Failed) Then
@@ -310,6 +315,10 @@ Public Function LoadNext() As Boolean
 
     ' A previous document being ready must not publish this document's unfinished terrain.
     Ready = False
+
+    If Details.Streams.Town <> Town.Name Then
+        Call Fountains.Destroy(Details.Streams)
+    End If
 
     Call Renderer.SyncDocument(Assets, Town)
 
@@ -377,8 +386,11 @@ Public Function LoadNext() As Boolean
         LiveAppearance = Town.Appearance
         LiveStyle = Town.TerrainStyle
         LiveSurface = Town.Surface
+        LiveTown = Town.Name
 
         Call Navigation.Rebuild(Town)
+
+        Ok = World.Synchronize(Town)
 
     End If
 
@@ -477,12 +489,17 @@ Public Function TravelTo(Name As Text, Arrival As P.Vector3) As Boolean
 
     Dim Ok As Boolean
     Dim Returning As Boolean
+    Dim Origin As Text
 
+    Origin = Town.Name
     Returning = Journey.Resolve(GatewayJourney, Town.Name, Name, Arrival)
     Ok = Tabs.OpenNamed(OpenTabs, Town, Name)
 
     If Ok Then
 
+        ' Legacy travel supplies a destination point, not a remembered origin point.
+        GatewayJourney.ArrivalOrigin = Origin
+        GatewayJourney.ArrivalTown = Name
         TeleportPending = True
         TravelPending = True
         TravelArrival = Arrival
@@ -1045,8 +1062,16 @@ Public Sub Update(Leader As P.Vector3, Elapsed As Number)
 
     Call World.Update()
 
+    If Ready And LiveTown = Town.Name Then
+        Ok = World.Synchronize(Town)
+    End If
+
     If HaveDocument Then
         Call Map.Update(Town)
+    End If
+
+    If LiveTown <> Town.Name Then
+        Ready = False
     End If
 
     If Not Ready Then
@@ -1392,17 +1417,24 @@ Public Function TakeSpawn(ByRef Position As P.Vector3, ByRef Overview As Boolean
 
     Found = Journey.TakeArrival(GatewayJourney, Town, Position, Heading)
 
-    If TravelPending Then
-
-        Position = TravelArrival
+    If Found Then
         TravelPending = False
+        Return True
+    End If
+
+    If TravelPending And Town.MapTileCount = 0 Then
+
+        TravelPending = False
+        Position = TravelArrival
         Position.Y = Navigation.GroundHeight(Position.X, Position.Z)
         Heading = Connections.ArrivalHeading(Town.Name, Position)
         Return True
 
     End If
 
-    If Found Then
+    TravelPending = False
+
+    If Journey.Teleport(Town, Position, Heading) Then
         Return True
     End If
 
@@ -1610,6 +1642,16 @@ Public Function LandmarkKind() As Number
     Result = Town.Landmark
 
     Return Result
+
+End Function
+
+Public Function LandmarkRotation() As Double
+
+    Dim ReturnValue As Double
+
+    ReturnValue = Town.LandmarkRotation
+
+    Return ReturnValue
 
 End Function
 

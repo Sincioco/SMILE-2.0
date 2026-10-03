@@ -5,6 +5,7 @@ Option Explicit
 
 Import Smile.Tools.TownSurfaceLayers As Layers
 Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
 Import Smile.Simple3D.PartyTrail3D As Trail
 
 Public Const ORIGIN_X = 7400.0
@@ -18,6 +19,46 @@ Private Dim DoorRotation As Double
 Private Dim DoorHold As Number
 Private Dim Entered As Boolean
 Private Dim PendingEntry As Boolean
+
+Private Dim Pivot As P.Vector3
+Private Dim Turn As Double
+
+Public Sub Configure(Center As P.Vector3, Rotation As Double)
+
+    Pivot = Center
+    Turn = Rotation
+
+End Sub
+
+Public Function Placed(Point As P.Vector3) As P.Vector3
+
+    Dim Result As P.Vector3
+
+    Result = M.Add(Pivot, M.Rotate(M.Subtract(Point, Pivot), P.Vector(0.0, Turn, 0.0)))
+
+    Return Result
+
+End Function
+
+Public Function Original(Point As P.Vector3) As P.Vector3
+
+    Dim Result As P.Vector3
+
+    Result = M.Add(Pivot, M.Rotate(M.Subtract(Point, Pivot), P.Vector(0.0, -Turn, 0.0)))
+
+    Return Result
+
+End Function
+
+Public Function Heading(Yaw As Double) As Double
+
+    Dim Result As Double
+
+    Result = M.WrapDegrees(Yaw + Turn)
+
+    Return Result
+
+End Function
 
 Public Sub Enable(Value As Boolean)
 
@@ -38,6 +79,11 @@ End Function
 Public Function Contains(X As Double, Z As Double) As Boolean
 
     Dim Result As Boolean
+    Dim Source As P.Vector3
+
+    Source = Original(P.Vector(X, 0.0, Z))
+    X = Source.X
+    Z = Source.Z
 
     Result = Enabled And X >= 5400.0 And X <= 11400.0 And Z >= -3550.0 And Z <= 6050.0
 
@@ -50,6 +96,11 @@ Public Function CanStand(X As Double, Z As Double) As Boolean
     Dim LocalX As Double
     Dim LocalZ As Double
     Dim Result As Boolean
+    Dim Source As P.Vector3
+
+    Source = Original(P.Vector(X, 0.0, Z))
+    X = Source.X
+    Z = Source.Z
 
     LocalX = (ORIGIN_Z - Z) / SCALE
     LocalZ = (X - ORIGIN_X) / SCALE
@@ -126,6 +177,7 @@ Public Function ToWorld(Point As P.Vector3) As P.Vector3
 
     Result = P.Vector(ORIGIN_X + Point.Z * SCALE, DECK_Y + Point.Y * SCALE,
         ORIGIN_Z - Point.X * SCALE)
+    Result = Placed(Result)
 
     Return Result
 
@@ -135,6 +187,11 @@ Public Function GroundHeight(X As Double, Z As Double) As Double
 
     Dim Result As Double
     Dim Depth As Double
+    Dim Source As P.Vector3
+
+    Source = Original(P.Vector(X, 0.0, Z))
+    X = Source.X
+    Z = Source.Z
 
     Result = DECK_Y
     Depth = (X - ORIGIN_X) / SCALE
@@ -164,14 +221,16 @@ Public Sub Update(ByRef Path As Trail.State, ActorCount As Number, Elapsed As Nu
     Dim X As Double
     Dim Z As Double
     Dim NearDoor As Boolean
+    Dim Source As P.Vector3
 
     If Not Enabled Then
         Return
     End If
 
     For Index = 0 To Min(ActorCount, 5) - 1
-        X = (ORIGIN_Z - Path.Positions[Index].Z) / SCALE
-        Z = (Path.Positions[Index].X - ORIGIN_X) / SCALE
+        Source = Original(Path.Positions[Index])
+        X = (ORIGIN_Z - Source.Z) / SCALE
+        Z = (Source.X - ORIGIN_X) / SCALE
         NearDoor = NearDoor Or (Abs(X) < 15.0 And Z > -32.0 And Z < 18.0)
     End For
 
@@ -190,8 +249,9 @@ Public Sub Update(ByRef Path As Trail.State, ActorCount As Number, Elapsed As Nu
 
     End If
 
-    X = (ORIGIN_Z - Path.Positions[0].Z) / SCALE
-    Z = (Path.Positions[0].X - ORIGIN_X) / SCALE
+    Source = Original(Path.Positions[0])
+    X = (ORIGIN_Z - Source.Z) / SCALE
+    Z = (Source.X - ORIGIN_X) / SCALE
 
     If Z < -8.0 Then
         Entered = False

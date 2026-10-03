@@ -154,6 +154,7 @@ Public Function Draw(ByRef Value As State, ByRef Town As Document.State) As Bool
 
     Dim Index As Number
     Dim Part As Number
+    Dim FirstPart As Number
     Dim Slot As Number
     Dim Item As Document.Item
     Dim Shape As Catalog.Template
@@ -174,7 +175,13 @@ Public Function Draw(ByRef Value As State, ByRef Town As Document.State) As Bool
                 Shape.PartCount = 2
             End If
 
-            For Part = 0 To Shape.PartCount - 1
+            FirstPart = 0
+
+            If Item.Template >= 20 And Item.Template <= 25 Then
+                FirstPart = 1
+            End If
+
+            For Part = FirstPart To Shape.PartCount - 1
 
                 Slot = Shape.Parts[Part]
                 Ok = P.SetPosition(Value.Objects[Slot], Item.Position.X, Item.Position.Y, Item.Position.Z) And Ok

@@ -68,13 +68,59 @@ The original Neris layout is retained alongside these alternatives.
 `Luma - Story Atlas.world` is a separate fourteen-map graph including original Neris.
 It does not overwrite Sin's `Luma.world`. Graph connections visualize the network;
 actual scene transitions use the destination tiles in each town document.
-Open the atlas through **Edit Town → Files → Open World**. Missing images are
+Open the atlas through **Edit Town â†’ Files â†’ Open World**. Missing images are
 prepared by visiting saved maps, which also opens their tabs. **Demo** cycles the
 enabled maps every 30 seconds and immediately starts orbit; click it again to stop.
 Each thumbnail has a saved Demo toggle. Only Neris Town, Neris Spaceport, Horizon
 Airport and Neris Star Lake participate by default.
 **Maps** displays the open tabs as a four-column gallery with perspective thumbnails.
 The bottom **World Map** button reopens the atlas; double-click a card to enter.
+
+## October 3 map polish and Decor audit
+
+Ancient Relay now has eight mirrored inner crystal circles and eight outer rock
+spires. Verdant's large landforms are grounded across their full footprints.
+Silverfall's cross-stream road curves between its two trails. Greyglass rock
+texture follows the mountain slopes down to the foothills. Willowstep's intact
+snowy map was restored in live saves; town load failures cannot mix surface data
+from the outgoing town into a new town.
+
+Neris Spaceport is rotated 180 degrees and Horizon Airport 90 counterclockwise.
+Authored surfaces, props and the native/Blender terminal assemblies use the same
+map-center transform. Horizon retains Sin's edited roads and two destinations.
+
+The checked-in atlas now preserves Sin's latest fourteen-map layout and eleven
+links. Horizon connects only to Neris Town and Sunglass Expanse. World Map reopens
+the last atlas after restart. The shared native reconciliation owner updates
+yellow destinations when graph connections change, while unchanged connections
+preserve manually edited or removed areas. Inward blue circles show actual gate
+arrival points. The separate Teleport Spawn (Blue) tool sets direct-entry spawn;
+Neris defaults to X=0, Z=-2780. TWN14 stores the new metadata; older saves still load.
+
+All sixteen maps were audited against the Town Editor Decor palette. Campfire was
+present on a later page; it now appears first and has a regenerated thumbnail.
+Fountain templates 21–25 and crystal-circle templates 28–32 are repeated instances
+of existing designs and use the Fountain and Crystal Circle palette entries.
+Placed fountains share the Royal Court's animated water jets and impact rings.
+
+| Map | Placed Decor designs | Missing palette designs |
+| --- | --- | --- |
+| Neris Spaceport | Crystal Lamp, Market Stall, Leafy Tree, Slender Tree, Fountain | None |
+| Neris Town | Bench, Crystal Lamp, Flower Planter, Market Stall, Leafy Tree, Slender Tree, Fountain, Kingdom Sign, Crystal Circle, Wayfinding Sign | None |
+| East Valley | Crystal Lamp, Slender Tree, Fountain | None |
+| Horizon Airport | Crystal Lamp, Leafy Tree, Slender Tree, Fountain | None |
+| Neris Canals | Crystal Lamp, Slender Tree, Fountain | None |
+| Neris Crown Isles | Crystal Lamp, Leafy Tree, Slender Tree | None |
+| Neris Star Lake | Crystal Lamp, Flower Planter, Leafy Tree, Slender Tree, Fountain | None |
+| Ancient Relay | Crystal Circle, Sandstone Mesa, Ancient Rock Spire, Campfire | None |
+| Greyglass Pass | Leafy Tree, Slender Tree, Campfire | None |
+| Neris Relief Quarter | Bench, Crystal Lamp, Leafy Tree, Slender Tree, Fountain | None |
+| Neris Waterworks | Crystal Lamp, Slender Tree, Fountain, Crystal Circle | None |
+| Orin's Village | Crystal Lamp, Slender Tree, Fountain | None |
+| Sunglass Expanse | Market Stall, Slender Tree, Sandstone Mesa, Wind Dune, Ancient Rock Spire, Campfire | None |
+| Verdant Reach | Leafy Tree, Slender Tree, Highland Peak, Campfire | None |
+| Silverfall Basin | Leafy Tree, Slender Tree, Campfire | None |
+| Willowstep Highlands | Highland Peak, Campfire | None |
 
 ## Story authority and remaining work
 
@@ -94,12 +140,13 @@ leveling in these maps are not implemented. Original Neris has nine prototype
 residents; the generated alternatives do not yet have inhabitants.
 The atlas is not a claim that every Sin Star I location has been implemented.
 
-All 25 atlas connections have reciprocal road markers. The original Neris receives
+The original 25-link atlas had reciprocal road markers; the current atlas above
+uses Sin's edited connections and native reconciliation. The original Neris receives
 square boundary approaches and full-width marker updates; its buildings remain intact.
 Triggers cover the final 6 m of the road, side by side when sharing an exit. Arrival uses
 the matching entrance and a clear inward route outside every trigger. Explicit airport destinations retain their names;
-legacy shared-airport exits still remember their origin. The native route check
-covers all 50 directed entrances.
+legacy shared-airport exits still remember their origin. The historical route check
+covered all 50 directed entrances; current arrival regression checks use the saved maps.
 
 ## Road and placement cleanup
 
@@ -173,11 +220,11 @@ limitation; the generated maps use roads wider than their terrain cells.
 ## Journey terrain and landforms
 
 TWN7 adds a document terrain style: Meadow, Forest, Highland or Desert. Studio's
-Items → Surfaces → Terrain button cycles the style, with Undo. Versions 1–6 remain
+Items â†’ Surfaces â†’ Terrain button cycles the style, with Undo. Versions 1â€“6 remain
 readable as Meadow. Walking terrain remains level; the mountains, mesas, dunes and
 spires are movable collision-bearing scenery, not climbable heightfields.
 
-The four appended catalog templates (35–38) are generated with the standard-library
+The four appended catalog templates (35â€“38) are generated with the standard-library
 `../NerisTownV1/Source/journey_landforms.py`. Existing template IDs and catalog
 fingerprint stay intact. After generating that chunk, run the existing catalog
 native-data generators and Prepare-TownEditorAssets before compiling. The Blender
@@ -193,7 +240,7 @@ evidence that combat or encounters exist.
 
 Willowstep's central dead-end spur is removed. Three quadratic meltwater bends
 feed a larger irregular lake open across approximately 141 m of the south edge.
-The southern lake footprint is about 10,890 m² (previously 5,211 m²). Travel marker
+The southern lake footprint is about 10,890 mÂ² (previously 5,211 mÂ²). Travel marker
 placements/destinations are preserved; campfires overlapping the changed water
 are excluded and retained props remain terrain-grounded.
 

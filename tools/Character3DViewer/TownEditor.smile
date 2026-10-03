@@ -234,10 +234,10 @@ Public Function Command(ByRef Value As State, ByRef Town As Document.State, Acti
 
         For Index = 0 To Catalog.TEMPLATE_COUNT - 1
 
-            Shape = Catalog.TemplateAt(Index)
+            Shape = Catalog.TemplateAt(Panel.PaletteIndex(Index))
 
             If Shape.Category = Action And Shape.PaletteVisible Then
-                Value.Ui.Template = Index
+                Value.Ui.Template = Panel.PaletteIndex(Index)
                 Exit For
             End If
 
@@ -255,7 +255,8 @@ Public Function Command(ByRef Value As State, ByRef Town As Document.State, Acti
         Action = 91 Or
         Action = 92 Or
         Action = 760 Or
-        Action = 761) Then
+        Action = 761 Or
+        Action = 762) Then
 
         Value.Ui.Tool = Action
 
@@ -822,7 +823,7 @@ Public Function Input(ByRef Value As State, ByRef Town As Document.State,
     If (Value.Ui.Category = 2 And
         Value.Ui.Surface = 5 And
         ((Value.Ui.Tool >= 17 And Value.Ui.Tool <= 19) Or
-        Value.Ui.Tool = 760 Or Value.Ui.Tool = 761)) Then
+        Value.Ui.Tool = 760 Or Value.Ui.Tool = 761 Or Value.Ui.Tool = 762)) Then
 
         OnGround = Picking.TerrainPoint(Town, View, Pointer_X(), Pointer_Y(), Window_Width(), Window_Height(), RawPoint)
 

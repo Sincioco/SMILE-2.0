@@ -111,6 +111,12 @@ if (-not $SkipRendering) {
     }
     $sessionSource = $sessionSource.Replace('Call Commands.Start(Controls)',
         ($imports -join "`n") + "`n`nCall Commands.Start(Controls)")
+    $landscapes = foreach ($name in @('Willowstep Highlands', 'Silverfall Basin')) {
+        $path = Join-Path $root "games/SinStarI/SourceAssets/Towns/Neris/StoryTownsV1/Towns/$name.town"
+        'Call ImportFixture("TownEditor.Town.' + $name + '", "' + $path + '")'
+    }
+    $sessionSource = $sessionSource.Replace('Call Transitions.Run(Value, Failures)',
+        ($landscapes -join "`n") + "`nCall Transitions.Run(Value, Failures)")
     $sessionSource += @'
 
 Sub ImportFixture(Key As Text, Path As Text)
@@ -143,6 +149,9 @@ End Sub
     $inspection = $project.CreateElement('SmileSource')
     $inspection.SetAttribute('Include', 'NerisTownInspectionTests.smile')
     $null = $project.SmileProject.ItemGroup.AppendChild($inspection)
+    $transitions = $project.CreateElement('SmileSource')
+    $transitions.SetAttribute('Include', 'TownTransitionTests.smile')
+    $null = $project.SmileProject.ItemGroup.AppendChild($transitions)
     foreach ($item in @($project.SmileProject.ItemGroup.ChildNodes)) {
         if ($item.Name -in @('Model3DAsset', 'Asset')) { $null = $item.ParentNode.RemoveChild($item) }
     }

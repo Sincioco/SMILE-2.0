@@ -1,5 +1,60 @@
 # Character Viewer Architecture
 
+## October 3 map identity, arrivals and reusable fountain streams
+
+`TownEditorSession` binds its accepted terrain rollback state to `LiveTown`.
+`NerisTown` releases outgoing landmark resources before loading another town;
+the session similarly releases outgoing fountain streams. A failed allocation
+therefore cannot publish Neris's surface/style into Willowstep's document.
+`TownTransitionTests` reproduces the original allocation failure, then verifies
+Neris/Willowstep/Silverfall transitions and complete resource release. Campfires
+release the shared fire material cache when no effect emitter remains active.
+
+`FountainStreams3D` owns the shared parabolic jet/ripple geometry, extracted from
+the Royal Court fountain. Callers supply transforms, dimensions, batch and clock.
+`TownFountains` owns one exact-size batch for the eight nearest placed fountains;
+`TownAttachments` delegates update/draw/release. No actor or bootstrap owns this
+state. Static wire-like stream parts are omitted while basin/crystal meshes remain.
+
+`TownGatewayJourney` computes the same inward, standable marker used by arrival
+and editor drawing. `TownMapLoadTools` owns its revision-keyed display cache and
+the Teleport Spawn gesture. `TownHistory` restores that authored point with Undo.
+TWN14 appends optional spawn coordinates, landmark rotation and world-link stamp;
+native and Python readers retain TWN1–13 compatibility. Legacy Neris gains the
+accepted X=0, Z=-2780 direct-entry point. Explicit gate arrivals take priority.
+
+`TownWorldDocument` persists the last successfully saved/opened atlas.
+`TownWorldTravel` reconciles yellow destinations transactionally when its link
+stamp changes, retaining matching authored areas and manual edits while unchanged.
+`TownWorldEditor` caches failed attempts until the town/link revision changes.
+Map loading and the editor call these focused owners; no graph algorithm moved
+into the scene or application entry point.
+
+The existing airport route modules own map-center rotation and inverse collision
+transforms. Their previews, doors, traffic and lights use those public operations.
+`town_rotation.py` rotates authored grid/curves/props/markers; the Blender landmark
+owner applies the same transform to appended root objects. Source generation keeps
+Neris Spaceport at 180 degrees and Horizon at 270 degrees (90 counterclockwise).
+`town_design.ground_prop` embeds landform footprints into slopes; the source gate
+preparer groups connected areas instead of averaging separate exits to one town.
+
+Validation: the four native town groups pass, including arrival/Undo/save,
+rotated entrance movement, terrain style and effect lifecycle checks. Silverfall's
+prepared curved route/exit journeys pass. Native/Python TWN14 and repeated exit
+preparation checks pass. Native hardening passes all 59 checks; normal publication
+verifies 366 assets. Focused visual inspection includes both airports, the saved
+atlas, Ancient Relay, Willowstep, Silverfall and the editor palette/controls.
+The map installation retained Horizon's live edits and backed up every replaced key.
+
+Growth review: `NerisTown` adds five net coordination lines; `TownEditorSession`
+adds 42 for identity/lifecycle/arrival wiring. The shared fountain owner is 162
+lines; placed fountains and world reconciliation are bounded focused modules.
+NativeProgram and ViewerWorkflow are unchanged. No limits, baselines, exclusions,
+dependencies or architecture exceptions were changed. The existing large editor
+session remains legacy coordination debt; this task does not refactor it wholesale.
+Fountain particles are bounded to eight nearby props; remote fountains retain
+their static structure/water. Travel reconciliation never invents new road geometry.
+
 ## October 3 road closure, contour refinement and Spaceport walking
 
 `SurfaceContourRefinement3D` owns a bounded caller-owned depth-first work stack.

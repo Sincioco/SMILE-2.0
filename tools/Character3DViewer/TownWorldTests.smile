@@ -9,6 +9,9 @@ Import Smile.Tools.TownTabs As Tabs
 Import Smile.Tools.TownMapPicker As Picker
 Import Smile.Tools.TownDocument As Document
 Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Tools.TownWorldTravel As Travel
+Import Smile.Tools.TownDocumentNavigation As Navigation
+Import Smile.Tools.TownMapLoads As Tiles
 
 Private Dim Failures As Number
 Private Dim Opened As Tabs.State
@@ -184,6 +187,40 @@ Public Function Run() As Number
     Call Check(Canvas.X(Gesture, Loaded, 2, 1132, 2) <= 1132 And
         Canvas.Y(Gesture, Loaded, 2, 994, 3) < 930,
         "Reset View Frames The Distant Journey Card")
+
+    Ok = World.SaveWorld(Map)
+    Ok = World.LoadWorld(Loaded, "", "TownEditor.World.Last") And Ok
+
+    Call Check(Ok And Loaded.Name = Map.Name And Loaded.NodeCount = Map.NodeCount,
+        "Last World Snapshot Reopens Without A File Picker")
+
+    Ok = Document.Blank(Current, "Neris Town", 20, 20, 30.0)
+
+    Call Grid.PaintRectangle(Current.Surface, 0, 0, 19, 19, Grid.SURFACE_ROAD)
+
+    Ok = Tiles.PlaceRectangle(Current, 0, 8, 1, 9, "Obsolete Destination")
+    Ok = Tiles.PlaceRectangle(Current, 18, 8, 19, 9, "Neris Spaceport") And Ok
+
+    Call Navigation.Rebuild(Current)
+
+    Ok = Travel.Apply(Map, Current) And Ok
+
+    Call Check(Ok And Current.MapTileCount = 4 And Current.MapTiles[0].X = 18 And
+        Current.MapTiles[0].Destination = "Neris Spaceport",
+        "World Links Remove Stale Destinations And Preserve Matching Marker Positions")
+
+    Current.MapTileCount = 0
+    Ok = Travel.Apply(Map, Current)
+
+    Call Check(Not Ok And Current.MapTileCount = 0,
+        "An Unchanged World Does Not Undo A Manual Marker Deletion")
+
+    Map.Ports[0, 1] = 0
+    Ok = Travel.Apply(Map, Current)
+
+    Call Check(Ok And Current.MapTileCount = 1 And Current.MapTiles[0].X = 0,
+        "A Changed World Rebuilds Missing Destinations On The Requested Road Side")
+    Call Navigation.Disable()
 
     Return Failures
 

@@ -1,0 +1,162 @@
+''' Shared flowing fountain jets and expanding impact rings; callers own batches and clocks.
+Module Smile.Simple3D.FountainStreams3D
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+
+Public Type Profile
+    Origin As P.Vector3
+    Scale As P.Vector3
+    Yaw As Double
+    InnerRadius As Double
+    OuterRadius As Double
+    StartHeight As Double
+    EndHeight As Double
+    ArchHeight As Double
+    WidthScale As Double
+    RippleScale As Double
+    Steps As Number
+    RingSteps As Number
+    Rings As Number
+End Type
+
+Private Function WorldPoint(Shape As Profile, Local As P.Vector3) As P.Vector3
+
+    Dim Result As P.Vector3
+
+    Result = P.Vector(Local.X * Shape.Scale.X, Local.Y * Shape.Scale.Y, Local.Z * Shape.Scale.Z)
+    Result = M.Rotate(Result, P.Vector(0.0, Shape.Yaw, 0.0))
+    Result = M.Add(Shape.Origin, Result)
+
+    Return Result
+
+End Function
+
+Private Function LocalPoint(Shape As Profile, Jet As Number, Progress As Double) As P.Vector3
+
+    Dim Angle As Double
+    Dim Radius As Double
+    Dim Height As Double
+    Dim Result As P.Vector3
+
+    Angle = ToDouble(Jet) * 6.283185307179586 / 8.0
+    Radius = Shape.InnerRadius + (Shape.OuterRadius - Shape.InnerRadius) * Progress
+    Height = (Shape.StartHeight + Shape.ArchHeight * Progress * (1.0 - Progress) +
+        (Shape.EndHeight - Shape.StartHeight) * Progress)
+    Result = P.Vector(Cos(Angle) * Radius, Height, Sin(Angle) * Radius)
+
+    Return Result
+
+End Function
+
+Public Function StreamPoint(Shape As Profile, Jet As Number, Progress As Double) As P.Vector3
+
+    Dim Result As P.Vector3
+
+    Result = WorldPoint(Shape, LocalPoint(Shape, Jet, Progress))
+
+    Return Result
+
+End Function
+
+Private Function Point(ByRef Batch As Core.RibbonBatch3D, ByRef Index As Number,
+    Shape As Profile, LeftEdge As P.Vector3, RightEdge As P.Vector3, Opacity As Number) As Boolean
+
+    Dim Ok As Boolean
+
+    LeftEdge = WorldPoint(Shape, LeftEdge)
+    RightEdge = WorldPoint(Shape, RightEdge)
+    Ok = P.SetRibbonPoint(Batch, Index, LeftEdge, RightEdge,
+        ToDouble(Index) / ToDouble(Batch.Capacity - 1))
+    Ok = G.SetRibbonPointColor3D(Batch, Index, 155, 221, 246, Opacity) And Ok
+    Index = Index + 1
+
+    Return Ok
+
+End Function
+
+Public Function Append(ByRef Batch As Core.RibbonBatch3D, ByRef Index As Number,
+    Shape As Profile, Time As Number) As Boolean
+
+    Dim Jet As Number
+    Dim Cross As Number
+    Dim Step As Number
+    Dim Ring As Number
+    Dim Opacity As Number
+    Dim Angle As Double
+    Dim Progress As Double
+    Dim Phase As Double
+    Dim Radius As Double
+    Dim Width As Double
+    Dim Center As P.Vector3
+    Dim LeftEdge As P.Vector3
+    Dim RightEdge As P.Vector3
+    Dim Across As P.Vector3
+    Dim Ok As Boolean
+
+    Ok = True
+
+    For Jet = 0 To 7
+
+        Angle = ToDouble(Jet) * 6.283185307179586 / 8.0
+
+        For Cross = 0 To 1
+
+            Center = LocalPoint(Shape, Jet, 0.0)
+            Ok = Point(Batch, Index, Shape, Center, Center, 0) And Ok
+
+            For Step = 0 To Shape.Steps
+
+                Progress = ToDouble(Step) / ToDouble(Shape.Steps)
+                Center = LocalPoint(Shape, Jet, Progress)
+                Width = (0.043 + 0.013 * Sin(Progress * 48.0 - ToDouble(Time) * 0.010)) * Shape.WidthScale
+                Across = P.Vector(-Sin(Angle) * Width, 0.0, Cos(Angle) * Width)
+
+                If Cross = 1 Then
+                    Across = P.Vector(0.0, Width, 0.0)
+                End If
+
+                LeftEdge = P.Vector(Center.X - Across.X, Center.Y - Across.Y, Center.Z - Across.Z)
+                RightEdge = P.Vector(Center.X + Across.X, Center.Y + Across.Y, Center.Z + Across.Z)
+                Opacity = 48 + ToNumber(22.0 * (0.5 + 0.5 * Sin(Progress * 42.0 - ToDouble(Time) * 0.012)))
+                Ok = Point(Batch, Index, Shape, LeftEdge, RightEdge, Opacity) And Ok
+            End For
+
+            Ok = Point(Batch, Index, Shape, Center, Center, 0) And Ok
+        End For
+
+        Center = LocalPoint(Shape, Jet, 1.0)
+        Center.Y = Center.Y + 0.025 * Shape.WidthScale
+
+        For Ring = 0 To Shape.Rings - 1
+
+            Phase = ToDouble((Time + Ring * 600 + Jet * 97) Mod 1800) / 1800.0
+            Radius = (0.12 + Phase * 0.78) * Shape.RippleScale
+            Width = (0.016 + Phase * 0.012) * Shape.RippleScale
+            Opacity = ToNumber((1.0 - Phase) * 48.0)
+            LeftEdge = P.Vector(Center.X + Radius, Center.Y, Center.Z)
+            Ok = Point(Batch, Index, Shape, LeftEdge, LeftEdge, 0) And Ok
+
+            For Step = 0 To Shape.RingSteps
+
+                Angle = ToDouble(Step) * 6.283185307179586 / ToDouble(Shape.RingSteps)
+                LeftEdge = P.Vector(Center.X + Cos(Angle) * (Radius - Width), Center.Y,
+                    Center.Z + Sin(Angle) * (Radius - Width))
+                RightEdge = P.Vector(Center.X + Cos(Angle) * (Radius + Width), Center.Y,
+                    Center.Z + Sin(Angle) * (Radius + Width))
+                Ok = Point(Batch, Index, Shape, LeftEdge, RightEdge, Opacity) And Ok
+            End For
+
+            Ok = Point(Batch, Index, Shape, RightEdge, RightEdge, 0) And Ok
+        End For
+    End For
+
+    Return Ok
+
+End Function
+
+End Module

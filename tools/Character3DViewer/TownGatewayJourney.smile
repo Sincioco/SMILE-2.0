@@ -83,7 +83,7 @@ Private Function Approach(ByRef Town As Document.State, Gate As P.Vector3,
 
         Point = M.Add(Gate, M.Scale(Direction, ToDouble(Step) * 10.0))
 
-        If Not Navigation.IsRoad(Point) Then
+        If Not Navigation.IsRoad(Point) Or Not Navigation.CanStand(Point.X, Point.Z) Then
             Return False
         End If
 
@@ -114,7 +114,7 @@ Private Function Approach(ByRef Town As Document.State, Gate As P.Vector3,
             Return False
         End If
 
-        If Not Navigation.IsRoad(Point) Then
+        If Not Navigation.IsRoad(Point) Or Not Navigation.CanStand(Point.X, Point.Z) Then
             Exit For
         End If
 
@@ -129,15 +129,10 @@ Private Function Approach(ByRef Town As Document.State, Gate As P.Vector3,
 
 End Function
 
-''' Prefer the town-facing side, with enough clear road to start walking inward.
-Public Function Arrival(ByRef Town As Document.State, Origin As Text,
+Public Function GateArrival(ByRef Town As Document.State, Gate As P.Vector3,
     ByRef Position As P.Vector3, ByRef Heading As Double) As Boolean
 
-    Dim Index As Number
     Dim Bearing As Number
-    Dim X As Number
-    Dim Z As Number
-    Dim Gate As P.Vector3
     Dim Center As P.Vector3
     Dim Inward As P.Vector3
     Dim Direction As P.Vector3
@@ -148,56 +143,90 @@ Public Function Arrival(ByRef Town As Document.State, Origin As Text,
     Dim Alignment As Double
     Dim Found As Boolean
 
-    If Text_Length(Origin) = 0 Then
-        Return False
-    End If
-
-    Center = P.Vector((Town.Surface.OriginX + Town.Surface.XEdges[Town.Surface.Columns]) * 0.5,
-        0.0, (Town.Surface.OriginZ + Town.Surface.ZEdges[Town.Surface.Rows]) * 0.5)
+    Center = P.Vector((Town.Surface.XEdges[0] + Town.Surface.XEdges[Town.Surface.Columns]) * 0.5,
+        0.0, (Town.Surface.ZEdges[0] + Town.Surface.ZEdges[Town.Surface.Rows]) * 0.5)
+    Inward = M.Subtract(Center, Gate)
+    Inward = M.Scale(Inward, 1.0 / Max(1.0, M.Length(Inward)))
     Best = -1.0
 
-    For Index = 0 To Town.MapTileCount - 1
+    For Bearing = 0 To 7
 
-        If Town.MapTiles[Index].Destination = Origin Then
+        Direction = P.Vector(Sin(M.Radians(ToDouble(Bearing) * 45.0)), 0.0,
+            Cos(M.Radians(ToDouble(Bearing) * 45.0)))
+        Alignment = M.Dot(Direction, Inward)
 
-            X = Town.MapTiles[Index].X
-            Z = Town.MapTiles[Index].Z
-            Gate = P.Vector((Town.Surface.XEdges[X] + Town.Surface.XEdges[X + 1]) * 0.5,
-                0.0, (Town.Surface.ZEdges[Z] + Town.Surface.ZEdges[Z + 1]) * 0.5)
-            Inward = M.Subtract(Center, Gate)
-            Inward = M.Scale(Inward, 1.0 / Max(1.0, M.Length(Inward)))
+        If Alignment > 0.05 Then
 
-            For Bearing = 0 To 7
+            If Approach(Town, Gate, Direction, Candidate, ClearLength) Then
 
-                Direction = P.Vector(Sin(M.Radians(ToDouble(Bearing) * 45.0)), 0.0,
-                    Cos(M.Radians(ToDouble(Bearing) * 45.0)))
-                Alignment = M.Dot(Direction, Inward)
+                Score = Alignment + ClearLength / 240.0
 
-                If Alignment > 0.05 Then
+                If Score > Best Then
 
-                    If Approach(Town, Gate, Direction, Candidate, ClearLength) Then
-
-                        Score = Alignment + ClearLength / 240.0
-
-                        If Score > Best Then
-
-                            Best = Score
-                            Position = Candidate
-                            Position.Y = Navigation.GroundHeight(Position.X, Position.Z)
-                            Heading = M.WrapDegrees(ToDouble(Bearing) * 45.0 + 180.0)
-                            Found = True
-
-                        End If
-
-                    End If
+                    Best = Score
+                    Position = Candidate
+                    Position.Y = Navigation.GroundHeight(Position.X, Position.Z)
+                    Heading = M.WrapDegrees(ToDouble(Bearing) * 45.0 + 180.0)
+                    Found = True
 
                 End If
 
-            End For
+            End If
 
         End If
 
     End For
+
+    Return Found
+
+End Function
+
+''' Exactly one deterministic inward arrival per connected yellow area.
+Public Function Arrival(ByRef Town As Document.State, Origin As Text,
+    ByRef Position As P.Vector3, ByRef Heading As Double) As Boolean
+
+    Dim Labels As Tiles.LabelSet
+    Dim Index As Number
+
+    Call Tiles.BuildLabels(Town, Labels)
+
+    For Index = 0 To Labels.LabelCount - 1
+
+        If Text_Length(Origin) = 0 Or Labels.Names[Index] = Origin Then
+
+            If GateArrival(Town, Labels.Positions[Index], Position, Heading) Then
+                Return True
+            End If
+
+        End If
+
+    End For
+
+    Return False
+
+End Function
+
+Public Function Teleport(ByRef Town As Document.State, ByRef Position As P.Vector3,
+    ByRef Heading As Double) As Boolean
+
+    Dim Found As Boolean
+
+    If Town.HasTeleportSpawn Then
+
+        Position = Town.TeleportSpawn
+
+        If (Navigation.CanStand(Position.X, Position.Z) And
+            Text_Length(Tiles.DestinationAt(Town, Position.X, Position.Z)) = 0) Then
+
+            Position.Y = Navigation.GroundHeight(Position.X, Position.Z)
+            Heading = 180.0
+            Return True
+
+        End If
+
+    End If
+
+    Found = Arrival(Town, "", Position, Heading)
 
     Return Found
 

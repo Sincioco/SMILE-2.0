@@ -8,6 +8,7 @@ Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownDocumentNavigation As Navigation
 Import Smile.Tools.TownMapLoads As Tiles
 Import Smile.Tools.TownRoadTravel As Travel
+Import Smile.Tools.TownDocumentStore As Store
 Import Smile.Simple3D.SurfaceGrid3D As Grid
 Import Smile.Simple3D.Precision3D As P
 
@@ -22,6 +23,7 @@ Public Function Run() As Number
     Dim Index As Number
     Dim Clicked As P.Vector3
     Dim Heading As Double
+    Dim Loaded As Document.State
 
     Ok = Document.Blank(Town, "Destination", 12, 12, 30.0)
 
@@ -101,6 +103,27 @@ Public Function Run() As Number
     End If
 
     Call Travel.Cancel()
+
+    Position = P.Vector(Town.Surface.XEdges[7] + 15.0, 0.0, Town.Surface.ZEdges[6] + 15.0)
+
+    Town.HasTeleportSpawn = True
+    Town.TeleportSpawn = Position
+
+    Town.LandmarkRotation = 270.0
+    Town.WorldLinksStamp = 3721
+    Ok = Store.SaveDocument(Town, "TownEditor.ArrivalFixture", False)
+    Ok = Store.LoadDocument(Loaded, "TownEditor.ArrivalFixture") And Ok
+    Ok = Journey.Teleport(Loaded, Clicked, Heading) And Ok
+
+    If (Not Ok Or
+        Not Loaded.HasTeleportSpawn Or
+        Clicked.X <> Position.X Or
+        Clicked.Z <> Position.Z Or
+        Loaded.LandmarkRotation <> 270.0 Or
+        Loaded.WorldLinksStamp <> 3721) Then
+        Print "FAIL Edited Teleport Spawn And Rotation Survive Save And Direct Entry"
+        Failures = Failures + 1
+    End If
 
     Return Failures
 

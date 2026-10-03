@@ -31,7 +31,7 @@ for bad in (float('nan'), float('inf'), -10000.01):
         pass
     else:
         raise AssertionError('Invalid elevation accepted')
-for raw in (document['payload'][:-1], document['payload'][:3]+b'\x0e'+document['payload'][4:]):
+for raw in (document['payload'][:-1], document['payload'][:3]+b'\x0f'+document['payload'][4:]):
     try:
         decode(raw, catalog)
     except ValueError:
@@ -84,3 +84,28 @@ mixed['appearance'][0] = 5
 snow = decode(encode(mixed, catalog), catalog)
 assert snow['terrain_style'] == 4 and snow['appearance'][0] == 5
 print('PASS native/Python TWN13 Snow and explicit/inherited appearance with invalid-style rejection')
+
+arrival = decode(unwrap(key_path(folder, 'TownEditor.ArrivalFixture').read_bytes()), catalog)
+assert arrival['payload'][3] == 14
+assert arrival['landmark_rotation'] == 270 and arrival['world_links_stamp'] == 3721
+again = decode(encode(arrival, catalog), catalog)
+assert again['teleport_spawn'] == arrival['teleport_spawn']
+print('PASS native/Python TWN14 spawn, rotation and world-link round trip')
+
+# Rebuilding two separate exits to one destination must not pave a third spur
+# halfway between them (the demonstrated Silverfall authoring regression).
+sys.path.insert(0, str(ROOT/'games/SinStarI/SourceAssets/Towns/Neris/StoryTownsV1/Source'))
+from road_end_markers import boundary_exits
+from town_document_codec import raster_curves
+from town_access import surface
+exits = dict(name='Parallel Exits', columns=20, rows=20, xs=list(range(-400,401,40)),
+             zs=list(range(-400,401,40)), base_cells=[1]*400, cells=[1]*400, items=[],
+             curves=[[4,3,-220,-350,-220,400,80],[4,3,220,-350,220,400,80]],
+             map_tiles=[dict(x=x,z=19,destination='Neighbor') for x in (4,15)])
+exits['cells'] = raster_curves(exits)
+boundary_exits(exits)
+markers = sorted((t['x'],t['z']) for t in exits['map_tiles'])
+boundary_exits(exits)
+assert sorted((t['x'],t['z']) for t in exits['map_tiles']) == markers
+assert surface(exits,0,350) == 1
+print('PASS repeated boundary preparation keeps alternate exits separate')

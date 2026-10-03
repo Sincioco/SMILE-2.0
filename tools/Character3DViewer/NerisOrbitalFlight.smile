@@ -107,6 +107,8 @@ Public Function Position(Value As State, Ship As Number) As P.Vector3
     Result = P.Vector(Route.ORIGIN_X + X * Route.SCALE,
         Route.DECK_Y + Height * Route.SCALE, Route.ORIGIN_Z + Forward * Route.SCALE)
 
+    Result = Route.Placed(Result)
+
     Return Result
 
 End Function

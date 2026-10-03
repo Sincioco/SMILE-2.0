@@ -37,6 +37,10 @@ Public Sub Destroy(ByRef Value As State)
 
     Value.MapName = ""
 
+    If Fire.Value(1, Value.Flames[0]) = 0 Then
+        Call Fire.Shutdown()
+    End If
+
 End Sub
 
 Private Function SlotFor(ByRef Value As State, Identity As Number) As Number

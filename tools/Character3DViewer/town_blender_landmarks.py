@@ -151,12 +151,25 @@ def append_orbital_craft():
 def populate(document):
     original = ROOT / 'NerisSpaceport01V1/Town/Neris-Town-Spaceport-SW-r003.blend'
     counts = {}
+    before = set(bpy.context.scene.objects)
     if landmark(document) == 1:
         counts['Spaceport01'] = append_spaceport()
         counts['AlienVisitors'] = append_visitors()
         counts['NerisOrbitalCraft'] = append_orbital_craft()
     elif landmark(document) == 2:
         counts['Horizon'] = append_airport()
+    angle = document.get('landmark_rotation', 0)
+    if angle:
+        from mathutils import Matrix, Vector
+        center = Vector(((document['xs'][0]+document['xs'][-1])/20,
+                         (document['zs'][0]+document['zs'][-1])/20, 0))
+        transform = (Matrix.Translation(center) @ Matrix.Rotation(-math.radians(angle), 4, 'Z')
+                     @ Matrix.Translation(-center))
+        added = set(bpy.context.scene.objects)-before
+        bpy.context.view_layer.update()
+        for obj in added:
+            if obj.parent not in added:
+                obj.matrix_world = transform @ obj.matrix_world
     if document.get('court_placed', document['name'].startswith('Neris Town')):
         counts['RoyalCourt'] = append_court(document.get('court_offset', (0, 0)))
     for name, count in counts.items():

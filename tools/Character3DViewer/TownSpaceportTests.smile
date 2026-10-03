@@ -9,6 +9,7 @@ Import Smile.Tools.TownCatalogFeatures As Features
 Import Smile.Tools.TownGeometry As Geometry
 Import Smile.Tools.NerisTownNavigation As Navigation
 Import Smile.Tools.NerisSpaceportRoute As Port
+Import Smile.Tools.NerisHorizonRoute As Airport
 Import Smile.Simple3D.PartyTrail3D As Trail
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PrecisionMath3D As M
@@ -144,6 +145,29 @@ Public Function Run() As Number
     Call Port.Enable(False)
     Call Edited.Disable()
     Call Check(Ok, "Regression Document Initializes")
+
+    Call Port.Configure(P.Vector(-5500.0, 0.0, -6700.0), 180.0)
+    Call Port.Enable(True)
+
+    Position = Port.ToWorld(P.Vector(0.0, 0.0, -52.0))
+    Goal = Port.ToWorld(P.Vector(0.0, 0.0, 20.0))
+
+    Call Trail.Reset(Party, Position, 4, 22.0)
+    Call WalkTo(Position, Goal)
+    Call Check(Port.Heading(180.0) = 0.0, "Rotated Spaceport Faces South")
+    Call Port.Enable(False)
+    Call Port.Configure(P.Vector(0.0, 0.0, 0.0), 0.0)
+    Call Airport.Configure(P.Vector(8400.0, 0.0, 1250.0), 270.0)
+    Call Airport.Enable(True)
+
+    Position = Airport.ToWorld(P.Vector(0.0, 0.0, -52.0))
+    Goal = Airport.Original(Position)
+
+    Call Check(Abs(Goal.X - 6880.0) < 0.001 And Abs(Goal.Z - 1250.0) < 0.001 And
+        Airport.CanStand(Position.X, Position.Z) And Airport.Heading(Airport.YAW) = 0.0,
+        "Counter Clockwise Airport Rotation Preserves Its Walkable South Facing Approach")
+    Call Airport.Enable(False)
+    Call Airport.Configure(P.Vector(0.0, 0.0, 0.0), 0.0)
 
     Return Failures
 

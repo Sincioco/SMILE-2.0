@@ -40,7 +40,7 @@ Public Function AirportMapPosition() As P.Vector3
     If AirportRoute.Active() Then
         Position = AirportRoute.ToWorld(P.Vector(0.0, 0.0, 75.0))
     Else If OriginalRoute.Active() Then
-        Position = P.Vector(OriginalRoute.ORIGIN_X, OriginalRoute.DECK_Y, OriginalRoute.ORIGIN_Z)
+        Position = OriginalRoute.ToWorld(P.Vector(0.0, 0.0, 0.0))
     End If
 
     Return Position

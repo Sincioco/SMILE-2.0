@@ -31,7 +31,7 @@ Public Function Create(ByRef Value As State) As Boolean
         Ok = Value.Objects[Part].Handle <> 0 And Ok
         Ok = P.SetScale(Value.Objects[Part], 1000.0, 1000.0, 1000.0) And Ok
         Ok = P.SetPosition(Value.Objects[Part], Point.X, Point.Y, Point.Z) And Ok
-        Ok = P.SetRotation(Value.Objects[Part], 0.0, Route.YAW, 0.0) And Ok
+        Ok = P.SetRotation(Value.Objects[Part], 0.0, Route.Heading(Route.YAW), 0.0) And Ok
     End For
 
     Value.Ready = Ok

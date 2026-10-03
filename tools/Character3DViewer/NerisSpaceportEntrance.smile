@@ -18,6 +18,7 @@ Public Function Create(ByRef Value As State, West As Core.Model3D, East As Core.
     Dim Side As Number
     Dim Part As Number
     Dim Model As Core.Model3D
+    Dim Point As P.Vector3
     Dim Ok As Boolean
 
     Ok = West.GeometryReady And East.GeometryReady And West.PartCount = 3 And East.PartCount = 3
@@ -39,9 +40,9 @@ Public Function Create(ByRef Value As State, West As Core.Model3D, East As Core.
             Value.Objects[Side * 3 + Part] = G.CreateModelPart3D(Model, Part)
             Ok = Value.Objects[Side * 3 + Part].Handle <> 0 And Ok
             Ok = P.SetScale(Value.Objects[Side * 3 + Part], 2000.0, 2000.0, 2000.0) And Ok
-            Ok = P.SetPosition(Value.Objects[Side * 3 + Part],
-                Route.ORIGIN_X + ToDouble(1 - Side * 2) * 60.0,
-                Route.DECK_Y + 0.6, Route.ORIGIN_Z + 457.0) And Ok
+            Point = Route.Placed(P.Vector(Route.ORIGIN_X + ToDouble(1 - Side * 2) * 60.0,
+                Route.DECK_Y + 0.6, Route.ORIGIN_Z + 457.0))
+            Ok = P.SetPosition(Value.Objects[Side * 3 + Part], Point.X, Point.Y, Point.Z) And Ok
         End For
     End For
 
@@ -63,7 +64,7 @@ Public Function Draw(ByRef Value As State) As Boolean
 
         For Part = 0 To 2
             Ok = P.SetRotation(Value.Objects[Side * 3 + Part], 0.0,
-                180.0 + ToDouble(Side * 2 - 1) * Route.DoorAngle(), 0.0) And Ok
+                Route.Heading(180.0 + ToDouble(Side * 2 - 1) * Route.DoorAngle()), 0.0) And Ok
             Ok = G.DrawObject3D(Value.Objects[Side * 3 + Part]) And Ok
         End For
     End For

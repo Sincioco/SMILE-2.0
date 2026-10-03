@@ -7,6 +7,7 @@ Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As G
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Tools.NerisCastleRoute As Route
+Import Smile.Simple3D.FountainStreams3D As Jets
 
 Public Type State
     Water As Core.Material3D
@@ -68,18 +69,32 @@ Private Function Basin(ByRef Batch As Core.RibbonBatch3D, ByRef Index As Number,
 
 End Function
 
-''' Deterministic trajectory shared by flowing stream strips and impact rings.
+Private Function StreamProfile() As Jets.Profile
+
+    Dim Shape As Jets.Profile
+
+    Shape.Origin = WorldPoint(0.0, 0.0, -18.0)
+    Shape.Scale = P.Vector(Route.SCALE, Route.SCALE, Route.SCALE)
+    Shape.InnerRadius = 2.1
+    Shape.OuterRadius = 4.65
+    Shape.StartHeight = 2.75
+    Shape.EndHeight = 1.06
+    Shape.ArchHeight = 3.7
+    Shape.WidthScale = 1.0
+    Shape.RippleScale = 1.0
+    Shape.Steps = 32
+    Shape.RingSteps = 24
+    Shape.Rings = 3
+
+    Return Shape
+
+End Function
+
 Public Function StreamPoint(Jet As Number, Progress As Double) As P.Vector3
 
-    Dim Angle As Double
-    Dim Radius As Double
-    Dim Height As Double
     Dim Result As P.Vector3
 
-    Angle = ToDouble(Jet) * 6.283185307179586 / 8.0
-    Radius = 2.1 + 2.55 * Progress
-    Height = 2.75 + 3.7 * Progress * (1.0 - Progress) - 1.69 * Progress
-    Result = WorldPoint(Cos(Angle) * Radius, Height, -18.0 + Sin(Angle) * Radius)
+    Result = Jets.StreamPoint(StreamProfile(), Jet, Progress)
 
     Return Result
 
@@ -87,80 +102,10 @@ End Function
 
 Private Function Animate(ByRef Value As State) As Boolean
 
-    Dim Jet As Number
-    Dim Cross As Number
-    Dim Step As Number
-    Dim Ring As Number
     Dim Index As Number
-    Dim Opacity As Number
-    Dim Angle As Double
-    Dim Progress As Double
-    Dim Phase As Double
-    Dim Radius As Double
-    Dim Width As Double
-    Dim Center As P.Vector3
-    Dim LeftEdge As P.Vector3
-    Dim RightEdge As P.Vector3
-    Dim Across As P.Vector3
     Dim Ok As Boolean
 
-    Ok = True
-
-    For Jet = 0 To 7
-
-        Angle = ToDouble(Jet) * 6.283185307179586 / 8.0
-
-        For Cross = 0 To 1
-
-            Center = StreamPoint(Jet, 0.0)
-            Ok = Point(Value.Streams, Index, Center, Center, 0) And Ok
-
-            For Step = 0 To 32
-
-                Progress = ToDouble(Step) / 32.0
-                Center = StreamPoint(Jet, Progress)
-                Width = (0.043 + 0.013 * Sin(Progress * 48.0 - ToDouble(Value.Time) * 0.010)) * Route.SCALE
-                Across = P.Vector(-Sin(Angle) * Width, 0.0, Cos(Angle) * Width)
-
-                If Cross = 1 Then
-                    Across = P.Vector(0.0, Width, 0.0)
-                End If
-
-                LeftEdge = P.Vector(Center.X - Across.X, Center.Y - Across.Y, Center.Z - Across.Z)
-                RightEdge = P.Vector(Center.X + Across.X, Center.Y + Across.Y, Center.Z + Across.Z)
-                Opacity = 48 + ToNumber(22.0 * (0.5 + 0.5 * Sin(Progress * 42.0 - ToDouble(Value.Time) * 0.012)))
-                Ok = Point(Value.Streams, Index, LeftEdge, RightEdge, Opacity) And Ok
-            End For
-
-            Ok = Point(Value.Streams, Index, Center, Center, 0) And Ok
-        End For
-
-        Center = StreamPoint(Jet, 1.0)
-        Center.Y = Center.Y + 0.025 * Route.SCALE
-
-        For Ring = 0 To 2
-
-            Phase = ToDouble((Value.Time + Ring * 600 + Jet * 97) Mod 1800) / 1800.0
-            Radius = (0.12 + Phase * 0.78) * Route.SCALE
-            Width = (0.016 + Phase * 0.012) * Route.SCALE
-            Opacity = ToNumber((1.0 - Phase) * 48.0)
-            LeftEdge = P.Vector(Center.X + Radius, Center.Y, Center.Z)
-            Ok = Point(Value.Streams, Index, LeftEdge, LeftEdge, 0) And Ok
-
-            For Step = 0 To 24
-
-                Angle = ToDouble(Step) * 6.283185307179586 / 24.0
-                LeftEdge = P.Vector(Center.X + Cos(Angle) * (Radius - Width), Center.Y,
-                    Center.Z + Sin(Angle) * (Radius - Width))
-                RightEdge = P.Vector(Center.X + Cos(Angle) * (Radius + Width), Center.Y,
-                    Center.Z + Sin(Angle) * (Radius + Width))
-                Ok = Point(Value.Streams, Index, LeftEdge, RightEdge, Opacity) And Ok
-            End For
-
-            Ok = Point(Value.Streams, Index, RightEdge, RightEdge, 0) And Ok
-        End For
-    End For
-
+    Ok = Jets.Append(Value.Streams, Index, StreamProfile(), Value.Time)
     Ok = G.CommitRibbonBatch3D(Value.Streams, Index) And Ok
 
     Return Ok

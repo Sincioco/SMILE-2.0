@@ -33,6 +33,34 @@ def terrain_offset(doc, x, z):
                   (h10-h00)*u+(h11-h10)*v)
 
 
+def world(item, x, z):
+    a=math.radians(item['yaw']); c,s=math.cos(a),math.sin(a)
+    x*=item['scale'][0]/1000; z*=item['scale'][2]/1000
+    return item['position'][0]/10+x*c+z*s, item['position'][2]/10-x*s+z*c
+
+
+def prop_outline(item, margin=0):
+    low,high=CATALOG['templates'][item['template']]['bounds']
+    sx,sz=item['scale'][0]/1000,item['scale'][2]/1000
+    x0,x1=low[0]-margin/sx,high[0]+margin/sx
+    z0,z1=low[1]-margin/sz,high[1]+margin/sz
+    nx,nz=max(2,math.ceil((x1-x0)*sx/3)),max(2,math.ceil((z1-z0)*sz/3))
+    return [world(item,x0+(x1-x0)*i/nx,z0+(z1-z0)*j/nz)
+            for i in range(nx+1) for j in range(nz+1)]
+
+
+def ground_prop(doc, item):
+    """Seat broad landform bases in their lowest supporting ground, not a hilltop pivot."""
+    x, _, z = item['position']
+    support = terrain_offset(doc, x, z)
+    if item['template'] in (35, 36, 37, 38):
+        points = prop_outline(item)
+        support = min(terrain_offset(doc, px*10, pz*10) for px, pz in points
+                      if doc['xs'][0] <= px*10 <= doc['xs'][-1] and
+                         doc['zs'][0] <= pz*10 <= doc['zs'][-1]) - 2
+    item['position'][1] = 23 + support
+
+
 class Town:
     def __init__(self, name, size=720, step=3, smooth=False):
         self.name, self.size, self.step = name, size, step
@@ -41,6 +69,7 @@ class Town:
         self.items, self.tiles, self.notes = [], [], []
         self.smooth, self.curves = smooth, []
         self.center = (0, 0)
+        self.rotation = 0
         self.terrain_style = 0
         self.night = True
         self.night_preset = NIGHT.copy()
@@ -202,9 +231,9 @@ class Town:
         if self.height is not None:
             doc['heights'] = [round(self.height(x/10, z/10)*1000)/100
                               for z in doc['zs'] for x in doc['xs']]
-            doc['items'] = [dict(item, position=[item['position'][0],
-                23 + terrain_offset(doc, item['position'][0], item['position'][2]),
-                item['position'][2]]) for item in doc['items']]
+            doc['items'] = [dict(item, position=item['position'].copy()) for item in doc['items']]
+            for item in doc['items']:
+                ground_prop(doc, item)
         return doc
 
     def save(self, folder):
@@ -239,6 +268,9 @@ class Town:
                 if 0<=a<self.n and 0<=b<self.n and j in roads and j not in visited:
                     pending.append(j)
         assert roads == visited, (self.name, len(roads-visited), 'disconnected paving')
+        if self.rotation:
+            from town_rotation import rotate
+            doc = rotate(doc, self.rotation)
         path = folder / (self.name+'.town')
         atomic_write(path, encode(doc, CATALOG))
         loaded=decode(unwrap(path.read_bytes()), CATALOG)

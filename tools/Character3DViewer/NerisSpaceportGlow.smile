@@ -63,8 +63,7 @@ Public Function Create(ByRef Value As State) As Boolean
                 Point = P.Vector(232.0, 99.84, 192.0)
         End Select
 
-        Point = P.Vector(Route.ORIGIN_X - Point.X * Route.SCALE,
-            Route.DECK_Y + Point.Y * Route.SCALE, Route.ORIGIN_Z - Point.Z * Route.SCALE)
+        Point = Route.ToWorld(Point)
         Ok = P.SetParticle(Value.Particles, Index, Point, 95.0, 0.0, 0) And Ok
         Ok = G.SetParticleColor3D(Value.Particles, Index, 65, 205, 255, 48) And Ok
     End For
@@ -88,8 +87,7 @@ End Function
 
 Private Function ToWorld(Point As P.Vector3) As P.Vector3
 
-    Point = P.Vector(Route.ORIGIN_X - Point.X * Route.SCALE,
-        Route.DECK_Y + Point.Y * Route.SCALE, Route.ORIGIN_Z - Point.Z * Route.SCALE)
+    Point = Route.ToWorld(Point)
 
     Return Point
 

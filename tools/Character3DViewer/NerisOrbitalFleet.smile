@@ -7,6 +7,7 @@ Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As G
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Tools.NerisOrbitalFlight As Flight
+Import Smile.Tools.NerisSpaceportRoute As Route
 Import Smile.Tools.Character3DViewerCalibration As Numbers
 
 Public Type State
@@ -50,7 +51,7 @@ Public Sub LoadNext(ByRef Value As State)
                 Value.Objects[Ship * 4 + Part] = G.CreateModelPart3D(Value.Models[Value.Loaded], Part)
                 Ok = Value.Objects[Ship * 4 + Part].Handle <> 0 And Ok
                 Ok = P.SetScale(Value.Objects[Ship * 4 + Part], 1000.0, 1000.0, 1000.0) And Ok
-                Ok = P.SetRotation(Value.Objects[Ship * 4 + Part], 0.0, Flight.HEADING, 0.0) And Ok
+                Ok = P.SetRotation(Value.Objects[Ship * 4 + Part], 0.0, Route.Heading(Flight.HEADING), 0.0) And Ok
             End For
         End For
 

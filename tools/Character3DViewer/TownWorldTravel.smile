@@ -1,0 +1,205 @@
+''' Reconcile graph destinations once per changed link set; keep matching authored areas.
+Module Smile.Tools.TownWorldTravel
+
+Option Explicit
+
+Import Smile.Tools.TownWorldDocument As World
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownMapLoads As Tiles
+Import Smile.Tools.TownGatewayJourney As Journey
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.Precision3D As P
+
+Private Function HashText(Value As Text, Seed As Number) As Number
+
+    Dim Index As Number
+
+    For Index = 0 To Text_Length(Value) - 1
+        Seed = (Seed * 31 + Text_Code_At(Value, Index)) Mod 8000000
+    End For
+
+    Return Seed
+
+End Function
+
+Private Function FindGate(ByRef Town As Document.State, Port As Number, Destination As Text) As Boolean
+
+    Dim X As Number
+    Dim Z As Number
+    Dim BestX As Number
+    Dim BestZ As Number
+    Dim Kind As Number
+    Dim Score As Double
+    Dim Best As Double
+    Dim Target As P.Vector3
+    Dim Point As P.Vector3
+    Dim Arrival As P.Vector3
+    Dim Heading As Double
+    Dim Ok As Boolean
+
+    Target = P.Vector((Town.Surface.XEdges[0] + Town.Surface.XEdges[Town.Surface.Columns]) * 0.5,
+        0.0, (Town.Surface.ZEdges[0] + Town.Surface.ZEdges[Town.Surface.Rows]) * 0.5)
+
+    If Port = 0 Then
+        Target.X = Town.Surface.XEdges[0]
+    Else If Port = 2 Then
+        Target.X = Town.Surface.XEdges[Town.Surface.Columns]
+    Else If Port = 1 Then
+        Target.Z = Town.Surface.ZEdges[Town.Surface.Rows]
+    Else
+        Target.Z = Town.Surface.ZEdges[0]
+    End If
+
+    Best = 1000000000.0
+    BestX = -1
+
+    For Z = 0 To Town.Surface.Rows - 1
+
+        For X = 0 To Town.Surface.Columns - 1
+
+            Kind = Grid.ReadCell(Town.Surface, X, Z)
+
+            If Kind = Grid.SURFACE_ROAD Or Kind = Grid.SURFACE_BRIDGE Then
+
+                Point = P.Vector((Town.Surface.XEdges[X] + Town.Surface.XEdges[X + 1]) * 0.5,
+                    0.0, (Town.Surface.ZEdges[Z] + Town.Surface.ZEdges[Z + 1]) * 0.5)
+                Score = Abs(Point.X - Target.X) + Abs(Point.Z - Target.Z)
+
+                If Score < Best And Tiles.Find(Town, X, Z) < 0 Then
+
+                    If Journey.GateArrival(Town, Point, Arrival, Heading) Then
+
+                        Best = Score
+                        BestX = X
+                        BestZ = Z
+
+                    End If
+
+                End If
+
+            End If
+
+        End For
+    End For
+
+    If BestX < 0 Then
+        Return False
+    End If
+
+    Ok = Tiles.PlaceRectangle(Town, BestX, BestZ, BestX, BestZ, Destination)
+
+    Return Ok
+
+End Function
+
+Public Function LinkStamp(ByRef Map As World.State, TownName As Text) As Number
+
+    Dim Node As Number
+    Dim Other As Number
+    Dim Stamp As Number
+
+    For Node = 0 To Map.NodeCount - 1
+
+        If Map.Nodes[Node].Town = TownName Then
+
+            Stamp = HashText(Map.Name, 17)
+
+            For Other = 0 To Map.NodeCount - 1
+
+                If Map.Links[Node, Other] Then
+                    Stamp = HashText(Map.Nodes[Other].Town, Stamp + Map.Ports[Node, Other])
+                End If
+
+            End For
+
+            Stamp = Stamp + 1
+            Return Stamp
+
+        End If
+
+    End For
+
+    Return 0
+
+End Function
+
+Public Function Apply(ByRef Map As World.State, ByRef Town As Document.State) As Boolean
+
+    Dim Node As Number
+    Dim Other As Number
+    Dim Index As Number
+    Dim Kept As Number
+    Dim Stamp As Number
+    Dim Found[16] As Boolean
+    Dim Keep As Boolean
+    Dim Ok As Boolean
+    Dim Original As Document.State
+
+    Node = -1
+
+    For Index = 0 To Map.NodeCount - 1
+
+        If Map.Nodes[Index].Town = Town.Name Then
+            Node = Index
+        End If
+
+    End For
+
+    If Node < 0 Then
+        Return False
+    End If
+
+    Stamp = LinkStamp(Map, Town.Name)
+
+    If Town.WorldLinksStamp = Stamp Then
+        Return False
+    End If
+
+    Original = Town
+
+    For Index = 0 To Town.MapTileCount - 1
+
+        Keep = False
+
+        For Other = 0 To Map.NodeCount - 1
+
+            If (Map.Links[Node, Other] And
+                Town.MapTiles[Index].Destination = Map.Nodes[Other].Town) Then
+                Keep = True
+                Found[Other] = True
+            End If
+
+        End For
+
+        If Keep Then
+            Town.MapTiles[Kept] = Town.MapTiles[Index]
+            Kept = Kept + 1
+        End If
+
+    End For
+
+    Town.MapTileCount = Kept
+
+    For Other = 0 To Map.NodeCount - 1
+
+        If Map.Links[Node, Other] And Not Found[Other] Then
+
+            Ok = FindGate(Town, Map.Ports[Node, Other], Map.Nodes[Other].Town)
+
+            If Not Ok Then
+                Town = Original
+                Return False
+            End If
+
+        End If
+
+    End For
+
+    Town.WorldLinksStamp = Stamp
+    Town.Revision = Town.Revision + 1
+
+    Return True
+
+End Function
+
+End Module

@@ -139,6 +139,8 @@ Public Function Restore(ByRef Value As State, ByRef Town As Document.State,
         Town.CourtOffsetX = Value.Entries[Index].Town.CourtOffsetX
         Town.CourtOffsetZ = Value.Entries[Index].Town.CourtOffsetZ
         Town.CourtPlaced = Value.Entries[Index].Town.CourtPlaced
+        Town.HasTeleportSpawn = Value.Entries[Index].Town.HasTeleportSpawn
+        Town.TeleportSpawn = Value.Entries[Index].Town.TeleportSpawn
 
         For Item = 0 To Document.MAX_MAP_TILES - 1
             Town.MapTiles[Item] = Value.Entries[Index].Town.MapTiles[Item]

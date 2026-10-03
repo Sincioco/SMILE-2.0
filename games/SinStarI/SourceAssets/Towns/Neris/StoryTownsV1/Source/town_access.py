@@ -6,7 +6,7 @@ The checks use continuous brush geometry rather than just an object's cell.
 """
 import math
 import bisect
-from town_design import CATALOG, GROUND, ROAD, BRIDGE
+from town_design import CATALOG, GROUND, ROAD, BRIDGE, world, prop_outline as outline
 from town_document_codec import curve_contains, bezier_segments
 
 
@@ -20,22 +20,6 @@ def surface(doc,x,z):
             k=brush[1]
             kind=4 if k==3 and kind in(2,4) else k
     return kind
-
-def world(item, x, z):
-    a=math.radians(item['yaw']); c,s=math.cos(a),math.sin(a)
-    x*=item['scale'][0]/1000; z*=item['scale'][2]/1000
-    return item['position'][0]/10+x*c+z*s, item['position'][2]/10-x*s+z*c
-
-
-def outline(item, margin=0):
-    low,high=CATALOG['templates'][item['template']]['bounds']
-    sx,sz=item['scale'][0]/1000,item['scale'][2]/1000
-    x0,x1=low[0]-margin/sx,high[0]+margin/sx
-    z0,z1=low[1]-margin/sz,high[1]+margin/sz
-    nx,nz=max(2,math.ceil((x1-x0)*sx/3)),max(2,math.ceil((z1-z0)*sz/3))
-    return [world(item,x0+(x1-x0)*i/nx,z0+(z1-z0)*j/nz)
-            for i in range(nx+1) for j in range(nz+1)]
-
 
 def contains(item, x, z, margin=0):
     a=math.radians(item['yaw']); c,s=math.cos(a),math.sin(a)

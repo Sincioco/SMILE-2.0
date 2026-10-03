@@ -178,6 +178,21 @@ Public Sub Button(ByRef Value As State, Action As Number, X As Number, Y As Numb
 
 End Sub
 
+''' Put the reusable campfire on the first Decor page; retain all catalog identities.
+Public Function PaletteIndex(Index As Number) As Number
+
+    Dim Result As Number
+
+    Result = Index - 1
+
+    If Index = 0 Then
+        Result = Catalog.TEMPLATE_COUNT - 1
+    End If
+
+    Return Result
+
+End Function
+
 Public Function PaletteRows() As Number
 
     Dim Result As Number
@@ -198,6 +213,9 @@ Private Sub Library(ByRef Value As State, X As Number)
     Dim Rows As Number
     Dim TileX As Number
     Dim TileY As Number
+    Dim TemplateIndex As Number
+    Dim Total As Number
+    Dim PageLabel As Text
 
     Call Button(Value, 1, X, 206, 83, "Buildings", Value.Category = 1)
     Call Button(Value, 2, X + 87, 206, 78, "Surfaces", Value.Category = 2)
@@ -271,6 +289,7 @@ Private Sub Library(ByRef Value As State, X As Number)
 
             Call Button(Value, 760, X, 240 + StepY * 3, 139, "Select / Move", Value.Tool = 760, True, StepY - 3)
             Call Button(Value, 761, X + 144, 240 + StepY * 3, 139, "Resize", Value.Tool = 761, True, StepY - 3)
+            Call Button(Value, 762, X, 240 + StepY * 7, 283, "Teleport Spawn (Blue)", Value.Tool = 762, True, StepY - 3)
 
             Draw Text "Move area / resize nearest corner." At X, 244 + StepY * 4 Size 12 Color WHITE
             Draw Text "Drag, or select then click target." At X, 244 + StepY * 5 Size 12 Color WHITE
@@ -303,20 +322,36 @@ Private Sub Library(ByRef Value As State, X As Number)
 
         Call Button(Value, 10, X, 240, 139, "Select / Move", Value.Tool = 10)
         Call Button(Value, 11, X + 144, 240, 139, "Place Copy", Value.Tool = 11)
-        Call Button(Value, 20, X, 274, 60, "Prev")
-        Call Button(Value, 21, X + 223, 274, 60, "Next")
+
+        For Index = 0 To Catalog.TEMPLATE_COUNT - 1
+
+            Shape = Catalog.TemplateAt(Index)
+
+            If Shape.Category = Value.Category And Shape.PaletteVisible Then
+                Total = Total + 1
+            End If
+
+        End For
+
+        Call Button(Value, 20, X, 274, 60, "Prev", False, Value.Page > 0)
+        Call Button(Value, 21, X + 223, 274, 60, "Next", False,
+            (Value.Page + 1) * PaletteRows() < Total)
 
         If Value.Category = 1 Then
             Call Button(Value, 93, X + 65, 274, 153, "Royal Court...")
         Else
-            Draw Text "Palette" At X + 108, 281 Size 14 Color WHITE
+            PageLabel = ("Page " + NumberLabel(Value.Page + 1) + " / " +
+                NumberLabel((Total + PaletteRows() - 1) / PaletteRows()))
+
+            Draw Text PageLabel At X + 91, 281 Size 14 Color WHITE
         End If
 
         Rows = PaletteRows()
 
         For Index = 0 To Catalog.TEMPLATE_COUNT - 1
 
-            Shape = Catalog.TemplateAt(Index)
+            TemplateIndex = PaletteIndex(Index)
+            Shape = Catalog.TemplateAt(TemplateIndex)
 
             If Shape.Category = Value.Category And Shape.PaletteVisible Then
 
@@ -325,8 +360,8 @@ Private Sub Library(ByRef Value As State, X As Number)
                     TileX = X + (Row Mod 2) * 144
                     TileY = 304 + (Row / 2) * 93
 
-                    Call Button(Value, 100 + Index, TileX, TileY, 139,
-                        "", Value.Template = Index, True, 89)
+                    Call Button(Value, 100 + TemplateIndex, TileX, TileY, 139,
+                        "", Value.Template = TemplateIndex, True, 89)
 
                     Draw Image Value.Atlas From (Shape.PreviewIndex Mod 5) * 128, (Shape.PreviewIndex / 5) * 96 Size 128 By 96 At TileX + 20, TileY + 2 Size 96 By 72 Filter Smooth
 

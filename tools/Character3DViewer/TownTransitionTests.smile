@@ -1,0 +1,137 @@
+''' Regression for landscape loads borrowing the previous town's rollback surface.
+Module Smile.Tools.TownTransitionTests
+
+Option Explicit
+
+Import Smile.Tools.NerisTown As Town
+Import Smile.Tools.TownEditorSession As Editor
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownDocumentStore As Storage
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Core As Core
+
+Private Sub Check(Condition As Boolean, Label As Text, ByRef Failures As Number)
+
+    If Not Condition Then
+        Print "FAIL " + Label
+        Failures = Failures + 1
+    End If
+
+End Sub
+
+Private Sub Arrive(ByRef Value As Town.State, Name As Text, ByRef Failures As Number)
+
+    Dim Ok As Boolean
+    Dim Step As Number
+
+    Ok = Editor.TravelTo(Name, P.Vector(0.0, 0.0, 0.0))
+
+    Call Check(Ok Or Editor.TownName() = Name, "Open Transition Fixture " + Name, Failures)
+
+    For Step = 0 To 1200
+
+        Call Town.Update(Value, 16)
+
+        If Value.Failed Or (Value.Ready And Value.LoadingTown = Name) Then
+            Exit For
+        End If
+
+    End For
+
+    Call Check(Value.Ready And Not Value.Failed, "Ready After Map Transition " + Name, Failures)
+
+End Sub
+
+Public Sub Run(ByRef Value As Town.State, ByRef Failures As Number)
+
+    Dim Center As P.Vector3
+    Dim Saved As Document.State
+    Dim Ok As Boolean
+    Dim Pass As Number
+    Dim Name As Text
+    Dim Pressure[4] As Core.RibbonBatch3D
+    Dim Material As Core.Material3D
+    Dim Texture As Core.Texture3D
+    Dim Available As Number
+    Dim Index As Number
+    Dim MaterialPressure[32] As Core.Material3D
+
+    Call Arrive(Value, "Neris Town", Failures)
+
+    Material = G.CreateEffectMaterial3D(Texture, G.MATERIAL_ALPHA_BLEND, 100)
+    Available = (G.VfxValue3D(G.VFX_QUERY_MAX_STAGED_RIBBON_POINTS) -
+        G.VfxValue3D(G.VFX_QUERY_STAGED_RIBBON_CAPACITY))
+
+    For Index = 0 To 3
+
+        If Available > 0 Then
+            Pressure[Index] = G.CreateRibbonBatch3D(Min(8192, Available), Material)
+            Available = Available - Pressure[Index].Capacity
+        End If
+
+    End For
+
+    For Index = 0 To 31
+        MaterialPressure[Index] = G.CreateEffectMaterial3D(Texture, G.MATERIAL_ALPHA_BLEND, 100)
+    End For
+
+    Ok = Editor.TravelTo("Willowstep Highlands", P.Vector(0.0, 0.0, 0.0))
+
+    Call Editor.Update(Value.People.Path.Positions[0], 16)
+
+    For Index = 0 To 1200
+
+        Ok = Editor.LoadNext()
+
+        If Editor.Failed() Or Ok Then
+            Exit For
+        End If
+
+    End For
+
+    Center = Editor.MapCenter()
+
+    Call Check(Editor.Failed() And Not Ok,
+        "Exhausted Water Budget Reports A Load Failure", Failures)
+    Call Check(Abs(Center.X) < 0.001 And Abs(Center.Z) < 0.001,
+        "Failed Load Cannot Replace Willowstep With Neris Terrain", Failures)
+
+    For Index = 0 To 3
+        Call G.DestroyRibbonBatch3D(Pressure[Index])
+    End For
+
+    For Index = 0 To 31
+        Call G.DestroyMaterial3D(MaterialPressure[Index])
+    End For
+
+    Call G.DestroyMaterial3D(Material)
+    Call Arrive(Value, "Neris Town", Failures)
+
+    For Pass = 0 To 1
+
+        Name = "Willowstep Highlands"
+
+        If Pass = 1 Then
+            Name = "Silverfall Basin"
+        End If
+
+        Call Arrive(Value, Name, Failures)
+
+        Center = Editor.MapCenter()
+
+        Call Check(Abs(Center.X) < 0.001 And Abs(Center.Z) < 0.001,
+            "Landscape Retains Its Own Bounds " + Name, Failures)
+        Call Arrive(Value, "Neris Town", Failures)
+
+        Ok = Storage.LoadDocument(Saved, "TownEditor.Recovery." + Name)
+
+        Call Check(Ok And Saved.Surface.Heights.Nonzero > 0,
+            "Leaving Landscape Preserves Its Elevations " + Name, Failures)
+    End For
+
+    Print "Map Transitions: Neris, Willowstep, Neris, Silverfall, Neris"
+
+End Sub
+
+End Module

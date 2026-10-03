@@ -54,6 +54,10 @@ End Type
 
 Public Type State
     Landmark As Number
+    LandmarkRotation As Double
+    WorldLinksStamp As Number
+    HasTeleportSpawn As Boolean
+    TeleportSpawn As P.Vector3
     TerrainStyle As Number
     Appearance As SurfaceStyles.State
     CourtOffsetX As Double

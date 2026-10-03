@@ -13,6 +13,8 @@ Import Smile.Tools.TownDocumentStore As Storage
 Import Smile.Tools.TownLibrary As Library
 Import Smile.Tools.TownTabs As Tabs
 Import Smile.Tools.TownEditorPanel As Panel
+Import Smile.Tools.TownDocument As TownDocument
+Import Smile.Tools.TownWorldTravel As Travel
 
 Private Dim Map As Document.State
 Private Dim Ui As Panel.State
@@ -28,10 +30,45 @@ Private Dim TownCount As Number
 Private Dim ReturnTown As Text
 Private Dim PreviewFailed[16] As Boolean
 Private Dim Entering As Boolean
+Private Dim TriedRestore As Boolean
+Private Dim AttemptTown As Text
+Private Dim AttemptStamp As Number
+Private Dim AttemptRevision As Number
 
 Public Function Active() As Boolean
 
     Return Enabled
+
+End Function
+
+Public Function Synchronize(ByRef Town As TownDocument.State) As Boolean
+
+    Dim Restored As Boolean
+    Dim Changed As Boolean
+    Dim Stamp As Number
+
+    If Map.Name = "" And Not TriedRestore Then
+        TriedRestore = True
+        Restored = Document.LoadWorld(Map, "", "TownEditor.World.Last")
+    End If
+
+    Stamp = Travel.LinkStamp(Map, Town.Name)
+
+    If (Stamp = 0 Or
+        (AttemptTown = Town.Name And AttemptStamp = Stamp And AttemptRevision = Town.Revision)) Then
+        Return False
+    End If
+
+    Changed = Travel.Apply(Map, Town)
+    AttemptTown = Town.Name
+    AttemptStamp = Stamp
+    AttemptRevision = Town.Revision
+
+    If Town.WorldLinksStamp <> Stamp Then
+        Ui.Message = "A linked map needs a clear road entry; existing yellow areas retained."
+    End If
+
+    Return Changed
 
 End Function
 
@@ -111,10 +148,22 @@ End Sub
 
 Public Sub Reopen(Town As Text)
 
-    If Map.NodeCount = 0 Then
+    Dim Restored As Boolean
+
+    If Map.Name = "" Then
+        Restored = Document.LoadWorld(Map, "", "TownEditor.World.Last")
+    End If
+
+    If Map.Name = "" Then
         Call Open(False, Town)
 
         Return
+    End If
+
+    If Graph.Camera.Zoom = 0 Then
+        Call Canvas.Fit(Graph, Map, Panel.LeftEdge(), Window_Height())
+
+        Graph.Selected = -1
     End If
 
     Enabled = True
@@ -191,7 +240,7 @@ Public Sub Update()
     If Loaded Then
 
         Graph.Selected = -1
-        Dirty = True
+        Dirty = Not Document.SaveWorld(Map)
 
         Call Canvas.Fit(Graph, Map, Panel.LeftEdge(), Window_Height())
 

@@ -16,6 +16,7 @@ Import Smile.Simple3D.Character3D As Character
 Import Smile.Tools.TownEditorSession As Editor
 Import Smile.Tools.Character3DViewerCalibration As Calibration
 Import Smile.Tools.NerisTownInspectionTests As Inspection
+Import Smile.Tools.TownTransitionTests As Transitions
 Import Smile.Tools.TownEditor As Commands
 Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownTabs As Tabs
@@ -26,6 +27,7 @@ Import Smile.Tools.TownSaveQueue As SaveQueue
 Import Smile.Tools.TownLighting As Lighting
 Import Smile.Tools.TownMapLoadTools As MapLoadTools
 Import Smile.Tools.TownMapLoads As MapLoads
+Import Smile.Tools.TownGatewayJourney As Journey
 Import Smile.Tools.TownDocumentMap As DocumentMap
 Import Smile.Tools.TownCatalogData As Catalog
 Import Smile.Tools.TownEditorPanel As Panel
@@ -309,6 +311,7 @@ If Value.Ready Then
 
 End If
 
+Call Transitions.Run(Value, Failures)
 Call CheckTerrainParty()
 Call Town.Destroy(Value)
 
@@ -444,7 +447,7 @@ Sub CheckPermanentUpdates()
     OpenTabs.TabCount = 0
 
     Call Tabs.Ensure(OpenTabs, Draft)
-    Call Check(Saved And OpenTabs.TabCount = 3, "Startup Restores All Three Permanent Maps")
+    Call Check(Saved And OpenTabs.TabCount = 5, "Startup Restores Towns And Both Landscape Fixtures")
 
     For MapIndex = 0 To 2
 
@@ -477,7 +480,7 @@ Sub CheckPermanentUpdates()
     OpenTabs.TabCount = 0
 
     Call Tabs.Ensure(OpenTabs, Draft)
-    Call Check(Saved And OpenTabs.TabCount = 3 And
+    Call Check(Saved And OpenTabs.TabCount = 5 And
         OpenTabs.Documents[0].Light.Ambient = 61 And
         OpenTabs.Documents[1].Light.Ambient = 62 And
         OpenTabs.Documents[2].Light.Ambient = 63,
@@ -953,6 +956,34 @@ Sub CheckAirportEntry(ByRef Value As Town.State)
 
 End Sub
 
+Sub CheckGateArrival(ByRef Value As Town.State, Origin As Text)
+
+    Dim Saved As Document.State
+    Dim Expected As P.Vector3
+    Dim Heading As Double
+    Dim Ok As Boolean
+    Dim Index As Number
+
+    Ok = Storage.LoadDocument(Saved, "TownEditor.PermanentNeris")
+
+    If Saved.MapTileCount = 0 Then
+        Expected = Connections.Arrival("Neris Town", Origin)
+    Else
+        Ok = Journey.Arrival(Saved, Origin, Expected, Heading) And Ok
+    End If
+
+    Call Check(Ok And Value.People.MemberCount = 4 And
+        Abs(Value.People.Path.Positions[0].X - Expected.X) < 0.001 And
+        Abs(Value.People.Path.Positions[0].Z - Expected.Z) < 0.001,
+        "Party Arrives At The Displayed Blue Circle From " + Origin)
+
+    For Index = 0 To 3
+        Call Check(Navigation.CanStand(Value.People.Path.Positions[Index].X,
+            Value.People.Path.Positions[Index].Z), "Each Arriving Party Member Has Ground Support")
+    End For
+
+End Sub
+
 Sub CheckWalkingConnection(ByRef Value As Town.State)
 
     Dim Step As Number
@@ -1000,7 +1031,7 @@ Sub CheckWalkingConnection(ByRef Value As Town.State)
     Call Town.MoveParty(Value, P.Vector(1.0, 0.0, 0.0), 200)
     Call Check(Editor.TownName() = "Neris Town", "Spaceport East Road Returns To Town")
     Call LoadArrival(Value)
-    Call Check(Value.People.Path.Positions[0].X = -4950.0, "Party Returns At The West Town Gate")
+    Call CheckGateArrival(Value, "Neris Spaceport")
     Call Party.Teleport(Value.People, P.Vector(2670.0, 23.12, -1000.0))
     Call Town.MoveParty(Value, P.Vector(1.0, 0.0, 0.0), 200)
     Call Check(Editor.TownName() = "Horizon Airport", "East Road Travels To Horizon Airport")
@@ -1046,8 +1077,7 @@ Sub CheckWalkingConnection(ByRef Value As Town.State)
 
     Call Check(Editor.TownName() = "Neris Town", "Airport West Road Returns To Town")
     Call LoadArrival(Value)
-    Call Check(Value.People.MemberCount = 4 And Value.People.Path.Positions[0].X = 2500.0,
-        "All Four Party Members Return At The East Town Gate")
+    Call CheckGateArrival(Value, "Horizon Airport")
     Call LoadResidents(Value)
     Call Check(G.LiveModelCount3D() = BeforeModels And G.LiveMeshCount3D() = BeforeMeshes,
         "Three Map Round Trip Releases All Airport Resources")

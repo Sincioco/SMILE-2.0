@@ -318,6 +318,12 @@ Private Function DocumentVersion(ByRef Value As Document.State) As Number
 
     Version = 7
 
+    If (Value.HasTeleportSpawn Or
+        Value.LandmarkRotation <> 0.0 Or
+        Value.WorldLinksStamp <> 0) Then
+        Return 14
+    End If
+
     If Value.Appearance.Nonzero > 0 Or Value.TerrainStyle = 4 Then
         Return 13
     End If
@@ -671,6 +677,25 @@ Private Sub Encode(ByRef Value As Document.State, MarkSaved As Boolean)
         Call WriteAppearance(Value.Appearance, Value.Surface.Columns * Value.Surface.Rows)
     End If
 
+    If DocumentVersion(Value) >= 14 Then
+
+        Call WritePrecise(Value.LandmarkRotation)
+        Call WriteInteger(Value.WorldLinksStamp)
+
+        If Value.HasTeleportSpawn Then
+
+            Call WriteByte(1)
+            Call WritePrecise(Value.TeleportSpawn.X)
+            Call WritePrecise(Value.TeleportSpawn.Z)
+
+        Else
+
+            Call WriteByte(0)
+
+        End If
+
+    End If
+
     ByteCount = Offset
 
 End Sub
@@ -696,7 +721,7 @@ Private Function Decode() As Boolean
 
     Version = ReadByte()
 
-    If Version < 1 Or Version > 13 Then
+    If Version < 1 Or Version > 14 Then
         Return False
     End If
 
@@ -931,6 +956,26 @@ Private Function Decode() As Boolean
 
     If Version >= 12 Then
         Valid = ReadAppearance(Candidate.Appearance, Candidate.Surface.Columns * Candidate.Surface.Rows) And Valid
+    End If
+
+    If Version >= 14 Then
+
+        Candidate.LandmarkRotation = ReadPrecise()
+        Candidate.WorldLinksStamp = ReadInteger()
+        Flag = ReadByte()
+        Valid = Valid And Flag <= 1
+        Candidate.HasTeleportSpawn = Flag = 1
+
+        If Candidate.HasTeleportSpawn Then
+            Candidate.TeleportSpawn.X = ReadPrecise()
+            Candidate.TeleportSpawn.Z = ReadPrecise()
+        End If
+
+    Else If Candidate.Name = "Neris Town" Then
+
+        Candidate.HasTeleportSpawn = True
+        Candidate.TeleportSpawn.Z = -2780.0
+
     End If
 
     If Offset <> ByteCount Then

@@ -31,6 +31,10 @@ Import Smile.Tools.TownHistory As History
 Import Smile.Tools.TownEditorPanel As Panel
 Import Smile.Tools.TownSurfaceTools As SurfaceTools
 Import Smile.Tools.TownSurfaceStyles As SurfaceStyles
+Import Smile.Tools.TownTerrainStyles As Styles
+Import Smile.Tools.TownFountains As Fountains
+Import Smile.Tools.TownMapLoadTools As MapTools
+Import Smile.Simple3D.FountainStreams3D As Jets
 
 Dim Town As Document.State
 Dim CanalTown As Document.State
@@ -52,6 +56,7 @@ Dim UntilTime As Number
 Dim Action As Number
 Dim WithoutCastle[5] As Number
 Dim Photograph As Number
+Dim SpawnUndo As History.State
 
 Game Window "Town Editor Catalog Check" Size 1100 By 720
 
@@ -95,6 +100,7 @@ End For
 
 Call Check(Not Assets.Failed, "Catalog Loads Within Resource Limits")
 Call CheckSmoothTerrain()
+Call CheckFountainAndSpawn()
 
 Ok = Terrain.Create(Ground)
 
@@ -919,6 +925,65 @@ Sub CheckLocalLighting()
     Ok = Lighting.ApplyLocal(Draft)
 
     Call Check(Ok And G.ActiveLightCount3D() = 2, "Town Accent Lights Switch Off In Daylight")
+
+End Sub
+
+Sub CheckFountainAndSpawn()
+
+    Dim Draft As Document.State
+    Dim Streams As Fountains.State
+    Dim Shape As Jets.Profile
+    Dim Point As P.Vector3
+    Dim Low As P.Vector3
+    Dim High As P.Vector3
+    Dim Marker As MapTools.State
+    Dim Ink As Guides.Drawing
+    Dim Ok As Boolean
+    Dim Capacity As Number
+
+    Ok = Document.Blank(Draft, "Fountain Fixture", 12, 12, 30.0)
+    Draft.ItemCount = 1
+    Draft.Items[0].Active = True
+    Draft.Items[0].Identity = 1
+    Draft.Items[0].Template = 20
+    Draft.Items[0].Position = P.Vector(100.0, 75.0, 200.0)
+    Draft.Items[0].Scale = P.Vector(2000.0, 2000.0, 2000.0)
+    Draft.Items[0].Yaw = 90.0
+    Shape = Fountains.Profile(Draft.Items[0])
+    Point = Jets.StreamPoint(Shape, 0, 1.0)
+
+    Call Check(Abs(Point.X - 100.0) < 0.001 And Abs(Point.Z - 140.0) < 0.001 And
+        Abs(Point.Y - 91.8) < 0.001, "Fountain Streams Follow Prop Position Scale Rotation And Basin Height")
+
+    Capacity = G.VfxValue3D(G.VFX_QUERY_STAGED_RIBBON_CAPACITY)
+    Ok = Fountains.Update(Streams, Draft, Point, 500)
+
+    Call Check(Ok And Streams.Ready And Streams.Time = 500 And Streams.Batch.Capacity = 544,
+        "Small Fountain Publishes Animated Jets And Ripple Rings In One Bounded Batch")
+
+    Ok = Fountains.Update(Streams, Draft, Point, 125) And Ok
+    Draft.Items[0].Active = False
+    Ok = Fountains.Update(Streams, Draft, Point, 0) And Ok
+
+    Call Check(Ok And Streams.Batch.Handle = 0 And
+        G.VfxValue3D(G.VFX_QUERY_STAGED_RIBBON_CAPACITY) = Capacity,
+        "Deleting The Last Fountain Releases Its Stream Resources")
+    Call Navigation.Rebuild(Draft)
+    Call History.Reset(SpawnUndo, Draft, Ink)
+    Call MapTools.Gesture(Marker, Draft, P.Vector(0.0, 0.0, 0.0), True, True, False, 762)
+    Call History.Record(SpawnUndo, Draft, Ink)
+
+    Call Check(Draft.HasTeleportSpawn, "Blue Spawn Tool Accepts Walkable Ground")
+
+    Ok = History.Restore(SpawnUndo, Draft, Ink, False)
+
+    Call Check(Ok And Not Draft.HasTeleportSpawn, "Undo Restores The Previous Teleport Spawn")
+
+    Low = Styles.Coordinates(2, 1, 0.0, 23.0, 0.0, P.Vector(0.0, 0.94, 0.0))
+    High = Styles.Coordinates(2, 1, 0.0, 23.0, 0.0, P.Vector(0.0, 1.0, 0.0))
+
+    Call Check(Low.Y > High.Y + 0.2, "Rock Texture Starts On Lower Foothill Slopes At The Same Altitude")
+    Call Navigation.Disable()
 
 End Sub
 

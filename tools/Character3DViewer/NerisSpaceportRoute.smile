@@ -5,6 +5,8 @@ Option Explicit
 
 Import Smile.Tools.TownSurfaceLayers As Layers
 Import Smile.Simple3D.PartyTrail3D As Trail
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
 Import Smile.Tools.NerisSpaceportGround As Ground
 
 Public Const ORIGIN_X = -5500.0
@@ -18,6 +20,46 @@ Private Dim DoorRotation As Double
 Private Dim DoorHold As Number
 Private Dim Entered As Boolean
 Private Dim PendingEntry As Boolean
+
+Private Dim Pivot As P.Vector3
+Private Dim Turn As Double
+
+Public Sub Configure(Center As P.Vector3, Rotation As Double)
+
+    Pivot = Center
+    Turn = Rotation
+
+End Sub
+
+Public Function Placed(Point As P.Vector3) As P.Vector3
+
+    Dim Result As P.Vector3
+
+    Result = M.Add(Pivot, M.Rotate(M.Subtract(Point, Pivot), P.Vector(0.0, Turn, 0.0)))
+
+    Return Result
+
+End Function
+
+Public Function Original(Point As P.Vector3) As P.Vector3
+
+    Dim Result As P.Vector3
+
+    Result = M.Add(Pivot, M.Rotate(M.Subtract(Point, Pivot), P.Vector(0.0, -Turn, 0.0)))
+
+    Return Result
+
+End Function
+
+Public Function Heading(Yaw As Double) As Double
+
+    Dim Result As Double
+
+    Result = M.WrapDegrees(Yaw + Turn)
+
+    Return Result
+
+End Function
 
 Public Sub Enable(Value As Boolean)
 
@@ -38,6 +80,11 @@ End Function
 Public Function Contains(X As Double, Z As Double) As Boolean
 
     Dim Result As Boolean
+    Dim Source As P.Vector3
+
+    Source = Original(P.Vector(X, 0.0, Z))
+    X = Source.X
+    Z = Source.Z
 
     Result = Enabled And Ground.Contains((ORIGIN_X - X) / SCALE, (ORIGIN_Z - Z) / SCALE)
 
@@ -51,6 +98,11 @@ Public Function CanStand(X As Double, Z As Double) As Boolean
     Dim LocalX As Double
     Dim LocalZ As Double
     Dim Result As Boolean
+    Dim Source As P.Vector3
+
+    Source = Original(P.Vector(X, 0.0, Z))
+    X = Source.X
+    Z = Source.Z
 
     LocalX = (ORIGIN_X - X) / SCALE
     LocalZ = (ORIGIN_Z - Z) / SCALE
@@ -72,14 +124,17 @@ Public Sub Update(ByRef Path As Trail.State, ActorCount As Number, Elapsed As Nu
     Dim X As Double
     Dim Z As Double
     Dim NearDoor As Boolean
+    Dim Source As P.Vector3
 
     If Not Enabled Then
         Return
     End If
 
     For Index = 0 To Min(ActorCount, 5) - 1
-        X = (ORIGIN_X - Path.Positions[Index].X) / SCALE
-        Z = (ORIGIN_Z - Path.Positions[Index].Z) / SCALE
+
+        Source = Original(Path.Positions[Index])
+        X = (ORIGIN_X - Source.X) / SCALE
+        Z = (ORIGIN_Z - Source.Z) / SCALE
         NearDoor = NearDoor Or (Abs(X) < 9.0 And Z > -57.0 And Z < -24.0 And
             Abs(Path.Positions[Index].Y - DECK_Y) < 18.0)
     End For
@@ -101,8 +156,9 @@ Public Sub Update(ByRef Path As Trail.State, ActorCount As Number, Elapsed As Nu
 
     End If
 
-    X = (ORIGIN_X - Path.Positions[0].X) / SCALE
-    Z = (ORIGIN_Z - Path.Positions[0].Z) / SCALE
+    Source = Original(Path.Positions[0])
+    X = (ORIGIN_X - Source.X) / SCALE
+    Z = (ORIGIN_Z - Source.Z) / SCALE
 
     If (Abs(X) < 5.6 And
         Z >= -44.5 And
@@ -128,6 +184,17 @@ Public Function ConsumeEntry() As Boolean
 
     Result = PendingEntry
     PendingEntry = False
+
+    Return Result
+
+End Function
+
+Public Function ToWorld(Point As P.Vector3) As P.Vector3
+
+    Dim Result As P.Vector3
+
+    Result = Placed(P.Vector(ORIGIN_X - Point.X * SCALE, DECK_Y + Point.Y * SCALE,
+        ORIGIN_Z - Point.Z * SCALE))
 
     Return Result
 

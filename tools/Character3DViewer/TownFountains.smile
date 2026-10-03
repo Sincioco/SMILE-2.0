@@ -1,0 +1,171 @@
+''' Placed fountain streams. One exact-size batch serves the eight nearest fountains.
+Module Smile.Tools.TownFountains
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.FountainStreams3D As Jets
+Import Smile.Tools.TownDocument As Document
+
+Public Type State
+    Batch As Core.RibbonBatch3D
+    Material As Core.Material3D
+    Town As Text
+    Time As Number
+    FountainCount As Number
+    Ready As Boolean
+End Type
+
+Public Function Profile(Item As Document.Item) As Jets.Profile
+
+    Dim Shape As Jets.Profile
+
+    Shape.Origin = Item.Position
+    Shape.Scale = P.Vector(Item.Scale.X / 1000.0, Item.Scale.Y / 1000.0, Item.Scale.Z / 1000.0)
+    Shape.Yaw = Item.Yaw
+    Shape.InnerRadius = 8.0
+    Shape.OuterRadius = 30.0
+    Shape.StartHeight = 21.0
+    Shape.EndHeight = 8.4
+    Shape.ArchHeight = 28.0
+    Shape.WidthScale = 10.0
+    Shape.RippleScale = 6.0
+    Shape.Steps = 16
+    Shape.RingSteps = 12
+    Shape.Rings = 2
+
+    Return Shape
+
+End Function
+
+Public Sub Destroy(ByRef Value As State)
+
+    Dim Empty As State
+
+    Call G.DestroyRibbonBatch3D(Value.Batch)
+    Call G.DestroyMaterial3D(Value.Material)
+
+    Value = Empty
+
+End Sub
+
+Public Function Update(ByRef Value As State, ByRef Town As Document.State,
+    Leader As P.Vector3, Elapsed As Number) As Boolean
+
+    Dim ReturnValue As Boolean
+
+    Dim Selected[8] As Number
+    Dim Distances[8] As Double
+    Dim Item As Document.Item
+    Dim Distance As Double
+    Dim Index As Number
+    Dim Slot As Number
+    Dim ShiftIndex As Number
+    Dim Scan As Number
+    Dim FountainCount As Number
+    Dim Point As Number
+    Dim Texture As Core.Texture3D
+    Dim Ok As Boolean
+
+    For Index = 0 To Town.ItemCount - 1
+
+        Item = Town.Items[Index]
+
+        If (Item.Active And
+            Item.Template >= 20 And
+            Item.Template <= 25) Then
+
+            Distance = ((Item.Position.X - Leader.X) * (Item.Position.X - Leader.X) +
+                (Item.Position.Z - Leader.Z) * (Item.Position.Z - Leader.Z))
+            Slot = FountainCount
+
+            For Scan = 0 To FountainCount - 1
+
+                If Distances[Scan] > Distance Then
+                    Slot = Scan
+                    Exit For
+                End If
+
+            End For
+
+            If Slot < 8 Then
+
+                For Scan = 0 To 6
+
+                    ShiftIndex = 7 - Scan
+
+                    If ShiftIndex > Slot Then
+                        Selected[ShiftIndex] = Selected[ShiftIndex - 1]
+                        Distances[ShiftIndex] = Distances[ShiftIndex - 1]
+                    End If
+
+                End For
+
+                Selected[Slot] = Index
+                Distances[Slot] = Distance
+                FountainCount = Min(8, FountainCount + 1)
+
+            End If
+
+        End If
+
+    End For
+
+    If Value.FountainCount <> FountainCount Or Value.Town <> Town.Name Then
+        Call Destroy(Value)
+    End If
+
+    If FountainCount = 0 Then
+        Return True
+    End If
+
+    Ok = True
+
+    If Value.Batch.Handle = 0 Then
+
+        Value.Material = G.CreateEffectMaterial3D(Texture, G.MATERIAL_ALPHA_BLEND, 100)
+        Ok = G.SetEffectMaterial3D(Value.Material, G.MATERIAL_ALPHA_BLEND, 175, 225, 250, 100, 100)
+        Value.Batch = G.CreateRibbonBatch3D(FountainCount * 544, Value.Material)
+        Value.FountainCount = FountainCount
+        Value.Town = Town.Name
+        Ok = Value.Batch.Handle <> 0 And Ok
+
+        If Not Ok Then
+            Call Destroy(Value)
+
+            Return False
+        End If
+
+    End If
+
+    Value.Time = (Value.Time + Max(0, Elapsed)) Mod 3600000
+
+    For Slot = 0 To FountainCount - 1
+        Ok = Jets.Append(Value.Batch, Point, Profile(Town.Items[Selected[Slot]]), Value.Time) And Ok
+    End For
+
+    Value.Ready = G.CommitRibbonBatch3D(Value.Batch, Point) And Ok
+
+    ReturnValue = Value.Ready
+
+    Return ReturnValue
+
+End Function
+
+Public Function Draw(ByRef Value As State) As Boolean
+
+    Dim Ok As Boolean
+
+    Ok = True
+
+    If Value.Ready Then
+        Ok = G.DrawRibbonBatch3D(Value.Batch)
+    End If
+
+    Return Ok
+
+End Function
+
+End Module

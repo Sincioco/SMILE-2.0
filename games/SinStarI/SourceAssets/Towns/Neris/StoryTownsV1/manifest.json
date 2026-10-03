@@ -123,7 +123,7 @@
       "Original terminal, doors, pads and alien arrival schedules retained"
     ],
     "campfires": 0,
-    "sha256": "d218c8897452949feeb0458145d0447befe11135c6dd72937af34fcde0219869"
+    "sha256": "d87cfce48c452172ab2781decbecda0158bcac12a390433a2a9889e4e82053fe"
   },
   {
     "name": "Horizon Airport",
@@ -144,7 +144,7 @@
       "Operating terminal, runway, aircraft and navigation beacons retained"
     ],
     "campfires": 0,
-    "sha256": "c07affb04f446713092254ab177f94932881975bfbfbf9b073978d7696c7d5cd"
+    "sha256": "cb301befdef6bdcf08b74e9774830befed9870722f1c40a9e9340a81bdef39a2"
   },
   {
     "name": "Verdant Reach",
@@ -451,7 +451,7 @@
       -30
     ],
     "campfires": 12,
-    "sha256": "c2e758154923ae1305ea6a365b837d5e4a38137490cee8355d831ee5a4a25757"
+    "sha256": "8c77d94e380f7803f6152c5b77253390850bb14936d6a71ced6494e3a6290409"
   },
   {
     "name": "Greyglass Pass",
@@ -1251,13 +1251,13 @@
     "name": "Ancient Relay",
     "file": "Ancient Relay.town",
     "size_m": 560,
-    "items": 29,
+    "items": 33,
     "trees": 0,
     "lamps": 0,
     "houses": 0,
     "castles": 0,
     "city_halls": 0,
-    "draw_cost": 119,
+    "draw_cost": 139,
     "local_lights": 16,
     "water_percent": 0.0,
     "story_spaces": [
@@ -1265,7 +1265,7 @@
       "Not the separate Chapter Five off-world observatory."
     ],
     "campfires": 12,
-    "sha256": "a61046ed46039ed3c6b542b17c0abd3c6e37602c6e84fa57f5ac6614b6667b3d"
+    "sha256": "e078acf2c96c11fac997c50c675dff2fa1959136955493cc265d1f9e5ce9497a"
   },
   {
     "name": "Neris Relief Quarter",
@@ -2028,14 +2028,14 @@
     "name": "Silverfall Basin",
     "file": "Silverfall Basin.town",
     "size_m": 384.0,
-    "items": 213,
-    "trees": 181,
+    "items": 215,
+    "trees": 180,
     "lamps": 0,
     "houses": 0,
     "castles": 0,
     "city_halls": 0,
-    "draw_cost": 852,
-    "local_lights": 36,
+    "draw_cost": 860,
+    "local_lights": 39,
     "water_percent": 9.9,
     "story_spaces": [
       "Two steep cascades descend 42 m, separated by a broad river-crossing shelf.",
@@ -2526,7 +2526,7 @@
       28,
       0
     ],
-    "campfires": 32,
-    "sha256": "e6fbc9bad1a25ec4a8651fdc1ab0b40b5e8a6448a2ef290a42960e6a79667331"
+    "campfires": 35,
+    "sha256": "6e70ce48a4786017bd963b64c90b6d83c86c5ebbec0cb7a7a359a0c87f5d8836"
   }
 ]

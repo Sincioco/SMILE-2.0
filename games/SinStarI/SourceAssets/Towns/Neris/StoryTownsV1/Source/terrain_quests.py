@@ -10,7 +10,7 @@ import json
 import math
 from pathlib import Path
 import random
-from town_design import Town, CATALOG, GROUND, WATER, ROAD, atomic_write, encode, decode, unwrap, terrain_offset
+from town_design import Town, CATALOG, GROUND, WATER, ROAD, atomic_write, encode, decode, unwrap, terrain_offset, ground_prop
 from town_access import outline, surface, prepare
 from journey_layouts import distance, forest, mountains, desert
 
@@ -158,7 +158,7 @@ def basin():
              (0,-70),(56,-70),(113,-40),(150,-54),(192,-54)]
     side_route = [(-192,142),(-105,160),(-25,154),(28,118),
                   (68,99),(138,96),(192,120)]
-    crossing = [(28,-70),(28,118)]
+    crossing = [(28,-70),(39,-36),(19,8),(24,48),(39,83),(28,118)]
     clearings = [(-90, -84), (0, -70), (90, -84)]
     flow = stream(town, (192,24), (-102,24), 24)
     town.lake((-162,29),[(-216,-30),(-179,-29),(-169,-9),(-142,-20),(-118,-4),
@@ -202,7 +202,7 @@ def save(design, folder):
     for index in (flow if isinstance(flow,list) else ([] if flow is None else [flow])):
         doc['flows'][index] = [1,1,100]
     for item in doc['items']:
-        item['position'][1] = 23 + terrain_offset(doc, item['position'][0], item['position'][2])
+        ground_prop(doc, item)
     if town.name != 'Neris Relief Quarter':
         for item in doc['items']:
             if item['template'] == 15:
@@ -234,7 +234,7 @@ def save(design, folder):
                            (doc['zs'][t['z']]+doc['zs'][t['z']+1])/20]
                           for t in doc['map_tiles']],
         acceptance_spawn=((-40,-95) if town.name == 'Sunglass Expanse' else
-                          (28,0) if town.name == 'Silverfall Basin' else
+                          paths[2][len(paths[2])//2] if town.name == 'Silverfall Basin' else
                           paths[0][len(paths[0])//2] if town.name == 'Willowstep Highlands' else
                           (0,18) if town.name == 'Neris Relief Quarter' else (0,0)))
     print(town.name, len(payload), 'authored bytes;', record['trees'], 'trees;',

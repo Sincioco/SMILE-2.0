@@ -136,8 +136,9 @@ Public Function Coordinates(Style As Number, Kind As Number, X As Double,
 
     If Kind = 1 And Style = 2 Then
 
-        ' The valley samples the atlas's plain region; rock appears on elevated slopes.
-        Exposure = Max(0.0, Min(1.0, (Y - 120.9) / 700.0))
+        ' Follow the foothill slope, not one horizontal altitude through every mountain.
+        ' Gentle ground stays plain; rock blends in from the lower mountain footprint.
+        Exposure = Max(0.0, Min(1.0, (1.0 - Normal.Y - 0.006) * 8.0))
         Exposure = Exposure * Exposure * (3.0 - 2.0 * Exposure)
         Repeat = (Z + Y * 0.65 + 60.0 * Sin(X / 570.0)) / 180.0
         Repeat = Abs(2.0 * (Repeat - Floor(Repeat)) - 1.0)

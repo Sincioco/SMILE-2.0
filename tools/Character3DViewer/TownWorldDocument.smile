@@ -232,6 +232,11 @@ Public Function SaveWorld(ByRef Value As State, Optional Key As Text = "") As Bo
     Save Data Bytes Count Offset To Key Status Status
     Result = Status = DATA_STATUS_OK
 
+    If Result And Key = "TownEditor.World." + Value.Name Then
+        Save Data Bytes Count Offset To "TownEditor.World.Last" Status Status
+        Result = Status = DATA_STATUS_OK
+    End If
+
     Return Result
 
 End Function

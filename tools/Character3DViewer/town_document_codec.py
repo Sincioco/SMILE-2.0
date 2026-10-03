@@ -1,4 +1,4 @@
-"""Bounded TWN1–TWN13 codec shared by the existing Blender document worker."""
+"""Bounded TWN1–TWN14 codec shared by the existing Blender document worker."""
 import math
 from functools import lru_cache
 import hashlib
@@ -163,7 +163,7 @@ def decode(payload, catalog, request=False):
     if bytes(r.byte() for _ in range(3)) != b'TWN':
         raise ValueError('Unsupported town format')
     version = r.byte()
-    if not 1 <= version <= 13:
+    if not 1 <= version <= 14:
         raise ValueError('Unsupported town format')
     fingerprint = catalog.get('document_fingerprint') or hashlib.sha256(json.dumps(catalog, sort_keys=True).encode()).hexdigest()
     if r.name() != fingerprint:
@@ -299,6 +299,13 @@ def decode(payload, catalog, request=False):
                 raise ValueError('Invalid tile appearance run')
             appearance.extend([style]*length)
         result['appearance'] = appearance
+    if version >= 14:
+        result['landmark_rotation'] = r.precise()
+        result['world_links_stamp'] = r.integer()
+        if r.flag():
+            result['teleport_spawn'] = [r.precise(), r.precise()]
+    elif result['name'] == 'Neris Town':
+        result['teleport_spawn'] = [0.0, -2780.0]
     result['payload'] = payload[:r.offset]
     if request:
         result['mode'], result['request_id'] = r.integer(), r.integer()
@@ -436,6 +443,10 @@ def encode(document, catalog):
         version = 13
         if not appearance:
             appearance = [0]*(document['columns']*document['rows'])
+    if document.get('teleport_spawn') is not None or document.get('landmark_rotation',0) or document.get('world_links_stamp',0):
+        version = 14
+        if not appearance:
+            appearance = [0]*(document['columns']*document['rows'])
     result = bytearray(b'TWN') + bytes([version]) + name(fingerprint) + name(document['name']) + b'\0'
     precise = lambda value: integer(round(value * 1000000))
     result += integer(document['columns']) + integer(document['rows']) + precise(document['cell_size'])
@@ -504,6 +515,15 @@ def encode(document, catalog):
                 end += 1
             result += integer(end-start) + integer(appearance[start])
             start = end
+    if version >= 14:
+        result += precise(document.get('landmark_rotation',0))
+        result += integer(document.get('world_links_stamp',0))
+        spawn = document.get('teleport_spawn')
+        result += bytes([int(spawn is not None)])
+        if spawn is not None:
+            if len(spawn) != 2:
+                raise ValueError('Teleport spawn needs X and Z')
+            result += b''.join(precise(value) for value in spawn)
     if len(result) > 524288:
         raise ValueError('Town exceeds the native 512 KiB document limit')
     decode(result, catalog)  # Same format/range checks apply in both directions.

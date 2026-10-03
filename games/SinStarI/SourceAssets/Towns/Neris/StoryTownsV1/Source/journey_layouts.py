@@ -225,7 +225,8 @@ def relay():
     t.path([(-268,0),(268,0)],18)
     t.path([(0,-200),(0,200)],18)
     t.place(10,0,0,2.2,180)
-    for angle in (25,65,145,205,245,325):
+    # Two matching structures per quadrant, mirrored about both main roads.
+    for angle in (22.5 + step*45 for step in range(8)):
         a=math.radians(angle)
         t.place(38,130*math.cos(a),130*math.sin(a),1.0,angle)
         t.place(27,65*math.cos(a),65*math.sin(a),1.5,angle)

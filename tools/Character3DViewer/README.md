@@ -1,5 +1,41 @@
 # SMILE 2.0 - Sin Star I - Game Engine and Studio
 
+## October 3 map polish and arrival editing
+
+Placed fountains now use the Royal Court's flowing jets and impact rings. The
+eight nearest fountains animate within the shared renderer budget. Decor starts
+with Campfire, includes its rendered thumbnail, and shows the current page count.
+All placed Decor designs are represented; repeated fountain/plaza instances share
+their existing palette entry. The per-map audit is in StoryTownsV1's README.
+
+**Items → Surfaces → Map Load (Yellow Border)** retains Draw Area, Reassign,
+Delete, Select / Move and Resize. Each usable yellow area shows a blue arrival
+circle and an inward direction mark. **Teleport Spawn (Blue)** places or moves
+the separate direct-entry circle by clicking walkable ground. Ctrl+Z restores it;
+Delete on the circle removes it. Map-dialog entry uses that point, then falls back
+to an inward gate circle. Neris defaults to X=0, Z=-2780. Walking between maps uses
+the destination's matching gate circle. Blue guides are shown in the Town Editor.
+
+**World Map** reopens the last atlas, including after restart. Changed graph links
+update yellow destinations; existing matching areas keep their edited positions.
+The first reopen after restart frames every card automatically; later reopens
+retain the current zoom and pan.
+Reopening regression check: restart Studio, press World Map and confirm every
+saved card fits without Reset View; zoom/pan, leave and reopen to confirm that view remains.
+Deleting/moving an area does not recreate it while the graph stays unchanged.
+Sin's latest atlas has two Horizon connections: Neris Town and Sunglass Expanse.
+
+Willowstep's own snowy terrain is restored and failed map loads cannot reuse the
+outgoing town's rollback surface. Ancient Relay has mirrored eight-part inner and
+outer rings. Greyglass rock texture follows slopes down to the foothills. Verdant
+landforms are embedded across their footprints. Silverfall's crossing now curves.
+Neris Spaceport is rotated 180 degrees; Horizon is rotated 90 counterclockwise,
+including buildings, landscape, doors, traffic, lighting, collision and arrivals.
+
+Save files with the new metadata use TWN14. Older saves still load. Rebuild and
+relaunch native Studio to adopt source changes; no .NET/VSIX rebuild or browser
+refresh is needed. The current delivery is already built and launched.
+
 ## October 3 continuous road edges and Spaceport access
 
 Road sides now close down to the adjoining ground or water bed, including flat

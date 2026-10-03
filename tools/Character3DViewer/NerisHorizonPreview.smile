@@ -32,6 +32,7 @@ End Type
 
 Public Sub LoadNext(ByRef Value As State)
 
+    Dim PlacedOrigin As P.Vector3
     Dim Part As Number
     Dim Object As Core.Object3D
     Dim Ok As Boolean
@@ -81,8 +82,9 @@ Public Sub LoadNext(ByRef Value As State)
         Object = G.CreateModelPart3D(Value.Models[Value.Loaded], Part)
         Ok = Object.Handle <> 0 And Ok
         Ok = P.SetScale(Object, Route.SCALE * 100.0, Route.SCALE * 100.0, Route.SCALE * 100.0) And Ok
-        Ok = P.SetRotation(Object, 0.0, Route.YAW, 0.0) And Ok
-        Ok = P.SetPosition(Object, Route.ORIGIN_X, Route.DECK_Y, Route.ORIGIN_Z) And Ok
+        Ok = P.SetRotation(Object, 0.0, Route.Heading(Route.YAW), 0.0) And Ok
+        PlacedOrigin = Route.ToWorld(P.Vector(0.0, 0.0, 0.0))
+        Ok = P.SetPosition(Object, PlacedOrigin.X, PlacedOrigin.Y, PlacedOrigin.Z) And Ok
         Value.Objects[Value.ObjectCount] = Object
         Value.ObjectCount = Value.ObjectCount + 1
     End For
@@ -166,7 +168,7 @@ Public Function Draw(ByRef Value As State) As Boolean
                     Ok = P.SetPosition(Value.Objects[Index], Offset.X, Offset.Y, Offset.Z) And Ok
 
                     If Model > 0 Then
-                        Ok = P.SetRotation(Value.Objects[Index], 0.0, Route.YAW, 0.0) And Ok
+                        Ok = P.SetRotation(Value.Objects[Index], 0.0, Route.Heading(Route.YAW), 0.0) And Ok
                     End If
 
                     Ok = G.DrawObject3D(Value.Objects[Index]) And Ok
@@ -191,7 +193,7 @@ Public Function Draw(ByRef Value As State) As Boolean
 
                 For Index = Value.FlightFirst[Flight] To Value.FlightFirst[Flight] + Value.Models[Model].PartCount - 1
                     Ok = P.SetPosition(Value.Objects[Index], Offset.X, Offset.Y, Offset.Z) And Ok
-                    Ok = P.SetRotation(Value.Objects[Index], Runway.Pitch(Pose), Runway.Heading(Pose), 0.0) And Ok
+                    Ok = P.SetRotation(Value.Objects[Index], Runway.Pitch(Pose), Route.Heading(Runway.Heading(Pose)), 0.0) And Ok
                     Ok = G.DrawObject3D(Value.Objects[Index]) And Ok
                 End For
 

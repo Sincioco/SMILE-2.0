@@ -12,6 +12,7 @@
     <SmileSource Include="TownSurfaceStyles.smile" />
     <SmileSource Include="TownMapLoads.smile" />
     <SmileSource Include="TownMapLoadTools.smile" />
+    <SmileSource Include="TownGatewayJourney.smile" />
     <SmileSource Include="TownSelection.smile" />
     <SmileSource Include="TownGuides.smile" />
     <SmileSource Include="TownGuideFiles.smile" />
@@ -63,6 +64,7 @@
     <SmileSource Include="NerisHorizonRoute.smile" />
     <SmileSource Include="NerisHorizonLighting.smile" />
     <SmileSource Include="TownAttachments.smile" />
+    <SmileSource Include="TownFountains.smile" />
     <Model3DAsset Include="BuildAssets\Neris\Castle-00.glb" Descriptor="BuildAssets\Neris\Castle.sm3d.json" LogicalPath="Assets\Neris\Castle-00.sm3d" TextureOutputDirectory="Assets\Neris\CastleTextures" Profile="Static" Identity="sin-star-i.town.neris.castle-tripo-v1" ProductionState="Prototype" />
     <Model3DAsset Include="BuildAssets\Neris\Castle-01.glb" Descriptor="BuildAssets\Neris\Castle.sm3d.json" LogicalPath="Assets\Neris\Castle-01.sm3d" TextureOutputDirectory="Assets\Neris\CastleTextures" Profile="Static" Identity="sin-star-i.town.neris.castle-tripo-v1" ProductionState="Prototype" />
     <Model3DAsset Include="BuildAssets\Neris\Castle-02.glb" Descriptor="BuildAssets\Neris\Castle.sm3d.json" LogicalPath="Assets\Neris\Castle-02.sm3d" TextureOutputDirectory="Assets\Neris\CastleTextures" Profile="Static" Identity="sin-star-i.town.neris.castle-tripo-v1" ProductionState="Prototype" />

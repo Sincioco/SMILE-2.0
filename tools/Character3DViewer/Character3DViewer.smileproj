@@ -68,6 +68,7 @@
     <SmileSource Include="TownRoadSearch.smile" />
     <SmileSource Include="TownRoadStops.smile" />
     <SmileSource Include="TownWorldDocument.smile" />
+    <SmileSource Include="TownWorldTravel.smile" />
     <SmileSource Include="TownWorldView.smile" />
     <SmileSource Include="TownWorldPreviews.smile" />
     <SmileSource Include="TownWorldImport.smile" />
@@ -120,6 +121,7 @@
     <SmileSource Include="TownLighting.smile" />
     <SmileSource Include="NerisHorizonLighting.smile" />
     <SmileSource Include="TownAttachments.smile" />
+    <SmileSource Include="TownFountains.smile" />
     <SmileSource Include="NerisTownCamera.smile" />
     <SmileSource Include="NerisTownInspectionLimits.smile" />
     <SmileSource Include="NerisTownKeyboard.smile" />

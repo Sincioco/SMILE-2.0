@@ -120,22 +120,21 @@ def terrain_coordinates(document, mesh):
         for loop in poly.loop_indices:
             p=mesh.vertices[mesh.loops[loop].vertex_index].co
             x,y,z=p.x*10,p.z*10+21,p.y*10
+            key=(x,z)
+            if key not in normal_cache:
+                normal_y=1
+                if document.get('heights'):
+                    step=document['cell_size']
+                    low_x,high_x=max(document['xs'][0],x-step),min(document['xs'][-1],x+step)
+                    low_z,high_z=max(document['zs'][0],z-step),min(document['zs'][-1],z+step)
+                    gx=(terrain_offset(document,high_x,z)-terrain_offset(document,low_x,z))/max(.001,high_x-low_x)
+                    gz=(terrain_offset(document,x,high_z)-terrain_offset(document,x,low_z))/max(.001,high_z-low_z)
+                    normal_y=1/math.sqrt(gx*gx+1+gz*gz)
+                normal_cache[key]=normal_y
+            threshold, strength = (.006,8) if style == 2 else (.045,3)
+            exposure=max(0,min(1,(1-normal_cache[key]-threshold)*strength))
             if style == 2:
-                exposure=max(0,min(1,(y-120.9)/700))
                 exposure=exposure*exposure*(3-2*exposure)
-            else:
-                key=(x,z)
-                if key not in normal_cache:
-                    normal_y=1
-                    if document.get('heights'):
-                        step=document['cell_size']
-                        low_x,high_x=max(document['xs'][0],x-step),min(document['xs'][-1],x+step)
-                        low_z,high_z=max(document['zs'][0],z-step),min(document['zs'][-1],z+step)
-                        gx=(terrain_offset(document,high_x,z)-terrain_offset(document,low_x,z))/max(.001,high_x-low_x)
-                        gz=(terrain_offset(document,x,high_z)-terrain_offset(document,x,low_z))/max(.001,high_z-low_z)
-                        normal_y=1/math.sqrt(gx*gx+1+gz*gz)
-                    normal_cache[key]=normal_y
-                exposure=max(0,min(1,(1-normal_cache[key]-.045)*3))
             repeat=(z+y*.65+60*math.sin(x/570))/(180 if style == 2 else 160)
             repeat=abs(2*(repeat-math.floor(repeat))-1)
             uv[loop].uv=((x+55*math.sin(z/430))/300,1-(.04+exposure*.64+repeat*.27))

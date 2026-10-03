@@ -8,11 +8,24 @@ from town_document_codec import curve_contains, raster_curves
 def boundary_exits(doc):
     """Square boundary approaches; shared exits branch into separate labelled lanes."""
     xs,zs=doc['xs'],doc['zs']
-    groups={}
-    for tile in doc['map_tiles']:
-        groups.setdefault(tile['destination'],[]).append(tile)
+    # The same destination may have several separate road ends. Averaging them
+    # creates a new disconnected spur between those roads on a repeated rebuild.
+    remaining={(t['x'],t['z']):t for t in doc['map_tiles']}
+    groups=[]
+    while remaining:
+        first=next(iter(remaining))
+        destination=remaining[first]['destination']
+        pending=[first];tiles=[]
+        while pending:
+            cell=pending.pop()
+            tile=remaining.get(cell)
+            if tile is None or tile['destination']!=destination:continue
+            tiles.append(remaining.pop(cell))
+            x,z=cell
+            pending.extend([(x-1,z),(x+1,z),(x,z-1),(x,z+1)])
+        groups.append((destination,tiles))
     exits=[]
-    for name,tiles in groups.items():
+    for name,tiles in groups:
         x=sum((xs[t['x']]+xs[t['x']+1])/2 for t in tiles)/len(tiles)
         z=sum((zs[t['z']]+zs[t['z']+1])/2 for t in tiles)/len(tiles)
         side=min(range(4),key=lambda s:(x-xs[0],xs[-1]-x,z-zs[0],zs[-1]-z)[s])

@@ -11,6 +11,7 @@ Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownCatalogData As Catalog
 Import Smile.Tools.TownCatalogFeatures As Features
 Import Smile.Tools.TownGeometry As Geometry
+Import Smile.Tools.TownFountains As Fountains
 
 Public Type State
     Model As Core.Model3D
@@ -25,6 +26,7 @@ Public Type State
     WaterPoints As Number
     Clock As Number
     Ready As Boolean
+    Streams As Fountains.State
 End Type
 
 Public Function Create(ByRef Value As State) As Boolean
@@ -118,6 +120,7 @@ Public Sub Update(ByRef Value As State, ByRef Town As Document.State,
     Value.WaterPoints = 0
     Value.Clock = (Value.Clock + Max(0, Elapsed)) Mod 3600000
     Value.Ready = G.SetEffectMaterialWater3D(Value.Material, True, 45, 0, Value.Clock / 8, 2)
+    Value.Ready = Fountains.Update(Value.Streams, Town, Leader, Elapsed) And Value.Ready
 
     For Index = 0 To Town.ItemCount - 1
 
@@ -246,6 +249,8 @@ Public Function Draw(ByRef Value As State, ByRef Town As Document.State) As Bool
         Ok = G.DrawRibbonBatch3D(Value.Water) And Ok
     End If
 
+    Ok = Fountains.Draw(Value.Streams) And Ok
+
     Return Ok
 
 End Function
@@ -263,6 +268,7 @@ Public Sub Destroy(ByRef Value As State)
     Call G.DestroyModel3D(Value.RoyalModel)
     Call G.DestroyRibbonBatch3D(Value.Water)
     Call G.DestroyMaterial3D(Value.Material)
+    Call Fountains.Destroy(Value.Streams)
 
     Value.Ready = False
 

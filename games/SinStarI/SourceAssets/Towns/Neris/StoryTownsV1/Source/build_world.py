@@ -13,35 +13,22 @@ def text(value):
 
 
 def build(folder):
-    nodes = [
-        ('Neris Spaceport', 80, 150), ('Neris Town', 500, 150),
-        ('Horizon Airport', 920, 150), ('Neris Canals', 80, 520),
-        ('Neris Star Lake', 500, 520), ('Neris Crown Isles', 920, 520),
-        ('East Valley', 1480, 1290), ("Orin's Village", 1900, 1290),
-        ('Neris Waterworks', 500, 920), ('Verdant Reach', 990, 920),
-        ('Greyglass Pass', 1480, 920), ('Sunglass Expanse', 1480, 150),
-        ('Ancient Relay', 1900, 150), ('Neris Relief Quarter', 80, 920)]
-    links = set()
-    for i in range(1, 8):
-        if i != 2:
-            links.add(tuple(sorted((0, i))))
-            links.add(tuple(sorted((2, i))))
-    links.add((0, 2))
-    links.update(((1,8),(8,9),(9,10),(6,10),(6,7),(2,11),(11,12),(8,12),
-                  (1,13),(8,13),(4,9),(5,11)))
-    payload = integer(2) + text('Luma - Story Atlas') + integer(len(nodes))
+    graph = json.loads((folder / 'world-layout.json').read_text(encoding='utf-8'))
+    nodes = graph['nodes']
+    links = {tuple(pair) for pair in graph['links']}
+    ports = {(a,b):port for a,b,port in graph.get('ports', [])}
+    payload = integer(2) + text(graph['name']) + integer(len(nodes))
     for name, x, y in nodes:
         payload += text(name) + integer(x) + integer(y)
     for i, (_, x, y) in enumerate(nodes):
         for j, (_, tx, ty) in enumerate(nodes):
             linked = tuple(sorted((i, j))) in links
             port = (2 if tx > x else 0) if abs(tx-x) >= abs(ty-y) else (3 if ty > y else 1)
+            port = ports.get((i,j), port)
             payload += integer(linked) + integer(port if linked else 0)
     path = folder / 'Luma - Story Atlas.world'
     atomic_write(path, payload)
     assert unwrap(path.read_bytes()) == payload
-    (folder / 'world-layout.json').write_text(json.dumps(dict(
-        name='Luma - Story Atlas', nodes=nodes, links=sorted(links)), indent=2)+'\n', encoding='utf-8')
     print(f'Built {path.name}: {len(nodes)} maps, {len(links)} connections')
 
 

@@ -7,6 +7,8 @@ Import Smile.Tools.TownSurfaceLayers As Layers
 Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownMapLoads As Links
 Import Smile.Tools.TownGuides As Guides
+Import Smile.Tools.TownGatewayJourney As Journey
+Import Smile.Tools.TownDocumentNavigation As Navigation
 Import Smile.Simple3D.SurfaceGrid3D As Grid
 Import Smile.Simple3D.TerrainSurface3D As Terrain
 Import Smile.Simple3D.Precision3D As P
@@ -18,6 +20,9 @@ Public Type State
     Labels As Links.LabelSet
     LabelName As Text
     LabelRevision As Number
+    Arrivals[4096] As P.Vector3
+    Headings[4096] As Double
+    ValidArrivals[4096] As Boolean
     Area As Links.Area
     Selected As Boolean
     Moving As Boolean
@@ -44,6 +49,29 @@ Public Sub Gesture(ByRef Value As State, ByRef Town As Document.State,
     Dim Z As Number
     Dim Index As Number
     Dim Ok As Boolean
+
+    If Tool = 762 Then
+
+        If Available And Pressed Then
+
+            If (Navigation.CanStand(Point.X, Point.Z) And
+                Text_Length(Links.DestinationAt(Town, Point.X, Point.Z)) = 0) Then
+
+                Town.HasTeleportSpawn = True
+                Town.TeleportSpawn = Point
+                Town.Revision = Town.Revision + 1
+                Value.Message = "Teleport Spawn placed. Click elsewhere to move it; Ctrl+Z undoes."
+
+            Else
+                Value.Message = "Choose walkable ground outside the yellow travel areas."
+
+            End If
+
+        End If
+
+        Return
+
+    End If
 
     If Tool = 760 Or Tool = 761 Then
         Call TransformGesture(Value, Town, Point, Available, Pressed, Held, Tool = 761)
@@ -77,8 +105,19 @@ Public Sub Gesture(ByRef Value As State, ByRef Town As Document.State,
 
         If Tool = 19 Then
 
-            Ok = Links.Remove(Town, X, Z)
-            Value.Message = "Map Load area removed; terrain retained."
+            If (Town.HasTeleportSpawn And
+                Abs(Point.X - Town.TeleportSpawn.X) <= 22.0 And
+                Abs(Point.Z - Town.TeleportSpawn.Z) <= 22.0) Then
+
+                Town.HasTeleportSpawn = False
+                Town.Revision = Town.Revision + 1
+                Value.Message = "Teleport Spawn removed."
+
+            Else
+                Ok = Links.Remove(Town, X, Z)
+                Value.Message = "Map Load area removed; terrain retained."
+
+            End If
 
         Else If Tool = 18 And Index < 0 Then
 
@@ -349,7 +388,7 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State, View As P.Ca
     Dim LabelY As Number
     Dim LabelWidth As Number
 
-    If Town.MapTileCount = 0 Then
+    If Town.MapTileCount = 0 And Not Town.HasTeleportSpawn Then
         Return
     End If
 
@@ -395,12 +434,21 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State, View As P.Ca
 
         Call Links.BuildLabels(Town, Value.Labels)
 
+        For Index = 0 To Value.Labels.LabelCount - 1
+            Value.ValidArrivals[Index] = Journey.GateArrival(Town, Value.Labels.Positions[Index],
+                Value.Arrivals[Index], Value.Headings[Index])
+        End For
+
         Value.LabelName = Town.Name
         Value.LabelRevision = Town.Revision
 
     End If
 
     For Index = 0 To Value.Labels.LabelCount - 1
+
+        If Value.ValidArrivals[Index] Then
+            Call DrawArrival(Town, Value.Arrivals[Index], Value.Headings[Index], View)
+        End If
 
         Point = Value.Labels.Positions[Index]
         Sample = Terrain.SamplePoint(Town.Surface, Point.X, Point.Z)
@@ -420,7 +468,43 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State, View As P.Ca
 
     End For
 
+    If Town.HasTeleportSpawn Then
+        Call DrawArrival(Town, Town.TeleportSpawn, 180.0, View)
+    End If
+
     End Clip
+
+End Sub
+
+Private Sub DrawArrival(ByRef Town As Document.State, Position As P.Vector3,
+    Heading As Double, View As P.Camera3D)
+
+    Dim Segment As Number
+    Dim Angle As Double
+    Dim Mark As Guides.Marker
+    Dim Sample As Terrain.Sample
+
+    For Segment = 0 To 32
+
+        Angle = ToDouble(Segment) * 6.283185307179586 / 32.0
+        Mark.Last = P.Vector(Position.X + Cos(Angle) * 22.0, 0.0, Position.Z + Sin(Angle) * 22.0)
+        Sample = Terrain.SamplePoint(Town.Surface, Mark.Last.X, Mark.Last.Z)
+        Mark.Last.Y = Sample.Offset + Layers.OVERLAY_Y
+
+        If Segment > 0 Then
+            Call Guides.DrawMarker(Mark, View, RGB(20, 155, 255))
+        End If
+
+        Mark.First = Mark.Last
+    End For
+
+    Angle = (Heading - 180.0) * 0.017453292519943295
+    Mark.First = P.Vector(Position.X, Position.Y + Layers.OVERLAY_Y, Position.Z)
+    Sample = Terrain.SamplePoint(Town.Surface, Position.X, Position.Z)
+    Mark.First.Y = Sample.Offset + Layers.OVERLAY_Y
+    Mark.Last = P.Vector(Position.X + Sin(Angle) * 30.0, Mark.First.Y, Position.Z + Cos(Angle) * 30.0)
+
+    Call Guides.DrawMarker(Mark, View, RGB(20, 155, 255))
 
 End Sub
 

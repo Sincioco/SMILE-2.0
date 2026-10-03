@@ -1,4 +1,4 @@
-"""Landscape the two working terminals without moving their native landing assemblies."""
+"""Landscape the two working terminals with their operating native landing assemblies."""
 from math import sin, cos, radians
 from town_design import Town, GROUND, WATER, ROAD
 
@@ -11,6 +11,7 @@ def point(r, a):
 
 def spaceport():
     t = Town('Neris Spaceport', 1200, 5, smooth=True)
+    t.rotation = 180
     t.night_preset = SPACEPORT_NIGHT.copy()
     t.center = (-550, -670)
     # A luminous orbital garden surrounds the unchanged crystal terminal and pads.
@@ -81,6 +82,7 @@ def spaceport():
 
 def airport():
     t = Town('Horizon Airport', 1400, 5, smooth=True)
+    t.rotation = 270
     t.center = (840, 125)
     t.symmetric = False
     # Keep the complete operating field clear. Wrap its land in scalloped coastal gardens.

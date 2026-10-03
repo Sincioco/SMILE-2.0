@@ -116,6 +116,10 @@ Public Sub LoadNext(ByRef Value As State)
         Value.Ready = False
         Value.Panel.Loading = False
 
+        ' Outgoing landmark resources must not compete with incoming terrain.
+
+        Call Landmarks.Destroy(Value.Landmarks, Value.Comparison, Value.Harbor, Value.Horizon)
+
     End If
 
     If Value.Residents.Enabled And Authoring.TownName() <> "Neris Town" Then
@@ -132,6 +136,9 @@ Public Sub LoadNext(ByRef Value As State)
     End If
 
     If Value.Edited Then
+
+        Call SpaceportRoute.Configure(Authoring.MapCenter(0.0), Authoring.LandmarkRotation())
+        Call HorizonRoute.Configure(Authoring.MapCenter(0.0), Authoring.LandmarkRotation())
 
         AuthoringReady = Authoring.LoadNext()
         Value.Failed = Authoring.Failed()
@@ -1139,8 +1146,6 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
     If (Value.Edited And
         (Value.Landmarks.Town <> Authoring.TownName() Or
         (Authoring.CourtExists() And Not Value.Comparison.Ready))) Then
-        Call Authoring.Update(Value.People.Path.Positions[0], Elapsed)
-
         Value.Ready = False
     End If
 
