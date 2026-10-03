@@ -58,6 +58,8 @@ Public Type State
     WorldLinksStamp As Number
     HasTeleportSpawn As Boolean
     TeleportSpawn As P.Vector3
+    HasInitialCamera As Boolean
+    InitialCamera As P.Camera3D
     TerrainStyle As Number
     Appearance As SurfaceStyles.State
     CourtOffsetX As Double

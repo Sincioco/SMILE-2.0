@@ -84,7 +84,7 @@ Public Function ContainsPoint(X As Number, Y As Number, ViewWidth As Number, Vie
 
     Dim Result As Boolean
 
-    Result = X >= ViewWidth - 306 And X < ViewWidth And Y >= 128 And Y < ViewHeight - 160
+    Result = X >= ViewWidth - 306 And X < ViewWidth And Y >= 128 And Y < ViewHeight - 127
 
     Return Result
 
@@ -492,7 +492,7 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State,
 
     Value.ControlCount = 0
     Value.TerrainStyle = Town.TerrainStyle
-    Fill Rectangle X - 10, 128, 306, Max(0, Window_Height() - 298), RGB(12, 23, 36)
+    Fill Rectangle X - 10, 128, 306, Max(0, Window_Height() - 265), RGB(12, 23, 36)
     Draw Text "Town Editor" At X, 138 Size 21 Color WHITE
 
     Call Button(Value, 400, X + 222, 136, 62, "Done")
@@ -592,14 +592,16 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State,
 
     Call Button(Value, 32, X, Window_Height() - 261, 139, "Undo (Ctrl+Z)", False, Value.CanUndo)
     Call Button(Value, 33, X + 144, Window_Height() - 261, 139, "Redo (Ctrl+Y)", False, Value.CanRedo)
+    Call Button(Value, 763, X, Window_Height() - 228, 283,
+        "Set Initial Orbit Camera", False, Not Value.Orthographic)
 
-    Draw Text Text_Slice(Town.Name, 0, 30) At X, Window_Height() - 227 Size 14 Color WHITE
-    Draw Text NumberLabel(SelectedCount) + " selected" At X, Window_Height() - 205 Size 13 Color RGB(70, 225, 220)
-    Draw Text Text_Slice(Value.Message, 0, 39) At X, Window_Height() - 183 Size 12 Color RGB(240, 205, 140)
+    Draw Text Text_Slice(Town.Name, 0, 30) At X, Window_Height() - 194 Size 14 Color WHITE
+    Draw Text NumberLabel(SelectedCount) + " selected" At X, Window_Height() - 172 Size 13 Color RGB(70, 225, 220)
+    Draw Text Text_Slice(Value.Message, 0, 39) At X, Window_Height() - 150 Size 12 Color RGB(240, 205, 140)
 
     If Value.Busy Then
-        Fill Rectangle X, Window_Height() - 169, 283, 4, RGB(29, 48, 65)
-        Fill Rectangle X, Window_Height() - 169, 283 * Max(0, Min(100, Value.ProgressPercent)) / 100, 4, RGB(70, 225, 220)
+        Fill Rectangle X, Window_Height() - 136, 283, 4, RGB(29, 48, 65)
+        Fill Rectangle X, Window_Height() - 136, 283 * Max(0, Min(100, Value.ProgressPercent)) / 100, 4, RGB(70, 225, 220)
     End If
 
     If Value.Section = 2 Then

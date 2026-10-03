@@ -31,6 +31,7 @@ Import Smile.Tools.TownTerrainTools As TerrainTools
 Import Smile.Tools.TownTerrainPanel As TerrainPanel
 Import Smile.Tools.TownRampTools As RampTools
 Import Smile.Tools.TownWaterTools As WaterTools
+Import Smile.Tools.TownStartingCamera As StartingCamera
 
 Public Type State
     StyleGesture As StyleTools.State
@@ -692,6 +693,21 @@ Public Function Input(ByRef Value As State, ByRef Town As Document.State,
 
     If Not Blocked Then
         Action = Command(Value, Town, Panel.Input(Value.Ui))
+    End If
+
+    If Action = 763 Then
+
+        Ok = StartingCamera.Capture(Town, View)
+        Value.Ui.Message = "Use 3D View to set the initial camera."
+
+        If Ok Then
+            Call History.Record(Value.HistoryState, Town, Value.Guide.Ink)
+
+            Value.Ui.Message = "Initial orbit camera set for this town."
+        End If
+
+        Return 0
+
     End If
 
     If Key_Event_Held(KEY_CONTROL) And Key = KEY_Z Then
