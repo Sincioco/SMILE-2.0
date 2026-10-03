@@ -6,6 +6,7 @@ Import Smile.Simple3D.SurfaceGrid3D As Grid
 Import Smile.Tools.TownSurfaceLayers As Layers
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownStartingCamera As StartingCamera
 Import Smile.Tools.TownStyleTests As StyleTests
 Import Smile.Tools.TownSectionTests As SectionTests
 Import Smile.Tools.TownCurvesTests As CurveTests
@@ -41,6 +42,11 @@ Import Smile.Tools.TownDecks As Decks
 Import Smile.Tools.TownGeometry As Geometry
 Import Smile.Simple3D.PrecisionMath3D As Math3D
 
+Dim CameraTestDraft As Document.State
+Dim CameraTestLoaded As Document.State
+Dim CameraTestOther As Document.State
+Dim CameraTestJournal As History.State
+Dim CameraTestInk As Guides.Drawing
 Dim Town As Document.State
 Dim Selected As Selection.State
 Dim Sample As Document.Item
@@ -67,6 +73,7 @@ Dim Showcase As Demo.State
 Dim DemoChoices As Demo.Selection
 Dim ReopenedChoices As Demo.Selection
 
+Call CheckInitialCamera()
 Call CheckMinimapGesture()
 Call CheckLandmarkIdentity()
 Call Demo.Start(Showcase)
@@ -1192,5 +1199,60 @@ Sub CheckCastleDecks()
 
     Call Navigation.Rebuild(Town)
     Call Check(Not Navigation.CanStand(Point.X, Point.Z), "Removed Castle Cannot Leave A Walkable Water Footprint")
+
+End Sub
+
+Sub CheckInitialCamera()
+
+    Dim Camera As P.Camera3D
+    Dim Restored As P.Camera3D
+    Dim Accepted As Boolean
+    Dim Revision As Number
+
+    Accepted = Document.Blank(CameraTestDraft, "Saved Camera Fixture", 8, 8, 50.0)
+    Accepted = Document.Blank(CameraTestOther, "Independent Camera Fixture", 8, 8, 50.0) And Accepted
+    Camera = StartingCamera.Frame(CameraTestDraft)
+    Camera.Position = P.Vector(275.25, 360.5, -590.75)
+    Camera.Target = P.Vector(17.5, 26.25, 34.5)
+    Revision = CameraTestDraft.Surface.Revision
+
+    Call History.Reset(CameraTestJournal, CameraTestDraft, CameraTestInk)
+
+    Accepted = Document.SetInitialCamera(CameraTestDraft, Camera) And Accepted
+
+    Call History.Record(CameraTestJournal, CameraTestDraft, CameraTestInk)
+    Call Check(Accepted And CameraTestDraft.HasInitialCamera And CameraTestDraft.Surface.Revision = Revision,
+        "Saving Initial Camera Does Not Rebuild Terrain")
+
+    Accepted = Storage.SaveDocument(CameraTestDraft, "TownEditor.InitialCamera") And Accepted
+    Accepted = Storage.LoadDocument(CameraTestLoaded, "TownEditor.InitialCamera") And Accepted
+    Restored = StartingCamera.Frame(CameraTestLoaded)
+
+    Call Check(Accepted And CameraTestLoaded.HasInitialCamera And
+        Math3D.Distance(Restored.Position, Camera.Position) < 0.00001 And
+        Math3D.Distance(Restored.Target, Camera.Target) < 0.00001 And
+        Restored.FovDegrees = Camera.FovDegrees And Restored.NearPlane = Camera.NearPlane,
+        "TWN15 Restores The Exact Initial View")
+
+    Accepted = History.Restore(CameraTestJournal, CameraTestDraft, CameraTestInk, False)
+
+    Call Check(Accepted And Not CameraTestDraft.HasInitialCamera, "Undo Restores Automatic Initial Camera")
+
+    Accepted = History.Restore(CameraTestJournal, CameraTestDraft, CameraTestInk, True)
+    Restored = StartingCamera.Frame(CameraTestDraft)
+
+    Call Check(Accepted And Math3D.Distance(Restored.Position, Camera.Position) < 0.00001,
+        "Redo Restores Authored Initial Camera")
+
+    Restored = StartingCamera.Frame(CameraTestOther)
+
+    Call Check(Not CameraTestOther.HasInitialCamera And Math3D.Distance(Restored.Position, Camera.Position) > 1.0,
+        "Initial Camera Is Isolated Per Town")
+
+    Camera.OrthographicHeight = 100.0
+    Accepted = Document.SetInitialCamera(CameraTestOther, Camera)
+
+    Call Check(Not Accepted And Not CameraTestOther.HasInitialCamera,
+        "Initial Orbit Camera Rejects A 2D View")
 
 End Sub

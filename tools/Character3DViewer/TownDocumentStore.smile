@@ -316,6 +316,10 @@ Private Function DocumentVersion(ByRef Value As Document.State) As Number
     Dim Index As Number
     Dim Version As Number
 
+    If Value.HasInitialCamera Then
+        Return 15
+    End If
+
     Version = 7
 
     If (Value.HasTeleportSpawn Or
@@ -696,6 +700,26 @@ Private Sub Encode(ByRef Value As Document.State, MarkSaved As Boolean)
 
     End If
 
+    If Value.HasInitialCamera Then
+
+        Valid = Valid And Document.ValidInitialCamera(Value.InitialCamera)
+
+        Call WriteByte(1)
+        Call WritePrecise(Value.InitialCamera.Position.X)
+        Call WritePrecise(Value.InitialCamera.Position.Y)
+        Call WritePrecise(Value.InitialCamera.Position.Z)
+        Call WritePrecise(Value.InitialCamera.Target.X)
+        Call WritePrecise(Value.InitialCamera.Target.Y)
+        Call WritePrecise(Value.InitialCamera.Target.Z)
+        Call WritePrecise(Value.InitialCamera.UpDirection.X)
+        Call WritePrecise(Value.InitialCamera.UpDirection.Y)
+        Call WritePrecise(Value.InitialCamera.UpDirection.Z)
+        Call WritePrecise(Value.InitialCamera.FovDegrees)
+        Call WritePrecise(Value.InitialCamera.NearPlane)
+        Call WritePrecise(Value.InitialCamera.FarPlane)
+
+    End If
+
     ByteCount = Offset
 
 End Sub
@@ -721,7 +745,7 @@ Private Function Decode() As Boolean
 
     Version = ReadByte()
 
-    If Version < 1 Or Version > 14 Then
+    If Version < 1 Or Version > 15 Then
         Return False
     End If
 
@@ -975,6 +999,32 @@ Private Function Decode() As Boolean
 
         Candidate.HasTeleportSpawn = True
         Candidate.TeleportSpawn.Z = -2780.0
+
+    End If
+
+    If Version >= 15 Then
+
+        Flag = ReadByte()
+        Valid = Valid And Flag <= 1
+        Candidate.HasInitialCamera = Flag = 1
+
+        If Candidate.HasInitialCamera Then
+
+            Candidate.InitialCamera.Position.X = ReadPrecise()
+            Candidate.InitialCamera.Position.Y = ReadPrecise()
+            Candidate.InitialCamera.Position.Z = ReadPrecise()
+            Candidate.InitialCamera.Target.X = ReadPrecise()
+            Candidate.InitialCamera.Target.Y = ReadPrecise()
+            Candidate.InitialCamera.Target.Z = ReadPrecise()
+            Candidate.InitialCamera.UpDirection.X = ReadPrecise()
+            Candidate.InitialCamera.UpDirection.Y = ReadPrecise()
+            Candidate.InitialCamera.UpDirection.Z = ReadPrecise()
+            Candidate.InitialCamera.FovDegrees = ReadPrecise()
+            Candidate.InitialCamera.NearPlane = ReadPrecise()
+            Candidate.InitialCamera.FarPlane = ReadPrecise()
+            Valid = Valid And Document.ValidInitialCamera(Candidate.InitialCamera)
+
+        End If
 
     End If
 

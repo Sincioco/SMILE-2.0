@@ -1,4 +1,4 @@
-"""Bounded TWN1–TWN14 codec shared by the existing Blender document worker."""
+"""Bounded TWN1–TWN15 codec shared by the existing Blender document worker."""
 import math
 from functools import lru_cache
 import hashlib
@@ -163,7 +163,7 @@ def decode(payload, catalog, request=False):
     if bytes(r.byte() for _ in range(3)) != b'TWN':
         raise ValueError('Unsupported town format')
     version = r.byte()
-    if not 1 <= version <= 14:
+    if not 1 <= version <= 15:
         raise ValueError('Unsupported town format')
     fingerprint = catalog.get('document_fingerprint') or hashlib.sha256(json.dumps(catalog, sort_keys=True).encode()).hexdigest()
     if r.name() != fingerprint:
@@ -306,6 +306,13 @@ def decode(payload, catalog, request=False):
             result['teleport_spawn'] = [r.precise(), r.precise()]
     elif result['name'] == 'Neris Town':
         result['teleport_spawn'] = [0.0, -2780.0]
+    if version >= 15 and r.flag():
+        camera = [r.precise() for _ in range(12)]
+        if (not 1 <= camera[9] < 179 or not 0 < camera[10] < camera[11]
+                or sum((camera[i]-camera[i+3])**2 for i in range(3)) <= 0.000001
+                or sum(v*v for v in camera[6:9]) <= 0.000001):
+            raise ValueError('Invalid initial camera')
+        result['initial_camera'] = camera
     result['payload'] = payload[:r.offset]
     if request:
         result['mode'], result['request_id'] = r.integer(), r.integer()
@@ -447,6 +454,10 @@ def encode(document, catalog):
         version = 14
         if not appearance:
             appearance = [0]*(document['columns']*document['rows'])
+    if document.get('initial_camera') is not None:
+        version = 15
+        if not appearance:
+            appearance = [0]*(document['columns']*document['rows'])
     result = bytearray(b'TWN') + bytes([version]) + name(fingerprint) + name(document['name']) + b'\0'
     precise = lambda value: integer(round(value * 1000000))
     result += integer(document['columns']) + integer(document['rows']) + precise(document['cell_size'])
@@ -524,6 +535,11 @@ def encode(document, catalog):
             if len(spawn) != 2:
                 raise ValueError('Teleport spawn needs X and Z')
             result += b''.join(precise(value) for value in spawn)
+    if version >= 15:
+        camera = document['initial_camera']
+        if len(camera) != 12:
+            raise ValueError('Initial camera needs twelve components')
+        result += b'\x01' + b''.join(precise(value) for value in camera)
     if len(result) > 524288:
         raise ValueError('Town exceeds the native 512 KiB document limit')
     decode(result, catalog)  # Same format/range checks apply in both directions.

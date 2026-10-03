@@ -65,14 +65,14 @@ Public Function Run() As Number
 
     Controls.Zoom = ToDouble(Motion.DEFAULT_ZOOM)
     Controls.OrbitYaw = 90.0
-    Shot = Motion.ComposeDistance(View, Controls, 20.0, 2000.0, 1.57062)
+    Shot = Motion.ComposeDistance(View, Controls, 1000.0, 1.57062)
 
     Call Check(Shot.Position.X = Shot.Target.X And Shot.Position.Z = Shot.Target.Z And
         Shot.OrthographicHeight = 600.0 And Abs(Shot.UpDirection.X) > 0.999,
         "Orthographic Quarter Turn Stays Exactly Vertical And Preserves Scale")
 
     Controls.Zoom = -80.0
-    Shot = Motion.ComposeDistance(View, Controls, 20.0, 2000.0, 1.57062)
+    Shot = Motion.ComposeDistance(View, Controls, 400.0, 1.57062)
 
     Call Check(Shot.OrthographicHeight < 600.0 And Shot.OrthographicHeight > 0.0,
         "Orthographic Zoom Changes Parallel View Scale")

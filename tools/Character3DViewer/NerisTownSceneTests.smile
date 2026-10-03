@@ -371,13 +371,14 @@ Sub CheckCamera(ByRef Scene As Town.State)
         "O Bakes The Displayed Shot And Clears Applied Drag Offsets")
     Call Town.ResetOverview(Scene)
     Call Check(Scene.View.Controls.OrbitYaw = 0.0 And
-        Scene.View.Controls.Zoom = ToDouble(Motion.DEFAULT_ZOOM),
+        Scene.View.Distance.Current = Scene.View.MaximumDistance,
         "Fit Reset Command Restores Default Overview")
 
     Scene.View.FloorVisible = False
     Scene.View.Controls.OrbitPitch = -75.0
     Scene.View.Controls.PanY = -550.0
-    Scene.View.Controls.Zoom = -144.0
+    Scene.View.Distance.Current = Scene.View.MinimumDistance
+    Scene.View.Distance.Target = Scene.View.Distance.Current
 
     Call Town.Update(Scene, 0)
     Call Check(Scene.View.LiveCamera.Position.Y > 25.0 And
@@ -393,22 +394,29 @@ Sub CheckCamera(ByRef Scene As Town.State)
     Call Check(Scene.View.LiveCamera.FovDegrees = 32.0,
         "Following Retains The Town Lens")
 
-    Scene.View.Controls.Zoom = ToDouble(Motion.ZOOM_OUT_LIMIT)
+    Call Town.BeginZoom(Scene)
+
+    Scene.View.Distance.Current = Scene.View.MaximumDistance
+    Scene.View.Distance.Target = Scene.View.Distance.Current
 
     Call Town.Update(Scene, 0)
     Call Check(Abs(Math3D.Length(Math3D.Subtract(Scene.View.LiveCamera.Position,
-        Scene.View.LiveCamera.Target)) - 18000.0) < 0.01 And
+        Scene.View.LiveCamera.Target)) - Scene.View.MaximumDistance) < 0.01 And
         Scene.View.LiveCamera.FovDegrees = 32.0, "Tab Follow Can Zoom Out To Whole Town Without Wide Angle")
 
     Scene.Follow = False
 
     Call Town.Update(Scene, 0)
     Call Check(Abs(Math3D.Length(Math3D.Subtract(Scene.View.LiveCamera.Position,
-        Scene.View.LiveCamera.Target)) - 18000.0) < 0.01,
+        Scene.View.LiveCamera.Target)) - Scene.View.MaximumDistance) < 0.01,
         "Overview And Follow Share The Same Maximum Distance")
 
     Scene.Follow = True
-    Scene.View.Controls.Zoom = -40.0
+
+    Call Town.BeginZoom(Scene)
+
+    Scene.View.Distance.Current = 350.0
+    Scene.View.Distance.Target = 350.0
 
     Call Town.Update(Scene, 0)
 
@@ -420,7 +428,11 @@ Sub CheckCamera(ByRef Scene As Town.State)
         Not Scene.Follow, "O Preserves The Close Displayed Eye Without Retargeting The Leader")
 
     Scene.Follow = True
-    Scene.View.Controls.Zoom = 100.0
+
+    Call Town.BeginZoom(Scene)
+
+    Scene.View.Distance.Current = Scene.View.MaximumDistance
+    Scene.View.Distance.Target = Scene.View.Distance.Current
 
     Call Town.Update(Scene, 0)
 
@@ -439,11 +451,11 @@ Sub CheckCamera(ByRef Scene As Town.State)
     Scene.Cinematic = True
     Scene.Follow = False
     Scene.View.Controls.PanX = 150.0
-    Scene.View.Controls.Zoom = ToDouble(Motion.ZOOM_OUT_LIMIT)
+    Scene.View.Distance.Current = Scene.View.MaximumDistance
 
     Call Town.OnMovement(Scene, True)
     Call Check(Not Scene.Follow And Not Scene.Cinematic And Scene.View.Controls.PanX = 150.0 And
-        Scene.View.Controls.Zoom = ToDouble(Motion.ZOOM_OUT_LIMIT),
+        Scene.View.Distance.Current = Scene.View.MaximumDistance,
         "Movement Stops Orbit Without Changing Overview Framing")
 
     Scene.Follow = True
@@ -452,7 +464,7 @@ Sub CheckCamera(ByRef Scene As Town.State)
     Call Town.OnMovement(Scene, False)
     Call Town.OnMovement(Scene, True)
     Call Check(Scene.Follow And Scene.View.Controls.PanX = 12.0 And
-        Scene.View.Controls.Zoom = ToDouble(Motion.ZOOM_OUT_LIMIT),
+        Scene.View.Distance.Current = Scene.View.MaximumDistance,
         "Restarting Movement Preserves User Selected Follow Framing")
 
     Scene.Flight.Enabled = False

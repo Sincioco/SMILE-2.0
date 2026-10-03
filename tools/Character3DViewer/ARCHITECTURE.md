@@ -1,5 +1,72 @@
 # Character Viewer Architecture
 
+## October 3 predictable magnification and authored initial camera
+
+The reported zoom video exposed three interacting causes: every wheel event
+picked a new target and reset the offset reference; inward and outward offsets
+used different distance curves; picking/orbit could enlarge the far bound. The
+slider displayed eye-to-target distance while its handle represented that offset.
+Horizontal orbit also applied the opposite sign to the renderer's yaw convention.
+
+`DistanceZoom3D` now owns bounded current/target distance, proportional 10% wheel
+steps and monotonic easing. Reversing input cancels the pending opposite movement.
+`ArenaViewport3D` routes distance input to this owner; `ArenaCamera3D` only composes
+the explicit distance. The old town offset conversion and per-wheel cursor zoom
+are removed. Character/battle FOV controls retain their separate existing contract.
+
+`NerisTownInspectionLimits` owns the map/viewport fit (1x), one fixed viewing ray,
+and its terrain contact bound. `TownDocumentNavigation.GroundRay` uses the same
+height triangles as terrain, with the highest road/water/ground base layer as a
+conservative clearance surface. A sky/void ray cannot zoom inward into empty space.
+The near plane shrinks near contact and retains distant bridge depth precision.
+`NerisTownCameraPanel` shows fit-distance/current-distance magnification and maps
+horizontal yaw in the renderer's direction. Scene code only coordinates mode changes.
+
+`TownDocument` owns the authored initial camera and its validation.
+`TownStartingCamera` selects it, the existing editor captures it with Undo/Redo,
+and `TownDocumentStore`/the Python codec preserve its twelve precise values in
+TWN15. TWN1–14 remain readable. The camera has its own document revision change;
+capturing a shot does not rebuild terrain. New loading/reset/idle orbit honors
+the saved target; the explicit Orbit command still orbits the displayed shot.
+
+Regression coverage replaces the discarded offset/accelerated-wheel contracts
+with exact proportional steps, rapid reversal, repeated limit input, H Orbit,
+top view and angled terrain contact. Existing follow, fly, pan, reset and bridge
+checks remain. Preparation preserves the 1x eye and the first settled wheel notch
+is exactly 1.10x; Tab and Fit are checked with input running before camera composition.
+Fit initializes its new distance before the next pointer frame can adopt the old shot.
+The live check also reproduced idle orbit replacing a zoomed ground target with
+the map center. Idle orbit now keeps that zoomed shot and pitch; the regression
+advances the idle timer at maximum zoom and checks unchanged framing/magnification,
+including the mouse/key wake-up path.
+Camera persistence covers native/Python round trips, per-town
+isolation, invalid-camera rejection and Undo/Redo. No compiler/runtime extension,
+dependency, architecture exclusion or limit increase is required.
+
+Validation debt discovered during this change: the older `test-neris-town.ps1`
+static-chunk scene fixture fails its arrival-start, authored-wall, reload timing,
+arena rendering and moving Royal Court leaf assertions. An isolated build of
+pre-change commit `eae26d6e` reproduces those failures. That fixture starts the
+legacy scene without the current authored-document session; its failures cannot
+be treated as evidence of a new zoom regression. The current `test-town-editor`
+session exercises the accepted maps, walking, doors, map transitions and camera
+regressions. Migrating the old fixture's bootstrap/bridge expectations is deferred
+as a separate test-maintenance task; next action is to adopt the accepted document
+fixtures before updating assertions. No test is disabled or reported as passing.
+
+Validation: 95 shared-arena checks, 59 native hardening checks and 13 formatter
+integration checks pass. All four town groups pass after focused session reruns,
+including six terrain-contact rays per map in Neris, Willowstep and Silverfall.
+Native/Python TWN15 camera round trips pass alongside legacy TWN7/9/11/13/14 data.
+Native visual checks confirm the first 1.10x wheel step, draggable H Orbit,
+initial-camera capture/Undo, maximum surface contact, unchanged pitch/magnification
+after idle orbit starts, and Fit returning from maximum zoom to the whole map at 1x.
+The legacy scene comparison adds no failure category relative to its baseline.
+The repository-wide style check passes. The reusable distance owner is 93 lines;
+the existing scene coordinator grows by eighteen net lines, camera composition shrinks
+by 79, and the editor session adds ten query lines. No entry-point growth or
+new mutable global state is introduced.
+
 ## October 3 map identity, arrivals and reusable fountain streams
 
 `TownEditorSession` binds its accepted terrain rollback state to `LiveTown`.

@@ -10,6 +10,7 @@ Import Smile.Simple3D.FreeCamera3D As FreeCamera
 Import Smile.Tools.NerisTownNavigation As Navigation
 Import Smile.Simple3D.ArenaViewport3D As Arena
 Import Smile.Simple3D.ArenaCamera3D As Motion
+Import Smile.Simple3D.DistanceZoom3D As DistanceZoom
 
 Public Type State
     FlyInspect As Boolean
@@ -137,7 +138,7 @@ Public Sub Capture(ByRef Value As State, ByRef View As Arena.State, ByRef Base A
 
     Call StopTravel(Value)
     Call Arena.BeginTransition(View, 0)
-    Call Motion.Reset(View.Controls, View.Zoom)
+    Call Arena.ResetControls(View)
 
 End Sub
 
@@ -180,9 +181,9 @@ Public Sub OrbitZoom(ByRef View As Arena.State, Keys As HeldKeys, Elapsed As Num
     Seconds = ToDouble(Min(100, Max(0, Elapsed))) / 1000.0
     View.Controls.OrbitYaw = Camera.NormalizeAngle(View.Controls.OrbitYaw +
         Keys.ArrowSide * Seconds * 35.0)
-    View.Zoom.Target = Clamp(View.Zoom.Target - Keys.ArrowForward * Seconds * 48.0,
-        ToDouble(Motion.ZOOM_IN_LIMIT), ToDouble(Motion.ZOOM_OUT_LIMIT))
-    View.Controls.ZoomTarget = View.Zoom.Target
+
+    Call Arena.ConfigureDistance(View, View.LiveCamera)
+    Call DistanceZoom.Step(View.Distance, Keys.ArrowForward * Seconds * 6.0)
 
 End Sub
 

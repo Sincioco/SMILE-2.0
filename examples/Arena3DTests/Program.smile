@@ -2,6 +2,7 @@ Option Explicit
 
 Import Smile.Simple3D.Arena3D As Arena
 Import Smile.Simple3D.ArenaCamera3D As Motion
+Import Smile.Simple3D.DistanceZoom3D As DistanceZoom
 Import Smile.Simple3D.ArenaBackdrop3D As Backdrop
 Import Smile.Simple3D.ArenaViewport3D As Viewport
 Import Smile.Simple3D.PrecisionCamera3D As Camera
@@ -54,9 +55,7 @@ Sub RunChecks()
     Dim Above As P.Vector3
     Dim CenterPixel As Core.ProjectedPoint3D
     Dim AbovePixel As Core.ProjectedPoint3D
-    Dim Wheel As Motion.WheelState
-    Dim OtherWheel As Motion.WheelState
-    Dim StepSize As Number
+    Dim Distance As DistanceZoom.State
 
     Call Motion.Reset(Controls, Zoom)
 
@@ -145,31 +144,40 @@ Sub RunChecks()
     Call Motion.Reset(Controls, Zoom)
     Call Check(Controls.PanX = 0.0 And Controls.OrbitYaw = 0.0 And Zoom.Current = -16.0)
 
-    StepSize = Motion.AcceleratedWheelStep(Wheel, 1, 1000, 8)
+    Call DistanceZoom.Configure(Distance, 1000.0, 1.0, 1000.0)
+    Call DistanceZoom.Step(Distance, 1.0)
+    Call Check(Abs(Distance.Target - 1000.0 / 1.1) < 0.000001)
+    Call DistanceZoom.Advance(Distance, 16)
 
-    Call Check(StepSize = 8)
+    PreviousZoom = Distance.Current
 
-    For Index = 1 To 5
-        StepSize = Motion.AcceleratedWheelStep(Wheel, 1, 1000 + Index * 50, 8)
+    Call DistanceZoom.Step(Distance, -1.0)
+    Call DistanceZoom.Advance(Distance, 16)
+    Call Check(Distance.Current > PreviousZoom And Distance.Current <= 1000.0)
+    Call DistanceZoom.SetTarget(Distance, 1.0)
+    Call DistanceZoom.Advance(Distance, 80)
+
+    For Index = 0 To 9
+        Call DistanceZoom.Step(Distance, 1.0)
+        Call DistanceZoom.Advance(Distance, 16)
+        Call Check(Distance.Current = 1.0 And Distance.Target = 1.0)
     End For
 
-    Call Check(StepSize = 24)
+    Call DistanceZoom.Step(Distance, -1.0)
+    Call Check(Abs(Distance.Target - 1.1) < 0.000001)
+    Call DistanceZoom.SetTarget(Distance, 1000.0)
+    Call DistanceZoom.Advance(Distance, 80)
 
-    StepSize = Motion.AcceleratedWheelStep(Wheel, -1, 1300, 8)
+    For Index = 0 To 9
+        Call DistanceZoom.Step(Distance, -1.0)
+        Call DistanceZoom.Advance(Distance, 16)
+        Call Check(Distance.Current = 1000.0 And Distance.Target = 1000.0)
+    End For
 
-    Call Check(StepSize = 8)
-
-    StepSize = Motion.AcceleratedWheelStep(Wheel, -1, 1350, 8)
-
-    Call Check(StepSize = 12)
-
-    StepSize = Motion.AcceleratedWheelStep(Wheel, -1, 1700, 8)
-
-    Call Check(StepSize = 8)
-
-    StepSize = Motion.AcceleratedWheelStep(OtherWheel, -1, 1750, 8)
-
-    Call Check(StepSize = 8 And OtherWheel.Ticks = 1)
+    Call Check(DistanceZoom.Magnification(Distance) = 1.0)
+    Call DistanceZoom.Step(Distance, 1.0)
+    Call DistanceZoom.Advance(Distance, 80)
+    Call Check(Abs(DistanceZoom.Magnification(Distance) - 1.1) < 0.000001)
 
     ''' Diagonal rear-facing Battle camera must never roll or cross an orbit pole.
 

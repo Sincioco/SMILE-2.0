@@ -35,6 +35,7 @@
     <SmileSource Include="SceneVfx3D.smile" />
     <SmileSource Include="Arena3D.smile" />
     <SmileSource Include="ArenaCamera3D.smile" />
+    <SmileSource Include="DistanceZoom3D.smile" />
     <SmileSource Include="ArenaBackdrop3D.smile" />
     <SmileSource Include="ArenaViewport3D.smile" />
     <SmileSource Include="PartyTrail3D.smile" />

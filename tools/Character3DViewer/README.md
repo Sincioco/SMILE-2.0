@@ -1,5 +1,24 @@
 # SMILE 2.0 - Sin Star I - Game Engine and Studio
 
+## October 3 predictable town zoom and initial orbit camera
+
+Town zoom now displays magnification: **1x fits the entire map**. Wheel-up zooms
+in by 10% per notch; wheel-down reverses that step. Reversing the wheel immediately
+cancels pending motion in the other direction. The far limit stays fixed during
+the gesture, and the near limit stops just before the actual terrain, road or
+water surface. Repeated input at either limit cannot accumulate hidden movement.
+The same distance owner handles the slider and Up/Down keys. Angled and 2D top
+views are supported; the camera lens does not change during town zoom.
+
+The H Orbit handle follows the drag direction correctly. In the Town Editor,
+arrange a **3D** view and press **Set Initial Orbit Camera** below Undo/Redo.
+This saves the eye, target and lens for that town's initial view and right-click
+reset/orbit. It supports Undo/Redo and travels with viewer/Blender town saves.
+Saved-camera files use TWN15; all earlier town formats remain readable.
+
+Rebuild/relaunch native Studio for these changes. No .NET/VSIX rebuild or browser
+refresh is needed.
+
 ## October 3 map polish and arrival editing
 
 Placed fountains now use the Royal Court's flowing jets and impact rings. The

@@ -8,12 +8,15 @@ Import Smile.Simple3D.ArenaCamera3D As Motion
 Import Smile.Simple3D.ArenaBackdrop3D As Backdrop
 Import Smile.Simple3D.PrecisionCamera3D As Camera
 Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Simple3D.DistanceZoom3D As DistanceZoom
 
 Public Type State
     Floor As Arena.ArenaFloor
     Backgrounds As Backdrop.State
     Controls As Camera.Controls
     Zoom As Camera.ZoomState
+    Distance As DistanceZoom.State
     LiveCamera As P.Camera3D
     TransitionFrom As P.Camera3D
     TransitionElapsed As Number
@@ -50,7 +53,7 @@ Public Function Create(Width As Number, Depth As Number,
     Result.PreviousTime = Timer()
     Result.Ready = Result.Floor.Ready And Result.Backgrounds.Ready And WorldScale > 0.0
 
-    Call Motion.Reset(Result.Controls, Result.Zoom)
+    Call ResetControls(Result)
 
     Return Result
 
@@ -60,7 +63,6 @@ End Function
 Public Sub Update(ByRef Value As State, Key As Number, Optional Blocked As Boolean = False,
     Optional WheelStep As Number = Motion.ZOOM_STEP)
 
-    Dim Changed As Boolean
     Dim CurrentTime As Number
     Dim Pointer As Motion.PointerInput
 
@@ -71,19 +73,64 @@ Public Sub Update(ByRef Value As State, Key As Number, Optional Blocked As Boole
     End If
 
     If Not Blocked And Pointer_Pressed(POINTER_SECONDARY) Then
-        Call Motion.Reset(Value.Controls, Value.Zoom)
+        Call ResetControls(Value)
     End If
 
     CurrentTime = Timer()
     Pointer = Motion.ReadPointer(Blocked)
 
-    Changed = Motion.UpdatePointer(Value.Controls, Value.Zoom, Pointer,
-        Value.PanXLimit, Value.PanYLimit, Value.WorldScale, WheelStep)
-
-    Call Motion.Advance(Value.Controls, Value.Zoom, CurrentTime - Value.PreviousTime)
+    Call ApplyPointer(Value, Pointer, CurrentTime - Value.PreviousTime, WheelStep)
     Call AdvanceTransition(Value, CurrentTime - Value.PreviousTime)
 
     Value.PreviousTime = CurrentTime
+
+End Sub
+
+Public Sub ResetControls(ByRef Value As State)
+
+    Dim Empty As DistanceZoom.State
+
+    Call Motion.Reset(Value.Controls, Value.Zoom)
+
+    Value.Distance = Empty
+
+End Sub
+
+Public Sub ConfigureDistance(ByRef Value As State, Base As P.Camera3D)
+
+    Call DistanceZoom.Configure(Value.Distance, M.Distance(Base.Position, Base.Target),
+        Max(Value.MinimumDistance, Value.Distance.Minimum), Value.MaximumDistance)
+
+End Sub
+
+''' Input routing is shared by the live viewport and native camera regressions.
+Public Sub ApplyPointer(ByRef Value As State, Input As Motion.PointerInput,
+    Elapsed As Number, Optional WheelStep As Number = Motion.ZOOM_STEP)
+
+    Dim Changed As Boolean
+
+    If Value.MinimumDistance > 0.0 Then
+
+        Call ConfigureDistance(Value, Value.LiveCamera)
+
+        If Not Input.Blocked Then
+            Call DistanceZoom.Step(Value.Distance, ToDouble(Input.Wheel))
+        End If
+
+        Input.Wheel = 0
+        Changed = Motion.UpdatePointer(Value.Controls, Value.Zoom, Input,
+            Value.PanXLimit, Value.PanYLimit, Value.WorldScale, WheelStep)
+
+        Call DistanceZoom.Advance(Value.Distance, Elapsed)
+
+    Else
+
+        Changed = Motion.UpdatePointer(Value.Controls, Value.Zoom, Input,
+            Value.PanXLimit, Value.PanYLimit, Value.WorldScale, WheelStep)
+
+        Call Motion.Advance(Value.Controls, Value.Zoom, Elapsed)
+
+    End If
 
 End Sub
 
@@ -111,8 +158,10 @@ End Sub
 Public Sub ComposeCamera(ByRef Value As State, BaseCamera As P.Camera3D)
 
     If Value.MinimumDistance > 0.0 And Value.MaximumDistance > Value.MinimumDistance Then
+        Call ConfigureDistance(Value, BaseCamera)
+
         Value.LiveCamera = Motion.ComposeDistance(BaseCamera, Value.Controls,
-            Value.MinimumDistance, Value.MaximumDistance, Max(1.48, Value.MaximumPitch))
+            Value.Distance.Current, Max(1.48, Value.MaximumPitch))
     Else
 
         BaseCamera.FovDegrees = BaseCamera.FovDegrees - ToDouble(Motion.DEFAULT_ZOOM)

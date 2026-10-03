@@ -1,11 +1,12 @@
 [CmdletBinding()]
-param()
+param([string]$PublicationDirectory)
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 $viewer = Join-Path $root 'tools\Character3DViewer'
 $compiler = Join-Path $root 'artifacts\compiler\smilec.exe'
 $output = Join-Path $viewer 'bin\Release'
+if ($PublicationDirectory) { $output = [IO.Path]::GetFullPath($PublicationDirectory) }
 $logs = Join-Path $root 'artifacts\tests\neris-town'
 $null = New-Item -ItemType Directory -Path $logs -Force
 if (-not (Test-Path -LiteralPath (Join-Path $output 'Assets\Neris\Neris-00.sm3d'))) {

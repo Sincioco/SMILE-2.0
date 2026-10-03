@@ -9,34 +9,6 @@ Import Smile.Tools.NerisTownTour As Tour
 Import Smile.Simple3D.TerrainSurface3D As Terrain
 Import Smile.Simple3D.PrecisionMath3D As M
 
-Public Function Valid(Camera As P.Camera3D) As Boolean
-
-    Dim Result As Boolean
-
-    Result = (Camera.OrthographicHeight = 0.0 And
-        Camera.FovDegrees >= 1.0 And Camera.FovDegrees < 179.0 And
-        Camera.NearPlane > 0.0 And Camera.FarPlane > Camera.NearPlane And
-        M.Distance(Camera.Position, Camera.Target) > 0.001)
-
-    Return Result
-
-End Function
-
-''' Capture the displayed perspective without moving it or beginning orbit.
-Public Function Capture(ByRef Town As Document.State, Camera As P.Camera3D) As Boolean
-
-    If Not Valid(Camera) Then
-        Return False
-    End If
-
-    Town.InitialCamera = Camera
-    Town.HasInitialCamera = True
-    Town.Revision = Town.Revision + 1
-
-    Return True
-
-End Function
-
 Public Function Frame(ByRef Town As Document.State) As P.Camera3D
 
     Dim Camera As P.Camera3D

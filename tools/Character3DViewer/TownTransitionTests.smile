@@ -4,6 +4,7 @@ Module Smile.Tools.TownTransitionTests
 Option Explicit
 
 Import Smile.Tools.NerisTown As Town
+Import Smile.Tools.NerisTownInspectionTests As Inspection
 Import Smile.Tools.TownEditorSession As Editor
 Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownDocumentStore As Storage
@@ -117,6 +118,7 @@ Public Sub Run(ByRef Value As Town.State, ByRef Failures As Number)
         End If
 
         Call Arrive(Value, Name, Failures)
+        Call Inspection.SurfaceZoom(Value, Failures)
 
         Center = Editor.MapCenter()
 

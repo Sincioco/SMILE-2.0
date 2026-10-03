@@ -9,6 +9,7 @@ Import Smile.Simple3D.PrecisionMath3D As M
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.ArenaViewport3D As Arena
 Import Smile.Simple3D.ArenaCamera3D As Motion
+Import Smile.Simple3D.DistanceZoom3D As DistanceZoom
 Import Smile.Tools.Character3DViewerCalibration As Numbers
 Import Smile.Tools.Character3DViewerTiming As Timing
 Import Smile.Tools.NerisTownCamera As Drone
@@ -120,7 +121,8 @@ End Function
 
 ''' 1 toggles orbit, 2 fits, 3 signals manual rotation, 4 toggles Fly Inspect.
 Public Function Input(ByRef Value As State, ByRef View As Arena.State,
-    ByRef Base As P.Camera3D, Blocked As Boolean, Following As Boolean) As Number
+    ByRef Base As P.Camera3D, Blocked As Boolean, Following As Boolean,
+    Optional RightInset As Number = 0) As Number
 
     Dim Row As Number
     Dim Amount As Double
@@ -164,7 +166,7 @@ Public Function Input(ByRef Value As State, ByRef View As Arena.State,
                 Value.DragRow = Row
 
                 If Row = 3 And Not Following Then
-                    Call Limits.BeginZoom(View, Base)
+                    Call Limits.BeginZoom(View, Base, RightInset)
                 End If
 
             End If
@@ -174,23 +176,8 @@ Public Function Input(ByRef Value As State, ByRef View As Arena.State,
     End If
 
     If Value.DragRow > 0 And Pointer_Held(POINTER_PRIMARY) Then
-
         Amount = Clamp(ToDouble(Pointer_X() - (Window_Width() - 476)) / 164.0, 0.0, 1.0)
-        Offset = M.Subtract(Base.Position, Base.Target)
-
-        If Value.DragRow = 1 Then
-            View.Controls.OrbitYaw = Amount * 360.0 - 180.0 - M.Degrees(Atan2(Offset.X, Offset.Z))
-            Result = 3
-        Else If Value.DragRow = 2 Then
-            View.Controls.OrbitPitch = (Drone.MinimumPitch(Following) +
-                Amount * (80.0 - Drone.MinimumPitch(Following)) -
-                M.Degrees(Atan2(Offset.Y, Sqrt(Offset.X * Offset.X + Offset.Z * Offset.Z))))
-            Result = 3
-        Else
-            View.Zoom.Target = ToDouble(Motion.ZOOM_IN_LIMIT) + Amount * ToDouble(Motion.ZOOM_OUT_LIMIT - Motion.ZOOM_IN_LIMIT)
-            View.Controls.ZoomTarget = View.Zoom.Target
-        End If
-
+        Result = SetSlider(View, Base, Value.DragRow, Amount, Following)
     End If
 
     If Pointer_Released(POINTER_PRIMARY) Or Not Pointer_Held(POINTER_PRIMARY) Then
@@ -201,7 +188,33 @@ Public Function Input(ByRef Value As State, ByRef View As Arena.State,
 
 End Function
 
-Private Sub Slider(Label As Text, Row As Number, Amount As Double, Reading As Number)
+Public Function SetSlider(ByRef View As Arena.State, Base As P.Camera3D,
+    Row As Number, Amount As Double, Following As Boolean) As Number
+
+    Dim Offset As P.Vector3
+    Dim Result As Number
+
+        Offset = M.Subtract(Base.Position, Base.Target)
+
+        If Row = 1 Then
+            View.Controls.OrbitYaw = M.Degrees(Atan2(Offset.X, Offset.Z)) - (Amount * 360.0 - 180.0)
+            Result = 3
+        Else If Row = 2 Then
+            View.Controls.OrbitPitch = (Drone.MinimumPitch(Following) +
+                Amount * (80.0 - Drone.MinimumPitch(Following)) -
+                M.Degrees(Atan2(Offset.Y, Sqrt(Offset.X * Offset.X + Offset.Z * Offset.Z))))
+            Result = 3
+        Else
+
+            Call DistanceZoom.SetTarget(View.Distance,
+                View.Distance.Maximum - Amount * (View.Distance.Maximum - View.Distance.Minimum))
+        End If
+
+    Return Result
+
+End Function
+
+Private Sub Slider(Label As Text, Row As Number, Amount As Double, Reading As Text)
 
     Dim PanelX As Number
     Dim SliderY As Number
@@ -211,7 +224,7 @@ Private Sub Slider(Label As Text, Row As Number, Amount As Double, Reading As Nu
     Draw Text Label At PanelX + 12, SliderY - 8 Size 12 Color WHITE
     Fill Rectangle PanelX + 98, SliderY - 2, 164, 4, RGB(62, 83, 104)
     Fill Rectangle PanelX + 98 + ToNumber(Round(Clamp(Amount, 0.0, 1.0) * 164.0)) - 3, SliderY - 6, 6, 12, RGB(70, 210, 205)
-    Draw Text Numbers.NumberText(Reading) At PanelX + 202, SliderY - 20 Size 11 Color RGB(160, 220, 230)
+    Draw Text Reading At PanelX + 202, SliderY - 20 Size 11 Color RGB(160, 220, 230)
 
 End Sub
 
@@ -229,10 +242,12 @@ Public Sub Draw(ByRef Value As State, ByRef View As Arena.State,
 
     Fill Rectangle Window_Width() - 574, 8, 280, 112, RGB(12, 20, 32) Opacity 80
 
-    Call Slider("H Orbit", 1, (Horizontal + 180.0) / 360.0, ToNumber(Round(Horizontal)))
+    Call Slider("H Orbit", 1, (Horizontal + 180.0) / 360.0, Numbers.NumberText(ToNumber(Round(Horizontal))))
     Call Slider("V Orbit", 2, (Vertical - Drone.MinimumPitch(Following)) /
-        (80.0 - Drone.MinimumPitch(Following)), ToNumber(Round(Vertical)))
-    Call Slider("Zoom", 3, (View.Zoom.Target - ToDouble(Motion.ZOOM_IN_LIMIT)) / ToDouble(Motion.ZOOM_OUT_LIMIT - Motion.ZOOM_IN_LIMIT), ToNumber(Round(M.Length(Offset))))
+        (80.0 - Drone.MinimumPitch(Following)), Numbers.NumberText(ToNumber(Round(Vertical))))
+    Call Slider("Zoom", 3, (View.Distance.Maximum - View.Distance.Current) /
+        Max(0.01, View.Distance.Maximum - View.Distance.Minimum),
+        MeasureLabel(DistanceZoom.Magnification(View.Distance)) + "x")
     Call Layout.DrawButton(3, Orbiting)
     Call Layout.DrawButton(4, False)
     Call Layout.DrawButton(5, FlyInspect)

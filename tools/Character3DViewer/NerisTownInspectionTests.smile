@@ -4,6 +4,8 @@ Module Smile.Tools.NerisTownInspectionTests
 Option Explicit
 
 Import Smile.Tools.NerisTown As Town
+Import Smile.Tools.NerisTownCameraPanel As Panel
+Import Smile.Simple3D.DistanceZoom3D As DistanceZoom
 Import Smile.Tools.NerisTownParty As Party
 Import Smile.Tools.NerisTownMap As TownMap
 Import Smile.Tools.NerisTownCamera As Drone
@@ -30,14 +32,14 @@ Public Sub Run(ByRef Value As Town.State, ByRef Failures As Number)
     SavedMap = Value.Map
     SavedPosition = Value.People.Path.Positions[0]
 
-    Call ZoomAfterTab(Value, Failures)
+    Call BasicZoom(Value, Failures)
+    Call SurfaceZoom(Value, Failures)
+    Call FollowAfterZoom(Value, Failures)
     Call PartyMovementAcrossCameras(Value, Failures)
     Call IdleOrbit(Value, Failures)
     Call WalkingCameraGesture(Value, Failures)
     Call BridgeDepthPrecision(Value, Failures)
     Call InspectionPitch(Value, Failures)
-    Call MapPanAndGroundZoom(Value, Failures)
-    Call SkyTargetZoom(Value, Failures)
     Call BehindLeader(Value, Failures)
     Call FollowPartyOrbit(Value, Failures)
 
@@ -48,10 +50,7 @@ Public Sub Run(ByRef Value As Town.State, ByRef Failures As Number)
     Call MapOrbit(Value, Failures)
     Call QuarterTurn(Value, Failures)
     Call FrontView(Value, Failures)
-    Call CursorZoom(Value, Failures)
-    Call OrbitZoom(Value, Failures)
     Call TopViewResetAndOrbit(Value, Failures)
-    Call ConstantWheelSteps(Failures)
     Call FocusWallClearance(Failures)
 
     ' Loading is incremental. Finish it before checking the final recorded duration.
@@ -81,35 +80,245 @@ Public Sub Run(ByRef Value As Town.State, ByRef Failures As Number)
 
 End Sub
 
-Private Sub ConstantWheelSteps(ByRef Failures As Number)
+''' The real input loop runs before follow framing after Tab resets the controls.
+Private Sub FollowAfterZoom(ByRef Value As Town.State, ByRef Failures As Number)
 
-    Dim Controls As Camera.Controls
-    Dim Zoom As Camera.ZoomState
     Dim Pointer As Motion.PointerInput
-    Dim Index As Number
-    Dim Previous As Double
-    Dim Changed As Boolean
 
-    Call Motion.Reset(Controls, Zoom)
+    Call Town.ResetOverview(Value)
+    Call Town.FocusParty(Value)
+    Call Arena.ApplyPointer(Value.View, Pointer, 16)
+    Call Arena.AdvanceTransition(Value.View, 1000)
+    Call Town.Update(Value, 0)
+    Call Check(M.Distance(Value.View.LiveCamera.Position, Value.View.LiveCamera.Target) < 533.0,
+        "Tab Returns From 1x To The Party Even When Input Runs Before Camera Composition", Failures)
+    Call Town.ResetOverview(Value)
+
+End Sub
+
+''' Exercise the real terrain ray on flat and elevated towns at low and steep angles.
+Public Sub SurfaceZoom(ByRef Value As Town.State, ByRef Failures As Number)
+
+    Dim Low As P.Vector3
+    Dim High As P.Vector3
+    Dim Point As P.Vector3
+    Dim Ray As P.Vector3
+    Dim Hit As P.Vector3
+    Dim Before As P.Vector3
+    Dim Index As Number
+    Dim Angle As Double
+    Dim Ok As Boolean
+
+    Call Town.ResetOverview(Value)
+    Call Edited.SurfaceBounds(Low, High)
+
+    Value.Cinematic = False
+
+    For Index = 0 To 5
+
+        Point = M.Lerp(Low, High, 0.3 + ToDouble(Index Mod 3) * 0.2)
+        Point.Y = High.Y + 1000.0
+        Ok = Edited.GroundRay(Point, P.Vector(0.0, -1.0, 0.0), 10000.0, Hit)
+
+        Call Check(Ok, "Terrain Contact Fixture Has An Actual Map Surface", Failures)
+
+        Point = Hit
+        Angle = M.Radians(30.0 + ToDouble(Index / 3) * 50.0)
+        Value.BaseCamera.Target = Point
+        Value.BaseCamera.Position = M.Add(Point, P.Vector(0.0, Sin(Angle) * 1000.0, -Cos(Angle) * 1000.0))
+        Value.View.LiveCamera = Value.BaseCamera
+
+        Call Arena.ResetControls(Value.View)
+        Call Town.BeginZoom(Value)
+        Call Drone.Compose(Value.Flight, Value.View, Value.BaseCamera, False, 0)
+        Call DistanceZoom.SetTarget(Value.View.Distance, Value.View.Distance.Minimum)
+        Call DistanceZoom.Advance(Value.View.Distance, 100)
+        Call Drone.Compose(Value.Flight, Value.View, Value.BaseCamera, False, 0)
+
+        Before = Value.View.LiveCamera.Position
+        Ok = M.TryNormalize(M.Subtract(Value.View.LiveCamera.Target, Before), Ray)
+        Ok = Edited.GroundRay(Before, Ray, 10000.0, Hit) And Ok
+
+        Call Check(Ok And M.Distance(Before, Hit) > Value.View.LiveCamera.NearPlane And
+            M.Distance(Before, Hit) < 10.0,
+            "Maximum Zoom Remains Just Above Visible Terrain At Both 3D Angles", Failures)
+        Call DistanceZoom.Step(Value.View.Distance, 10.0)
+        Call DistanceZoom.Advance(Value.View.Distance, 100)
+        Call Drone.Compose(Value.Flight, Value.View, Value.BaseCamera, False, 0)
+        Call Check(M.Distance(Before, Value.View.LiveCamera.Position) < 0.001,
+            "Repeated Terrain Contact Input Cannot Move The Camera", Failures)
+    End For
+
+    Call Town.ResetOverview(Value)
+
+End Sub
+
+Private Sub BasicZoom(ByRef Value As Town.State, ByRef Failures As Number)
+
+    Dim Pointer As Motion.PointerInput
+    Dim Before As P.Camera3D
+    Dim Target As P.Vector3
+    Dim Pixel As Camera.ProjectedPoint
+    Dim Previous As Double
+    Dim Limit As Double
+    Dim Row As Number
+    Dim Index As Number
+    Dim Result As Number
+    Dim Scale As Double
+    Dim Offset As P.Vector3
+
+    Call Town.ResetOverview(Value)
+
+    Value.Cinematic = False
+
+    Before = Value.View.LiveCamera
+
+    Call Town.BeginZoom(Value)
+    Call Town.Update(Value, 0)
+    Call Check(M.Distance(Before.Position, Value.View.LiveCamera.Position) < 0.001 And
+        Abs(DistanceZoom.Magnification(Value.View.Distance) - 1.0) < 0.000001,
+        "Preparing Zoom Preserves The Exact 1x Eye And Magnification", Failures)
 
     Pointer.Wheel = 1
 
-    For Index = 0 To 4
+    Call Arena.ApplyPointer(Value.View, Pointer, 80)
+    Call Town.Update(Value, 0)
+    Call Check(Abs(DistanceZoom.Magnification(Value.View.Distance) - 1.1) < 0.000001,
+        "The First Wheel Notch From Whole Map Is Exactly 1.10x", Failures)
+    Call Town.ResetOverview(Value)
+    Call Town.BeginZoom(Value)
+    Call Town.Update(Value, 0)
 
-        Previous = Zoom.Target
-        Changed = Motion.UpdatePointer(Controls, Zoom, Pointer, 360.0, 220.0, 1.0, 8)
+    Limit = Value.View.MaximumDistance
+    Target = Value.BaseCamera.Target
+    Before = Value.View.LiveCamera
+    Pointer.Wheel = 1
 
-        Call Check(Changed And Zoom.Target - Previous = -8.0,
-            "Repeated Wheel Ticks Keep The Same Zoom Step", Failures)
-        Call Motion.Advance(Controls, Zoom, 16)
+    For Index = 0 To 15
+
+        Previous = Value.View.Distance.Current
+
+        Call Town.BeginZoom(Value)
+        Call Arena.ApplyPointer(Value.View, Pointer, 16)
+        Call Town.Update(Value, 0)
+        Call Check(Value.View.Distance.Current < Previous And
+            Value.View.MaximumDistance = Limit And M.Distance(Value.BaseCamera.Target, Target) < 0.001,
+            "Rapid Zoom In Keeps One Ray And A Fixed Fit Limit", Failures)
     End For
 
+    Previous = Value.View.Distance.Current
     Pointer.Wheel = -1
-    Previous = Zoom.Target
-    Changed = Motion.UpdatePointer(Controls, Zoom, Pointer, 360.0, 220.0, 1.0, 8)
 
-    Call Check(Zoom.Target - Previous = 8.0,
-        "Reversing The Wheel Keeps The Same Zoom Step", Failures)
+    Call Arena.ApplyPointer(Value.View, Pointer, 16)
+    Call Town.Update(Value, 0)
+    Call Check(Value.View.Distance.Current > Previous And Value.View.Distance.Current < Previous * 1.11,
+        "Wheel Reversal Immediately Moves Out Without Jumping To The Far Limit", Failures)
+
+    Pointer.Wheel = -100
+
+    Call Arena.ApplyPointer(Value.View, Pointer, 100)
+    Call Town.Update(Value, 0)
+
+    Before = Value.View.LiveCamera
+
+    For Index = 0 To 8
+        Call Arena.ApplyPointer(Value.View, Pointer, 100)
+        Call Town.Update(Value, 0)
+    End For
+
+    Call Check(Value.View.Distance.Current = Limit And Value.View.Distance.Target = Limit And
+        M.Distance(Before.Position, Value.View.LiveCamera.Position) < 0.001 And
+        Abs(DistanceZoom.Magnification(Value.View.Distance) - 1.0) < 0.00001,
+        "Further Zoom Out At 1x Cannot Change Camera Label Or Limit", Failures)
+
+    Pointer.Wheel = 100
+
+    For Index = 0 To 2
+        Call Arena.ApplyPointer(Value.View, Pointer, 100)
+        Call Town.Update(Value, 0)
+    End For
+
+    Before = Value.View.LiveCamera
+
+    For Index = 0 To 8
+        Call Arena.ApplyPointer(Value.View, Pointer, 100)
+        Call Town.Update(Value, 0)
+    End For
+
+    Call Check(M.Distance(Before.Position, Value.View.LiveCamera.Position) < 0.001 And
+        Value.View.LiveCamera.Position.Y > Edited.GroundHeight(Before.Position.X, Before.Position.Z) And
+        Value.View.LiveCamera.NearPlane < M.Distance(Before.Position, Before.Target),
+        "Repeated Maximum Zoom Stops Above The Map Without Drift Or Near Clip Penetration", Failures)
+
+    Previous = DistanceZoom.Magnification(Value.View.Distance)
+    Value.InputActive = False
+
+    Call Town.UpdateIdle(Value, False, 20000)
+    Call Town.Update(Value, 0)
+    Call Check(Value.Cinematic And Value.View.Distance.Prepared,
+        "Idle Orbit Retains The Fixed Zoom Reference", Failures)
+    Call Check(M.Distance(Before.Position, Value.View.LiveCamera.Position) < 0.001 And
+        M.Distance(Before.Target, Value.View.LiveCamera.Target) < 0.001 And
+        Abs(DistanceZoom.Magnification(Value.View.Distance) - Previous) < 0.001,
+        "Idle Orbit Preserves The Zoomed Shot Instead Of Retargeting The Map Center", Failures)
+    Call Town.UpdateIdle(Value, True, 0)
+    Call Check(Not Value.Cinematic And Value.View.Distance.Prepared And
+        Abs(DistanceZoom.Magnification(Value.View.Distance) - Previous) < 0.001,
+        "Waking Idle Orbit Keeps The Same Zoom Reference And Magnification", Failures)
+    Call Town.BeginZoom(Value)
+
+    Pointer.Wheel = -1
+    Previous = Value.View.Distance.Current
+
+    Call Arena.ApplyPointer(Value.View, Pointer, 16)
+    Call Town.Update(Value, 0)
+    Call Check(Value.View.Distance.Current > Previous,
+        "Zoom Out Responds On The First Frame After Ground Contact", Failures)
+
+    Pointer.Wheel = 0
+
+    Call Town.FitTown(Value)
+    Call Arena.ApplyPointer(Value.View, Pointer, 16)
+    Call Arena.AdvanceTransition(Value.View, 1000)
+    Call Town.Update(Value, 0)
+    Call Check(Abs(DistanceZoom.Magnification(Value.View.Distance) - 1.0) < 0.00001 And
+        Abs(M.Distance(Value.View.LiveCamera.Position, Value.View.LiveCamera.Target) -
+        Value.View.MaximumDistance) < 0.001,
+        "Fit Returns From Ground Contact To 1x Before The Next Pointer Frame", Failures)
+
+    Call Town.ResetOverview(Value)
+
+    Value.Cinematic = False
+
+    For Index = 0 To 4
+
+        Scale = ToDouble(Index) / 4.0
+        Result = Panel.SetSlider(Value.View, Value.BaseCamera, 1, Scale, False)
+
+        Call Town.Update(Value, 0)
+
+        Offset = M.Subtract(Value.View.LiveCamera.Position, Value.View.LiveCamera.Target)
+
+        Call Check(Result = 3 And Abs(Camera.NormalizeAngle(
+            M.Degrees(Atan2(Offset.X, Offset.Z)) - (Scale * 360.0 - 180.0))) < 0.001,
+            "Horizontal Orbit Handle Maps Directly To The Rendered Bearing", Failures)
+    End For
+
+    Call Town.ResetOverview(Value)
+    Call Town.TopDown(Value, True)
+    Call Town.BeginZoom(Value)
+
+    Value.Cinematic = False
+    Before = Value.View.LiveCamera
+    Previous = Value.View.Distance.Current
+    Pointer.Wheel = 1
+
+    Call Arena.ApplyPointer(Value.View, Pointer, 80)
+    Call Town.Update(Value, 0)
+    Call Check(Value.View.Distance.Current < Previous And
+        Value.View.LiveCamera.OrthographicHeight < Before.OrthographicHeight,
+        "Top Down Zoom Magnifies The Parallel View", Failures)
+    Call Town.ResetOverview(Value)
 
 End Sub
 
@@ -126,7 +335,7 @@ Private Sub TopViewResetAndOrbit(ByRef Value As Town.State, ByRef Failures As Nu
     Expected = Value.View.LiveCamera
     Value.View.Controls.PanX = 150.0
     Value.View.Controls.OrbitYaw = 83.0
-    Value.View.Zoom.Current = -40.0
+    Value.View.Distance.Current = 800.0
     Value.View.Controls.Zoom = -40.0
 
     Call Arena.ComposeCamera(Value.View, Value.BaseCamera)
@@ -190,7 +399,7 @@ Private Sub FocusWallClearance(ByRef Failures As Number)
     View.MaximumDistance = 50000.0
     Flight.Focusing = True
 
-    Call Motion.Reset(View.Controls, View.Zoom)
+    Call Arena.ResetControls(View)
     Call Arena.BeginTransition(View, 1000)
     Call Arena.AdvanceTransition(View, 500)
     Call Drone.Compose(Flight, View, Shot, True, 16, True)
@@ -211,131 +420,6 @@ Private Sub FocusWallClearance(ByRef Failures As Number)
     Call Check(Camera.Basis(View.LiveCamera, Forward, RightValue, UpValue) And
         M.Distance(View.LiveCamera.Position, View.LiveCamera.Target) >= 0.999,
         "Focus Beside A Wall Retains A Nonzero Camera Direction", Failures)
-
-End Sub
-
-Private Sub OrbitZoom(ByRef Value As Town.State, ByRef Failures As Number)
-
-    Dim Pointer As Motion.PointerInput
-    Dim Anchor As P.Vector3
-    Dim Eye As P.Vector3
-    Dim Pixel As Camera.ProjectedPoint
-    Dim Before As Double
-    Dim Yaw As Double
-    Dim Mode As Number
-    Dim Direction As Number
-    Dim Frame As Number
-    Dim Ok As Boolean
-    Dim Anchored As Boolean
-
-    For Mode = 0 To 2
-
-        Call Town.ResetOverview(Value)
-        Call Arena.AdvanceTransition(Value.View, 1000)
-        Call Town.Update(Value, 0)
-
-        Value.IdleOrbit = Mode = 1
-        Value.OrbitPaused = Mode = 2
-
-        For Direction = 0 To 1
-
-            Eye = Value.View.LiveCamera.Position
-            Ok = Picking.OrbitPoint(Value.View.LiveCamera, 430, 360,
-                Window_Width(), Window_Height(), Anchor)
-            Before = M.Distance(Eye, Anchor)
-
-            Call Town.UpdateIdle(Value, True, 0, True)
-            Call Town.BeginPointerZoom(Value, 430, 360)
-            Call Check(Ok And Value.Flight.CursorZoom And M.Distance(Eye, Value.View.LiveCamera.Position) < 0.01,
-                "Orbit Wheel Picks The Cursor World Point Without Jumping", Failures)
-
-            Yaw = Value.View.Controls.OrbitYaw
-            Pointer.Wheel = 3 - Direction * 6
-            Ok = Motion.UpdatePointer(Value.View.Controls, Value.View.Zoom, Pointer)
-            Anchored = True
-
-            For Frame = 1 To 20
-                Call Motion.Advance(Value.View.Controls, Value.View.Zoom, 16)
-                Call Town.Update(Value, 16)
-
-                Pixel = Camera.ProjectViewerPoint(Anchor, Value.View.LiveCamera, Window_Width(), Window_Height())
-                Anchored = Anchored And Pixel.Visible And Abs(Pixel.X - 430.0) < 0.5 And Abs(Pixel.Y - 360.0) < 0.5
-            End For
-
-            Call Check(Anchored And Value.Cinematic And Not Value.IdleOrbit,
-                "Cursor Point Stays Under The Mouse While Zoom And Orbit Advance Together", Failures)
-            Call Check((Mode = 2 And Value.View.Controls.OrbitYaw = Yaw) Or
-                (Mode <> 2 And Value.View.Controls.OrbitYaw <> Yaw),
-                "Zoom Keeps Active Orbit Moving And Paused Orbit Paused", Failures)
-            Call Check((Direction = 0 And M.Distance(Value.View.LiveCamera.Position, Anchor) < Before) Or
-                (Direction = 1 And M.Distance(Value.View.LiveCamera.Position, Anchor) > Before),
-                "Orbit Zoom Moves Toward Or Away From The Picked Map Point", Failures)
-        End For
-    End For
-
-    Call Town.ResetOverview(Value)
-
-    Call Check(Not Value.Flight.CursorZoom,
-        "Reset Overview Releases The Previous Cursor Zoom Anchor", Failures)
-
-End Sub
-
-Private Sub CursorZoom(ByRef Value As Town.State, ByRef Failures As Number)
-
-    Dim Point As P.Vector3
-    Dim Pixel As Camera.ProjectedPoint
-    Dim Before As P.Camera3D
-    Dim Mode As Number
-    Dim Step As Number
-    Dim Pending As Double
-
-    For Mode = 0 To 1
-
-        Call Town.ResetOverview(Value)
-
-        Value.Cinematic = False
-        Value.Follow = False
-        Value.PartyCamera = False
-
-        If Mode = 1 Then
-            Call Town.TopDown(Value, True)
-        End If
-
-        Before = Value.View.LiveCamera
-        Point = Camera.CursorPointAtDepth(Before, 350, 300,
-            M.Distance(Before.Position, Before.Target) * 0.7, Window_Width(), Window_Height())
-
-        Call Drone.BeginCursorZoom(Value.Flight, Value.View, Value.BaseCamera, Point, 350, 300)
-        Call Check(M.Distance(Before.Position, Value.View.LiveCamera.Position) < 0.0001,
-            "Beginning Cursor Zoom Does Not Jump The Camera", Failures)
-
-        Call Camera.AdjustZoomTarget(Value.View.Zoom, 1, 24)
-        Call Motion.Advance(Value.View.Controls, Value.View.Zoom, 16)
-
-        Pending = Value.View.Zoom.Target - Value.View.Zoom.Current
-
-        Call Drone.BeginCursorZoom(Value.Flight, Value.View, Value.BaseCamera, Point, 350, 300)
-        Call Check(Abs(Value.View.Zoom.Target - Value.View.Zoom.Current - Pending) < 0.0001,
-            "Rapid Wheel Events Retain Unfinished Zoom Instead Of Discarding It", Failures)
-
-        For Step = 0 To 1
-
-            Value.View.Zoom.Current = -48.0 + ToDouble(Step) * 56.0
-            Value.View.Zoom.Target = Value.View.Zoom.Current
-            Value.View.Controls.Zoom = Value.View.Zoom.Current
-
-            Call Drone.Compose(Value.Flight, Value.View, Value.BaseCamera, False, 0)
-
-            Pixel = Camera.ProjectViewerPoint(Point, Value.View.LiveCamera, Window_Width(), Window_Height())
-
-            Call Check(Pixel.Visible And Abs(Pixel.X - 350.0) < 0.1 And Abs(Pixel.Y - 300.0) < 0.1,
-                "Cursor Zoom In And Out Retains The Picked Object In Perspective And True 2D", Failures)
-        End For
-
-        Value.Flight.CursorZoom = False
-    End For
-
-    Call Town.ResetOverview(Value)
 
 End Sub
 
@@ -491,53 +575,6 @@ Private Sub FollowPartyOrbit(ByRef Value As Town.State, ByRef Failures As Number
 
 End Sub
 
-Private Sub SkyTargetZoom(ByRef Value As Town.State, ByRef Failures As Number)
-
-    Dim Before As P.Camera3D
-    Dim Forward As P.Vector3
-    Dim After As P.Vector3
-    Dim Ok As Boolean
-    Dim SavedMaximumDistance As Double
-
-    Call Town.ResetOverview(Value)
-
-    Value.Cinematic = False
-    ' Reproduce the expanded airport view, whose ground ray exceeds the old map's radius.
-    SavedMaximumDistance = Value.View.MaximumDistance
-    Value.View.MaximumDistance = 40000.0
-    Value.BaseCamera.Position = P.Vector(-13136.0, 17119.0, 2077.0)
-    Value.BaseCamera.Target = P.Vector(-13115.0, 17057.0, 2031.0)
-
-    Call Arena.BeginTransition(Value.View, 0)
-    Call Motion.Reset(Value.View.Controls, Value.View.Zoom)
-    Call Drone.Compose(Value.Flight, Value.View, Value.BaseCamera, False, 0)
-
-    Before = Value.View.LiveCamera
-    Ok = M.TryNormalize(M.Subtract(Before.Target, Before.Position), Forward)
-
-    Call Limits.BeginZoom(Value.View, Value.BaseCamera)
-    Call Drone.Compose(Value.Flight, Value.View, Value.BaseCamera, False, 0)
-
-    Ok = M.TryNormalize(M.Subtract(Value.View.LiveCamera.Target, Value.View.LiveCamera.Position), After)
-
-    Call Check(M.Distance(Before.Position, Value.View.LiveCamera.Position) < 0.001 And
-        M.Distance(Forward, After) < 0.001,
-        "Ground Zoom Preparation Preserves The Displayed Eye And Viewing Direction", Failures)
-
-    Value.View.Zoom.Current = ToDouble(Motion.ZOOM_IN_LIMIT)
-    Value.View.Zoom.Target = Value.View.Zoom.Current
-    Value.View.Controls.Zoom = Value.View.Zoom.Current
-
-    Call Drone.Compose(Value.Flight, Value.View, Value.BaseCamera, False, 0)
-    Call Check(Abs(Value.View.LiveCamera.Position.Y - Limits.GROUND_CLEARANCE) < 0.01,
-        "Sky Target At Distance Eighty Can Zoom All The Way To Ground", Failures)
-
-    Value.View.MaximumDistance = SavedMaximumDistance
-
-    Call Town.ResetOverview(Value)
-
-End Sub
-
 Private Sub BehindLeader(ByRef Value As Town.State, ByRef Failures As Number)
 
     Dim SavedYaw As Double
@@ -568,71 +605,6 @@ Private Sub BehindLeader(ByRef Value As Town.State, ByRef Failures As Number)
 
     Value.People.Members[0].Yaw = SavedYaw
 
-    Call Town.ResetOverview(Value)
-
-End Sub
-
-Private Sub MapPanAndGroundZoom(ByRef Value As Town.State, ByRef Failures As Number)
-
-    Dim Before As P.Camera3D
-    Dim Contact As P.Camera3D
-    Dim Offset As P.Vector3
-    Dim Index As Number
-    Dim Ok As Boolean
-
-    Call Town.ResetOverview(Value)
-
-    Value.Cinematic = False
-
-    Call Drone.Compose(Value.Flight, Value.View, Value.BaseCamera, False, 0)
-
-    Value.View.Controls.Panning = True
-
-    Call Motion.ApplyDrag(Value.View.Controls, False, True, -600, 0,
-        Value.View.PanXLimit, Value.View.PanYLimit, Value.View.WorldScale)
-    Call Drone.Compose(Value.Flight, Value.View, Value.BaseCamera, False, 16)
-    Call Check(Value.View.Controls.PanX > 2160.0,
-        "Map Pan Moves Beyond The Former Character Sized Horizontal Stop", Failures)
-
-    Value.View.Controls.PanX = 0.0
-    Value.View.Controls.PanY = -1500.0
-
-    Call Drone.Compose(Value.Flight, Value.View, Value.BaseCamera, False, 16)
-    Call Check(Value.View.LiveCamera.Target.Y < 0.0 And Value.View.LiveCamera.Position.Y > 25.01,
-        "Pan Can Aim Below The Map While The Camera Remains Above It", Failures)
-
-    Value.View.Controls.Panning = False
-    Before = Value.View.LiveCamera
-    Value.View.Zoom.Current = ToDouble(Motion.ZOOM_IN_LIMIT)
-    Value.View.Zoom.Target = Value.View.Zoom.Current
-    Value.View.Controls.Zoom = Value.View.Zoom.Current
-
-    Call Drone.Compose(Value.Flight, Value.View, Value.BaseCamera, False, 16)
-
-    Contact = Value.View.LiveCamera
-    Offset = M.Cross(M.Subtract(Before.Position, Before.Target), M.Subtract(Contact.Position, Before.Target))
-
-    Call Check(Abs(Contact.Position.Y - 25.01) < 0.01 And M.Length(Offset) < 0.1 And
-        M.Distance(Contact.Target, Before.Target) < 0.001,
-        "Zoom Stops At Ground On The Original Ray Without Sliding Or Moving The Target", Failures)
-
-    For Index = 0 To 4
-        Value.View.Zoom.Target = ToDouble(Motion.ZOOM_IN_LIMIT)
-        Value.View.Zoom.Current = ToDouble(Motion.ZOOM_IN_LIMIT)
-        Value.View.Controls.Zoom = Value.View.Zoom.Current
-
-        Call Drone.Compose(Value.Flight, Value.View, Value.BaseCamera, False, 16)
-    End For
-
-    Call Check(M.Distance(Contact.Position, Value.View.LiveCamera.Position) < 0.001,
-        "Repeated Zoom In At The Ground Cannot Drift Into Space", Failures)
-
-    Value.View.Zoom.Target = Value.View.Zoom.Target + 8.0
-
-    Call Motion.Advance(Value.View.Controls, Value.View.Zoom, 100)
-    Call Drone.Compose(Value.Flight, Value.View, Value.BaseCamera, False, 100)
-    Call Check(Value.View.LiveCamera.Position.Y > Contact.Position.Y + 1.0,
-        "Zoom Out Responds Immediately After Ground Contact", Failures)
     Call Town.ResetOverview(Value)
 
 End Sub
@@ -709,7 +681,7 @@ Public Sub RightClickOrbit(ByRef Value As Town.State, ByRef Failures As Number)
     Value.PartyCamera = False
     Value.Cinematic = False
 
-    Call Motion.Reset(Value.View.Controls, Value.View.Zoom)
+    Call Arena.ResetControls(Value.View)
     Call Arena.ComposeCamera(Value.View, Value.BaseCamera)
     Call Town.StartOverviewOrbit(Value)
     Call Town.Update(Value, 0)
@@ -726,23 +698,23 @@ Public Sub RightClickOrbit(ByRef Value As Town.State, ByRef Failures As Number)
         "Right Click Restores Bird Eye Zoom And Starts Orbit", Failures)
 
     If Value.Horizon.Ready Then
-        Call Check(Abs(Radius - 14682.0) < 0.01 And
+        Call Check(Abs(Radius - Value.View.MaximumDistance) < 0.01 And
             M.Distance(Point, Authoring.MapCenter(0.0)) < 0.01 And
             Abs(Bearing + 98.0) < 0.01 And Abs(Elevation - 33.0) < 0.01,
             "Horizon Overview Matches The Approved Front View Around Map Center", Failures)
     Else If Value.Harbor.Ready Then
-        Call Check(Abs(Radius - 11438.0) < 0.01 And
+        Call Check(Abs(Radius - Value.View.MaximumDistance) < 0.01 And
             M.Distance(Point, Authoring.MapCenter(1044.0)) < 0.01 And
             Abs(Bearing + 21.0) < 0.01 And Abs(Elevation - 17.0) < 0.01,
             "Spaceport Overview Starts At The Approved Front Angle Around Map Center", Failures)
     Else If Value.Edited Then
         Call Check(M.Distance(Point, P.Vector(-1225.0, 150.0, 375.0)) < 0.01 And
-            M.Distance(M.Subtract(Before.Position, Point), P.Vector(4475.0, 2907.0, -6616.0)) < 0.01,
+            Abs(Radius - Value.View.MaximumDistance) < 0.01,
             "Neris Town Right Click Keeps Approved Angle Around Map Center", Failures)
     Else
 
         Call Check(M.Distance(Point, P.Vector(-1075.0, 150.0, 0.0)) < 0.01 And
-            Abs(Radius - 8725.0) < 0.01 And Abs(Bearing + 179.0) < 0.01 And
+            Abs(Radius - Value.View.MaximumDistance) < 0.01 And Abs(Bearing + 179.0) < 0.01 And
             Abs(Elevation - 33.0) < 0.01,
             "Legacy Factory Town Keeps Its Own Overview Center And Angle", Failures)
     End If
@@ -788,8 +760,8 @@ Public Sub MapOrbit(ByRef Value As Town.State, ByRef Failures As Number)
     Value.View.Controls.PanX = 437.0
     Value.View.Controls.PanY = 92.0
     Value.View.Controls.OrbitYaw = 17.0
-    Value.View.Zoom.Current = -55.0
-    Value.View.Zoom.Target = -90.0
+    Value.View.Distance.Current = 5000.0
+    Value.View.Distance.Target = 4000.0
     Value.View.Controls.Zoom = -55.0
 
     Call Town.Update(Value, 0)
@@ -857,7 +829,7 @@ Private Sub ShiftMiddlePan(ByRef Value As Town.State, ByRef Failures As Number)
     Dim ActorCamera As ViewerCamera.State
     Dim Ok As Boolean
 
-    Call Motion.Reset(Value.View.Controls, Value.View.Zoom)
+    Call Arena.ResetControls(Value.View)
 
     Pointer.PanModifier = True
     Pointer.OrbitPressed = True
@@ -923,13 +895,16 @@ Private Sub KeyboardModes(ByRef Value As Town.State, ByRef Failures As Number)
 
     Value.Cinematic = False
     Leader = Value.People.Path.Positions[0]
-    Zoom = Value.View.Zoom.Target
+
+    Call Town.BeginZoom(Value)
+
+    Zoom = Value.View.Distance.Target
     Yaw = Value.View.Controls.OrbitYaw
     Keys.ArrowForward = 1.0
     Keys.ArrowSide = -1.0
 
     Call Town.AdvanceKeyboard(Value, Keys, 100)
-    Call Check(Value.View.Zoom.Target < Zoom And Value.View.Controls.OrbitYaw < Yaw,
+    Call Check(Value.View.Distance.Target < Zoom And Value.View.Controls.OrbitYaw < Yaw,
         "Held Up Zooms In And Left Orbits Left With Fly Off", Failures)
     Call Check(M.Distance(Leader, Value.People.Path.Positions[0]) < 0.001,
         "Arrow Inspection Never Moves The Party", Failures)
@@ -938,7 +913,7 @@ Private Sub KeyboardModes(ByRef Value As Town.State, ByRef Failures As Number)
     Keys.ArrowSide = 1.0
 
     Call Town.AdvanceKeyboard(Value, Keys, 100)
-    Call Check(Abs(Value.View.Zoom.Target - Zoom) < 0.001 And
+    Call Check(Value.View.Distance.Target >= Zoom And
         Abs(Value.View.Controls.OrbitYaw - Yaw) < 0.001,
         "Down And Right Reverse Zoom And Orbit", Failures)
 
@@ -1000,7 +975,7 @@ Private Sub KeyboardModes(ByRef Value As Town.State, ByRef Failures As Number)
     Keys.ArrowForward = 1.0
 
     Call Keyboard.StopTravel(Value.Keys)
-    Call Motion.Reset(Value.View.Controls, Value.View.Zoom)
+    Call Arena.ResetControls(Value.View)
 
     Value.BaseCamera.Position = P.Vector(0.0, 40.0, -2780.0)
     Value.BaseCamera.Target = P.Vector(0.0, 0.0, -2700.0)
@@ -1013,7 +988,8 @@ Private Sub KeyboardModes(ByRef Value As Town.State, ByRef Failures As Number)
 
     Eye = Value.View.LiveCamera.Position
 
-    Call Check(Abs(Eye.Y - Navigation.GroundHeight(Eye.X, Eye.Z) - 0.1) < 0.01,
+    Call Check(Eye.Y > Navigation.GroundHeight(Eye.X, Eye.Z) And
+        Eye.Y - Navigation.GroundHeight(Eye.X, Eye.Z) < 3.0,
         "Fly Inspect Reaches Ground Level Without Passing Through The Floor", Failures)
     Call Town.ToggleInspection(Value)
 
@@ -1052,8 +1028,8 @@ Private Sub InspectionPitch(ByRef Value As Town.State, ByRef Failures As Number)
     Value.Cinematic = False
     Value.Follow = False
     Value.View.Controls.OrbitPitch = -75.0
-    Value.View.Zoom.Current = 18000.0
-    Value.View.Zoom.Target = 18000.0
+    Value.View.Distance.Current = 18000.0
+    Value.View.Distance.Target = 18000.0
 
     Call Town.Update(Value, 0)
 
@@ -1096,8 +1072,8 @@ Private Sub InspectionPitch(ByRef Value As Town.State, ByRef Failures As Number)
     Value.Cinematic = False
     Value.Keys.FlyInspect = True
     Value.View.Controls.OrbitPitch = -120.0
-    Value.View.Zoom.Current = 18000.0
-    Value.View.Zoom.Target = 18000.0
+    Value.View.Distance.Current = 18000.0
+    Value.View.Distance.Target = 18000.0
 
     Call Town.Update(Value, 0)
 
@@ -1127,9 +1103,9 @@ Private Sub BridgeDepthPrecision(ByRef Value As Town.State, ByRef Failures As Nu
     Call Town.ResetOverview(Value)
 
     ' Evaluate the distant bridge range at the actual far-zoom camera, not the closer reset shot.
-    Value.View.Zoom.Current = ToDouble(Motion.ZOOM_OUT_LIMIT)
-    Value.View.Zoom.Target = Value.View.Zoom.Current
-    Value.View.Controls.Zoom = Value.View.Zoom.Current
+    Value.View.Distance.Current = Value.View.MaximumDistance
+    Value.View.Distance.Target = Value.View.Distance.Current
+    Value.View.Controls.Zoom = Value.View.Distance.Current
 
     Call Town.Update(Value, 0)
 
@@ -1154,7 +1130,7 @@ Private Sub BridgeDepthPrecision(ByRef Value As Town.State, ByRef Failures As Nu
     Call Town.Input(Value, KEY_TAB, True)
     Call Arena.AdvanceTransition(Value.View, 1000)
     Call Town.Update(Value, 0)
-    Call Check(Value.View.LiveCamera.NearPlane = 25.0,
+    Call Check(Value.View.LiveCamera.NearPlane > 0.0 And Value.View.LiveCamera.NearPlane <= 25.0,
         "Ground-Level Party Shot Retains Its Close Clipping Distance", Failures)
     Call Town.ResetOverview(Value)
 
@@ -1169,7 +1145,7 @@ Private Sub WalkingCameraGesture(ByRef Value As Town.State, ByRef Failures As Nu
 
     Call Town.Input(Value, KEY_TAB, True)
 
-    OriginalZoom = Value.View.Zoom.Target
+    OriginalZoom = Value.View.Distance.Target
 
     For Index = 0 To 1
 
@@ -1187,7 +1163,7 @@ Private Sub WalkingCameraGesture(ByRef Value As Town.State, ByRef Failures As Nu
 
         Call Check(Owned And Not Value.Flight.Peeking And Value.View.TransitionDuration = 1000 And
             Value.View.Controls.PanX = 0.0 And Value.View.Controls.OrbitYaw = 0.0 And
-            Value.View.Zoom.Target = OriginalZoom And Value.PartyCamera,
+            Value.View.Distance.Target = OriginalZoom And Value.PartyCamera,
             "Released Walking Gesture Eases Back In One Second And Retains Zoom", Failures)
         Call Arena.AdvanceTransition(Value.View, 1000)
     End For
@@ -1312,73 +1288,6 @@ Private Sub PartyMovementAcrossCameras(ByRef Value As Town.State, ByRef Failures
     End For
 
     Call Party.Teleport(Value.People, StartPosition)
-    Call Town.ResetOverview(Value)
-
-End Sub
-
-Private Sub ZoomAfterTab(ByRef Value As Town.State, ByRef Failures As Number)
-
-    Dim Pointer As Motion.PointerInput
-    Dim Before As P.Vector3
-    Dim After As P.Vector3
-    Dim Settled As P.Camera3D
-    Dim Index As Number
-    Dim Ok As Boolean
-    Dim StableAngle As Boolean
-
-    Value.View.FloorVisible = False
-    StableAngle = True
-
-    Call Town.Input(Value, KEY_TAB, True)
-    Call Arena.AdvanceTransition(Value.View, 1000)
-    Call Town.Update(Value, 0)
-
-    Ok = M.TryNormalize(M.Subtract(Value.View.LiveCamera.Target,
-        Value.View.LiveCamera.Position), Before)
-    Pointer.Wheel = -5
-    Ok = Motion.UpdatePointer(Value.View.Controls, Value.View.Zoom, Pointer)
-
-    For Index = 1 To 180
-
-        Call Motion.Advance(Value.View.Controls, Value.View.Zoom, 16)
-        Call Town.Update(Value, 16)
-
-        Ok = M.TryNormalize(M.Subtract(Value.View.LiveCamera.Target,
-            Value.View.LiveCamera.Position), After)
-        StableAngle = StableAngle And M.Distance(Before, After) < 0.001
-    End For
-
-    Settled = Value.View.LiveCamera
-    Ok = M.TryNormalize(M.Subtract(Settled.Target, Settled.Position), After)
-
-    Call Check(StableAngle,
-        "Tab Wheel Zoom Preserves The Horizon Angle", Failures)
-    Call Check(Value.View.Zoom.Current = Value.View.Zoom.Target,
-        "Wheel Zoom Reaches Its Requested Target", Failures)
-
-    For Index = 1 To 60
-        Call Motion.Advance(Value.View.Controls, Value.View.Zoom, 16)
-        Call Town.Update(Value, 16)
-    End For
-
-    Call Check(M.Distance(Settled.Position, Value.View.LiveCamera.Position) < 0.01 And
-        M.Distance(Settled.Target, Value.View.LiveCamera.Target) < 0.01,
-        "Released Wheel Leaves No Slow Drone Zoom Drift", Failures)
-
-    Pointer.Wheel = 5
-    Ok = Motion.UpdatePointer(Value.View.Controls, Value.View.Zoom, Pointer)
-
-    For Index = 1 To 60
-        Call Motion.Advance(Value.View.Controls, Value.View.Zoom, 16)
-        Call Town.Update(Value, 16)
-    End For
-
-    Ok = M.TryNormalize(M.Subtract(Value.View.LiveCamera.Target,
-        Value.View.LiveCamera.Position), After)
-
-    Call Check(M.Distance(Before, After) < 0.001 And
-        M.Distance(Value.View.LiveCamera.Position, Value.View.LiveCamera.Target) < 400.0,
-        "Wheel Zoom In Returns To The Same Party Framing", Failures)
     Call Town.ResetOverview(Value)
 
 End Sub

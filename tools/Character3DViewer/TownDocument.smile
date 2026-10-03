@@ -4,6 +4,7 @@ Module Smile.Tools.TownDocument
 Option Explicit
 
 Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
 Import Smile.Simple3D.SurfaceGrid3D As Grid
 Import Smile.Tools.TownSurfaceStyles As SurfaceStyles
 
@@ -77,6 +78,35 @@ Public Type State
     Revision As Number
     SavedRevision As Number
 End Type
+
+''' Capture the displayed perspective without moving it or beginning orbit.
+Public Function SetInitialCamera(ByRef Town As State, Camera As P.Camera3D) As Boolean
+
+    If Not ValidInitialCamera(Camera) Then
+        Return False
+    End If
+
+    Town.InitialCamera = Camera
+    Town.HasInitialCamera = True
+    Town.Revision = Town.Revision + 1
+
+    Return True
+
+End Function
+
+Public Function ValidInitialCamera(Camera As P.Camera3D) As Boolean
+
+    Dim Result As Boolean
+
+    Result = (Camera.OrthographicHeight = 0.0 And
+        Camera.FovDegrees >= 1.0 And Camera.FovDegrees < 179.0 And
+        Camera.NearPlane > 0.0 And Camera.FarPlane > Camera.NearPlane And
+        M.Distance(Camera.Position, Camera.Target) > 0.001 And
+        M.Length(Camera.UpDirection) > 0.001)
+
+    Return Result
+
+End Function
 
 ''' Migrate original map names and automatically numbered copies from TWN1-9.
 Public Function LegacyLandmark(Name As Text) As Number

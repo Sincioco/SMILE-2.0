@@ -1684,7 +1684,7 @@ Sub CheckVisibleDepth()
     Value.BaseCamera.Target = P.Vector(Castle.ORIGIN_X, Castle.DECK_Y, Castle.ORIGIN_Z)
     Value.View.MaximumPitch = 1.57072
 
-    Call Motion.Reset(Value.View.Controls, Value.View.Zoom)
+    Call Arena.ResetControls(Value.View)
     Call Town.Update(Value, 0)
     Call Town.Draw(Value)
 
@@ -1954,7 +1954,7 @@ Sub CheckTerrainCamera()
         Flight.Enabled = Variant = 1
         Flight.Focusing = True
 
-        Call Motion.Reset(View.Controls, View.Zoom)
+        Call Arena.ResetControls(View)
         Call Arena.BeginTransition(View, 1000)
         Call Arena.AdvanceTransition(View, 500)
         Call Drone.Compose(Flight, View, Shot, True, 16, True)

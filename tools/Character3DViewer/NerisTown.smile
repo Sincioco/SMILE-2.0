@@ -193,8 +193,9 @@ Public Sub LoadNext(ByRef Value As State)
 
     Value.Panel.GeometryTime = 0
 
-    Value.View.MinimumDistance = 80.0
-    Value.View.MaximumDistance = 18000.0
+    Value.View.MinimumDistance = 0.25
+    Value.View.MaximumDistance = Limits.FitDistance(Value.BaseCamera,
+        Window_Width() - 32, Window_Height() - 256)
     Value.View.FloorVisible = False
     Value.View.GridVisible = False
 
@@ -205,7 +206,6 @@ Public Sub LoadNext(ByRef Value As State)
 
     If Value.Harbor.Ready Or Value.Horizon.Ready Then
 
-        Value.View.MaximumDistance = 40000.0
         Value.BaseCamera.FarPlane = 55000.0
         Ok = Scene.SetShadowArea(-2650, 1500, -3200, 15200, 15500, 1, 22000) And Ok
 
@@ -250,6 +250,7 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
     Dim Pointer As Motion.PointerInput
     Dim ArenaKey As Number
     Dim PanelAction As Number
+    Dim CameraInset As Number
     Dim MovingGesture As Boolean
     Dim OrbitPoint As P.Vector3
     Dim RequestedView As Number
@@ -384,7 +385,7 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
 
             Call Keyboard.StopTravel(Value.Keys)
             Call Drone.Focus(Value.Flight, Value.People.Members[0].Yaw, Value.View.LiveCamera)
-            Call Motion.Reset(Value.View.Controls, Value.View.Zoom)
+            Call Arena.ResetControls(Value.View)
             Call Arena.BeginTransition(Value.View, 1000)
 
             Value.Follow = True
@@ -445,7 +446,7 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
         Value.Cinematic = False
         Value.Flight.Suspended = True
 
-        Call Motion.Reset(Value.View.Controls, Value.View.Zoom)
+        Call Arena.ResetControls(Value.View)
 
         Return
 
@@ -475,7 +476,7 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
                 Authoring.ViewRightEdge() / 2, (Window_Height() + 76) / 2,
                 M.Distance(Value.BaseCamera.Position, Value.BaseCamera.Target), Window_Width(), Window_Height())
 
-            Call Motion.Reset(Value.View.Controls, Value.View.Zoom)
+            Call Arena.ResetControls(Value.View)
             Call Arena.BeginTransition(Value.View, 0)
             Call Arena.ComposeCamera(Value.View, Value.BaseCamera)
 
@@ -485,8 +486,20 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
 
     End If
 
+    If (Not Blocked And
+        CameraPanel.Hovered(Value.Panel.HelpOpen) And
+        Pointer_Pressed(POINTER_PRIMARY) And
+        Pointer_Y() < 120) Then
+        Call Keyboard.Capture(Value.Keys, Value.View, Value.BaseCamera)
+        Call ManualCamera(Value)
+    End If
+
+    If Authoring.Editing() Then
+        CameraInset = Window_Width() - Authoring.ViewRightEdge()
+    End If
+
     PanelAction = CameraPanel.Input(Value.Panel, Value.View, Value.BaseCamera, Blocked,
-        Drone.GroundShot(Value.Flight, Value.PartyCamera))
+        Drone.GroundShot(Value.Flight, Value.PartyCamera), CameraInset)
     Blocked = Blocked Or CameraPanel.Hovered(Value.Panel.HelpOpen) Or Value.Panel.DragRow > 0
 
     If PanelAction = 1 Then
@@ -554,12 +567,7 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
     If (Not Blocked And
         Pointer.Wheel <> 0 And
         Not Value.Flight.CursorOrbit) Then
-        Call BeginPointerZoom(Value)
-    Else If (Pointer.OrbitPressed Or
-        Pointer.PanPressed Or
-        Pointer_Pressed(POINTER_PRIMARY) Or
-        Key <> 0) Then
-        Value.Flight.CursorZoom = False
+        Call BeginZoom(Value)
     End If
 
     Call Motion.ResolveGesture(Value.View.Controls, Pointer)
@@ -655,7 +663,7 @@ Public Sub FocusParty(ByRef Value As State)
     Value.Cinematic = False
 
     Call Drone.Focus(Value.Flight, Value.People.Members[0].Yaw, Value.View.LiveCamera)
-    Call Motion.Reset(Value.View.Controls, Value.View.Zoom)
+    Call Arena.ResetControls(Value.View)
 
 End Sub
 
@@ -676,8 +684,7 @@ Public Sub HoldDisplayedView(ByRef Value As State)
 
     If Value.Follow Then
         Call Drone.AnchorParty(Value.Flight, Value.View, Value.BaseCamera, Value.People.Path.Positions[0])
-    Else
-
+    Else If Not Value.View.Distance.Prepared Then
         Call Drone.AnchorPoint(Value.Flight, Value.View, Value.BaseCamera, Value.View.LiveCamera.Target)
     End If
 
@@ -687,27 +694,27 @@ Public Sub HoldDisplayedView(ByRef Value As State)
 
 End Sub
 
-''' Zoom follows the picked map point while retaining the current orbit state.
-Public Sub BeginPointerZoom(ByRef Value As State, Optional X As Number = -1, Optional Y As Number = -1)
+''' Adopt a transitioning/following shot once; wheel events never repick its target.
+Public Sub BeginZoom(ByRef Value As State)
 
-    Dim Point As P.Vector3
+    If Value.Follow Or Value.View.TransitionDuration > 0 Then
 
-    If X < 0 Or Y < 0 Then
-        X = Pointer_X()
-        Y = Pointer_Y()
+        Call Keyboard.Capture(Value.Keys, Value.View, Value.BaseCamera)
+        Call ManualCamera(Value)
+        Call Arena.ConfigureDistance(Value.View, Value.BaseCamera)
+
     End If
 
-    If Picking.OrbitPoint(Value.View.LiveCamera, X, Y,
-        Window_Width(), Window_Height(), Point) Then
+    Value.OverviewOrbit = False
+    Value.Cinematic = False
+    Value.IdleOrbit = False
+    Value.IdleTime = 0
 
-        Call Drone.BeginCursorZoom(Value.Flight, Value.View, Value.BaseCamera, Point, X, Y)
+    If Authoring.Editing() Then
+        Call Limits.BeginZoom(Value.View, Value.BaseCamera, 306)
+    Else
 
-        Value.Follow = False
-        Value.PartyCamera = False
-        Value.OverviewOrbit = False
-        Value.IdleOrbit = False
-        Value.IdleTime = 0
-
+        Call Limits.BeginZoom(Value.View, Value.BaseCamera)
     End If
 
 End Sub
@@ -732,14 +739,20 @@ Public Sub ToggleDrone(ByRef Value As State)
 
     End If
 
-    Call Motion.Reset(Value.View.Controls, Value.View.Zoom)
+    Call Arena.ResetControls(Value.View)
 
 End Sub
 
 ''' Start orbit from the displayed shot, absorbing existing pan and zoom exactly once.
 Public Sub StartOrbit(ByRef Value As State, Optional CurrentView As Boolean = True)
 
-    Call Keyboard.Capture(Value.Keys, Value.View, Value.BaseCamera)
+    Dim ZoomPrepared As Boolean
+
+    ZoomPrepared = Value.View.Distance.Prepared And Not CurrentView
+
+    If Not ZoomPrepared Then
+        Call Keyboard.Capture(Value.Keys, Value.View, Value.BaseCamera)
+    End If
 
     If CurrentView Then
 
@@ -748,9 +761,6 @@ Public Sub StartOrbit(ByRef Value As State, Optional CurrentView As Boolean = Tr
 
         Call Drone.AnchorPoint(Value.Flight, Value.View, Value.BaseCamera,
             Picking.OrbitCenter(Value.View.LiveCamera, Window_Width(), Window_Height()))
-
-        Value.View.MaximumDistance = Max(Value.View.MaximumDistance,
-            M.Distance(Value.BaseCamera.Position, Value.BaseCamera.Target))
 
     Else If (Value.Follow And
         (Value.PartyCamera Or Value.Cinematic) And
@@ -762,7 +772,9 @@ Public Sub StartOrbit(ByRef Value As State, Optional CurrentView As Boolean = Tr
         Value.Follow = False
         Value.PartyCamera = False
 
-        If Value.Edited Then
+        If (Value.Edited And
+            Not Authoring.HasInitialCamera() And
+            Not ZoomPrepared) Then
             Call Drone.AnchorPoint(Value.Flight, Value.View, Value.BaseCamera,
                 Authoring.MapCenter(Value.BaseCamera.Target.Y))
         End If
@@ -775,7 +787,7 @@ Public Sub StartOrbit(ByRef Value As State, Optional CurrentView As Boolean = Tr
     Value.Flight.Arrival = False
     Value.Flight.Peeking = False
     Value.Cinematic = True
-    Value.OverviewOrbit = Not CurrentView And Not Value.Follow
+    Value.OverviewOrbit = Not CurrentView And Not Value.Follow And Not ZoomPrepared
     Value.OrbitPaused = False
     Value.IdleOrbit = False
     Value.IdleTime = 0
@@ -887,7 +899,14 @@ Public Sub FitTown(ByRef Value As State)
         Call Authoring.FrameDocument(Value.BaseCamera)
     End If
 
-    Call Motion.Reset(Value.View.Controls, Value.View.Zoom)
+    Value.View.MaximumDistance = Limits.FitDistance(Value.BaseCamera,
+        Authoring.ViewRightEdge() * 2 - Window_Width() - 32, Window_Height() - 256)
+    Value.BaseCamera.Position = M.Add(Value.BaseCamera.Target,
+        M.Scale(M.Subtract(Value.BaseCamera.Position, Value.BaseCamera.Target),
+        Value.View.MaximumDistance / M.Distance(Value.BaseCamera.Position, Value.BaseCamera.Target)))
+
+    Call Arena.ResetControls(Value.View)
+    Call Arena.ConfigureDistance(Value.View, Value.BaseCamera)
 
 End Sub
 
@@ -895,16 +914,10 @@ Public Sub ResetOverview(ByRef Value As State, Optional Harbor As Boolean = Fals
     Optional TransitionMilliseconds As Number = 0)
 
     Value.View.MaximumPitch = M.Radians(80.0)
-    Value.View.MinimumDistance = 80.0
-    Value.View.MaximumDistance = 18000.0
+    Value.View.MinimumDistance = 0.25
     Value.Flight.CursorOrbit = False
     Value.Flight.OrbitAtParty = False
-    Value.Flight.CursorZoom = False
     Value.Keys.FlyInspect = False
-
-    If Value.Harbor.Ready Or Value.Horizon.Ready Then
-        Value.View.MaximumDistance = 40000.0
-    End If
 
     Call Keyboard.StopTravel(Value.Keys)
 
@@ -928,16 +941,23 @@ Public Sub ResetOverview(ByRef Value As State, Optional Harbor As Boolean = Fals
         Call Tour.Frame(Value.BaseCamera, Authoring.MapCenter(1044.0), 11438.0, -21.0, 17.0)
     End If
 
-    If Value.Edited And Authoring.TownName() = "Neris Town" Then
-        Call Tour.TownOverview(Value.BaseCamera, Authoring.MapCenter())
-    End If
-
-    If TransitionMilliseconds > 0 Then
+    If TransitionMilliseconds > 0 And Not Authoring.HasInitialCamera() Then
         Call Tour.ContinueOrbit(Value.BaseCamera, Value.View.LiveCamera)
     End If
 
+    Value.View.MaximumDistance = Limits.FitDistance(Value.BaseCamera, Window_Width() - 32, Window_Height() - 256)
+
+    If Not Authoring.HasInitialCamera() Then
+        Value.BaseCamera.Position = M.Add(Value.BaseCamera.Target,
+            M.Scale(M.Subtract(Value.BaseCamera.Position, Value.BaseCamera.Target),
+            Value.View.MaximumDistance / M.Distance(Value.BaseCamera.Position, Value.BaseCamera.Target)))
+    Else
+        Value.View.MaximumDistance = Max(Value.View.MaximumDistance,
+            M.Distance(Value.BaseCamera.Position, Value.BaseCamera.Target))
+    End If
+
     Call Arena.BeginTransition(Value.View, TransitionMilliseconds)
-    Call Motion.Reset(Value.View.Controls, Value.View.Zoom)
+    Call Arena.ResetControls(Value.View)
     Call Arena.ComposeCamera(Value.View, Value.BaseCamera)
 
 End Sub
@@ -948,7 +968,6 @@ Public Sub TopDown(ByRef Value As State, Optional Orthographic As Boolean = Fals
     Dim Distance As Double
 
     Value.Flight.CursorOrbit = False
-    Value.Flight.CursorZoom = False
 
     Call Keyboard.StopTravel(Value.Keys)
 
@@ -974,7 +993,7 @@ Public Sub TopDown(ByRef Value As State, Optional Orthographic As Boolean = Fals
     Value.Flight.Arrival = False
     Value.InputActive = True
 
-    Call Motion.Reset(Value.View.Controls, Value.View.Zoom)
+    Call Arena.ResetControls(Value.View)
     Call Arena.BeginTransition(Value.View, 0)
     Call Drone.Compose(Value.Flight, Value.View, Value.BaseCamera, False, 0)
 
@@ -1068,10 +1087,8 @@ Public Sub AdvanceKeyboard(ByRef Value As State, Keys As Keyboard.HeldKeys, Elap
                 Call ManualCamera(Value)
             End If
 
-            If (Keys.ArrowForward <> 0.0 And
-                Not Value.Keys.Zooming And
-                Not Value.Follow) Then
-                Call Limits.BeginZoom(Value.View, Value.BaseCamera)
+            If Keys.ArrowForward <> 0.0 Then
+                Call BeginZoom(Value)
             End If
 
             Call Keyboard.OrbitZoom(Value.View, Keys, Elapsed)
@@ -1200,7 +1217,8 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
 
         If (Value.Cinematic And
             Value.OverviewOrbit And
-            Not Value.Follow) Then
+            Not Value.Follow And
+            Not Authoring.HasInitialCamera()) Then
 
             MapCenter = Authoring.MapCenter(Value.BaseCamera.Target.Y)
             CenterOffset = M.Subtract(MapCenter, Value.BaseCamera.Target)

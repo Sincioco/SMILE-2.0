@@ -31,7 +31,7 @@ for bad in (float('nan'), float('inf'), -10000.01):
         pass
     else:
         raise AssertionError('Invalid elevation accepted')
-for raw in (document['payload'][:-1], document['payload'][:3]+b'\x0f'+document['payload'][4:]):
+for raw in (document['payload'][:-1], document['payload'][:3]+b'\x10'+document['payload'][4:]):
     try:
         decode(raw, catalog)
     except ValueError:
@@ -109,3 +109,18 @@ boundary_exits(exits)
 assert sorted((t['x'],t['z']) for t in exits['map_tiles']) == markers
 assert surface(exits,0,350) == 1
 print('PASS repeated boundary preparation keeps alternate exits separate')
+
+initial = decode(unwrap(key_path(folder, 'TownEditor.InitialCamera').read_bytes()), catalog)
+assert initial['payload'][3] == 15
+assert initial['initial_camera'][:6] == [275.25, 360.5, -590.75, 17.5, 26.25, 34.5]
+assert decode(encode(initial, catalog), catalog)['initial_camera'] == initial['initial_camera']
+for field in (9, 10, 11):
+    bad_camera = copy.deepcopy(initial)
+    bad_camera['initial_camera'][field] = -1
+    try:
+        encode(bad_camera, catalog)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError('Invalid initial camera accepted')
+print('PASS native/Python TWN15 camera round trip and invalid camera rejection')

@@ -1707,6 +1707,16 @@ Public Sub DrawMap(Position As P.Vector3, Opacity As Number, LeaderName As Text,
 
 End Sub
 
+Public Function HasInitialCamera() As Boolean
+
+    Dim ReturnValue As Boolean
+
+    ReturnValue = Town.HasInitialCamera
+
+    Return ReturnValue
+
+End Function
+
 Public Sub FrameDocument(ByRef Camera As P.Camera3D, Optional Overview As Boolean = False)
 
     Dim Direction As P.Vector3

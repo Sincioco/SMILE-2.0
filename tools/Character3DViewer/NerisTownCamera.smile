@@ -36,85 +36,8 @@ Public Type State
     CursorX As Number
     CursorY As Number
     CursorDepth As Double
-    CursorZoom As Boolean
-    CursorZoomLast As Double
 End Type
 
-''' Keep the displayed pose while moving the zoom plane to the picked surface.
-Public Sub BeginCursorZoom(ByRef Value As State, ByRef View As Arena.State,
-    ByRef Base As P.Camera3D, Point As P.Vector3, X As Number, Y As Number)
-
-    Dim Projected As Camera.ProjectedPoint
-    Dim Forward As P.Vector3
-    Dim RightValue As P.Vector3
-    Dim UpValue As P.Vector3
-    Dim PendingZoom As Double
-
-    Projected = Camera.ProjectViewerPoint(Point, View.LiveCamera, Window_Width(), Window_Height())
-
-    If Not Projected.Visible Or Not Camera.Basis(View.LiveCamera, Forward, RightValue, UpValue) Then
-        Return
-    End If
-
-    If Value.CursorZoom Then
-        PendingZoom = View.Zoom.Target - View.Zoom.Current
-    End If
-
-    Base = View.LiveCamera
-    Base.Target = M.Add(Base.Position, M.Scale(Forward, Projected.Depth))
-    View.MinimumDistance = Min(View.MinimumDistance, 0.25)
-    View.MaximumDistance = Max(View.MaximumDistance, Projected.Depth)
-    Value.Suspended = True
-    Value.Focusing = False
-    Value.Arrival = False
-    Value.Peeking = False
-    Value.OrbitAtParty = False
-    Value.CursorOrbit = False
-    Value.CursorZoom = True
-    Value.CursorZoomLast = ToDouble(Motion.DEFAULT_ZOOM)
-    Value.CursorAnchor = Point
-    Value.CursorX = X
-    Value.CursorY = Y
-
-    Call Motion.Reset(View.Controls, View.Zoom)
-    Call Arena.BeginTransition(View, 0)
-
-    View.Zoom.Target = Clamp(View.Zoom.Current + PendingZoom, View.Zoom.Minimum, View.Zoom.Maximum)
-    View.Controls.ZoomTarget = View.Zoom.Target
-
-End Sub
-
-Private Sub KeepZoomPoint(ByRef Value As State, ByRef View As Arena.State)
-
-    Dim Projected As Camera.ProjectedPoint
-    Dim Shot As P.Camera3D
-    Dim Delta As P.Vector3
-    Dim Forward As P.Vector3
-    Dim RightValue As P.Vector3
-    Dim UpValue As P.Vector3
-
-    If Not Value.CursorZoom Or Value.CursorZoomLast = View.Controls.Zoom Then
-        Return
-    End If
-
-    Projected = Camera.ProjectViewerPoint(Value.CursorAnchor, View.LiveCamera, Window_Width(), Window_Height())
-
-    If Not Projected.Visible Or Not Camera.Basis(View.LiveCamera, Forward, RightValue, UpValue) Then
-        Value.CursorZoom = False
-        Return
-    End If
-
-    Shot = Camera.KeepCursorAnchor(View.LiveCamera, Value.CursorAnchor,
-        Value.CursorX, Value.CursorY, Projected.Depth, Window_Width(), Window_Height())
-    Delta = M.Subtract(Shot.Position, View.LiveCamera.Position)
-    View.Controls.PanX = View.Controls.PanX + M.Dot(Delta, RightValue)
-    View.Controls.PanY = View.Controls.PanY + M.Dot(Delta, UpValue)
-    View.LiveCamera = Shot
-    Value.CursorZoomLast = View.Controls.Zoom
-
-End Sub
-
-' Exact overhead and level-front framing share the editor's projection and picking contract.
 Public Function EditingView(View As P.Camera3D, Mode As Number) As P.Camera3D
 
     Dim Result As P.Camera3D
@@ -174,7 +97,7 @@ Public Sub LeaveTopView(ByRef View As Arena.State, ByRef Base As P.Camera3D)
 
     Base = EditingView(View.LiveCamera, 2)
 
-    Call Motion.Reset(View.Controls, View.Zoom)
+    Call Arena.ResetControls(View)
     Call Arena.BeginTransition(View, 700)
     Call Arena.ComposeCamera(View, Base)
 
@@ -210,10 +133,9 @@ Public Sub TurnClockwise(ByRef Value As State, ByRef View As Arena.State, ByRef 
     Value.Arrival = False
     Value.Peeking = False
     Value.CursorOrbit = False
-    Value.CursorZoom = False
     Value.OrbitAtParty = False
 
-    Call Motion.Reset(View.Controls, View.Zoom)
+    Call Arena.ResetControls(View)
     Call Arena.BeginTransition(View, 0)
     Call Arena.ComposeCamera(View, Base)
 
@@ -229,7 +151,6 @@ Public Sub BeginCursorOrbit(ByRef Value As State, View As P.Camera3D,
     End If
 
     Projected = Camera.ProjectViewerPoint(Point, View, Window_Width(), Window_Height())
-    Value.CursorZoom = False
     Value.CursorOrbit = Projected.Visible
     Value.CursorAnchor = Point
     Value.CursorX = X
@@ -248,7 +169,7 @@ Public Sub FinishCursorOrbit(ByRef Value As State, ByRef View As Arena.State,
     Base = View.LiveCamera
     Value.CursorOrbit = False
 
-    Call Motion.Reset(View.Controls, View.Zoom)
+    Call Arena.ResetControls(View)
     Call Arena.BeginTransition(View, 0)
 
 End Sub
@@ -260,16 +181,19 @@ Public Sub AnchorPoint(ByRef Value As State, ByRef View As Arena.State,
     Base = View.LiveCamera
     Base.Target = Point
     ' A picked point may be closer than the old orbit minimum; do not push the eye away.
-    View.MinimumDistance = Min(View.MinimumDistance, Max(0.25, M.Distance(Base.Position, Point)))
+
+    If M.Distance(Base.Position, Point) > View.MaximumDistance Then
+        Base.Target = M.Lerp(Base.Position, Point, View.MaximumDistance / M.Distance(Base.Position, Point))
+    End If
+
     Value.OrbitAtParty = False
     Value.Suspended = True
     Value.Focusing = False
     Value.Arrival = False
     Value.Peeking = False
     Value.CursorOrbit = False
-    Value.CursorZoom = False
 
-    Call Motion.Reset(View.Controls, View.Zoom)
+    Call Arena.ResetControls(View)
     Call Arena.BeginTransition(View, 0)
 
 End Sub
@@ -310,7 +234,6 @@ Public Sub Focus(ByRef Value As State, Yaw As Double, Displayed As P.Camera3D)
     Value.OrbitAtParty = False
     Value.Peeking = False
     Value.CursorOrbit = False
-    Value.CursorZoom = False
 
     Call Follow.Reset(Value.Flight, Displayed.Position)
 
@@ -536,7 +459,7 @@ Public Sub ArrivalFrame(ByRef Value As State, ByRef View As Arena.State,
     Base.Position = M.Add(Leader, M.Add(M.Scale(Forward, -300.0), P.Vector(0.0, 26.0, 0.0)))
 
     Call Focus(Value, Heading, Base)
-    Call Motion.Reset(View.Controls, View.Zoom)
+    Call Arena.ResetControls(View)
     Call Arena.BeginTransition(View, 0)
     Call Arena.ComposeCamera(View, Base)
 
@@ -563,11 +486,15 @@ Public Sub Compose(ByRef Value As State, ByRef View As Arena.State,
         Resolved = Resolve(Value, Base, Elapsed)
     End If
 
+    If Following And Not Value.OrbitAtParty Then
+        View.Distance.Current = M.Distance(Resolved.Position, Resolved.Target)
+        View.Distance.Target = View.Distance.Current
+    End If
+
+    Call Arena.ConfigureDistance(View, Resolved)
     Call Constrain(View, Resolved, LowShot, FreeInspect)
 
-    If FreeInspect Then
-        Call Limits.Apply(View, Resolved, Navigation.GroundHeight(Resolved.Position.X, Resolved.Position.Z) + 0.1)
-    Else If Not Following Then
+    If Not FreeInspect And Not Following Then
         Call Limits.Apply(View, Resolved)
     End If
 
@@ -576,7 +503,6 @@ Public Sub Compose(ByRef Value As State, ByRef View As Arena.State,
     View.FloorVisible = False
 
     Call Arena.ComposeCamera(View, Resolved)
-    Call KeepZoomPoint(Value, View)
 
     If Following And Value.Focusing Then
         Call ClearFocus(Value, View)
@@ -611,15 +537,10 @@ Public Sub Compose(ByRef Value As State, ByRef View As Arena.State,
 
     ' Elevated town views need more depth precision than a nearby character shot.
     ' The 6.2 cm bridge paving/deck gap otherwise collapses in the 24-bit buffer.
-    View.LiveCamera.NearPlane = Max(25.0, (View.LiveCamera.Position.Y - 25.0) * 0.1)
-
-    If FreeInspect Then
-        View.LiveCamera.NearPlane = Max(0.25, (View.LiveCamera.Position.Y -
-            Navigation.GroundHeight(View.LiveCamera.Position.X, View.LiveCamera.Position.Z)) * 0.1)
-    Else If Following And Edited.Elevated() Then
-        View.LiveCamera.NearPlane = Max(0.25, Min(25.0,
-            M.Distance(View.LiveCamera.Position, View.LiveCamera.Target) * 0.1))
-    End If
+    View.LiveCamera.NearPlane = Max(0.05, Min(View.Distance.Current * 0.1,
+        (View.LiveCamera.Position.Y - Navigation.GroundHeight(
+        View.LiveCamera.Position.X, View.LiveCamera.Position.Z)) * 0.1))
+    View.LiveCamera.FarPlane = Max(Base.FarPlane, View.MaximumDistance * 2.0)
 
     Value.Focusing = Value.Focusing And View.TransitionDuration > 0
 

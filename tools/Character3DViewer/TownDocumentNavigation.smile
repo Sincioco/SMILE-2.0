@@ -168,6 +168,30 @@ Public Function IsRoad(Point As P.Vector3) As Boolean
 
 End Function
 
+Public Function GroundRay(Origin As P.Vector3, Ray As P.Vector3,
+    Distance As Double, ByRef Point As P.Vector3) As Boolean
+
+    Dim Result As Boolean
+    Dim Depth As Double
+
+    If Not Enabled And Ray.Y < -0.000001 Then
+
+        Depth = (Layers.ROAD_Y - Origin.Y) / Ray.Y
+        Point = M.Add(Origin, M.Scale(Ray, Depth))
+        Result = (Depth >= 0.0 And Depth <= Distance And
+            Point.X >= -4900.0 And Point.X <= 2750.0 And
+            Point.Z >= -3550.0 And Point.Z <= 3550.0)
+
+        Return Result
+
+    End If
+
+    Result = TerrainRay.Pick(Snapshot.Surface, Origin, Ray, Layers.ROAD_Y, Distance, Point)
+
+    Return Result
+
+End Function
+
 Public Sub SurfaceBounds(ByRef Low As P.Vector3, ByRef High As P.Vector3)
 
     Low = P.Vector(-4900.0, Layers.ROAD_Y, -3550.0)

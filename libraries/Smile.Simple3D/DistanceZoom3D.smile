@@ -1,0 +1,93 @@
+''' Bounded camera distance. Input changes one target; easing cannot overshoot it.
+Module Smile.Simple3D.DistanceZoom3D
+
+Option Explicit
+
+Public Type State
+    Prepared As Boolean
+    Current As Double
+    Target As Double
+    Minimum As Double
+    Maximum As Double
+End Type
+
+Public Sub Configure(ByRef Value As State, Distance As Double, Minimum As Double, Maximum As Double)
+
+    Value.Minimum = Max(0.01, Minimum)
+    Value.Maximum = Max(Value.Minimum, Maximum)
+
+    If Value.Current <= 0.0 Then
+        Value.Current = Distance
+        Value.Target = Distance
+    End If
+
+    Value.Current = Clamp(Value.Current, Value.Minimum, Value.Maximum)
+    Value.Target = Clamp(Value.Target, Value.Minimum, Value.Maximum)
+
+End Sub
+
+Public Sub SetTarget(ByRef Value As State, Distance As Double)
+
+    Value.Target = Clamp(Distance, Value.Minimum, Value.Maximum)
+
+End Sub
+
+''' Wheel notches and held keys share proportional steps, independent of the far limit.
+Public Sub Step(ByRef Value As State, Steps As Double)
+
+    Dim Remaining As Double
+    Dim Amount As Double
+
+    If Steps = 0.0 Then
+        Return
+    End If
+
+    If (Steps > 0.0 And
+        Value.Target > Value.Current Or
+        Steps < 0.0 And
+        Value.Target < Value.Current) Then
+        Value.Target = Value.Current
+    End If
+
+    Remaining = Min(100.0, Abs(Steps))
+
+    Do
+
+        Amount = Min(1.0, Remaining)
+
+        If Steps > 0.0 Then
+            Value.Target = Value.Target / (1.0 + Amount * 0.1)
+        Else
+            Value.Target = Value.Target * (1.0 + Amount * 0.1)
+        End If
+
+        Remaining = Remaining - Amount
+
+    Loop Until Remaining <= 0.0
+
+    Call SetTarget(Value, Value.Target)
+
+End Sub
+
+Public Sub Advance(ByRef Value As State, Elapsed As Number)
+
+    Value.Current = (Value.Current + (Value.Target - Value.Current) *
+        Clamp(ToDouble(Elapsed) / 80.0, 0.0, 1.0))
+
+    If Abs(Value.Target - Value.Current) < 0.001 Then
+        Value.Current = Value.Target
+    End If
+
+End Sub
+
+Public Function Magnification(Value As State) As Double
+
+    Dim Result As Double
+
+    Result = Value.Maximum / Max(Value.Minimum, Value.Current)
+
+    Return Result
+
+End Function
+
+End Module

@@ -31,7 +31,6 @@ Import Smile.Tools.TownTerrainTools As TerrainTools
 Import Smile.Tools.TownTerrainPanel As TerrainPanel
 Import Smile.Tools.TownRampTools As RampTools
 Import Smile.Tools.TownWaterTools As WaterTools
-Import Smile.Tools.TownStartingCamera As StartingCamera
 
 Public Type State
     StyleGesture As StyleTools.State
@@ -697,7 +696,7 @@ Public Function Input(ByRef Value As State, ByRef Town As Document.State,
 
     If Action = 763 Then
 
-        Ok = StartingCamera.Capture(Town, View)
+        Ok = Document.SetInitialCamera(Town, View)
         Value.Ui.Message = "Use 3D View to set the initial camera."
 
         If Ok Then
