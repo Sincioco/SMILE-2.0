@@ -41,6 +41,8 @@ Public Function Run() As Number
     Dim Component As Number
     Dim Bytes[8192] As Number
     Dim Length As Number
+    Dim Routes As Travel.State
+    Dim Revision As Number
     Dim Status As Number
 
     Failures = 0
@@ -94,45 +96,26 @@ Public Function Run() As Number
 
     Ok = Canvas.Gesture(Gesture, Map, StartX, StartY, True, True, True, 1000, 900)
 
-    Call Check(Gesture.DragPort And Not Ok And Not Map.Links[0, 1],
-        "World Connection Starts As A Preview")
-
     Ok = Canvas.Gesture(Gesture, Map, EndX, EndY, False, False, True, 1000, 900)
 
-    Call Check(Ok And Map.Links[0, 1] And Map.Links[1, 0] And
-        Map.Ports[0, 1] = 2 And Map.Ports[1, 0] = 0,
-        "Dropping A Port Creates A Bidirectional Connection At The Chosen Edges")
+    Call Check(Not Map.Links[0, 1] And Not Map.Links[1, 0],
+        "Dragging Between Former Yellow Handles Cannot Create A Route")
 
+    Map.Links[0, 1] = True
+    Map.Links[1, 0] = True
+    Map.Ports[0, 1] = 1
+    Map.Ports[1, 0] = 3
     Ok = Canvas.Gesture(Gesture, Map, 500, 450, True, True, True, 1000, 900)
 
-    Call Check(Gesture.PendingDelete And Not Ok And Map.Links[0, 1],
-        "Clicking A Connection Prompts Before Deleting")
+    Call Check(Not Ok And Map.Links[0, 1] And Map.Links[1, 0],
+        "Clicking A Displayed Route Cannot Delete It")
 
-    Ok = Canvas.ConfirmDelete(Gesture, Map, False)
-
-    Call Check(Not Ok And Map.Links[0, 1], "Cancel Keeps The World Connection")
-
-    Ok = Canvas.Gesture(Gesture, Map, 500, 450, True, True, True, 1000, 900)
-    Ok = Canvas.ConfirmDelete(Gesture, Map, True)
-
-    Call Check(Ok And Not Map.Links[0, 1] And Not Map.Links[1, 0],
-        "Confirmed Connection Delete Removes Both Directions")
-
-    Ok = Canvas.Gesture(Gesture, Map, StartX, StartY, True, True, True, 1000, 900)
-    Ok = Canvas.Gesture(Gesture, Map, 500, 700, False, False, True, 1000, 900)
-
-    Call Check(Not Ok And Not Map.Links[0, 1], "Dropping On Empty Canvas Cancels The Connection")
-
-    Ok = World.Connect(Map, 0, 1, 0, 3)
-
-    Call Check(Not Ok And Not Map.Links[0, 0], "A World Node Cannot Connect To Itself")
-
-    Ok = World.Connect(Map, 0, 1, 1, 3)
+    Ok = True
     Ok = World.SaveWorld(Map, "TownEditor.World.PortFixture") And Ok
     Ok = World.LoadWorld(Loaded, "", "TownEditor.World.PortFixture") And Ok
 
-    Call Check(Ok And Loaded.Name = Map.Name And Loaded.Ports[0, 1] = 1 And
-        Loaded.Ports[1, 0] = 3, "Portable World Opens Without Typing A Name And Preserves Ports")
+    Call Check(Ok And Loaded.Name = Map.Name And Not Loaded.Links[0, 1] And
+        Not Loaded.Links[1, 0], "Portable World Keeps Layout And Discards Cached Connections")
 
     Load Data "TownEditor.World.PortFixture" Into Bytes Count Length Status Status
     Bytes[0] = 1
@@ -147,8 +130,8 @@ Public Function Run() As Number
     Save Data Bytes Count Length - 12 To "TownEditor.World.LegacyFixture" Status Status
     Ok = World.LoadWorld(Loaded, "", "TownEditor.World.LegacyFixture")
 
-    Call Check(Ok And Loaded.Links[0, 1] And Loaded.Ports[0, 1] = 2 And
-        Loaded.Ports[1, 0] = 0, "Old Worlds Retain Connections With Default Facing Ports")
+    Call Check(Ok And Not Loaded.Links[0, 1] And Not Loaded.Links[1, 0],
+        "Old Manual World Links Cannot Become Travel Authority")
 
     Bytes[0] = 99
     Save Data Bytes Count Length - 12 To "TownEditor.World.BadFixture" Status Status
@@ -158,7 +141,10 @@ Public Function Run() As Number
         "Invalid World File Does Not Replace The Current World")
 
     Ok = World.Add(Map, "Neris Spaceport", 500, 100)
-    Ok = World.Connect(Map, 0, 3, 2, 1) And Ok
+    Map.Links[0, 2] = True
+    Map.Links[2, 0] = True
+    Map.Ports[0, 2] = 3
+    Map.Ports[2, 0] = 1
 
     Call World.Remove(Map, 1)
     Call Check(Ok And Map.NodeCount = 2 And Map.Nodes[1].Town = "Neris Spaceport" And
@@ -201,26 +187,40 @@ Public Function Run() As Number
     Ok = Tiles.PlaceRectangle(Current, 0, 8, 1, 9, "Obsolete Destination")
     Ok = Tiles.PlaceRectangle(Current, 18, 8, 19, 9, "Neris Spaceport") And Ok
 
-    Call Navigation.Rebuild(Current)
+    Revision = Current.Revision
 
-    Ok = Travel.Apply(Map, Current) And Ok
-
-    Call Check(Ok And Current.MapTileCount = 4 And Current.MapTiles[0].X = 18 And
-        Current.MapTiles[0].Destination = "Neris Spaceport",
-        "World Links Remove Stale Destinations And Preserve Matching Marker Positions")
+    Call Travel.ReadTown(Map, 0, Current)
+    Call Check(Map.Links[0, 1] And Map.Ports[0, 1] = 2 And Not Map.Links[0, 2],
+        "Yellow Destinations Define Routes And Actual Map Sides")
+    Call Check(Current.MapTileCount = 8 And Current.Revision = Revision And
+        Current.MapTiles[0].Destination = "Obsolete Destination",
+        "Atlas Never Deletes Yellow Areas Whose Destination Is Outside The Atlas")
 
     Current.MapTileCount = 0
-    Ok = Travel.Apply(Map, Current)
 
-    Call Check(Not Ok And Current.MapTileCount = 0,
-        "An Unchanged World Does Not Undo A Manual Marker Deletion")
+    Call Travel.ReadTown(Map, 0, Current)
+    Call Check(Not Map.Links[0, 1] And Current.MapTileCount = 0,
+        "Deleting The Last Yellow Area Removes Only Its Outgoing Route")
 
-    Map.Ports[0, 1] = 0
-    Ok = Travel.Apply(Map, Current)
+    Ok = Tiles.PlaceRectangle(Current, 0, 8, 1, 9, "Far Journey")
 
-    Call Check(Ok And Current.MapTileCount = 1 And Current.MapTiles[0].X = 0,
-        "A Changed World Rebuilds Missing Destinations On The Requested Road Side")
-    Call Navigation.Disable()
+    Call Travel.ReadTown(Map, 0, Current)
+    Call Check(Ok And Map.Links[0, 2] And Not Map.Links[0, 1] And Map.Ports[0, 2] = 0,
+        "Reassigned Yellow Areas Change Destination And Connection Side")
+
+    Opened.TabCount = 1
+    Opened.Documents[0] = Current
+
+    Call Travel.Reset(Routes, Map)
+    Call Travel.Update(Routes, Map, Opened)
+    Call Check(Map.Links[0, 2] And Not Map.Links[2, 0],
+        "A One Way Yellow Area Does Not Invent A Return Route")
+
+    Opened.Documents[0].MapTileCount = 0
+    Opened.Documents[0].Revision = Opened.Documents[0].Revision + 1
+
+    Call Travel.Update(Routes, Map, Opened)
+    Call Check(Not Map.Links[0, 2], "Unsaved Open Town Edits Refresh The Atlas")
 
     Return Failures
 

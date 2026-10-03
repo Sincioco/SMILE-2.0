@@ -58,7 +58,7 @@ def east_valley():
         for radius in (51,64):
             x,z=point(radius,angle+15)
             t.place(19,x,z,1.35)
-    t.gates()
+    t.gates(width=7, bank=False)
     t.notes=['Six-point star inside a circular waterfront promenade',
         'Six memorial gardens and a circular lake around City Hall, linked to the inner promenade',
         'Road-facing homes along six clear avenues with connected ring paths']
@@ -116,6 +116,8 @@ def home_village():
     t.place(9,0,0,1.05)
     # Outside-only exits preserve all four residential loops and their ponds.
     t.gates(join_x=177,width=8)
+    for side in (-1, 1):
+        t.path([(side*118, 0), (side*190, 0)], 8)
     t.notes=["Working label for Orin's unnamed home village; not a new canon proper name",
         'Central circular civic island and four round residential neighborhoods',
         'Eight satellite fountain gardens with smooth curved banks and lantern-lit paths']

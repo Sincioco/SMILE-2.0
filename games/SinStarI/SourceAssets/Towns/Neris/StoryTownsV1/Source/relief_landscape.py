@@ -26,8 +26,8 @@ def build():
             town.place(14, side*x, z, 1.8, 90 if side == 1 else 270)
         town.lamps([(side*x, z) for x in (35, 95, 145) for z in (-13, 13)], 1.7)
         town.lamps([(side*58, z) for z in (-115, -55, 55, 115)], 1.7)
-    town.path([(0, -125), (0, 70)], 10)
-    town.place(9, 0, 100, 1.8, 0)
+    town.path([(0, -125), (0, 0)], 10)
+    town.place(9, 0, 0, 1.8, 0)
     town.gates(destinations=('Neris Town', 'Neris Waterworks'), width=14)
     main[0], main[-1] = (-196, 0), (196, 0)
     town.acceptance_paths = paths

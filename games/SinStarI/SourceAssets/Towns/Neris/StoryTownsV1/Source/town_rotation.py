@@ -53,5 +53,9 @@ def rotate(document, degrees):
             brush[4], brush[5] = brush[5], brush[4]
     if doc.get('teleport_spawn') is not None:
         doc['teleport_spawn'] = point(*doc['teleport_spawn'])
+    for spawn in doc.get('npc_spawns', []):
+        if spawn is not None:
+            spawn[0], spawn[2] = point(spawn[0], spawn[2])
+            spawn[3] = (spawn[3] + degrees) % 360
     doc['landmark_rotation'] = (doc.get('landmark_rotation', 0) + degrees) % 360
     return doc

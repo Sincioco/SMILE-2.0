@@ -10666,6 +10666,8 @@ extern "C" long long smile_renderer3d_model_text_operation(long long command,
     const char* text, long long length, long long a, long long b, long long c)
 {
     char name[1025];
+    if (command == SMILE_3D_TEXT_EXPORT_VIEWPORT_PNG)
+        return smile_3d_capture_storage(command, text, length, a);
     if (text == 0 || length <= 0 || length > 1024) { smile_last_error3d = 48; return 0; }
     if (command == SMILE_3D_TEXT_SAVE_VIEWPORT_CAPTURE || command == SMILE_3D_TEXT_LOAD_VIEWPORT_CAPTURE)
         return smile_3d_capture_storage(command, text, length, a);

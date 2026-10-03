@@ -231,6 +231,7 @@ Private Const TEXT_COMMAND_MODEL_SOCKET_NAME = 11
 Private Const TEXT_COMMAND_MODEL_EVENT_NAME = 12
 Private Const TEXT_COMMAND_SAVE_VIEWPORT_CAPTURE = 13
 Private Const TEXT_COMMAND_LOAD_VIEWPORT_CAPTURE = 14
+Private Const TEXT_COMMAND_EXPORT_VIEWPORT_PNG = 15
 
 Public Const PRIMITIVE_CUBE = 1
 Public Const PRIMITIVE_PLANE = 2
@@ -4281,6 +4282,16 @@ Public Function SaveViewportCapture3D(Handle As Number, Key As Text) As Boolean
 
     Result = Renderer3DText(TEXT_COMMAND_SAVE_VIEWPORT_CAPTURE, Key, Handle, 0, 0, 0, 0, 0, 0, 0) <> 0
 
+    Return Result
+
+End Function
+
+''' Export a cached viewport as PNG in the background; poll Data_FileStatus/Progress.
+Public Function ExportViewportCapturePng3D(Handle As Number, Path As Text) As Number
+
+    Dim Result As Number
+
+    Result = Renderer3DText(TEXT_COMMAND_EXPORT_VIEWPORT_PNG, Path, Handle, 0, 0, 0, 0, 0, 0, 0)
     Return Result
 
 End Function

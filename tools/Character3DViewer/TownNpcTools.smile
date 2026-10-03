@@ -1,0 +1,280 @@
+''' NPC palette and spawn-marker gestures; runtime actors remain resident-owned.
+Module Smile.Tools.TownNpcTools
+
+Option Explicit
+
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownNpcLayout As Layout
+Import Smile.Tools.TownEditorPanel As Panel
+Import Smile.Tools.TownDocumentNavigation As Navigation
+Import Smile.Tools.TownSpawnMarker As Marker
+Import Smile.Tools.TownResidentMovement As Movement
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionCamera3D As Camera
+
+Public Function Command(ByRef Ui As Panel.State, ByRef Town As Document.State,
+    Action As Number) As Boolean
+
+    If Action = 5 Or (Action >= 800 And Action <= 808) Then
+
+        If Ui.Category <> 5 Then
+            Ui.Page = 0
+        End If
+
+        Ui.Category = 5
+        Ui.Section = 0
+        Ui.Tool = 811
+
+        If Action >= 800 Then
+            Ui.NpcIndex = Action - 800
+        End If
+
+        Ui.Message = "NPC Spawn: click walkable ground to place or move."
+        Return True
+
+    End If
+
+    If Ui.Category = 5 And (Action = 816 Or Action = 817) Then
+
+        If Action = 816 Then
+            Ui.Page = Max(0, Ui.Page - 1)
+        Else
+            Ui.Page = Min((Layout.NPC_COUNT - 1) / PaletteSlots(), Ui.Page + 1)
+        End If
+
+        Return True
+
+    End If
+
+    If (Ui.Category <> 5 Or
+        Action < 811 Or
+        Action > 815) Then
+        Return False
+    End If
+
+    If Action = 811 Or Action = 812 Then
+
+        Ui.Tool = Action
+        Ui.Message = "Click the point the NPC should face."
+
+        If Action = 811 Then
+            Ui.Message = "Click walkable ground to place or move."
+        End If
+
+        Return True
+
+    End If
+
+    If Not Town.Npcs.Authored Then
+        Town.Npcs = Layout.Defaults(Town.Name)
+    End If
+
+    Town.Npcs.Authored = True
+
+    If Action = 813 Then
+        Town.Npcs.People[Ui.NpcIndex].Active = False
+    Else If Action = 814 Then
+        Town.Npcs.People[Ui.NpcIndex].Heading = Town.Npcs.People[Ui.NpcIndex].Heading - 15.0
+    Else
+        Town.Npcs.People[Ui.NpcIndex].Heading = Town.Npcs.People[Ui.NpcIndex].Heading + 15.0
+    End If
+
+    Town.Revision = Town.Revision + 1
+    Return True
+
+End Function
+
+Public Function Place(ByRef Ui As Panel.State, ByRef Town As Document.State,
+    Point As P.Vector3) As Boolean
+
+    Dim Spawn As Layout.Spawn
+    Dim Spawns As Layout.State
+
+    Spawns = Town.Npcs
+
+    If Not Spawns.Authored Then
+        Spawns = Layout.Defaults(Town.Name)
+    End If
+
+    Spawn = Spawns.People[Ui.NpcIndex]
+
+    If Ui.Tool = 812 Then
+
+        If Not Spawn.Active Then
+            Ui.Message = "Place this NPC Spawn first."
+            Return False
+        End If
+
+        Spawn.Heading = Movement.Facing(Spawn.Position, Point)
+
+    Else
+
+        If Not Navigation.CanStand(Point.X, Point.Z) Then
+            Ui.Message = "Choose walkable ground or road for this NPC."
+            Return False
+        End If
+
+        Point.Y = Navigation.GroundHeight(Point.X, Point.Z)
+        Spawn.Position = Point
+        Spawn.Active = True
+
+    End If
+
+    Town.Npcs = Spawns
+    Town.Npcs.Authored = True
+    Town.Npcs.People[Ui.NpcIndex] = Spawn
+    Town.Revision = Town.Revision + 1
+    Ui.Message = Layout.NameAt(Ui.NpcIndex) + " Spawn updated. Save to keep it."
+    Return True
+
+End Function
+
+Private Sub Portrait(ByRef Ui As Panel.State, Index As Number, X As Number, Y As Number)
+
+    Dim Left As Number
+    Dim Top As Number
+    Dim Width As Number
+    Dim Height As Number
+
+    Left = 270 + Index * 215
+    Top = 160 + Index * 32
+    Width = 145
+    Height = 300
+
+    If Index >= 5 Then
+
+        Left = 272 + (Index - 5) * 224
+        Top = 450 + (Index - 5) * 35
+        Width = 108
+        Height = 224
+
+    End If
+
+    If Index = 8 Then
+
+        Left = 930
+        Top = 575
+        Width = 130
+        Height = 225
+
+    End If
+
+    Draw Image Ui.NpcAtlas From Left, Top Size Width By Height At X, Y Size 38 By 54 Filter Smooth
+
+End Sub
+
+Public Function PaletteSlots() As Number
+
+    Dim Result As Number
+
+    Result = 2 * Max(1, Min(3, (Window_Height() - 600) / 62))
+    Return Result
+
+End Function
+
+Public Sub DrawPanel(ByRef Ui As Panel.State, ByRef Town As Document.State)
+
+    Dim Index As Number
+    Dim X As Number
+    Dim Y As Number
+    Dim Spawns As Layout.State
+    Dim Label As Text
+    Dim Slot As Number
+    Dim Slots As Number
+
+    If Not Ui.NpcAtlasLoaded Then
+        Load Image Ui.NpcAtlas From "Assets/Neris/Residents/Cast-Preview.png"
+
+        Ui.NpcAtlasLoaded = True
+    End If
+
+    Spawns = Town.Npcs
+
+    If Not Spawns.Authored Then
+        Spawns = Layout.Defaults(Town.Name)
+    End If
+
+    Slots = PaletteSlots()
+    Ui.Page = Min(Ui.Page, (Layout.NPC_COUNT - 1) / Slots)
+
+    For Slot = 0 To Slots - 1
+
+        Index = Ui.Page * Slots + Slot
+
+        If Index >= Layout.NPC_COUNT Then
+            Exit For
+        End If
+
+        X = Panel.LeftEdge() + 10 + (Slot Mod 2) * 144
+        Y = 240 + (Slot / 2) * 62
+        Label = "Not Placed"
+
+        If Spawns.People[Index].Active Then
+            Label = "Placed"
+        End If
+
+        Call Panel.Button(Ui, 800 + Index, X, Y, 139, "", Ui.NpcIndex = Index, True, 58)
+        Call Portrait(Ui, Index, X + 3, Y + 2)
+
+        Draw Text Layout.NameAt(Index) At X + 47, Y + 10 Size 13 Color WHITE
+        Draw Text Label At X + 47, Y + 33 Size 11 Color RGB(130, 210, 220)
+    End For
+
+    X = Panel.LeftEdge() + 10
+
+    Y = 240 + (Slots / 2) * 62
+
+    Call Panel.Button(Ui, 816, X, Y, 139, "Previous NPCs", False, Ui.Page > 0)
+    Call Panel.Button(Ui, 817, X + 144, Y, 139, "Next NPCs", False,
+        (Ui.Page + 1) * Slots < Layout.NPC_COUNT)
+    Call Panel.Button(Ui, 811, X, Y + 32, 139, "Place / Move", Ui.Tool = 811)
+    Call Panel.Button(Ui, 812, X + 144, Y + 32, 139, "Face Point", Ui.Tool = 812)
+    Call Panel.Button(Ui, 814, X, Y + 64, 60, "-15")
+    Call Panel.Button(Ui, 815, X + 65, Y + 64, 60, "+15")
+    Call Panel.Button(Ui, 813, X + 130, Y + 64, 153, "Delete NPC Spawn")
+
+    Draw Text "Circle: Spawn   Line: Facing" At X, Y + 98 Size 12 Color WHITE
+
+End Sub
+
+Public Sub DrawMarkers(ByRef Ui As Panel.State, ByRef Town As Document.State,
+    View As P.Camera3D)
+
+    Dim Spawns As Layout.State
+    Dim Index As Number
+    Dim Projected As Camera.ProjectedPoint
+    Dim Radius As Double
+
+    Spawns = Town.Npcs
+
+    If Not Spawns.Authored Then
+        Spawns = Layout.Defaults(Town.Name)
+    End If
+
+    For Index = 0 To Layout.NPC_COUNT - 1
+
+        If Spawns.People[Index].Active Then
+
+            Projected = Camera.ProjectViewerPoint(Spawns.People[Index].Position, View,
+                Window_Width(), Window_Height())
+            Radius = Max(22.0, Camera.WorldSizeForPixels(8, Max(View.NearPlane, Projected.Depth),
+                View.FovDegrees, Window_Height()))
+
+            If View.OrthographicHeight > 0.0 Then
+                Radius = Max(22.0, View.OrthographicHeight * 8.0 / ToDouble(Window_Height()))
+            End If
+
+            Call Marker.Draw(Town, Spawns.People[Index].Position,
+                Spawns.People[Index].Heading, View, Radius)
+
+            If Projected.Visible And Projected.X < ToDouble(Panel.LeftEdge()) Then
+                Draw Text Layout.NameAt(Index) At ToNumber(Projected.X) + 10, ToNumber(Projected.Y) - 18 Size 13 Color CYAN
+            End If
+
+        End If
+
+    End For
+
+End Sub
+
+End Module

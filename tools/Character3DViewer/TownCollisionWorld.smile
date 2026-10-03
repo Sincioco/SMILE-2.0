@@ -10,6 +10,7 @@ Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownCatalogData As Catalog
 Import Smile.Tools.TownCatalogFeatures As Features
 Import Smile.Tools.TownGeometry As Geometry
+Import Smile.Tools.TownSurfaceLayers As Layers
 Import Smile.Simple3D.TerrainSurface3D As Terrain
 Import Smile.Simple3D.TerrainTraversal3D As Traversal
 
@@ -241,6 +242,74 @@ Public Function CanTraverse(ByRef Value As State, First As P.Vector3, Last As P.
 
     End For
     Return False
+
+End Function
+
+Public Function GroundHeight(ByRef Snapshot As State, X As Double, Z As Double) As Double
+
+    Dim Index As Number
+    Dim Part As Number
+    Dim Cell As Number
+    Dim Point As P.Vector3
+    Dim Shape As Catalog.Template
+    Dim Box As Features.Box
+    Dim Height As Double
+    Dim LocalHeight As Double
+    Dim Ground As Terrain.Sample
+
+    Cell = Grid.ReadPoint(Snapshot.Surface, X, Z)
+    Height = Layers.GROUND_WALK_Y
+
+    If Cell = Grid.SURFACE_ROAD Or Cell = Grid.SURFACE_BRIDGE Then
+        Height = Layers.ROAD_Y
+    End If
+
+    ' Road-over-water cells follow the same terrain triangles as their visible deck.
+    Ground = Terrain.SamplePoint(Snapshot.Surface, X, Z)
+    Height = Height + Ground.Offset
+
+    For Index = 0 To Snapshot.ItemCount - 1
+
+        If NearWorld(Snapshot, Index, X, Z) Then
+
+            Point = Geometry.ToLocal(Snapshot.Items[Index], P.Vector(X, Snapshot.Items[Index].Position.Y, Z))
+
+            If NearItem(Snapshot, Index, Point) Then
+
+                Shape = Snapshot.Shapes[Snapshot.Items[Index].Template]
+                LocalHeight = Approach(Snapshot.Items[Index], Point, True)
+
+                For Part = 0 To Shape.StepCount - 1
+
+                    Box = Features.StepAt(Snapshot.Items[Index].Template, Part)
+
+                    If InBox(Box, Point, 0.015) Then
+                        LocalHeight = Max(LocalHeight, Box.Height)
+                    End If
+
+                End For
+
+                For Part = 0 To Shape.FloorCount - 1
+
+                    Box = Features.FloorAt(Snapshot.Items[Index].Template, Part)
+
+                    If InBox(Box, Point, 0.015) Then
+                        LocalHeight = Max(LocalHeight, Box.Height)
+                    End If
+
+                End For
+
+                If LocalHeight > -9000.0 Then
+                    Height = Max(Height, Snapshot.Items[Index].Position.Y + LocalHeight * Snapshot.Items[Index].Scale.Y / 1000.0)
+                End If
+
+            End If
+
+        End If
+
+    End For
+
+    Return Height
 
 End Function
 

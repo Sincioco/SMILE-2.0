@@ -163,7 +163,7 @@ def decode(payload, catalog, request=False):
     if bytes(r.byte() for _ in range(3)) != b'TWN':
         raise ValueError('Unsupported town format')
     version = r.byte()
-    if not 1 <= version <= 15:
+    if not 1 <= version <= 16:
         raise ValueError('Unsupported town format')
     fingerprint = catalog.get('document_fingerprint') or hashlib.sha256(json.dumps(catalog, sort_keys=True).encode()).hexdigest()
     if r.name() != fingerprint:
@@ -304,8 +304,6 @@ def decode(payload, catalog, request=False):
         result['world_links_stamp'] = r.integer()
         if r.flag():
             result['teleport_spawn'] = [r.precise(), r.precise()]
-    elif result['name'] == 'Neris Town':
-        result['teleport_spawn'] = [0.0, -2780.0]
     if version >= 15 and r.flag():
         camera = [r.precise() for _ in range(12)]
         if (not 1 <= camera[9] < 179 or not 0 < camera[10] < camera[11]
@@ -313,6 +311,8 @@ def decode(payload, catalog, request=False):
                 or sum(v*v for v in camera[6:9]) <= 0.000001):
             raise ValueError('Invalid initial camera')
         result['initial_camera'] = camera
+    if version >= 16:
+        result['npc_spawns'] = [[r.precise() for _ in range(4)] if r.flag() else None for _ in range(9)]
     result['payload'] = payload[:r.offset]
     if request:
         result['mode'], result['request_id'] = r.integer(), r.integer()
@@ -456,6 +456,8 @@ def encode(document, catalog):
             appearance = [0]*(document['columns']*document['rows'])
     if document.get('initial_camera') is not None:
         version = 15
+    if document.get('npc_spawns') is not None:
+        version = 16
         if not appearance:
             appearance = [0]*(document['columns']*document['rows'])
     result = bytearray(b'TWN') + bytes([version]) + name(fingerprint) + name(document['name']) + b'\0'
@@ -536,10 +538,22 @@ def encode(document, catalog):
                 raise ValueError('Teleport spawn needs X and Z')
             result += b''.join(precise(value) for value in spawn)
     if version >= 15:
-        camera = document['initial_camera']
-        if len(camera) != 12:
-            raise ValueError('Initial camera needs twelve components')
-        result += b'\x01' + b''.join(precise(value) for value in camera)
+        camera = document.get('initial_camera')
+        result += b'\x01' if camera is not None else b'\x00'
+        if camera is not None:
+            if len(camera) != 12:
+                raise ValueError('Initial camera needs twelve components')
+            result += b''.join(precise(value) for value in camera)
+    if version >= 16:
+        spawns = document['npc_spawns']
+        if len(spawns) != 9:
+            raise ValueError('NPC layout needs nine named slots')
+        for spawn in spawns:
+            result += b'\x01' if spawn is not None else b'\x00'
+            if spawn is not None:
+                if len(spawn) != 4:
+                    raise ValueError('NPC spawn needs X, Y, Z and heading')
+                result += b''.join(precise(value) for value in spawn)
     if len(result) > 524288:
         raise ValueError('Town exceeds the native 512 KiB document limit')
     decode(result, catalog)  # Same format/range checks apply in both directions.

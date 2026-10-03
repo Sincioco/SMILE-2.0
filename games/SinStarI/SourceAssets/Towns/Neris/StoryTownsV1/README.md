@@ -1,3 +1,21 @@
+# October 3 authored map corrections
+
+Checked `.town` files are authoritative. World Map arrows now reflect authored
+yellow Map Load zones, read-only. The old `connect_world.py` and
+`road_end_markers.py` mutation steps are removed. Builders are explicit offline
+authoring tools, never runtime load hooks.
+
+The sixteen maps retain current destinations, lighting and initial cameras.
+Corrections remove Star Lake/Spaceport exterior spurs, Ancient Relay N/S stubs
+and Waterworks reservoir wedges; straighten short exit approaches; match East
+Valley, Neris Canals and Orin's Village exits to their main road widths; and
+center Relief Quarter's City Hall, front door toward negative Z (south), without
+its old northern access stub. Neris Town includes nine prepared NPC spawns.
+
+Run `scripts/test-town-authored-maps.py` for these specific geometry regressions.
+The generation notes below describe history, not instructions to overwrite
+current maps. Subsequent map edits remain explicit Town Editor actions.
+
 # Luma town designs
 
 Editable native `.town` maps for Sin Star I. These reuse the repository's Neris
@@ -186,10 +204,8 @@ Run `Source/build_towns.py`, `Source/build_journeys.py`, then `Source/build_worl
 runtime. The generator validates document round trips, authoring/resource bounds,
 road connectivity, destination tiles and intended mirror symmetry. `manifest.json`
 records counts and design notes. `world-layout.json` records graph positions/links.
-After regeneration, run `Source/connect_world.py --original <current-Neris.town>
---output <staging-folder>` to add the atlas's reciprocal road markers. It prepares
-an additive Neris copy in staging and updates the thirteen generated source maps.
-`travel-connections.json` records the resulting destination network.
+The former graph-to-town regeneration step is retired. Author destinations in
+the Town Editor; World Map reads those zones without changing the towns.
 
 Close Studio normally before using `Source/install_maps.py --data <Data folder>
 --backup <new backup folder>`. It validates each input and retains every replaced

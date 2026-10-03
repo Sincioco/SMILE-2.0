@@ -1,0 +1,71 @@
+''' Cardinal letters remain attached to the town's world-space edges during editing.
+Module Smile.Tools.TownCompass
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionCamera3D As Camera
+Import Smile.Simple3D.TerrainSurface3D As Terrain
+Import Smile.Tools.TownDocument As Document
+
+Public Sub Draw(ByRef Town As Document.State, View As P.Camera3D, RightEdge As Number)
+
+    Dim Index As Number
+    Dim Position As P.Vector3
+    Dim Ground As Terrain.Sample
+    Dim Point As Camera.ProjectedPoint
+    Dim LowX As Double
+    Dim HighX As Double
+    Dim LowZ As Double
+    Dim HighZ As Double
+    Dim Label As Text
+    Dim X As Number
+    Dim Y As Number
+
+    LowX = Town.Surface.OriginX
+    HighX = Town.Surface.XEdges[Town.Surface.Columns]
+    LowZ = Town.Surface.OriginZ
+    HighZ = Town.Surface.ZEdges[Town.Surface.Rows]
+
+    For Index = 0 To 3
+
+        Position = P.Vector((LowX + HighX) * 0.5, 0.0, (LowZ + HighZ) * 0.5)
+        Label = "N"
+
+        If Index = 0 Then
+            Position.Z = HighZ
+        Else If Index = 1 Then
+            Position.X = HighX
+            Label = "E"
+        Else If Index = 2 Then
+            Position.Z = LowZ
+            Label = "S"
+        Else
+            Position.X = LowX
+            Label = "W"
+        End If
+
+        Ground = Terrain.SamplePoint(Town.Surface, Position.X, Position.Z)
+        Position.Y = Ground.Offset + 25.0
+        Point = Camera.ProjectViewerPoint(Position, View, Window_Width(), Window_Height())
+
+        If Point.Visible Then
+
+            X = ToNumber(Point.X)
+            Y = ToNumber(Point.Y)
+
+            If (X >= 14 And
+                X < RightEdge - 14 And
+                Y >= 146 And
+                Y < Window_Height() - 56) Then
+                Fill Rectangle X - 12, Y - 13, 25, 27, RGB(12, 23, 36)
+                Draw Text Label At X - 7, Y - 11 Size 22 Color RGB(70, 225, 220)
+            End If
+
+        End If
+
+    End For
+
+End Sub
+
+End Module

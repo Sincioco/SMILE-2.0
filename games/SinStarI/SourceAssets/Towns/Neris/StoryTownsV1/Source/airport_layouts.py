@@ -56,10 +56,8 @@ def spaceport():
         t.path([point(limit,a),point(532,a)],20)
     t.path([(0,20),(0,550)],28)
     t.ring(0,380,65,14)
-    # Every destination gets a deliberate exit beyond the ring, never a traffic lane.
-    exits = ((270,'Neris Town'),(90,'Horizon Airport'),(0,'Neris Canals'),
-             (45,'Neris Star Lake'),(315,'Neris Crown Isles'),
-             (135,'East Valley'),(225,"Orin's Village"))
+    # Only the three cardinal exits are part of this authored layout.
+    exits = ((270,'Neris Town'),(90,'Horizon Airport'),(0,'Neris Canals'))
     t.destinations = tuple(name for _,name in exits)
     for a,name in exits:
         t.path([point(533,a),point(584,a)],20)
@@ -74,7 +72,7 @@ def spaceport():
             x,z=point(568,a+da)
             t.disk(x,z,4)
             t.place(15,x,z,2)
-    t.notes = ['Connected service drive and seven outward destination spurs',
+    t.notes = ['Connected service drive and three cardinal exits',
                'Embassy pavilions, arrival plaza and water observatories',
                'Original terminal, doors, pads and alien arrival schedules retained']
     return t

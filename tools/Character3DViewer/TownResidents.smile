@@ -1,4 +1,4 @@
-''' Neris-only resident lifecycle. Incremental loading, bounded errands and conversations.
+''' Authored town resident lifecycle. Incremental loading, bounded errands and conversations.
 Module Smile.Tools.TownResidents
 
 Option Explicit
@@ -8,10 +8,13 @@ Import Smile.Simple3D.PrecisionMath3D As M
 Import Smile.Simple3D.Character3D As Character
 Import Smile.Simple3D.Graphics3D As G
 Import Smile.Tools.TownDocumentNavigation As Navigation
+Import Smile.Tools.TownNearestRoadSearch As RoadSearch
 Import Smile.Tools.TownResidentMovement As Movement
 Import Smile.Tools.TownResidentDialogue As Dialogue
+Import Smile.Tools.TownNpcLayout As Layout
 
 Public Type Resident
+    Kind As Number
     Actor As Character.Actor
     Motion As Movement.State
     Clip As Text
@@ -19,6 +22,10 @@ Public Type Resident
 End Type
 
 Public Type State
+    Layout As Layout.State
+    TownName As Text
+    Total As Number
+    NextKind As Number
     People[9] As Resident
     Loaded As Number
     Version As Number
@@ -29,35 +36,8 @@ Public Type State
     ApproachActive As Boolean
     Enabled As Boolean
     Failed As Boolean
+    Placement As RoadSearch.State
 End Type
-
-Private Function Home(Index As Number) As P.Vector3
-
-    Dim Result As P.Vector3
-
-    Result = P.Vector(-450.0, 0.0, -2450.0)
-
-    If Index = 1 Then
-        Result = P.Vector(400.0, 0.0, -2450.0)
-    Else If Index = 2 Then
-        Result = P.Vector(0.0, 0.0, -2000.0)
-    Else If Index = 3 Then
-        Result = P.Vector(-700.0, 0.0, -2450.0)
-    Else If Index = 4 Then
-        Result = P.Vector(650.0, 0.0, -2450.0)
-    Else If Index = 5 Then
-        Result = P.Vector(-600.0, 0.0, -1800.0)
-    Else If Index = 6 Then
-        Result = P.Vector(700.0, 0.0, -1200.0)
-    Else If Index = 7 Then
-        Result = P.Vector(-400.0, 0.0, -1000.0)
-    Else If Index = 8 Then
-        Result = P.Vector(950.0, 0.0, -2450.0)
-    End If
-
-    Return Result
-
-End Function
 
 Public Sub Destroy(ByRef Value As State)
 
@@ -77,29 +57,64 @@ End Sub
 Private Sub LoadNext(ByRef Value As State)
 
     Dim Index As Number
+    Dim Kind As Number
     Dim Position As P.Vector3
+    Dim Empty As RoadSearch.State
     Dim Bounds As Character.Bounds3D
     Dim Height As Double
     Dim Ok As Boolean
 
     Index = Value.Loaded
-    Ok = Navigation.NearestRoad(Home(Index), Position)
 
-    If Not Ok Then
-        Value.Failed = True
-        Return
+    Kind = Value.NextKind
+
+    Do
+
+        If Kind >= Layout.NPC_COUNT Then
+            Value.Failed = True
+            Return
+        End If
+
+        If Value.Layout.People[Kind].Active Then
+            Exit Do
+        End If
+
+        Kind = Kind + 1
+
+    Loop
+
+    Position = Value.Layout.People[Kind].Position
+
+    If Not Value.Layout.Authored Then
+
+        If Not Value.Placement.Ready Or Value.Placement.Version <> Navigation.Version() Then
+            Call Navigation.StepNearestRoad(Value.Placement, Position)
+
+            Return
+        End If
+
+        If Not Value.Placement.Found Then
+            Value.Failed = True
+            Return
+        End If
+
+        Position = Value.Placement.Result
+
     End If
 
-    Value.People[Index].Actor = Character.LoadActor("Assets/Neris/Residents/" + Dialogue.NameAt(Index) + ".sm3d")
+    Value.Placement = Empty
+    Value.People[Index].Kind = Kind
+    Value.NextKind = Kind + 1
+    Value.People[Index].Actor = Character.LoadActor("Assets/Neris/Residents/" + Dialogue.NameAt(Kind) + ".sm3d")
     Ok = Character.IsValid(Value.People[Index].Actor)
     Bounds = Character.LocalBounds(Value.People[Index].Actor)
     Height = 21.0
 
-    If Index >= 5 Then
+    If Kind >= 5 Then
         Height = 14.5
     End If
 
-    If Index = 8 Then
+    If Kind = 8 Then
         Height = 8.5
     End If
 
@@ -108,7 +123,9 @@ Private Sub LoadNext(ByRef Value As State)
     Ok = Character.PlayAnimation(Value.People[Index].Actor, "Idle", True) And Ok
     Value.People[Index].Clip = "Idle"
 
-    Call Movement.Start(Value.People[Index].Motion, Position, Index)
+    Call Movement.Start(Value.People[Index].Motion, Position, Kind)
+
+    Value.People[Index].Motion.Heading = Value.Layout.People[Kind].Heading
 
     Value.People[Index].Ready = Ok
     Value.Loaded = Value.Loaded + 1
@@ -156,7 +173,7 @@ Public Function Input(ByRef Value As State, Key As Number) As Boolean
 
 End Function
 
-Public Sub Update(ByRef Value As State, TownName As Text, Paused As Boolean,
+Public Sub Update(ByRef Value As State, TownName As Text, Spawns As Layout.State, Paused As Boolean,
     Leader As P.Vector3, Elapsed As Number)
 
     Dim Index As Number
@@ -167,30 +184,32 @@ Public Sub Update(ByRef Value As State, TownName As Text, Paused As Boolean,
     Dim Position As P.Vector3
     Dim Ok As Boolean
 
-    If TownName <> "Neris Town" Then
+    If Not Spawns.Authored Then
+        Spawns = Layout.Defaults(TownName)
+    End If
+
+    If Value.TownName <> TownName Or Not Layout.Same(Value.Layout, Spawns) Then
+
         Call Destroy(Value)
 
-        Return
+        Value.Layout = Spawns
+        Value.TownName = TownName
+        Value.Total = Layout.Population(Spawns)
+        Value.Enabled = Value.Total > 0
+
     End If
 
     If Not Value.Enabled Then
+        Return
+    End If
 
-        Value.Enabled = True
-        Value.Speaking = -1
-        Value.Nearest = -1
-
+    If Value.Loaded < Value.Total And Not Value.Failed Then
+        Call LoadNext(Value)
     End If
 
     If Paused Then
-
         Value.Speaking = -1
         Value.ApproachActive = False
-        Return
-
-    End If
-
-    If Value.Loaded < 9 And Not Value.Failed Then
-        Call LoadNext(Value)
     End If
 
     Best = 55.0
@@ -200,16 +219,16 @@ Public Sub Update(ByRef Value As State, TownName As Text, Paused As Boolean,
 
         If Value.People[Index].Ready Then
 
-            If Value.Version <> Navigation.Version() Then
+            If Value.Version <> Navigation.Version() And Not Value.Layout.Authored Then
 
                 If Navigation.NearestRoad(Value.People[Index].Motion.Position, Position) Then
-                    Call Movement.Start(Value.People[Index].Motion, Position, Index)
+                    Call Movement.Start(Value.People[Index].Motion, Position, Value.People[Index].Kind)
                 End If
 
             End If
 
             Distance = M.Distance(Leader, Value.People[Index].Motion.Position)
-            Pausing = (Distance < 42.0 Or Value.Speaking = Index Or
+            Pausing = (Paused Or Distance < 42.0 Or Value.Speaking = Index Or
                 (Value.ApproachActive And Value.Approaching = Index))
 
             If (Distance < Best And
@@ -266,7 +285,7 @@ Public Function Draw(ByRef Value As State, TownName As Text) As Boolean
 
     Ok = True
 
-    If TownName = "Neris Town" Then
+    If Value.Enabled And TownName = Value.TownName Then
 
         For Index = 0 To Value.Loaded - 1
 
@@ -282,10 +301,36 @@ Public Function Draw(ByRef Value As State, TownName As Text) As Boolean
 
 End Function
 
+Public Function OverlayHeight(ByRef Value As State) As Number
+
+    If (Value.Enabled And
+        (Value.Nearest >= 0 Or Value.Speaking >= 0 Or
+        Value.Loaded < Value.Total Or Value.Failed)) Then
+        Return 186
+    End If
+
+    Return 0
+
+End Function
+
 Public Sub Overlay(ByRef Value As State)
 
+    Dim Nearest As Number
+    Dim Speaking As Number
+
+    Nearest = -1
+    Speaking = -1
+
+    If Value.Nearest >= 0 Then
+        Nearest = Value.People[Value.Nearest].Kind
+    End If
+
+    If Value.Speaking >= 0 Then
+        Speaking = Value.People[Value.Speaking].Kind
+    End If
+
     If Value.Enabled Then
-        Call Dialogue.Draw(Value.Nearest, Value.Speaking, Value.Loaded, Value.Failed)
+        Call Dialogue.Draw(Nearest, Speaking, Value.Loaded, Value.Failed, Value.Total)
     End If
 
 End Sub

@@ -2284,7 +2284,8 @@ long long smile_renderer3d_text_command(long long command, void* owned_text,
         result = smile_renderer3d_prepare_model_pbr(a, b, c, d);
     else if (text != 0 && ((command >= SMILE_3D_TEXT_MODEL_CLIP_INDEX &&
         command <= SMILE_3D_TEXT_TAKE_MODEL_ANIMATOR_EVENT) ||
-        command == SMILE_3D_TEXT_SAVE_VIEWPORT_CAPTURE || command == SMILE_3D_TEXT_LOAD_VIEWPORT_CAPTURE))
+        command == SMILE_3D_TEXT_SAVE_VIEWPORT_CAPTURE || command == SMILE_3D_TEXT_LOAD_VIEWPORT_CAPTURE ||
+        command == SMILE_3D_TEXT_EXPORT_VIEWPORT_PNG))
         result = smile_renderer3d_model_text_operation(command, smile_text_bytes(text),
             smile_text_length(text), a, b, c);
     smile_text_release(text);

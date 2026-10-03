@@ -3,6 +3,8 @@ Module Smile.Tools.TownEditor
 
 Option Explicit
 
+Import Smile.Tools.TownCompass As Compass
+
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.PrecisionCamera3D As Camera
 Import Smile.Simple3D.SurfaceGrid3D As Grid
@@ -31,6 +33,7 @@ Import Smile.Tools.TownTerrainTools As TerrainTools
 Import Smile.Tools.TownTerrainPanel As TerrainPanel
 Import Smile.Tools.TownRampTools As RampTools
 Import Smile.Tools.TownWaterTools As WaterTools
+Import Smile.Tools.TownNpcTools As Npcs
 
 Public Type State
     StyleGesture As StyleTools.State
@@ -197,6 +200,15 @@ Public Function Command(ByRef Value As State, ByRef Town As Document.State, Acti
     Call Cancel(Value, Town)
     Call History.Ensure(Value.HistoryState, Town, Value.Guide.Ink)
 
+    If Npcs.Command(Value.Ui, Town, Action) Then
+
+        Call Selection.ClearSelection(Value.Selected)
+        Call History.Record(Value.HistoryState, Town, Value.Guide.Ink)
+
+        Return 0
+
+    End If
+
     If WaterTools.Command(Value.WaterGesture, Value.TerrainGesture, Town, Action) Then
 
         Value.Ui.Section = 7
@@ -275,6 +287,14 @@ Public Function Command(ByRef Value As State, ByRef Town As Document.State, Acti
         Call CourtTools.Remove(Town)
 
         Value.Ui.Message = "Royal Court removed; terrain unchanged."
+
+    Else If Action = 764 Then
+
+        Value.Ui.PermanentPage = Max(0, Value.Ui.PermanentPage - 1)
+
+    Else If Action = 765 Then
+
+        Value.Ui.PermanentPage = Min(Panel.LastPermanentPage(), Value.Ui.PermanentPage + 1)
 
     Else If Action = 20 Or Action = 21 Then
 
@@ -741,6 +761,10 @@ Public Function Input(ByRef Value As State, ByRef Town As Document.State,
 
         Index = 24
 
+        If Value.Ui.Category = 5 Then
+            Index = 813
+        End If
+
         If Value.Ui.Tool = 93 Or Value.Ui.Tool = 94 Then
             Index = 95
         End If
@@ -798,6 +822,31 @@ Public Function Input(ByRef Value As State, ByRef Town As Document.State,
 
         If Ok Then
             Call History.Record(Value.HistoryState, Town, Value.Guide.Ink)
+        End If
+
+        Return Action
+
+    End If
+
+    If Value.Ui.Section = 0 And Value.Ui.Category = 5 Then
+
+        OnGround = Picking.TerrainPoint(Town, View, Pointer_X(), Pointer_Y(),
+            Window_Width(), Window_Height(), Value.Current)
+
+        If (OnGround And
+            Not Blocked And
+            Not Panel.Hovered() And
+            Not Key_Held(KEY_SHIFT) And
+            Pointer_Pressed(POINTER_PRIMARY)) Then
+
+            Call History.Ensure(Value.HistoryState, Town, Value.Guide.Ink)
+
+            Ok = Npcs.Place(Value.Ui, Town, Value.Current)
+
+            If Ok Then
+                Call History.Record(Value.HistoryState, Town, Value.Guide.Ink)
+            End If
+
         End If
 
         Return Action
@@ -1179,7 +1228,16 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State, View As P.Ca
     Value.Ui.CanUndo = History.UndoCount(Value.HistoryState) > 0
     Value.Ui.CanRedo = History.RedoCount(Value.HistoryState) > 0
 
+    If Value.Ui.Section = 0 And Value.Ui.Category = 5 Then
+        Call Npcs.DrawMarkers(Value.Ui, Town, View)
+    End If
+
     Call Panel.Draw(Value.Ui, Town, Value.Guide, Value.Selected.SelectedCount)
+    Call Compass.Draw(Town, View, Panel.LeftEdge())
+
+    If Value.Ui.Section = 0 And Value.Ui.Category = 5 Then
+        Call Npcs.DrawPanel(Value.Ui, Town)
+    End If
 
     If Value.Ui.Section = 7 Then
 

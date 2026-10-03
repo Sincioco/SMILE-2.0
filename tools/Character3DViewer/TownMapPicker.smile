@@ -280,7 +280,7 @@ Public Sub Draw(ByRef Value As State)
 
     Call UI.DrawButton(PanelX + PanelWidth() - 126, 228 + PitchY * 4, 110, 24, "Refresh All", False)
 
-    Label = "Choose a map. Demo On includes it in the 30-second cycle."
+    Label = "Choose a map. Demo On includes it in the demo cycle."
 
     If Text_Length(Value.Message) > 0 Then
         Label = Value.Message

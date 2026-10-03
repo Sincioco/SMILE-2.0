@@ -11,16 +11,8 @@ Public Type State
     Camera As View.State
     Selected As Number
     DragNode As Boolean
-    DragPort As Boolean
-    SourceNode As Number
-    SourcePort As Number
     OffsetX As Number
     OffsetY As Number
-    PointerX As Number
-    PointerY As Number
-    PendingDelete As Boolean
-    DeleteFirst As Number
-    DeleteSecond As Number
     ClickNode As Number
     ClickTime As Number
     ClickX As Number
@@ -100,103 +92,18 @@ Public Sub Fit(ByRef Value As State, ByRef Map As Document.State, RightEdge As N
 
 End Sub
 
-Private Function PickPort(ByRef Value As State, ByRef Map As Document.State, Px As Number, Py As Number,
-    RightEdge As Number, Height As Number) As Number
-
-    Dim ReturnValue As Number
-
-    Dim Index As Number
-    Dim Side As Number
-    Dim Result As Number
-
-    For Index = 0 To Map.NodeCount - 1
-
-        For Side = 0 To 3
-
-            If (Abs(Px - X(Value, Map, Index, RightEdge, Side)) <= 10 And
-                Abs(Py - Y(Value, Map, Index, Height, Side)) <= 10) Then
-                Result = Index * 4 + Side
-                Return Result
-            End If
-
-        End For
-    End For
-
-    ReturnValue = -1
-
-    Return ReturnValue
-
-End Function
-
-Private Function OnLine(ByRef Value As State, ByRef Map As Document.State, First As Number, Second As Number,
-    Px As Number, Py As Number, RightEdge As Number, Height As Number) As Boolean
-
-    Dim Ax As Double
-    Dim Ay As Double
-    Dim Dx As Double
-    Dim Dy As Double
-    Dim LengthSquared As Double
-    Dim Amount As Double
-    Dim Result As Boolean
-
-    Ax = ToDouble(X(Value, Map, First, RightEdge, Map.Ports[First, Second]))
-    Ay = ToDouble(Y(Value, Map, First, Height, Map.Ports[First, Second]))
-    Dx = ToDouble(X(Value, Map, Second, RightEdge, Map.Ports[Second, First])) - Ax
-    Dy = ToDouble(Y(Value, Map, Second, Height, Map.Ports[Second, First])) - Ay
-    LengthSquared = Dx * Dx + Dy * Dy
-
-    If LengthSquared < 1.0 Then
-        Return False
-    End If
-
-    Amount = Clamp(((ToDouble(Px) - Ax) * Dx + (ToDouble(Py) - Ay) * Dy) / LengthSquared, 0.0, 1.0)
-    Dx = ToDouble(Px) - Ax - Amount * Dx
-    Dy = ToDouble(Py) - Ay - Amount * Dy
-    Result = Dx * Dx + Dy * Dy <= 49.0
-
-    Return Result
-
-End Function
-
 Public Function Gesture(ByRef Value As State, ByRef Map As Document.State,
     Px As Number, Py As Number, Pressed As Boolean, Held As Boolean, Available As Boolean,
     RightEdge As Number, Height As Number, Optional Now As Number = -1) As Boolean
 
-    Dim Picked As Number
     Dim Index As Number
-    Dim Other As Number
     Dim Changed As Boolean
 
     If Now < 0 Then
         Now = Timer()
     End If
 
-    Value.PointerX = Px
-    Value.PointerY = Py
-
-    If Value.PendingDelete Then
-        Return False
-    End If
-
-    If Value.DragPort Then
-
-        If Not Held Then
-
-            Value.DragPort = False
-
-            If Available Then
-
-                Picked = PickPort(Value, Map, Px, Py, RightEdge, Height)
-
-                If Picked >= 0 Then
-                    Changed = Document.Connect(Map, Value.SourceNode, Value.SourcePort, Picked / 4, Picked Mod 4)
-                End If
-
-            End If
-
-        End If
-
-    Else If Value.DragNode Then
+    If Value.DragNode Then
 
         Value.DragNode = Held
 
@@ -214,19 +121,6 @@ Public Function Gesture(ByRef Value As State, ByRef Map As Document.State,
         End If
 
     Else If Pressed And Available Then
-
-        Picked = PickPort(Value, Map, Px, Py, RightEdge, Height)
-
-        If Picked >= 0 Then
-
-            Value.ClickNode = 0
-            Value.SourceNode = Picked / 4
-            Value.SourcePort = Picked Mod 4
-            Value.Selected = Value.SourceNode
-            Value.DragPort = True
-            Return False
-
-        End If
 
         For Index = 0 To Map.NodeCount - 1
 
@@ -260,23 +154,6 @@ Public Function Gesture(ByRef Value As State, ByRef Map As Document.State,
 
         End For
 
-        For Index = 0 To Map.NodeCount - 1
-
-            For Other = Index + 1 To Map.NodeCount - 1
-
-                If (Map.Links[Index, Other] And
-                    OnLine(Value, Map, Index, Other, Px, Py, RightEdge, Height)) Then
-
-                    Value.PendingDelete = True
-                    Value.DeleteFirst = Index
-                    Value.DeleteSecond = Other
-                    Return False
-
-                End If
-
-            End For
-        End For
-
         Value.Selected = -1
         Value.ClickNode = 0
 
@@ -286,28 +163,30 @@ Public Function Gesture(ByRef Value As State, ByRef Map As Document.State,
 
 End Function
 
-Public Function ConfirmDelete(ByRef Value As State, ByRef Map As Document.State, Accepted As Boolean) As Boolean
+Private Sub Arrow(Ax As Number, Ay As Number, Bx As Number, EndY As Number)
 
-    Dim Changed As Boolean
+    Dim Dx As Double
+    Dim Dy As Double
+    Dim Length As Double
+    Dim TipX As Number
+    Dim TipY As Number
 
-    Changed = Accepted And Value.PendingDelete
+    Dx = ToDouble(Bx - Ax)
+    Dy = ToDouble(EndY - Ay)
+    Length = Max(1.0, Sqrt(Dx * Dx + Dy * Dy))
+    Dx = Dx / Length
+    Dy = Dy / Length
+    TipX = Ax + (Bx - Ax) * 2 / 3
+    TipY = Ay + (EndY - Ay) * 2 / 3
+    Draw Line TipX, TipY, TipX - ToNumber(Dx * 10.0 + Dy * 5.0), TipY - ToNumber(Dy * 10.0 - Dx * 5.0), RGB(60, 185, 184)
+    Draw Line TipX, TipY, TipX - ToNumber(Dx * 10.0 - Dy * 5.0), TipY - ToNumber(Dy * 10.0 + Dx * 5.0), RGB(60, 185, 184)
 
-    If Changed Then
-        Map.Links[Value.DeleteFirst, Value.DeleteSecond] = False
-        Map.Links[Value.DeleteSecond, Value.DeleteFirst] = False
-    End If
-
-    Value.PendingDelete = False
-
-    Return Changed
-
-End Function
+End Sub
 
 Public Sub Draw(ByRef Value As State, ByRef Map As Document.State, ByRef Images As Previews.State, RightEdge As Number, Height As Number)
 
     Dim Index As Number
     Dim Other As Number
-    Dim Side As Number
     Dim ColorValue As Number
     Dim Ax As Number
     Dim Ay As Number
@@ -318,26 +197,37 @@ Public Sub Draw(ByRef Value As State, ByRef Map As Document.State, ByRef Images 
 
         For Other = Index + 1 To Map.NodeCount - 1
 
-            If Map.Links[Index, Other] Then
+            If Map.Links[Index, Other] Or Map.Links[Other, Index] Then
 
                 Ax = X(Value, Map, Index, RightEdge, Map.Ports[Index, Other])
                 Ay = Y(Value, Map, Index, Height, Map.Ports[Index, Other])
                 Bx = X(Value, Map, Other, RightEdge, Map.Ports[Other, Index])
                 EndY = Y(Value, Map, Other, Height, Map.Ports[Other, Index])
+
+                If Not Map.Links[Index, Other] Then
+                    Ax = X(Value, Map, Index, RightEdge)
+                    Ay = Y(Value, Map, Index, Height)
+                End If
+
+                If Not Map.Links[Other, Index] Then
+                    Bx = X(Value, Map, Other, RightEdge)
+                    EndY = Y(Value, Map, Other, Height)
+                End If
+
                 Draw Line Ax, Ay, Bx, EndY, RGB(60, 185, 184)
+
+                If Map.Links[Index, Other] Then
+                    Call Arrow(Ax, Ay, Bx, EndY)
+                End If
+
+                If Map.Links[Other, Index] Then
+                    Call Arrow(Bx, EndY, Ax, Ay)
+                End If
 
             End If
 
         End For
     End For
-
-    If Value.DragPort Then
-
-        Ax = X(Value, Map, Value.SourceNode, RightEdge, Value.SourcePort)
-        Ay = Y(Value, Map, Value.SourceNode, Height, Value.SourcePort)
-        Draw Line Ax, Ay, Value.PointerX, Value.PointerY, RGB(245, 210, 70)
-
-    End If
 
     For Index = 0 To Map.NodeCount - 1
 
@@ -356,10 +246,6 @@ Public Sub Draw(ByRef Value As State, ByRef Map As Document.State, ByRef Images 
         Call Previews.Draw(Images, Index, Ax - Bx + 6, Ay - EndY + 6, Bx * 2 - 12, EndY * 2 - 54)
         Call View.Label(Map.Nodes[Index].Town, Ax, Ay + EndY - 42, Bx * 2 - 12,
             Max(13, Min(18, 16 * View.Scale(Value.Camera) / 100)), 38)
-
-        For Side = 0 To 3
-            Fill Rectangle X(Value, Map, Index, RightEdge, Side) - 4, Y(Value, Map, Index, Height, Side) - 4, 8, 8, RGB(245, 210, 70)
-        End For
     End For
 
 End Sub

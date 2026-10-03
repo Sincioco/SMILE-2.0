@@ -4,6 +4,9 @@ Option Explicit
 
 Import Smile.Tools.NerisTown As Town
 Import Smile.Tools.TownResidents As Residents
+Import Smile.Tools.TownNpcTools As NpcTools
+Import Smile.Tools.TownNpcLayout As NpcLayout
+Import Smile.Tools.TownGuides As NpcGuides
 Import Smile.Tools.TownDemo As Demo
 Import Smile.Tools.TownSurfaceTools As SurfaceTools
 Import Smile.Simple3D.SurfacePaint3D As Paint
@@ -87,6 +90,14 @@ Dim QueueFixture As SaveQueue.State
 Dim QueueMaps As Tabs.State
 Dim QueueJob As Files.State
 
+Dim NpcTown As Document.State
+Dim NpcUi As Panel.State
+Dim NpcJournal As History.State
+Dim NpcInk As NpcGuides.Drawing
+Dim NpcPeople As Residents.State
+Dim NpcBefore As NpcLayout.State
+Dim NpcGuideState As NpcGuides.State
+
 Game Window "Town Editor Session Check" Size 1100 By 720
 
 Call Commands.Start(Controls)
@@ -160,10 +171,7 @@ Call Editor.BeginEditing()
 
 If Value.Ready And Editor.TownName() = "Neris Town" Then
 
-    For Index = 0 To 8
-        Call Residents.Update(Value.Residents, "Neris Town", False,
-            Value.People.Path.Positions[0], 16)
-    End For
+    Call LoadResidents(Value)
 
     Call Check(Value.Residents.Loaded = 9 And Not Value.Residents.Failed,
         "Nine Residents Fit The Full Town Material Budget")
@@ -359,6 +367,7 @@ Call Check(OpenTabs.TabCount = 1 And Draft.Name = "Tab One", "Closing Other Tab 
 Ok = Tabs.SelectTab(OpenTabs, Draft, 0, True)
 
 Call Check(Not Ok And OpenTabs.TabCount = 1, "Permanent Neris Tab Cannot Close")
+Call CheckNpcEditing()
 Call CheckPermanentUpdates()
 Call CheckGuideAndMapControls()
 
@@ -1132,7 +1141,7 @@ Sub CheckResidentConversation(ByRef Value As Town.State)
     End For
 
     Call Town.AdvanceKeyboard(Value, Held, 16)
-    Call Residents.Update(Value.Residents, "Neris Town", False, Value.People.Path.Positions[0], 16)
+    Call Residents.Update(Value.Residents, "Neris Town", Editor.ResidentPlacement(), False, Value.People.Path.Positions[0], 16)
 
     Call Check(Value.ConversationFramed And Value.Follow And Value.PartyCamera And
         Value.View.TransitionDuration = 1000 And Value.Flight.Focusing,
@@ -1278,6 +1287,7 @@ Sub CheckDemoTransition()
     Dim InitialHeading As Double
     Dim NextHeading As Double
     Dim NightBefore As Boolean
+    Dim LeaderBefore As P.Vector3
 
     Call Town.Update(Value, 0)
     Call Town.FocusParty(Value)
@@ -1285,6 +1295,7 @@ Sub CheckDemoTransition()
     Call Town.Update(Value, 0)
 
     Displayed = Value.View.LiveCamera
+    LeaderBefore = Value.People.Path.Positions[0]
     Offset = M.Subtract(Displayed.Position, Displayed.Target)
     InitialHeading = M.Degrees(Atan2(Offset.X, Offset.Z))
 
@@ -1312,7 +1323,11 @@ Sub CheckDemoTransition()
     Offset = M.Subtract(Value.View.LiveCamera.Position, Value.View.LiveCamera.Target)
     NextHeading = M.Degrees(Atan2(Offset.X, Offset.Z))
 
-    Call Check(Value.Cinematic And Value.OverviewOrbit And Not Value.OrbitPaused And
+    Call Check(Value.Cinematic And Not Value.Follow And Not Value.OrbitPaused And
+        M.Distance(Value.People.Path.Positions[0], LeaderBefore) < 0.001 And
+        M.Distance(Value.View.LiveCamera.Target, Displayed.Target) < 0.01 And
+        Abs(M.Distance(Value.View.LiveCamera.Position, Displayed.Target) -
+            M.Distance(Displayed.Position, Displayed.Target)) < 0.01 And
         Value.View.TransitionDuration = 0 And
         Abs(Camera.NormalizeAngle(NextHeading - InitialHeading) + 2.5) < 0.01,
         "Demo Reaches The Next Orbit Position Instead Of The Initial Map Bearing")
@@ -1386,9 +1401,18 @@ Sub LoadResidents(ByRef Value As Town.State)
 
     Dim Step As Number
 
-    For Step = 0 To 8
-        Call Residents.Update(Value.Residents, "Neris Town", False,
-            Value.People.Path.Positions[0], 16)
+    For Step = 0 To 2047
+
+        Call Residents.Update(Value.Residents, "Neris Town", Editor.ResidentPlacement(), False,
+            Value.People.Path.Positions[0], 0)
+
+        Call Check(Value.Residents.Placement.Visited <= 2048 And
+            Value.Residents.Placement.Checks <= 8, "Resident Placement Stays Within Each Frame Budget")
+
+        If Value.Residents.Loaded = 9 Or Value.Residents.Failed Then
+            Exit For
+        End If
+
     End For
 
     Call Check(Value.Residents.Loaded = 9 And Not Value.Residents.Failed,
@@ -2033,5 +2057,85 @@ Sub CheckTerrainParty()
 
     Call Check(Accepted And Grounded And Continuous And Value.People.Ready,
         "Four Loaded Actors Stay Grounded Across Elevated Roads And Bridges In Both Directions")
+
+End Sub
+
+Sub CheckNpcEditing()
+
+    Dim Ok As Boolean
+    Dim Point As P.Vector3
+    Dim Page As Number
+    Dim ControlIndex As Number
+    Dim MapButtons As Number
+
+    Ok = Document.Blank(NpcTown, "NPC Editing", 12, 12, 20.0)
+
+    Call Grid.PaintRectangle(NpcTown.Surface, 0, 0, 11, 11, Grid.SURFACE_ROAD)
+    Call DocumentNavigation.Rebuild(NpcTown)
+    Call History.Reset(NpcJournal, NpcTown, NpcInk)
+
+    Ok = NpcTools.Command(NpcUi, NpcTown, 806) And Ok
+    Point = P.Vector(13.25, 0.0, -27.75)
+    Ok = NpcTools.Place(NpcUi, NpcTown, Point) And Ok
+
+    Call History.Record(NpcJournal, NpcTown, NpcInk)
+
+    Ok = NpcTools.Command(NpcUi, NpcTown, 812) And Ok
+    Ok = NpcTools.Place(NpcUi, NpcTown, P.Vector(100.0, 0.0, -27.75)) And Ok
+
+    Call History.Record(NpcJournal, NpcTown, NpcInk)
+    Call Check(Ok And NpcTown.Npcs.People[6].Active And NpcTown.Npcs.Authored And
+        Abs(NpcTown.Npcs.People[6].Heading - 270.0) < 0.01,
+        "NPC Spawn Can Be Placed And Directed At A Point")
+    Call Residents.Update(NpcPeople, NpcTown.Name, NpcTown.Npcs, True, P.Vector(0.0, 0.0, 0.0), 0)
+    Call Check(NpcPeople.Loaded = 1 And NpcPeople.People[0].Kind = 6 And Not NpcPeople.Failed And
+        Not NpcPeople.Placement.Started And NpcPeople.People[0].Motion.Position.X = 13.25 And
+        NpcPeople.People[0].Motion.Heading = NpcTown.Npcs.People[6].Heading,
+        "An Authored NPC Loads Directly In Any NpcTown With Its Saved Identity And Facing")
+    Call Residents.Destroy(NpcPeople)
+    Call NpcTools.DrawPanel(NpcUi, NpcTown)
+    Call Check(NpcUi.Controls[NpcUi.ControlCount - 1].Y + 26 < Window_Height() - 294,
+        "NPC Palette Fits Above The Editor Footer At 720p")
+    Call Panel.Release(NpcUi)
+
+    NpcBefore = NpcTown.Npcs
+    NpcUi.Tool = 811
+    Ok = NpcTools.Place(NpcUi, NpcTown, P.Vector(90000.0, 0.0, 0.0))
+
+    Call Check(Not Ok And NpcLayout.Same(NpcBefore, NpcTown.Npcs),
+        "Rejected NPC Placement Leaves Authored Content Unchanged")
+
+    Ok = NpcTools.Command(NpcUi, NpcTown, 813)
+
+    Call History.Record(NpcJournal, NpcTown, NpcInk)
+    Call Check(Ok And Not NpcTown.Npcs.People[6].Active, "NPC Spawn Delete")
+
+    Ok = History.Restore(NpcJournal, NpcTown, NpcInk, False)
+
+    Call Check(Ok And NpcLayout.Same(NpcBefore, NpcTown.Npcs), "NPC Spawn Delete Undo Restores Facing And Position")
+
+    NpcUi.Section = 5
+    Ok = True
+
+    For Page = 0 To Panel.LastPermanentPage()
+
+        NpcUi.PermanentPage = Page
+
+        Call Panel.Draw(NpcUi, NpcTown, NpcGuideState, 0)
+
+        For ControlIndex = 0 To NpcUi.ControlCount - 1
+
+            If (NpcUi.Controls[ControlIndex].Action >= 700 And
+                NpcUi.Controls[ControlIndex].Action < 716) Then
+                MapButtons = MapButtons + 1
+                Ok = (Ok And NpcUi.Controls[ControlIndex].Y >= 264 And
+                    NpcUi.Controls[ControlIndex].Y + NpcUi.Controls[ControlIndex].Height < Window_Height() - 261)
+            End If
+
+        End For
+    End For
+
+    Call Check(Ok And MapButtons = 16, "All Permanent Maps Fit Between Recovery Hint And Footer At 720p")
+    Call Panel.Release(NpcUi)
 
 End Sub

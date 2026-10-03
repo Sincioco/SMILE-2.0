@@ -258,7 +258,7 @@ Public Sub Draw(ByRef Value As State, ByRef View As Arena.State,
 End Sub
 
 Public Sub MapStatistics(ByRef Value As State, ByRef View As Arena.State,
-    Optional Conversation As Boolean = False)
+    Optional ReservedBottom As Number = 0)
 
     Dim Labels[6] As Text
     Dim Readings[6] As Text
@@ -300,11 +300,7 @@ Public Sub MapStatistics(ByRef Value As State, ByRef View As Arena.State,
     End For
 
     PanelWidth = 8 + LabelWidth + 16 + ReadingWidth + 8
-    StatsY = Window_Height() - 126
-
-    If Conversation Then
-        StatsY = StatsY - 130
-    End If
+    StatsY = Window_Height() - 126 - ReservedBottom
 
     Fill Rectangle 18, StatsY, PanelWidth, 114, RGB(12, 20, 32) Opacity 80
 

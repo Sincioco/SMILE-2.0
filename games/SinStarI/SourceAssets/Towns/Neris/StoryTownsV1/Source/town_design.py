@@ -182,7 +182,7 @@ class Town:
             self.place(template, x, z, 1.25, 90*side)
 
     def gates(self, z=0, destinations=('Neris Spaceport', 'Horizon Airport'),
-              join_x=None, width=18):
+              join_x=None, width=18, bank=True):
         """West/east pedestrian causeways; markers stay clear of railings/props."""
         end = self.size/2-12
         self.destinations = destinations
@@ -190,8 +190,9 @@ class Town:
             x = side*(end-12)
             bank_start = end-45 if join_x is None else join_x
             road_start = end-60 if join_x is None else join_x
-            self.rect(min(side*bank_start, side*(end+4)), z-width*4/3,
-                      max(side*bank_start, side*(end+4)), z+width*4/3)
+            if bank:
+                self.rect(min(side*bank_start, side*(end+4)), z-width*4/3,
+                          max(side*bank_start, side*(end+4)), z+width*4/3)
             self.path([(side*road_start, z), (side*end, z)], width)
             self.lamps([(x-12,z-14),(x-12,z+14),(x+12,z-14),(x+12,z+14)], 2.0)
             for row in range(self.n):

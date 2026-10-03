@@ -4,6 +4,7 @@
 #include <d3d11.h>
 #include <d2d1_1.h>
 #include <stdint.h>
+#include <stdio.h>
 #include "graphics_directx.h"
 
 extern "C" {
@@ -105,4 +106,17 @@ extern "C" void* smile_viewport_snapshot_load(const char* key, long long length)
     }
     HeapFree(GetProcessHeap(), 0, bytes);
     return result;
+}
+
+extern "C" long long smile_data_png_start(const char*, const char*, long long);
+extern "C" int smile_data_file_busy();
+
+extern "C" long long smile_viewport_snapshot_export(void* value, const char* path, long long length)
+{
+    if (smile_data_file_busy() || !path || length < 1 || length > 4095) return 0;
+    static unsigned sequence = 0;
+    char key[80];
+    sprintf_s(key, "Viewport.Png.%lu.%u", GetCurrentProcessId(), ++sequence);
+    if (!smile_viewport_snapshot_save(value, key, (long long)strlen(key))) return 0;
+    return smile_data_png_start(key, path, length);
 }

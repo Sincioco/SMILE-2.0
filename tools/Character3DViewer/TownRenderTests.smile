@@ -56,6 +56,8 @@ Dim UntilTime As Number
 Dim Action As Number
 Dim WithoutCastle[5] As Number
 Dim Photograph As Number
+Dim PngJob As Number
+Dim PngStatus As Number
 Dim SpawnUndo As History.State
 
 Game Window "Town Editor Catalog Check" Size 1100 By 720
@@ -222,6 +224,19 @@ Call Check(Photograph > 0 And G.DrawViewportCapture3D(Photograph, 420, 215, 240,
 Call Check(Not G.SaveViewportCapture3D(0, "TownRender.Thumbnail") And
     G.LoadViewportCapture3D("TownRender.Thumbnail.Missing") = 0,
     "Invalid Capture And Missing Save Return Failure Without Damaging The Cache")
+
+PngJob = G.ExportViewportCapturePng3D(Photograph, "@TOWN_PREVIEW_PNG@")
+UntilTime = Timer() + 5000
+
+Do
+    PngStatus = Data_FileStatus(PngJob)
+    Show Screen
+
+Loop Until PngStatus <> 0 Or Timer() >= UntilTime
+
+Call Check(PngJob > 0 And PngStatus = 1, "Native Photograph Exports A Verified PNG In The Background")
+Call Check(G.ExportViewportCapturePng3D(0, "@TOWN_PREVIEW_PNG@") = 0,
+    "An Invalid Photograph Cannot Replace The Saved PNG")
 Call G.ReleaseViewportCapture3D(Photograph)
 
 Print "Meshes"

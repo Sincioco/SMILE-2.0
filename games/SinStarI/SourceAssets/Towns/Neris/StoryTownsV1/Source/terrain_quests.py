@@ -187,12 +187,10 @@ def save(design, folder):
     if existing.exists():
         previous = decode(unwrap(existing.read_bytes()), CATALOG)
         assert previous['xs'] == doc['xs'] and previous['zs'] == doc['zs']
-        # The atlas owns destinations; a landscape refresh must retain its links.
+        # Authored yellow areas own destinations; regeneration retains them verbatim.
         doc['map_tiles'] = previous['map_tiles']
     doc['heights'] = [round(height(x/10, z/10)*1000)/100
                       for z in doc['zs'] for x in doc['xs']]
-    from road_end_markers import boundary_exits
-    boundary_exits(doc)
     # Keep natural mountain slopes in their continuous Highland palette. A hard
     # per-cell height/slope color threshold creates visible stair-step boundaries.
     if town.name in ('Silverfall Basin','Willowstep Highlands') and not any(b[0] in (5,6) for b in doc['curves']):

@@ -16,6 +16,7 @@ Import Smile.Tools.TownGeometry As Geometry
 Import Smile.Simple3D.CameraClearance3D As Clearance
 Import Smile.Simple3D.TerrainSurface3D As Terrain
 Import Smile.Simple3D.TerrainRay3D As TerrainRay
+Import Smile.Tools.TownNearestRoadSearch As RoadSearch
 
 Private Dim Snapshot As Collision.State
 Private Dim Enabled As Boolean
@@ -91,64 +92,59 @@ Public Function ClearTerrainSight(Camera As P.Camera3D) As P.Camera3D
 
 End Function
 
-''' Closest point inside a traversable road cell, using the committed map surface.
-Public Function NearestRoad(Point As P.Vector3, ByRef Result As P.Vector3) As Boolean
+Public Sub StepNearestRoad(ByRef Search As RoadSearch.State, Point As P.Vector3)
 
-    Dim X As Number
-    Dim Z As Number
-    Dim Candidate As P.Vector3
-    Dim Distance As Double
-    Dim Best As Double
-    Dim MarginX As Double
-    Dim MarginZ As Double
-    Dim Found As Boolean
+    Dim Kind As Number
 
-    If Not Enabled Then
-        Return False
-    End If
+    If Not Search.Started Or Search.Version <> SnapshotVersion Then
 
-    X = Grid.CellX(Snapshot.Surface, Point.X)
-    Z = Grid.CellZ(Snapshot.Surface, Point.Z)
+        Call RoadSearch.Begin(Search, Point, SnapshotVersion)
 
-    If ((Grid.ReadCell(Snapshot.Surface, X, Z) = Grid.SURFACE_ROAD Or
-        Grid.ReadCell(Snapshot.Surface, X, Z) = Grid.SURFACE_BRIDGE) And
-        CanStand(Point.X, Point.Z)) Then
+        Kind = Grid.ReadPoint(Snapshot.Surface, Point.X, Point.Z)
 
-        Result = Point
-        Result.Y = GroundHeight(Point.X, Point.Z)
-        Return True
+        If Enabled And (Kind = Grid.SURFACE_ROAD Or Kind = Grid.SURFACE_BRIDGE) Then
 
-    End If
+            If CanStand(Point.X, Point.Z) Then
 
-    Best = 1.0E+20
-
-    For Z = 0 To Snapshot.Surface.Rows - 1
-
-        For X = 0 To Snapshot.Surface.Columns - 1
-
-            If (Grid.ReadCell(Snapshot.Surface, X, Z) = Grid.SURFACE_ROAD Or
-                Grid.ReadCell(Snapshot.Surface, X, Z) = Grid.SURFACE_BRIDGE) Then
-
-                MarginX = Min(12.0, (Snapshot.Surface.XEdges[X + 1] - Snapshot.Surface.XEdges[X]) * 0.25)
-                MarginZ = Min(12.0, (Snapshot.Surface.ZEdges[Z + 1] - Snapshot.Surface.ZEdges[Z]) * 0.25)
-                Candidate.X = Clamp(Point.X, Snapshot.Surface.XEdges[X] + MarginX, Snapshot.Surface.XEdges[X + 1] - MarginX)
-                Candidate.Z = Clamp(Point.Z, Snapshot.Surface.ZEdges[Z] + MarginZ, Snapshot.Surface.ZEdges[Z + 1] - MarginZ)
-                Distance = ((Candidate.X - Point.X) * (Candidate.X - Point.X) +
-                    (Candidate.Z - Point.Z) * (Candidate.Z - Point.Z))
-
-                If Distance < Best And CanStand(Candidate.X, Candidate.Z) Then
-
-                    Candidate.Y = GroundHeight(Candidate.X, Candidate.Z)
-                    Result = Candidate
-                    Best = Distance
-                    Found = True
-
-                End If
+                Search.Result = Point
+                Search.Found = True
+                Search.Ready = True
 
             End If
 
-        End For
-    End For
+        End If
+
+    End If
+
+    If Not Enabled Then
+        Search.Ready = True
+        Search.Found = False
+    End If
+
+    If Not Search.Ready Then
+        Call RoadSearch.Step(Search, Snapshot)
+    End If
+
+    If Search.Ready And Search.Found Then
+        Search.Result.Y = GroundHeight(Search.Result.X, Search.Result.Z)
+    End If
+
+End Sub
+
+''' Synchronous compatibility query; resident loading uses StepNearestRoad instead.
+Public Function NearestRoad(Point As P.Vector3, ByRef Result As P.Vector3) As Boolean
+
+    Dim Search As RoadSearch.State
+    Dim Found As Boolean
+
+    Do
+
+        Call StepNearestRoad(Search, Point)
+
+    Loop Until Search.Ready
+
+    Result = Search.Result
+    Found = Search.Found
 
     Return Found
 
@@ -220,69 +216,10 @@ End Function
 
 Public Function GroundHeight(X As Double, Z As Double) As Double
 
-    Dim Index As Number
-    Dim Part As Number
-    Dim Cell As Number
-    Dim Point As P.Vector3
-    Dim Shape As Catalog.Template
-    Dim Box As Features.Box
-    Dim Height As Double
-    Dim LocalHeight As Double
-    Dim Ground As Terrain.Sample
+    Dim Result As Double
 
-    Cell = Grid.ReadPoint(Snapshot.Surface, X, Z)
-    Height = Layers.GROUND_WALK_Y
-
-    If Cell = Grid.SURFACE_ROAD Or Cell = Grid.SURFACE_BRIDGE Then
-        Height = Layers.ROAD_Y
-    End If
-
-    ' Road-over-water cells follow the same terrain triangles as their visible deck.
-    Ground = Terrain.SamplePoint(Snapshot.Surface, X, Z)
-    Height = Height + Ground.Offset
-
-    For Index = 0 To Snapshot.ItemCount - 1
-
-        If Collision.NearWorld(Snapshot, Index, X, Z) Then
-
-            Point = Geometry.ToLocal(Snapshot.Items[Index], P.Vector(X, Snapshot.Items[Index].Position.Y, Z))
-
-            If Collision.NearItem(Snapshot, Index, Point) Then
-
-                Shape = Snapshot.Shapes[Snapshot.Items[Index].Template]
-                LocalHeight = Collision.Approach(Snapshot.Items[Index], Point, True)
-
-                For Part = 0 To Shape.StepCount - 1
-
-                    Box = Features.StepAt(Snapshot.Items[Index].Template, Part)
-
-                    If Collision.InBox(Box, Point, 0.015) Then
-                        LocalHeight = Max(LocalHeight, Box.Height)
-                    End If
-
-                End For
-
-                For Part = 0 To Shape.FloorCount - 1
-
-                    Box = Features.FloorAt(Snapshot.Items[Index].Template, Part)
-
-                    If Collision.InBox(Box, Point, 0.015) Then
-                        LocalHeight = Max(LocalHeight, Box.Height)
-                    End If
-
-                End For
-
-                If LocalHeight > -9000.0 Then
-                    Height = Max(Height, Snapshot.Items[Index].Position.Y + LocalHeight * Snapshot.Items[Index].Scale.Y / 1000.0)
-                End If
-
-            End If
-
-        End If
-
-    End For
-
-    Return Height
+    Result = Collision.GroundHeight(Snapshot, X, Z)
+    Return Result
 
 End Function
 

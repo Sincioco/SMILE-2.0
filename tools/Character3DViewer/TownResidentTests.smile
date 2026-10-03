@@ -8,6 +8,8 @@ Import Smile.Tools.TownDocumentNavigation As Navigation
 Import Smile.Tools.TownResidentMovement As Movement
 Import Smile.Tools.TownResidentDialogue As Dialogue
 Import Smile.Tools.TownResidents As Residents
+Import Smile.Tools.TownNearestRoadSearch As Search
+Import Smile.Tools.TownCollisionWorld As Collision
 Import Smile.Tools.TownResidentInteraction As Interaction
 Import Smile.Tools.TownRoadTravel As Travel
 Import Smile.Simple3D.Precision3D As P
@@ -29,6 +31,8 @@ Public Function Run() As Number
     Dim Index As Number
     Dim Failures As Number
     Dim Ok As Boolean
+    Dim Query As Search.State
+    Dim World As Collision.State
 
     If (Movement.AvoidsSpawn(P.Vector(-400.0, 0.0, -2780.0), P.Vector(400.0, 0.0, -2780.0)) Or
         Not Movement.AvoidsSpawn(P.Vector(-400.0, 0.0, -2450.0), P.Vector(400.0, 0.0, -2450.0))) Then
@@ -167,6 +171,64 @@ Public Function Run() As Number
 
     If Not Ok Or Residents.Talking(People) Then
         Print "FAIL Conversation Must Close"
+        Failures = Failures + 1
+    End If
+
+    Ok = Document.Blank(Town, "Dense Placement", 100, 100, 20.0)
+
+    Call Grid.PaintRectangle(Town.Surface, 0, 0, 99, 99, Grid.SURFACE_ROAD)
+    Call Collision.Build(World, Town)
+    Call Search.Begin(Query, P.Vector(950.0, 0.0, 950.0), 1)
+
+    For Index = 0 To 1023
+
+        Call Search.Step(Query, World, 128, 2)
+
+        If Query.Visited > 128 Or Query.Checks > 2 Then
+
+            Print "FAIL Resident Placement Must Yield Within Its Frame Budget"
+            Failures = Failures + 1
+            Exit For
+
+        End If
+
+        If Query.Ready Then
+            Exit For
+        End If
+
+    End For
+
+    If (Not Query.Ready Or
+        Not Query.Found Or
+        Query.Result.X <> 950.0 Or
+        Query.Result.Z <> 950.0) Then
+        Print "FAIL Incremental Resident Placement Must Find The Actual Closest Road"
+        Failures = Failures + 1
+    End If
+
+    Call Grid.PaintRectangle(Town.Surface, 0, 0, 99, 99, Grid.SURFACE_WATER)
+    Call Navigation.Rebuild(Town)
+    Call Navigation.StepNearestRoad(Query, Point)
+
+    If (Query.Ready Or
+        Query.Found Or
+        Query.Visited > 2048) Then
+        Print "FAIL Changed Map Must Restart Placement Without A Blocking Full Scan"
+        Failures = Failures + 1
+    End If
+
+    For Index = 0 To 99
+
+        Call Navigation.StepNearestRoad(Query, Point)
+
+        If Query.Ready Then
+            Exit For
+        End If
+
+    End For
+
+    If Not Query.Ready Or Query.Found Then
+        Print "FAIL No Road Placement Must Finish Without Spawning In Water"
         Failures = Failures + 1
     End If
 

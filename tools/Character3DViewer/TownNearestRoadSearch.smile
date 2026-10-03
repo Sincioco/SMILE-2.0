@@ -1,0 +1,106 @@
+''' Resumable closest-road query against one committed collision snapshot.
+Module Smile.Tools.TownNearestRoadSearch
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Tools.TownCollisionWorld As Collision
+
+Public Type State
+    Origin As P.Vector3
+    Result As P.Vector3
+    Best As Double
+    Cursor As Number
+    Version As Number
+    Visited As Number
+    Checks As Number
+    Started As Boolean
+    Ready As Boolean
+    Found As Boolean
+End Type
+
+Public Sub Begin(ByRef Value As State, Point As P.Vector3, Version As Number)
+
+    Dim Empty As State
+
+    Value = Empty
+    Value.Origin = Point
+    Value.Best = 1.0E+20
+    Value.Version = Version
+    Value.Started = True
+
+End Sub
+
+''' Stop after a small cell/collision budget, even if the map has no usable road.
+Public Sub Step(ByRef Value As State, ByRef World As Collision.State,
+    Optional CellBudget As Number = 2048, Optional CheckBudget As Number = 8)
+
+    Dim X As Number
+    Dim Z As Number
+    Dim Kind As Number
+    Dim Candidate As P.Vector3
+    Dim Margin As Double
+    Dim Distance As Double
+    Dim Deadline As Number
+
+    Value.Visited = 0
+    Value.Checks = 0
+    Deadline = Timer() + 2
+
+    If Not Value.Started Or Value.Ready Then
+        Return
+    End If
+
+    Do
+
+        If Value.Cursor >= World.Surface.Columns * World.Surface.Rows Then
+            Exit Do
+        End If
+
+        X = Value.Cursor Mod World.Surface.Columns
+        Z = Value.Cursor / World.Surface.Columns
+        Value.Cursor = Value.Cursor + 1
+        Value.Visited = Value.Visited + 1
+        Kind = Grid.ReadCell(World.Surface, X, Z)
+
+        If Kind = Grid.SURFACE_ROAD Or Kind = Grid.SURFACE_BRIDGE Then
+
+            Margin = Min(12.0, (World.Surface.XEdges[X + 1] - World.Surface.XEdges[X]) * 0.25)
+            Candidate.X = Clamp(Value.Origin.X, World.Surface.XEdges[X] + Margin,
+                World.Surface.XEdges[X + 1] - Margin)
+            Margin = Min(12.0, (World.Surface.ZEdges[Z + 1] - World.Surface.ZEdges[Z]) * 0.25)
+            Candidate.Z = Clamp(Value.Origin.Z, World.Surface.ZEdges[Z] + Margin,
+                World.Surface.ZEdges[Z + 1] - Margin)
+            Distance = ((Candidate.X - Value.Origin.X) * (Candidate.X - Value.Origin.X) +
+                (Candidate.Z - Value.Origin.Z) * (Candidate.Z - Value.Origin.Z))
+
+            If Distance < Value.Best Then
+
+                Value.Checks = Value.Checks + 1
+
+                If Collision.CanStand(World, Candidate.X, Candidate.Z) Then
+
+                    Value.Result = Candidate
+                    Value.Best = Distance
+                    Value.Found = True
+
+                End If
+
+            End If
+
+        End If
+
+        If (Value.Visited >= Max(1, CellBudget) Or
+            Value.Checks >= Max(1, CheckBudget) Or
+            Timer() >= Deadline) Then
+            Exit Do
+        End If
+
+    Loop
+
+    Value.Ready = Value.Cursor >= World.Surface.Columns * World.Surface.Rows
+
+End Sub
+
+End Module

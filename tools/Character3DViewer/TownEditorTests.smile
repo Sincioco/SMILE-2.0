@@ -23,6 +23,7 @@ Import Smile.Tools.TownWorldDocument As World
 Import Smile.Tools.TownWorldTests As WorldTests
 Import Smile.Tools.TownGatewayTests As GatewayTests
 Import Smile.Tools.TownResidentTests As ResidentTests
+Import Smile.Tools.TownNpcTests As NpcTests
 Import Smile.Tools.TownDemo As Demo
 Import Smile.Tools.TownGuideEditingTests As GuideEditingTests
 Import Smile.Tools.TownGuides As Guides
@@ -141,6 +142,31 @@ Ok = Demo.Advance(Showcase, 1, True)
 Call Check(Ok And Showcase.Elapsed = 0, "Demo Changes Maps At Thirty Seconds")
 Call Check(Demo.SecondsRemaining(Showcase) = 30, "Next Map Restarts Countdown")
 Call Check(Demo.StatisticsVisible(Showcase), "Next Map Restores Statistics")
+
+Showcase.TownName = "Verdant Reach"
+Showcase.Elapsed = 4999
+
+Call Check(Demo.Duration("Greyglass Pass") = 15000 And Demo.Duration("Sunglass Expanse") = 15000 And
+    Demo.Duration("Ancient Relay") = 15000 And Demo.Duration("Neris Relief Quarter") = 15000 And
+    Demo.Duration("Willowstep Highlands") = 15000 And Demo.Duration("Silverfall Basin") = 15000 And
+    Demo.Duration("Neris Town") = 30000, "Requested Demo Maps Use Fifteen Seconds")
+Call Check(Not Demo.AlternateLighting(Showcase), "Short Demo Keeps Initial Lighting Before Five Seconds")
+
+Ok = Demo.Advance(Showcase, 1, True)
+
+Call Check(Not Ok And Demo.AlternateLighting(Showcase), "Short Demo Toggles At Five Seconds")
+
+Showcase.Elapsed = 9999
+Ok = Demo.Advance(Showcase, 1, True)
+
+Call Check(Not Ok And Not Demo.AlternateLighting(Showcase), "Short Demo Toggles Back At Ten Seconds")
+
+Showcase.Elapsed = 14999
+Ok = Demo.Advance(Showcase, 1, True)
+
+Call Check(Ok And Demo.SecondsRemaining(Showcase) = 15, "Short Demo Advances At Fifteen Seconds")
+
+Showcase.TownName = ""
 
 Call Demo.Toggle(Showcase)
 
@@ -416,7 +442,7 @@ Ok = World.SaveWorld(Map) And Ok
 Ok = World.LoadWorld(LoadedMap, Map.Name) And Ok
 
 Call Check(Ok And LoadedMap.NodeCount = 2 And LoadedMap.Nodes[0].Town = Town.Name And
-    LoadedMap.Nodes[1].X = 820 And LoadedMap.Links[1, 0], "World Towns Positions And Routes Round Trip")
+    LoadedMap.Nodes[1].X = 820 And Not LoadedMap.Links[1, 0], "World Layout Survives Without Manual Route Authority")
 
 RequestId = Storage.QueueBlender(Town, 2)
 
@@ -446,6 +472,7 @@ Failures = Failures + StyleTests.Run()
 Failures = Failures + WorldTests.Run()
 Failures = Failures + GatewayTests.Run()
 Failures = Failures + ResidentTests.Run()
+Failures = Failures + NpcTests.Run()
 Failures = Failures + GuideEditingTests.Run()
 
 If Failures = 0 Then

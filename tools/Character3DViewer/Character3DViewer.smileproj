@@ -44,6 +44,11 @@
     <SmileSource Include="NerisHorizonEntrance.smile" />
     <SmileSource Include="ProximityDrawbridge.smile" />
     <SmileSource Include="TownDocument.smile" />
+    <SmileSource Include="TownNpcLayout.smile" />
+    <SmileSource Include="TownNpcPreparation.smile" />
+    <SmileSource Include="TownNpcTools.smile" />
+    <SmileSource Include="TownCompass.smile" />
+    <SmileSource Include="TownSpawnMarker.smile" />
     <SmileSource Include="TownSurfaceStyles.smile" />
     <SmileSource Include="TownMapLoads.smile" />
     <SmileSource Include="TownGatewayJourney.smile" />
@@ -108,6 +113,7 @@
     <SmileSource Include="TownTerrainPanel.smile" />
     <SmileSource Include="TownSections.smile" />
     <SmileSource Include="TownDocumentNavigation.smile" />
+    <SmileSource Include="TownNearestRoadSearch.smile" />
     <SmileSource Include="TownCollisionWorld.smile" />
     <SmileSource Include="TownCatalogRenderer.smile" />
     <SmileSource Include="TownCampfires.smile" />
@@ -532,6 +538,7 @@
     <Asset Include="Assets\Neris\Green-Slope-Tile.png" />
     <Asset Include="Assets\Neris\Snow-Slope-Tile.png" />
     <Asset Include="Assets\Neris\Town-Palette.png" />
+    <Asset Include="Assets/Neris/Residents/Cast-Preview.png" />
     <Model3DAsset Include="BuildAssets\Neris\CastleV2\castle-00.glb" Descriptor="BuildAssets\Neris\CastleV2\Castle.sm3d.json" LogicalPath="Assets/Neris/CastleV2/Castle-00.sm3d" Profile="Static" Identity="sin-star-i.neris-castle.m06-r006.part-00" ProductionState="Prototype" />
     <Model3DAsset Include="BuildAssets\Neris\CastleV2\castle-01.glb" Descriptor="BuildAssets\Neris\CastleV2\Castle.sm3d.json" LogicalPath="Assets/Neris/CastleV2/Castle-01.sm3d" Profile="Static" Identity="sin-star-i.neris-castle.m06-r006.part-01" ProductionState="Prototype" />
     <Model3DAsset Include="BuildAssets\Neris\CastleV2\castle-02.glb" Descriptor="BuildAssets\Neris\CastleV2\Castle.sm3d.json" LogicalPath="Assets/Neris/CastleV2/Castle-02.sm3d" Profile="Static" Identity="sin-star-i.neris-castle.m06-r006.part-02" ProductionState="Prototype" />

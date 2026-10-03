@@ -4,11 +4,13 @@ Module Smile.Tools.TownDocumentStore
 Option Explicit
 
 Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.SurfacePaint3D As Paint
 Import Smile.Simple3D.TerrainHeights3D As Heights
 Import Smile.Simple3D.TerrainSurface3D As Terrain
 Import Smile.Simple3D.TerrainWater3D As Water
 Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownNpcLayout As NpcLayout
 Import Smile.Tools.TownSurfaceStyles As Styles
 Import Smile.Tools.TownCatalogData As Catalog
 
@@ -315,6 +317,10 @@ Private Function DocumentVersion(ByRef Value As Document.State) As Number
 
     Dim Index As Number
     Dim Version As Number
+
+    If Value.Npcs.Authored Then
+        Return 16
+    End If
 
     If Value.HasInitialCamera Then
         Return 15
@@ -720,6 +726,32 @@ Private Sub Encode(ByRef Value As Document.State, MarkSaved As Boolean)
 
     End If
 
+    If DocumentVersion(Value) >= 15 And Not Value.HasInitialCamera Then
+        Call WriteByte(0)
+    End If
+
+    If Value.Npcs.Authored Then
+
+        For Index = 0 To 8
+
+            If Value.Npcs.People[Index].Active Then
+
+                Call WriteByte(1)
+                Call WritePrecise(Value.Npcs.People[Index].Position.X)
+                Call WritePrecise(Value.Npcs.People[Index].Position.Y)
+                Call WritePrecise(Value.Npcs.People[Index].Position.Z)
+                Call WritePrecise(Value.Npcs.People[Index].Heading)
+
+            Else
+
+                Call WriteByte(0)
+
+            End If
+
+        End For
+
+    End If
+
     ByteCount = Offset
 
 End Sub
@@ -733,6 +765,8 @@ Private Function Decode() As Boolean
     Dim Flag As Number
     Dim Version As Number
     Dim EmptyPresets As Document.SunPresets
+    Dim EmptyNpcs As NpcLayout.State
+    Dim EmptyCamera As P.Camera3D
 
     Offset = 0
     Valid = True
@@ -745,7 +779,7 @@ Private Function Decode() As Boolean
 
     Version = ReadByte()
 
-    If Version < 1 Or Version > 15 Then
+    If Version < 1 Or Version > 16 Then
         Return False
     End If
 
@@ -755,6 +789,13 @@ Private Function Decode() As Boolean
 
     Call Styles.Reset(Candidate.Appearance)
 
+    Candidate.Npcs = EmptyNpcs
+    Candidate.HasInitialCamera = False
+    Candidate.InitialCamera = EmptyCamera
+    Candidate.HasTeleportSpawn = False
+    Candidate.TeleportSpawn = P.Vector(0.0, 0.0, 0.0)
+    Candidate.LandmarkRotation = 0.0
+    Candidate.WorldLinksStamp = 0
     Candidate.Name = ReadName()
     Candidate.Landmark = Document.LegacyLandmark(Candidate.Name)
     Candidate.SavedRevision = ReadByte()
@@ -995,11 +1036,6 @@ Private Function Decode() As Boolean
             Candidate.TeleportSpawn.Z = ReadPrecise()
         End If
 
-    Else If Candidate.Name = "Neris Town" Then
-
-        Candidate.HasTeleportSpawn = True
-        Candidate.TeleportSpawn.Z = -2780.0
-
     End If
 
     If Version >= 15 Then
@@ -1025,6 +1061,29 @@ Private Function Decode() As Boolean
             Valid = Valid And Document.ValidInitialCamera(Candidate.InitialCamera)
 
         End If
+
+    End If
+
+    If Version >= 16 Then
+
+        Candidate.Npcs.Authored = True
+
+        For Index = 0 To 8
+
+            Flag = ReadByte()
+            Valid = Valid And Flag >= 0 And Flag <= 1
+            Candidate.Npcs.People[Index].Active = Flag = 1
+
+            If Flag = 1 Then
+
+                Candidate.Npcs.People[Index].Position.X = ReadPrecise()
+                Candidate.Npcs.People[Index].Position.Y = ReadPrecise()
+                Candidate.Npcs.People[Index].Position.Z = ReadPrecise()
+                Candidate.Npcs.People[Index].Heading = ReadPrecise()
+
+            End If
+
+        End For
 
     End If
 

@@ -112,6 +112,22 @@ Public Function Check(ByRef Map As Town.State) As Boolean
 
 End Function
 
+''' Freeze the matching photograph before a save can outlive further edits.
+Public Function CopyTo(ByRef Map As Town.State, Key As Text) As Boolean
+
+    Dim Slot As Number
+    Dim Ok As Boolean
+
+    If Not Check(Map) Then
+        Return False
+    End If
+
+    Slot = Find(Map.Name)
+    Ok = G.SaveViewportCapture3D(Photos[Slot].Handle, Key)
+    Return Ok
+
+End Function
+
 Public Sub Refresh(Name As Text)
 
     Dim Slot As Number

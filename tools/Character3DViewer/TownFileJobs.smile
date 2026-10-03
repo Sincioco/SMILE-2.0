@@ -9,6 +9,8 @@ Import Smile.Tools.TownLibrary As Library
 Import Smile.Tools.TownFileLocations As Locations
 Import Smile.Tools.TownSavePreparation As Preparation
 Import Smile.Tools.TownDerivedCache As Derived
+Import Smile.Tools.TownWorldPreviews As Previews
+Import Smile.Simple3D.Graphics3D As G
 
 Public Const SAVE_VIEWER = 1
 Public Const OPEN_VIEWER = 2
@@ -19,6 +21,9 @@ Public Const SAVE_PERMANENT = 6
 
 Public Type State
     Preparation As Preparation.State
+    WithPreview As Boolean
+    WaitingPhoto As Boolean
+    SavingPng As Boolean
     Preparing As Boolean
     SaveAsCopy As Boolean
     RequestId As Number
@@ -46,7 +51,8 @@ Public Function BlocksEditing(ByRef Value As State) As Boolean
 
     Dim Result As Boolean
 
-    Result = Value.RequestId > 0 And (Value.Operation = OPEN_VIEWER Or Value.Operation = OPEN_BLENDER)
+    Result = Value.RequestId > 0 And (Value.WaitingPhoto Or
+        Value.Operation = OPEN_VIEWER Or Value.Operation = OPEN_BLENDER)
 
     Return Result
 
@@ -102,7 +108,8 @@ Private Sub PutInteger(Value As Number)
 End Sub
 
 Public Function Queue(ByRef Value As State, ByRef Town As Document.State,
-    Operation As Number, Path As Text, Optional RememberCurrent As Boolean = True) As Boolean
+    Operation As Number, Path As Text, Optional RememberCurrent As Boolean = True,
+    Optional WithPreview As Boolean = False) As Boolean
 
     Dim Id As Number
     Dim Ok As Boolean
@@ -152,6 +159,9 @@ Public Function Queue(ByRef Value As State, ByRef Town As Document.State,
     End If
 
     Value.NativeJob = 0
+    Value.WithPreview = WithPreview And Operation = SAVE_VIEWER
+    Value.WaitingPhoto = Value.WithPreview
+    Value.SavingPng = False
     Value.Preparing = False
 
     If (Operation = SAVE_VIEWER Or
@@ -302,7 +312,7 @@ Public Sub Choose(ByRef Value As State, ByRef Town As Document.State, Operation 
         Return
     End If
 
-    Ok = Queue(Value, Town, Operation, Path)
+    Ok = Queue(Value, Town, Operation, Path, True, Operation = SAVE_VIEWER)
 
 End Sub
 
@@ -312,6 +322,37 @@ Public Function Update(ByRef Value As State, ByRef Town As Document.State, Elaps
     Dim Status As Storage.BridgeStatus
     Dim Ok As Boolean
     Dim Opened As Boolean
+    Dim Photo As Number
+    Dim SavedName As Text
+
+    If Value.WaitingPhoto Then
+
+        SavedName = Value.Pending.Name
+        Value.Pending.Name = Value.OriginName
+        Value.WaitingPhoto = Not Previews.CopyTo(Value.Pending, SnapshotKey(Value.RequestId) + ".Preview")
+        Value.Pending.Name = SavedName
+        Value.WaitingTime = Value.WaitingTime + Elapsed
+        Value.Message = "Capturing town preview..."
+
+        If Value.WaitingPhoto Then
+
+            If Value.WaitingTime >= 10000 Then
+
+                Value.Failed = True
+                Value.Message = "Preview unavailable. Open this map, wait for it to load, then save again."
+                Value.WaitingPhoto = False
+                Value.Preparing = False
+                Value.RequestId = 0
+
+            End If
+
+            Return False
+
+        End If
+
+        Value.WaitingTime = 0
+
+    End If
 
     If Value.Preparing Then
 
@@ -355,6 +396,11 @@ Public Function Update(ByRef Value As State, ByRef Town As Document.State, Elaps
         If Value.Failed Then
 
             Value.Message = "Map preparation could not finish; edits retained."
+
+            If Value.Preparation.Npcs.Failed Then
+                Value.Message = "An NPC Spawn is blocked. Move it to walkable ground and save again."
+            End If
+
             Value.Preparing = False
             Value.RequestId = 0
 
@@ -421,6 +467,32 @@ Public Function Update(ByRef Value As State, ByRef Town As Document.State, Elaps
         Return False
     End If
 
+    If (Status.Status = 1 And
+        Value.WithPreview And
+        Not Value.SavingPng) Then
+
+        Photo = G.LoadViewportCapture3D(SnapshotKey(Value.RequestId) + ".Preview")
+        Value.NativeJob = G.ExportViewportCapturePng3D(Photo, PngPath(Value.Path))
+
+        Call G.ReleaseViewportCapture3D(Photo)
+
+        Value.SavingPng = True
+        Value.Progress = 95
+        Value.Message = "Town saved. Saving PNG preview..."
+
+        If Value.NativeJob > 0 Then
+            Return False
+        End If
+
+        Status.Status = 2
+        Value.Failed = True
+
+    End If
+
+    If Value.SavingPng And Status.Status <> 1 Then
+        Value.Message = "Town file saved; PNG preview could not be saved. " + Status.Message
+    End If
+
     If Status.Status = 1 Then
 
         If Value.Operation = OPEN_VIEWER Or Value.Operation = OPEN_BLENDER Then
@@ -461,6 +533,10 @@ Public Function Update(ByRef Value As State, ByRef Town As Document.State, Elaps
             Ok = Library.Remember(Town) And Ok
             Value.Message = "Saved and verified."
 
+            If Value.SavingPng Then
+                Value.Message = "Town and PNG preview saved and verified."
+            End If
+
             If Town.Name = Value.OriginName And Town.Revision <> Value.OriginRevision Then
                 Value.Message = "Snapshot saved. Newer edits are still unsaved."
             End If
@@ -499,6 +575,32 @@ Public Function Update(ByRef Value As State, ByRef Town As Document.State, Elaps
     Value.NativeJob = 0
 
     Return Opened
+
+End Function
+
+Public Function PngPath(Path As Text) As Text
+
+    Dim Index As Number
+    Dim Ending As Number
+    Dim Letter As Number
+    Dim Result As Text
+
+    Ending = Text_Length(Path)
+
+    For Index = 0 To Text_Length(Path) - 1
+
+        Letter = Text_Code_At(Path, Index)
+
+        If Letter = 47 Or Letter = 92 Then
+            Ending = Text_Length(Path)
+        Else If Letter = 46 Then
+            Ending = Index
+        End If
+
+    End For
+
+    Result = Text_Slice(Path, 0, Ending) + ".png"
+    Return Result
 
 End Function
 

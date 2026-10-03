@@ -1,0 +1,115 @@
+''' Authored NPC spawn markers. No renderer, navigation, or file state.
+Module Smile.Tools.TownNpcLayout
+
+Option Explicit
+
+Import Smile.Simple3D.Precision3D As P
+
+Public Const NPC_COUNT = 9
+
+Public Type Spawn
+    Position As P.Vector3
+    Heading As Double
+    Active As Boolean
+End Type
+
+Public Type State
+    Authored As Boolean
+    People[9] As Spawn
+End Type
+
+Public Function NameAt(Index As Number) As Text
+
+    Select Case Index
+        Case 0
+            Return "Tessa"
+        Case 1
+            Return "Maren"
+        Case 2
+            Return "Ilan"
+        Case 3
+            Return "Bram"
+        Case 4
+            Return "Sera"
+        Case 5
+            Return "Pip"
+        Case 6
+            Return "Nia"
+        Case 7
+            Return "Tobin"
+    End Select
+
+    Return "Mochi"
+
+End Function
+
+''' Compatibility defaults are materialized only by an explicit edit or save.
+Public Function Defaults(Name As Text) As State
+
+    Dim Result As State
+    Dim Index As Number
+
+    If Name = "Neris Town" Then
+
+        Result.People[0].Position = P.Vector(-450.0, 0.0, -2450.0)
+        Result.People[1].Position = P.Vector(400.0, 0.0, -2450.0)
+        Result.People[2].Position = P.Vector(0.0, 0.0, -2000.0)
+        Result.People[3].Position = P.Vector(-700.0, 0.0, -2450.0)
+        Result.People[4].Position = P.Vector(650.0, 0.0, -2450.0)
+        Result.People[5].Position = P.Vector(-600.0, 0.0, -1800.0)
+        Result.People[6].Position = P.Vector(700.0, 0.0, -1200.0)
+        Result.People[7].Position = P.Vector(-400.0, 0.0, -1000.0)
+        Result.People[8].Position = P.Vector(950.0, 0.0, -2450.0)
+
+        For Index = 0 To NPC_COUNT - 1
+            Result.People[Index].Active = True
+        End For
+
+    End If
+
+    Return Result
+
+End Function
+
+Public Function Same(First As State, Second As State) As Boolean
+
+    Dim Index As Number
+
+    If First.Authored <> Second.Authored Then
+        Return False
+    End If
+
+    For Index = 0 To NPC_COUNT - 1
+
+        If (First.People[Index].Active <> Second.People[Index].Active Or
+            First.People[Index].Position.X <> Second.People[Index].Position.X Or
+            First.People[Index].Position.Y <> Second.People[Index].Position.Y Or
+            First.People[Index].Position.Z <> Second.People[Index].Position.Z Or
+            First.People[Index].Heading <> Second.People[Index].Heading) Then
+            Return False
+        End If
+
+    End For
+
+    Return True
+
+End Function
+
+Public Function Population(Value As State) As Number
+
+    Dim Index As Number
+    Dim Result As Number
+
+    For Index = 0 To NPC_COUNT - 1
+
+        If Value.People[Index].Active Then
+            Result = Result + 1
+        End If
+
+    End For
+
+    Return Result
+
+End Function
+
+End Module

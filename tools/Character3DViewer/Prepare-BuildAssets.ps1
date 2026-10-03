@@ -163,6 +163,10 @@ $copies = @(
 )
 
 $residentRoot = Join-Path $repositoryRoot 'games\SinStarI\SourceAssets\Characters\Civilians\NerisResidentsV1'
+$copies += @{
+    Source = Join-Path $residentRoot 'cast-preview.png'
+    Destination = Join-Path $toolRoot 'Assets\Neris\Residents\Cast-Preview.png'
+}
 foreach ($residentName in @('Tessa', 'Maren', 'Ilan', 'Bram', 'Sera', 'Pip', 'Nia', 'Tobin', 'Mochi')) {
     $copies += @{
         Source = Join-Path $residentRoot "Models\$residentName.glb"

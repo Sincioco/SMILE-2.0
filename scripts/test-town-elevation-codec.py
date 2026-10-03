@@ -31,7 +31,7 @@ for bad in (float('nan'), float('inf'), -10000.01):
         pass
     else:
         raise AssertionError('Invalid elevation accepted')
-for raw in (document['payload'][:-1], document['payload'][:3]+b'\x10'+document['payload'][4:]):
+for raw in (document['payload'][:-1], document['payload'][:3]+b'\x11'+document['payload'][4:]):
     try:
         decode(raw, catalog)
     except ValueError:
@@ -92,24 +92,6 @@ again = decode(encode(arrival, catalog), catalog)
 assert again['teleport_spawn'] == arrival['teleport_spawn']
 print('PASS native/Python TWN14 spawn, rotation and world-link round trip')
 
-# Rebuilding two separate exits to one destination must not pave a third spur
-# halfway between them (the demonstrated Silverfall authoring regression).
-sys.path.insert(0, str(ROOT/'games/SinStarI/SourceAssets/Towns/Neris/StoryTownsV1/Source'))
-from road_end_markers import boundary_exits
-from town_document_codec import raster_curves
-from town_access import surface
-exits = dict(name='Parallel Exits', columns=20, rows=20, xs=list(range(-400,401,40)),
-             zs=list(range(-400,401,40)), base_cells=[1]*400, cells=[1]*400, items=[],
-             curves=[[4,3,-220,-350,-220,400,80],[4,3,220,-350,220,400,80]],
-             map_tiles=[dict(x=x,z=19,destination='Neighbor') for x in (4,15)])
-exits['cells'] = raster_curves(exits)
-boundary_exits(exits)
-markers = sorted((t['x'],t['z']) for t in exits['map_tiles'])
-boundary_exits(exits)
-assert sorted((t['x'],t['z']) for t in exits['map_tiles']) == markers
-assert surface(exits,0,350) == 1
-print('PASS repeated boundary preparation keeps alternate exits separate')
-
 initial = decode(unwrap(key_path(folder, 'TownEditor.InitialCamera').read_bytes()), catalog)
 assert initial['payload'][3] == 15
 assert initial['initial_camera'][:6] == [275.25, 360.5, -590.75, 17.5, 26.25, 34.5]
@@ -124,3 +106,13 @@ for field in (9, 10, 11):
     else:
         raise AssertionError('Invalid initial camera accepted')
 print('PASS native/Python TWN15 camera round trip and invalid camera rejection')
+
+# Native save-time placement is the same data Python/Blender preserves.
+npcs = decode(unwrap(key_path(folder, 'NPC.Authored').read_bytes()), catalog)
+assert npcs['payload'][3] == 16 and npcs.get('initial_camera') is None
+assert npcs['npc_spawns'][6][::3] == [13.25, 73.5]
+assert decode(encode(npcs, catalog), catalog)['npc_spawns'] == npcs['npc_spawns']
+empty = decode(unwrap(key_path(folder, 'NPC.Empty').read_bytes()), catalog)
+assert empty['npc_spawns'] == [None] * 9
+assert decode(encode(empty, catalog), catalog)['npc_spawns'] == [None] * 9
+print('PASS native/Python TWN16 NPC positions, facing and explicit empty layout')

@@ -37,7 +37,7 @@ def canals():
         t.place(8,side*40,-35,1.3,180)
         for x in (85,170,250):
             t.lamps([(side*x,-13),(side*x,13)],1.8)
-    t.gates()
+    t.gates(width=16, bank=False)
     t.notes=['Four-point Neris star with long ceremonial avenues',
         'Triangular residential quays separated by open canals',
         'Four short bridge approaches and clear waterfront streets']
@@ -60,7 +60,7 @@ def star_lake():
         t.path([polar(150,a),polar(316,a)],14)
     # The cross-island street passes in front of the drawbridge, not under its rails.
     t.path([(-348,0),(-149,0),(-112,-42),(112,-42),(149,0),(348,0)],16)
-    t.path([(0,-320),(0,-94)],16)
+    t.path([(0,-316),(0,-94)],16)
     t.path([(0,-36),(0,-28)],16)
     t.ring(0,-65,29,10)
     t.place(13,0,51,1.5)

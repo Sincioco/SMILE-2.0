@@ -3,27 +3,14 @@ Module Smile.Tools.TownResidentDialogue
 
 Option Explicit
 
+Import Smile.Tools.TownNpcLayout As Layout
+
 Public Function NameAt(Index As Number) As Text
 
-    If Index = 0 Then
-        Return "Tessa"
-    Else If Index = 1 Then
-        Return "Maren"
-    Else If Index = 2 Then
-        Return "Ilan"
-    Else If Index = 3 Then
-        Return "Bram"
-    Else If Index = 4 Then
-        Return "Sera"
-    Else If Index = 5 Then
-        Return "Pip"
-    Else If Index = 6 Then
-        Return "Nia"
-    Else If Index = 7 Then
-        Return "Tobin"
-    End If
+    Dim Result As Text
 
-    Return "Mochi"
+    Result = Layout.NameAt(Index)
+    Return Result
 
 End Function
 
@@ -41,7 +28,7 @@ Public Function Greeting(Index As Number) As Text
 
 End Function
 
-Public Sub Draw(Nearest As Number, Speaking As Number, Loaded As Number, Failed As Boolean)
+Public Sub Draw(Nearest As Number, Speaking As Number, Loaded As Number, Failed As Boolean, Optional Total As Number = 9)
 
     Dim Top As Number
     Dim Width As Number
@@ -66,11 +53,11 @@ Public Sub Draw(Nearest As Number, Speaking As Number, Loaded As Number, Failed 
 
         Draw Text "A resident could not load. Reopen this town to retry." At 24, Top + 80 Size 14 Color RGB(255, 205, 110)
 
-    Else If Loaded < 9 Then
+    Else If Loaded < Total Then
 
-        Draw Text "Welcoming Residents..." At 24, Top + 70 Size 14 Color RGB(90, 226, 220)
+        Draw Text "Loading Residents: " + Text_From_Double(ToDouble(Loaded)) + " / " + Text_From_Double(ToDouble(Total)) At 24, Top + 70 Size 14 Color RGB(90, 226, 220)
         Fill Rectangle 24, Top + 94, 180, 5, RGB(24, 49, 67)
-        Fill Rectangle 24, Top + 94, Loaded * 20, 5, RGB(90, 226, 220)
+        Fill Rectangle 24, Top + 94, 180 * Loaded / Max(1, Total), 5, RGB(90, 226, 220)
 
     End If
 

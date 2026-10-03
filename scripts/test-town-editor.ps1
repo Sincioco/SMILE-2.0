@@ -90,7 +90,29 @@ if (-not $SkipRendering) {
             [Text.Encoding]::UTF8.GetBytes('TownRender.' + $landscape.Split(' ')[0]))).ToLowerInvariant()
         [IO.File]::WriteAllBytes((Join-Path $renderData "$fixtureHash.bin"), $fixture[0..($fixtureLength - 1)])
     }
-    Invoke-Check (Join-Path $viewer 'TownRenderTests.smileproj') (Join-Path $output 'TownRenderTests.exe') 'PASS Town Editor Rendering'
+    [xml]$renderProject = Get-Content (Join-Path $viewer 'TownRenderTests.smileproj') -Raw
+    $pngPath = Join-Path $output 'Town Preview.png'
+    $renderSource = Join-Path $output 'TownRenderTests.smile'
+    [IO.File]::WriteAllText($renderSource, [IO.File]::ReadAllText((Join-Path $viewer 'TownRenderTests.smile')).Replace('@TOWN_PREVIEW_PNG@', $pngPath))
+    $renderProject.SmileProject.PropertyGroup.StartupFile = $renderSource
+    foreach ($node in @($renderProject.SmileProject.ItemGroup.ChildNodes)) {
+        if ($node.GetAttribute('StartupOnly') -eq 'true') {
+            $node.SetAttribute('Include', $renderSource)
+        } elseif ($node.LocalName -eq 'SmileSource' -and $node.HasAttribute('Include')) {
+            $node.SetAttribute('Include', [IO.Path]::GetFullPath((Join-Path $viewer $node.GetAttribute('Include'))))
+        }
+    }
+    $renderProjectPath = Join-Path $viewer 'Character3DViewer.TownRenderTests.smileproj'
+    $renderProject.Save($renderProjectPath)
+    Invoke-Check $renderProjectPath (Join-Path $output 'TownRenderTests.exe') 'PASS Town Editor Rendering'
+    Add-Type -AssemblyName System.Drawing
+    $png = [Drawing.Image]::FromFile($pngPath)
+    try {
+        if ($png.Width -ne 256 -or $png.Height -ne 170 -or $png.RawFormat.Guid -ne [Drawing.Imaging.ImageFormat]::Png.Guid) {
+            throw 'Exported town photograph is not the expected 256 x 170 PNG.'
+        }
+    } finally { $png.Dispose() }
+    Write-Host 'PASS Native PNG Format And Dimensions'
 
     [xml]$project = Get-Content (Join-Path $viewer 'Character3DViewer.smileproj') -Raw
     $project.SmileProject.PropertyGroup.StartupFile = 'TownSessionTests.smile'

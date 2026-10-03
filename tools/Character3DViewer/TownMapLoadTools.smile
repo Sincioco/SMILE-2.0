@@ -5,6 +5,7 @@ Option Explicit
 
 Import Smile.Tools.TownSurfaceLayers As Layers
 Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownSpawnMarker As SpawnMarker
 Import Smile.Tools.TownMapLoads As Links
 Import Smile.Tools.TownGuides As Guides
 Import Smile.Tools.TownGatewayJourney As Journey
@@ -447,7 +448,7 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State, View As P.Ca
     For Index = 0 To Value.Labels.LabelCount - 1
 
         If Value.ValidArrivals[Index] Then
-            Call DrawArrival(Town, Value.Arrivals[Index], Value.Headings[Index], View)
+            Call SpawnMarker.Draw(Town, Value.Arrivals[Index], Value.Headings[Index], View)
         End If
 
         Point = Value.Labels.Positions[Index]
@@ -469,42 +470,10 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State, View As P.Ca
     End For
 
     If Town.HasTeleportSpawn Then
-        Call DrawArrival(Town, Town.TeleportSpawn, 180.0, View)
+        Call SpawnMarker.Draw(Town, Town.TeleportSpawn, 180.0, View)
     End If
 
     End Clip
-
-End Sub
-
-Private Sub DrawArrival(ByRef Town As Document.State, Position As P.Vector3,
-    Heading As Double, View As P.Camera3D)
-
-    Dim Segment As Number
-    Dim Angle As Double
-    Dim Mark As Guides.Marker
-    Dim Sample As Terrain.Sample
-
-    For Segment = 0 To 32
-
-        Angle = ToDouble(Segment) * 6.283185307179586 / 32.0
-        Mark.Last = P.Vector(Position.X + Cos(Angle) * 22.0, 0.0, Position.Z + Sin(Angle) * 22.0)
-        Sample = Terrain.SamplePoint(Town.Surface, Mark.Last.X, Mark.Last.Z)
-        Mark.Last.Y = Sample.Offset + Layers.OVERLAY_Y
-
-        If Segment > 0 Then
-            Call Guides.DrawMarker(Mark, View, RGB(20, 155, 255))
-        End If
-
-        Mark.First = Mark.Last
-    End For
-
-    Angle = (Heading - 180.0) * 0.017453292519943295
-    Mark.First = P.Vector(Position.X, Position.Y + Layers.OVERLAY_Y, Position.Z)
-    Sample = Terrain.SamplePoint(Town.Surface, Position.X, Position.Z)
-    Mark.First.Y = Sample.Offset + Layers.OVERLAY_Y
-    Mark.Last = P.Vector(Position.X + Sin(Angle) * 30.0, Mark.First.Y, Position.Z + Cos(Angle) * 30.0)
-
-    Call Guides.DrawMarker(Mark, View, RGB(20, 155, 255))
 
 End Sub
 

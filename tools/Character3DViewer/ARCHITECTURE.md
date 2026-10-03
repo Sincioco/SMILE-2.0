@@ -1,5 +1,69 @@
 # Character Viewer Architecture
 
+## October 3 resident loading, authored connections and editor additions
+
+Measured root cause: synchronous resident nearest-road searches cost 10-22ms
+per NPC; the last map update added graph-to-town reconciliation costing 227ms on
+the first Neris pass, changing revisions and invalidating navigation. Individual
+model loads measured 2-6ms. `TownWorldTravel` now projects directed atlas edges
+from yellow destinations and never changes towns. It reads one closed document
+per frame and uses unsaved open documents. Legacy serialized graph links are
+ignored. Automatic connection and exit-generation scripts are removed.
+
+`TownNpcLayout` owns named positions/facing in the document. `TownNpcPreparation`
+validates/grounds the immutable save snapshot. `TownNearestRoadSearch` owns the
+legacy fallback, bounded by 2048 cells, eight collision checks or two milliseconds
+per step. Authored entry needs no search. `TownResidents` loads one actor per
+frame, retains identity independently from compact actor slots, and pauses NPC
+movement in edit mode. `TownNpcTools` owns the palette/gestures; `TownSpawnMarker`
+shares arrival/NPC circle rendering. TWN16 appends NPC data; old formats remain
+readable. History restores NPCs. Blank documents and legacy decoding now clear prior camera, spawn,
+rotation and link metadata; codec validation caught this existing state leak.
+
+Demo activation is consumed after idle activation in the update path, preserving
+the displayed camera/pivot and easing into the next orbit frame. `TownDemo` owns
+per-town duration and lighting thirds. `TownCompass` projects four letters at
+map edges. The panel owns permanent-map pagination and non-overlapping hint text.
+
+`TownFileJobs` freezes a matching photograph before exporting the town snapshot.
+`TownWorldPreviews` retains bounded 384 x 240 captures. The reusable native
+`Graphics3D.ExportViewportCapturePng3D` starts a data-file job; Windows WIC encoding
+and verification live in `graphics/viewport_png.cpp`. The existing worker and
+atomic-replacement path publish the PNG. No compiler feature, external dependency,
+Web implementation or entry-point algorithm is added. Town and PNG are separate
+verified writes; PNG failure after town success is explicitly reported. Save As
+resolves the photograph by the source map name.
+
+Focused validation covers immutable authored edges, bounded search, saved/empty
+NPC layouts, placement/facing/Undo, 720p panel bounds, Demo continuity/timing,
+PNG decoding/dimensions and invalid-handle protection, codec compatibility and
+the reported map geometry. The existing four native town groups and hardening
+suite provide integration checks. NativeProgram is unchanged; no guardrail
+threshold, baseline or exclusion is raised.
+
+Final native validation: the four town groups pass (foundations, routes, rendering
+and session), including PNG format/dimensions and the new top-view fit regression;
+59 native hardening checks and 13 formatter integration checks pass. All sixteen
+permanent maps were prepared and imported by the native runtime, and eight authored
+geometry categories pass. The live editor saved a matching `.town` / 384 x 240 PNG,
+showed the NPC portraits/spawn controls, and rendered rotated edge letters. Previous
+permanent maps are retained as recovery entries before the explicit installation.
+
+Live acceptance caught another camera defect: Fit updated eye distance while
+retaining a zoomed orthographic height. Fit now updates that projection size too;
+the regression projects both opposite map corners after fitting a close top view.
+The manual check confirms a complete 1x map and correct cardinal letters after R.
+
+Growth review against 0baa5bd2: the new production owners are NPC data 115 lines,
+NPC preparation 90, bounded search 106, NPC tools 280, shared spawn drawing 44 and
+map-edge letters 71. PNG encoding is 57 lines. Existing file-job orchestration
+grows 102 lines; editor 58, document storage 59 and residents 45. World canvas
+shrinks 114 lines and the editor session shrinks 15. These extend each owner's
+existing responsibility; large legacy owners remain debt. No separate architecture
+checker exists, so ownership, imports, entry-point growth and diff were reviewed
+directly. The older static Neris fixture's documented layout mismatch remains;
+the accepted editable-map integration suite is the passing current validation.
+
 ## October 3 predictable magnification and authored initial camera
 
 The reported zoom video exposed three interacting causes: every wheel event
@@ -87,13 +151,12 @@ state. Static wire-like stream parts are omitted while basin/crystal meshes rema
 and editor drawing. `TownMapLoadTools` owns its revision-keyed display cache and
 the Teleport Spawn gesture. `TownHistory` restores that authored point with Undo.
 TWN14 appends optional spawn coordinates, landmark rotation and world-link stamp;
-native and Python readers retain TWN1–13 compatibility. Legacy Neris gains the
-accepted X=0, Z=-2780 direct-entry point. Explicit gate arrivals take priority.
+native and Python readers retain TWN1–13 compatibility. Fresh Neris defaults use
+X=0, Z=-2780; decoding no longer injects an unauthored spawn. Gate arrivals take priority.
 
 `TownWorldDocument` persists the last successfully saved/opened atlas.
-`TownWorldTravel` reconciles yellow destinations transactionally when its link
-stamp changes, retaining matching authored areas and manual edits while unchanged.
-`TownWorldEditor` caches failed attempts until the town/link revision changes.
+`TownWorldTravel` now reads authored yellow destinations into atlas edges.
+The former link-stamp reconciliation is removed; the atlas never edits towns.
 Map loading and the editor call these focused owners; no graph algorithm moved
 into the scene or application entry point.
 

@@ -13,6 +13,7 @@ Public Type State
     NextIndex As Number
     Failed As Number
     Operation As Number
+    WithPreview As Boolean
     Active As Boolean
     Waiting As Boolean
     FirstPath As Text
@@ -88,6 +89,7 @@ Public Sub Begin(ByRef Value As State, ByRef OpenTabs As Tabs.State,
     Value.Failed = 0
     Value.Errors = ""
     Value.Waiting = False
+    Value.WithPreview = False
     Value.Active = True
 
 End Sub
@@ -111,6 +113,8 @@ Public Sub Choose(ByRef Value As State, ByRef OpenTabs As Tabs.State,
         Local_Timestamp() + " - " + Files.SafeName(Town.Name) + "." + Extension)
 
     Call Begin(Value, OpenTabs, Town, Path, Operation)
+
+    Value.WithPreview = Operation = Files.SAVE_VIEWER
 
 End Sub
 
@@ -162,7 +166,7 @@ Public Sub Update(ByRef Value As State, ByRef Job As Files.State,
     End If
 
     Ok = Files.Queue(Job, Value.Documents[Value.NextIndex], Value.Operation,
-        OutputPath(Value, Value.NextIndex), False)
+        OutputPath(Value, Value.NextIndex), False, Value.WithPreview)
     Job.SuppressReveal = True
     Job.BatchLabel = "Map " + Files.IdText(Value.NextIndex + 1) + "/" + Files.IdText(Value.MapCount)
     Value.Waiting = True

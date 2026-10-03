@@ -166,6 +166,8 @@ Private Sub BasicZoom(ByRef Value As Town.State, ByRef Failures As Number)
     Dim Result As Number
     Dim Scale As Double
     Dim Offset As P.Vector3
+    Dim BoundsLow As P.Vector3
+    Dim BoundsHigh As P.Vector3
 
     Call Town.ResetOverview(Value)
 
@@ -318,6 +320,26 @@ Private Sub BasicZoom(ByRef Value As Town.State, ByRef Failures As Number)
     Call Check(Value.View.Distance.Current < Previous And
         Value.View.LiveCamera.OrthographicHeight < Before.OrthographicHeight,
         "Top Down Zoom Magnifies The Parallel View", Failures)
+
+    Value.View.Distance.Current = 500.0
+    Value.View.Distance.Target = 500.0
+
+    Call Arena.ComposeCamera(Value.View, Value.BaseCamera)
+    Call Town.TopDown(Value, True)
+    Call Town.FitTown(Value)
+    Call Arena.BeginTransition(Value.View, 0)
+    Call Town.Update(Value, 0)
+    Call Edited.SurfaceBounds(BoundsLow, BoundsHigh)
+
+    Pixel = Camera.ProjectViewerPoint(BoundsLow, Value.View.LiveCamera, Window_Width(), Window_Height())
+
+    Call Check(Pixel.Visible And Pixel.X >= 16.0 And Pixel.Y <= ToDouble(Window_Height() - 32),
+        "Top View Fit Includes The South West Map Edge", Failures)
+
+    Pixel = Camera.ProjectViewerPoint(BoundsHigh, Value.View.LiveCamera, Window_Width(), Window_Height())
+
+    Call Check(Pixel.Visible And Pixel.X <= ToDouble(Authoring.ViewRightEdge() - 16) And Pixel.Y >= 128.0,
+        "Top View Fit Includes The North East Map Edge", Failures)
     Call Town.ResetOverview(Value)
 
 End Sub

@@ -174,8 +174,6 @@ def waterworks():
     for angle in range(0,360,72):
         x,z=point(190,angle)
         t.disk(x,z,48)
-        t.disk(x,z,36.2,WATER)
-        t.disk(x,z,11)
         gx,gz=point(175,angle+36)
         t.disk(gx,gz,23)
     # Two interlaced five-point stars carry service paths; land is authored first.
@@ -184,6 +182,12 @@ def waterworks():
         t.curve([a,((a[0]+b[0])/2,(a[1]+b[1])/2),b],14)
         a,b=point(128,index*36),point(175 if index%2 else 155,index*36)
         t.curve([a,((a[0]+b[0])/2,(a[1]+b[1])/2),b],16)
+    # Cut reservoir water after the service-road banks. Keep only the pump pads
+    # above water inside the rings; the road decks are painted afterward.
+    for angle in range(0,360,72):
+        x,z=point(190,angle)
+        t.disk(x,z,36.2,WATER)
+        t.disk(x,z,11)
     t.disk(0,0,32)
     for index in range(10):
         t.path([point(128,index*36),point(128,(index+4)*36)],6)
@@ -223,7 +227,8 @@ def relay():
     t.ring(0,0,90,16)
     t.ring(0,0,180,12)
     t.path([(-268,0),(268,0)],18)
-    t.path([(0,-200),(0,200)],18)
+    # End inside the outer ring; rounded road caps must not protrude beyond it.
+    t.path([(0,-176),(0,176)],18)
     t.place(10,0,0,2.2,180)
     # Two matching structures per quadrant, mirrored about both main roads.
     for angle in (22.5 + step*45 for step in range(8)):

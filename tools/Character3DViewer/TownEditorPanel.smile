@@ -19,6 +19,9 @@ Public Type Control
 End Type
 
 Public Type State
+    NpcIndex As Number
+    NpcAtlas As Image
+    NpcAtlasLoaded As Boolean
     Atlas As Image
     AtlasLoaded As Boolean
     Controls[80] As Control
@@ -28,6 +31,7 @@ Public Type State
     Tool As Number
     Template As Number
     Page As Number
+    PermanentPage As Number
     TerrainStyle As Number
     PaintStyle As Number
     Surface As Number
@@ -75,6 +79,30 @@ Public Function LeftEdge() As Number
     Dim Result As Number
 
     Result = Window_Width() - 306
+
+    Return Result
+
+End Function
+
+Public Function PermanentPageSize() As Number
+
+    Dim Result As Number
+
+    Result = SavedMaps.PERMANENT_COUNT
+
+    If 264 + Result * 29 > Window_Height() - 266 Then
+        Result = Max(1, (Window_Height() - 562) / 29)
+    End If
+
+    Return Result
+
+End Function
+
+Public Function LastPermanentPage() As Number
+
+    Dim Result As Number
+
+    Result = (SavedMaps.PERMANENT_COUNT - 1) / PermanentPageSize()
 
     Return Result
 
@@ -217,10 +245,15 @@ Private Sub Library(ByRef Value As State, X As Number)
     Dim Total As Number
     Dim PageLabel As Text
 
-    Call Button(Value, 1, X, 206, 83, "Buildings", Value.Category = 1)
-    Call Button(Value, 2, X + 87, 206, 78, "Surfaces", Value.Category = 2)
-    Call Button(Value, 3, X + 169, 206, 54, "Decor", Value.Category = 3)
-    Call Button(Value, 4, X + 227, 206, 56, "Bulk", Value.Category = 4)
+    Call Button(Value, 1, X, 206, 55, "Build", Value.Category = 1)
+    Call Button(Value, 2, X + 59, 206, 77, "Surfaces", Value.Category = 2)
+    Call Button(Value, 3, X + 140, 206, 50, "Decor", Value.Category = 3)
+    Call Button(Value, 5, X + 194, 206, 45, "NPCs", Value.Category = 5)
+    Call Button(Value, 4, X + 243, 206, 40, "Bulk", Value.Category = 4)
+
+    If Value.Category = 5 Then
+        Return
+    End If
 
     If Value.Category = 0 Then
 
@@ -549,14 +582,23 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State,
     Else If Value.Section = 5 Then
 
         Draw Text "Update Permanent Map" At X, 212 Size 15 Color WHITE
-        Draw Text "Use current edits for this startup tab:" At X, 239 Size 12 Color WHITE
+        Draw Text "Use current edits for this startup tab:" At X, 235 Size 12 Color WHITE
+        Draw Text "Previous map kept in Open Recovery." At X, 249 Size 11 Color RGB(240, 205, 140)
 
-        For Index = 0 To SavedMaps.PERMANENT_COUNT - 1
-            Call Button(Value, 700 + Index, X, 264 + Index * 29, 283,
+        Value.PermanentPage = Min(Value.PermanentPage, LastPermanentPage())
+        FileStep = PermanentPageSize()
+
+        For Index = Value.PermanentPage * FileStep To Min(SavedMaps.PERMANENT_COUNT - 1,
+            (Value.PermanentPage + 1) * FileStep - 1)
+
+            Call Button(Value, 700 + Index, X, 264 + (Index Mod FileStep) * 29, 283,
                 "Update " + SavedMaps.PermanentName(Index), False, True, 26)
         End For
 
-        Draw Text "Previous map kept in Open Recovery." At X, 676 Size 12 Color RGB(240, 205, 140)
+        If FileStep < SavedMaps.PERMANENT_COUNT Then
+            Call Button(Value, 764, X, 264 + FileStep * 29, 139, "Previous", False, Value.PermanentPage > 0)
+            Call Button(Value, 765, X + 144, 264 + FileStep * 29, 139, "Next", False, Value.PermanentPage < LastPermanentPage())
+        End If
 
     Else If Value.Section <> 7 Then
 
@@ -615,6 +657,12 @@ Public Sub Draw(ByRef Value As State, ByRef Town As Document.State,
 End Sub
 
 Public Sub Release(ByRef Value As State)
+
+    If Value.NpcAtlasLoaded Then
+        Unload Image Value.NpcAtlas
+
+        Value.NpcAtlasLoaded = False
+    End If
 
     If Value.AtlasLoaded Then
         Unload Image Value.Atlas

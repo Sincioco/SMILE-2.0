@@ -184,11 +184,11 @@ Public Sub DrawResidents(ByRef Value As Residents.State, Opacity As Number)
 
             ColorValue = RGB(110, 255, 155)
 
-            If Index = 8 Then
+            If Value.People[Index].Kind = 8 Then
                 ColorValue = RGB(255, 181, 80)
             End If
 
-            Call DrawResident(Value.People[Index].Motion.Position, Dialogue.NameAt(Index), ColorValue, Opacity)
+            Call DrawResident(Value.People[Index].Motion.Position, Dialogue.NameAt(Value.People[Index].Kind), ColorValue, Opacity)
 
         End If
 

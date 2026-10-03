@@ -744,7 +744,8 @@ Public Sub ToggleDrone(ByRef Value As State)
 End Sub
 
 ''' Start orbit from the displayed shot, absorbing existing pan and zoom exactly once.
-Public Sub StartOrbit(ByRef Value As State, Optional CurrentView As Boolean = True)
+Public Sub StartOrbit(ByRef Value As State, Optional CurrentView As Boolean = True,
+    Optional KeepPivot As Boolean = False)
 
     Dim ZoomPrepared As Boolean
 
@@ -759,8 +760,10 @@ Public Sub StartOrbit(ByRef Value As State, Optional CurrentView As Boolean = Tr
         Value.Follow = False
         Value.PartyCamera = False
 
-        Call Drone.AnchorPoint(Value.Flight, Value.View, Value.BaseCamera,
-            Picking.OrbitCenter(Value.View.LiveCamera, Window_Width(), Window_Height()))
+        If Not KeepPivot Then
+            Call Drone.AnchorPoint(Value.Flight, Value.View, Value.BaseCamera,
+                Picking.OrbitCenter(Value.View.LiveCamera, Window_Width(), Window_Height()))
+        End If
 
     Else If (Value.Follow And
         (Value.PartyCamera Or Value.Cinematic) And
@@ -904,6 +907,10 @@ Public Sub FitTown(ByRef Value As State)
     Value.BaseCamera.Position = M.Add(Value.BaseCamera.Target,
         M.Scale(M.Subtract(Value.BaseCamera.Position, Value.BaseCamera.Target),
         Value.View.MaximumDistance / M.Distance(Value.BaseCamera.Position, Value.BaseCamera.Target)))
+
+    If Value.BaseCamera.OrthographicHeight > 0.0 Then
+        Value.BaseCamera.OrthographicHeight = Value.View.MaximumDistance / Camera.FocalRatio(Value.BaseCamera.FovDegrees)
+    End If
 
     Call Arena.ResetControls(Value.View)
     Call Arena.ConfigureDistance(Value.View, Value.BaseCamera)
@@ -1156,7 +1163,6 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
     Dim Leader As P.Vector3
     Dim ArrivalHeading As Double
     Dim TabOverview As Boolean
-    Dim OverviewTransition As Number
     Dim MapCenter As P.Vector3
     Dim CenterOffset As P.Vector3
 
@@ -1187,6 +1193,12 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
 
     Call Authoring.UpdateDemoIdle(Value.View.LiveCamera, Elapsed,
         Value.InputActive Or Keyboard.Active(Held) Or Residents.Talking(Value.Residents))
+
+    If Authoring.TakeDemoOrbit() Then
+        Call StartOrbit(Value, True, True)
+        Call Arena.BeginTransition(Value.View, 1000)
+    End If
+
     Call UpdateIdle(Value, Value.InputActive Or Keyboard.Active(Held) Or RoadTravel.Active() Or
         Authoring.GestureActive() Or Residents.Talking(Value.Residents), Elapsed,
         False, Authoring.MapHovered())
@@ -1234,11 +1246,7 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
 
             If TabOverview Then
 
-                If Authoring.TakeDemoCamera(Value.View.LiveCamera) Then
-                    OverviewTransition = 1000
-                End If
-
-                Call ResetOverview(Value, False, OverviewTransition)
+                Call ResetOverview(Value, False)
 
             Else If Authoring.Editing() Then
 
@@ -1268,7 +1276,7 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
     Call TownMap.Update(Value.Map, Party.IsMoving(Value.People) Or
         (Value.Map.Opacity > 0.0 And Authoring.MapHovered()), Elapsed)
     Call Inset.Update(Value.PointOfView, Party.IsMoving(Value.People), Elapsed)
-    Call Residents.Update(Value.Residents, Authoring.TownName(), Authoring.Editing(), Leader, Elapsed)
+    Call Residents.Update(Value.Residents, Authoring.TownName(), Authoring.ResidentPlacement(), Authoring.Editing(), Leader, Elapsed)
 
     If Value.Cinematic And Not Value.OrbitPaused Then
         Value.View.Controls.OrbitYaw = Camera.NormalizeAngle(Value.View.Controls.OrbitYaw + ToDouble(Elapsed) * 0.0025)
@@ -1556,7 +1564,7 @@ Public Sub Overlay(ByRef Value As State)
     End If
 
     If Authoring.MapStatisticsVisible() Then
-        Call CameraPanel.MapStatistics(Value.Panel, Value.View, Residents.Talking(Value.Residents))
+        Call CameraPanel.MapStatistics(Value.Panel, Value.View, Residents.OverlayHeight(Value.Residents))
     End If
 
     If Not Authoring.Editing() And Not Authoring.PreviewActive() Then

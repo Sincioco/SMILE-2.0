@@ -15,10 +15,27 @@ Public Type Selection
 End Type
 
 Public Type State
+    TownName As Text
     Enabled As Boolean
     Elapsed As Number
     IdleElapsed As Number
 End Type
+
+Public Function Duration(Name As Text) As Number
+
+    If (Name = "Verdant Reach" Or
+        Name = "Greyglass Pass" Or
+        Name = "Sunglass Expanse" Or
+        Name = "Ancient Relay" Or
+        Name = "Neris Relief Quarter" Or
+        Name = "Willowstep Highlands" Or
+        Name = "Silverfall Basin") Then
+        Return 15000
+    End If
+
+    Return INTERVAL
+
+End Function
 
 Public Function DefaultIncluded(Name As Text) As Boolean
 
@@ -161,12 +178,13 @@ Public Function StatisticsVisible(Value As State) As Boolean
 
 End Function
 
-''' Show the opposite lighting during the middle ten seconds of each map visit.
+''' Use the opposite lighting only during the middle third of each map visit.
 Public Function AlternateLighting(Value As State) As Boolean
 
     Dim Result As Boolean
 
-    Result = Value.Enabled And Value.Elapsed >= 10000 And Value.Elapsed < 20000
+    Result = (Value.Enabled And Value.Elapsed >= Duration(Value.TownName) / 3 And
+        Value.Elapsed < Duration(Value.TownName) * 2 / 3)
 
     Return Result
 
@@ -177,7 +195,7 @@ Public Function SecondsRemaining(Value As State) As Number
     Dim Result As Number
 
     If Value.Enabled Then
-        Result = Max(0, INTERVAL - Value.Elapsed + 999) / 1000
+        Result = Max(0, Duration(Value.TownName) - Value.Elapsed + 999) / 1000
     End If
 
     Return Result
@@ -192,7 +210,7 @@ Public Function Advance(ByRef Value As State, Elapsed As Number, Ready As Boolea
 
     Value.Elapsed = Value.Elapsed + Max(0, Min(Elapsed, 1000))
 
-    If Value.Elapsed < INTERVAL Then
+    If Value.Elapsed < Duration(Value.TownName) Then
         Return False
     End If
 

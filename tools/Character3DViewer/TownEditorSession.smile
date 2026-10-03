@@ -6,6 +6,7 @@ Option Explicit
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Simple3D.Graphics3D As G
 Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownNpcLayout As NpcLayout
 Import Smile.Tools.TownSurfaceStyles As SurfaceStyles
 Import Smile.Tools.TownCatalogData As Catalog
 Import Smile.Tools.TownInitialSurface As Initial
@@ -58,7 +59,6 @@ Private Dim GatewayJourney As Journey.State
 Private Dim Showcase As Demo.State
 Private Dim DemoLightingAlternate As Boolean
 Private Dim DemoCameraPending As Boolean
-Private Dim DemoCameraFrom As P.Camera3D
 Private Dim OpenTabs As Tabs.State
 Private Dim Incoming As Document.State
 Private Dim Controls As Editor.State
@@ -390,8 +390,6 @@ Public Function LoadNext() As Boolean
 
         Call Navigation.Rebuild(Town)
 
-        Ok = World.Synchronize(Town)
-
     End If
 
     Return Ready
@@ -638,6 +636,8 @@ Private Sub FileCommand(Action As Number)
 
     Else If Action = 312 Then
 
+        Controls.Ui.PermanentPage = 0
+
         Controls.Ui.Section = 5
 
     Else If Action >= 700 And Action < 700 + Library.PERMANENT_COUNT Then
@@ -816,43 +816,21 @@ End Sub
 
 Public Sub ToggleDemo(View As P.Camera3D)
 
-    Dim Ok As Boolean
+    Showcase.TownName = Town.Name
 
     Call Demo.Toggle(Showcase)
 
-    If Showcase.Enabled And Not Demo.Included(OpenTabs.Menu.Showcase, Town.Name) Then
-
-        Ok = Tabs.SelectTab(OpenTabs, Town, Tabs.NextDemo(OpenTabs), False)
-        Showcase.Enabled = Ok
-
-        If Ok Then
-            Call Editor.ResetDocument(Controls, Town)
-        Else
-            Controls.Ui.Message = "Enable Demo for a map in the Maps dialog first."
-        End If
-
-    End If
-
     DemoCameraPending = Showcase.Enabled
-    DemoCameraFrom = View
-
-    If Showcase.Enabled Then
-        TeleportPending = True
-        TabOverviewPending = True
-    End If
 
 End Sub
 
-Public Function TakeDemoCamera(ByRef View As P.Camera3D) As Boolean
+Public Function TakeDemoOrbit() As Boolean
 
-    If Not DemoCameraPending Then
-        Return False
-    End If
+    Dim Result As Boolean
 
+    Result = DemoCameraPending
     DemoCameraPending = False
-    View = DemoCameraFrom
-
-    Return True
+    Return Result
 
 End Function
 
@@ -1062,10 +1040,6 @@ Public Sub Update(Leader As P.Vector3, Elapsed As Number)
 
     Call World.Update()
 
-    If Ready And LiveTown = Town.Name Then
-        Ok = World.Synchronize(Town)
-    End If
-
     If HaveDocument Then
         Call Map.Update(Town)
     End If
@@ -1206,6 +1180,8 @@ Public Sub Update(Leader As P.Vector3, Elapsed As Number)
     Controls.Ui.RoadPreparation = RoadTravel.Preparation()
 
     RecoveryClock = RecoveryClock + Elapsed
+
+    Showcase.TownName = Town.Name
 
     If Demo.Advance(Showcase, Elapsed, Ready And Not Editing() And
         Not World.Active() And Not OpenTabs.Menu.Visible And
@@ -1621,6 +1597,16 @@ Public Function CourtOffset() As P.Vector3
 
 End Function
 
+Public Function ResidentPlacement() As NpcLayout.State
+
+    Dim Result As NpcLayout.State
+
+    Result = Town.Npcs
+
+    Return Result
+
+End Function
+
 Public Function TownName() As Text
 
     Dim ReturnValue As Text
@@ -1662,8 +1648,7 @@ Public Function BeginWorldPhotograph() As Boolean
     If (Ready And
         AppliedRevision = Town.Revision And
         Ground.LiveRevision = Town.Surface.Revision And
-        Not Demo.AlternateLighting(Showcase) And
-        Not Controls.Ui.Busy) Then
+        Not Demo.AlternateLighting(Showcase)) Then
         Result = Previews.Begin(Town)
     End If
 

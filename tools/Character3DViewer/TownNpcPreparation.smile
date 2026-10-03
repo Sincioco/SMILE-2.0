@@ -1,0 +1,90 @@
+''' Validate and ground NPC spawns in the immutable save snapshot.
+Module Smile.Tools.TownNpcPreparation
+
+Option Explicit
+
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownNpcLayout As Layout
+Import Smile.Tools.TownNearestRoadSearch As Search
+Import Smile.Tools.TownCollisionWorld As Collision
+
+Public Type State
+    Query As Search.State
+    Index As Number
+    Legacy As Boolean
+    Failed As Boolean
+    Ready As Boolean
+End Type
+
+Public Sub Begin(ByRef Value As State, ByRef Town As Document.State)
+
+    Dim Empty As State
+
+    Value = Empty
+    Value.Legacy = Not Town.Npcs.Authored
+    Value.Ready = Value.Legacy And Town.Name <> "Neris Town"
+
+    If Value.Legacy Then
+        Town.Npcs = Layout.Defaults(Town.Name)
+    End If
+
+End Sub
+
+Public Sub Update(ByRef Value As State, ByRef Town As Document.State,
+    ByRef World As Collision.State)
+
+    Dim Spawn As Layout.Spawn
+    Dim Empty As Search.State
+
+    If Value.Ready Or Value.Failed Then
+        Return
+    End If
+
+    If Value.Index >= Layout.NPC_COUNT Then
+
+        Town.Npcs.Authored = True
+        Value.Ready = True
+        Return
+
+    End If
+
+    Spawn = Town.Npcs.People[Value.Index]
+
+    If Spawn.Active Then
+
+        If Value.Legacy Then
+
+            If Not Value.Query.Started Then
+                Call Search.Begin(Value.Query, Spawn.Position, 1)
+            End If
+
+            Call Search.Step(Value.Query, World)
+
+            If Not Value.Query.Ready Then
+                Return
+            End If
+
+            Value.Failed = Not Value.Query.Found
+            Spawn.Position = Value.Query.Result
+
+        Else
+            Value.Failed = Not Collision.CanStand(World, Spawn.Position.X, Spawn.Position.Z)
+
+        End If
+
+        If Value.Failed Then
+            Return
+        End If
+
+        Spawn.Position.Y = Collision.GroundHeight(World, Spawn.Position.X, Spawn.Position.Z)
+
+        Town.Npcs.People[Value.Index] = Spawn
+
+    End If
+
+    Value.Query = Empty
+    Value.Index = Value.Index + 1
+
+End Sub
+
+End Module

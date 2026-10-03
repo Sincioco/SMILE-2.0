@@ -125,30 +125,6 @@ Public Function Add(ByRef Value As State, Name As Text, X As Number, Y As Number
 
 End Function
 
-Public Function Connect(ByRef Value As State, First As Number, FirstPort As Number,
-    Second As Number, SecondPort As Number) As Boolean
-
-    If (First < 0 Or
-        First >= Value.NodeCount Or
-        Second < 0 Or
-        Second >= Value.NodeCount Or
-        First = Second Or
-        FirstPort < 0 Or
-        FirstPort > 3 Or
-        SecondPort < 0 Or
-        SecondPort > 3) Then
-        Return False
-    End If
-
-    Value.Links[First, Second] = True
-    Value.Links[Second, First] = True
-    Value.Ports[First, Second] = FirstPort
-    Value.Ports[Second, First] = SecondPort
-
-    Return True
-
-End Function
-
 Public Sub Remove(ByRef Value As State, Selected As Number)
 
     Dim Index As Number
@@ -324,6 +300,14 @@ Public Function LoadWorld(ByRef Value As State, Name As Text, Optional Key As Te
     If Not Valid Or Offset <> Length Then
         Return False
     End If
+
+    For Index = 0 To Candidate.NodeCount - 1
+
+        For Other = 0 To Candidate.NodeCount - 1
+            Candidate.Links[Index, Other] = False
+            Candidate.Ports[Index, Other] = 0
+        End For
+    End For
 
     Value = Candidate
 

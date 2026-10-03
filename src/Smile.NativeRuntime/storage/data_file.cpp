@@ -5,6 +5,8 @@
 #include <string.h>
 #include <string>
 
+DWORD smile_viewport_write_png(const WCHAR*, const unsigned char*, DWORD);
+
 DWORD smile_data_bundle_transfer(bool, const char*, const char*, const WCHAR*, long long, volatile LONG*);
 
 extern "C" {
@@ -25,7 +27,7 @@ static struct Transfer {
     volatile LONG progress;
     volatile LONG status; // 0 pending, 1 successful, 2 failed; -1 unknown job.
     HANDLE thread;
-    bool bundle, saving;
+    bool bundle, saving, png;
     char key[1025], records[264193];
 } job;
 
@@ -96,6 +98,17 @@ static DWORD WINAPI transfer(void*)
         FILE_ATTRIBUTE_NORMAL, nullptr);
     if (output == INVALID_HANDLE_VALUE) { error = GetLastError(); goto done; }
     ownsTemporary = true;
+    if (job.png) {
+        CloseHandle(output); output = INVALID_HANDLE_VALUE;
+        error = smile_viewport_write_png(temporary, bytes + 44, count - 44);
+        if (error) goto done;
+        output = CreateFileW(temporary, GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, 0, nullptr);
+        if (output == INVALID_HANDLE_VALUE || !FlushFileBuffers(output)) {
+            error = GetLastError(); goto done;
+        }
+        CloseHandle(output); output = INVALID_HANDLE_VALUE;
+        goto publish;
+    }
     if (!WriteFile(output, bytes, count, &written, nullptr) || !FlushFileBuffers(output))
         { error = GetLastError(); goto done; }
     if (written != count) { error = ERROR_WRITE_FAULT; goto done; }
@@ -106,6 +119,7 @@ static DWORD WINAPI transfer(void*)
     if (written != count || !envelope(bytes, written)) { error = ERROR_CRC; goto done; }
     InterlockedExchange(&job.progress, 95); // Written envelope verified.
     CloseHandle(output); output = INVALID_HANDLE_VALUE;
+publish:
     if (GetFileAttributesW(job.destination) != INVALID_FILE_ATTRIBUTES)
     {
         if (!ReplaceFileW(job.destination, temporary, backup, 0, nullptr, nullptr))
@@ -119,13 +133,14 @@ done:
     if (output != INVALID_HANDLE_VALUE) CloseHandle(output);
     if (ownsTemporary) DeleteFileW(temporary);
     if (bytes) HeapFree(GetProcessHeap(), 0, bytes);
+    if (job.png) DeleteFileW(job.source);
     if (error) fail(error);
     else { StringCchCopyA(job.message, 512, "File transfer complete."); InterlockedExchange(&job.progress, 100); }
     InterlockedExchange(&job.status, error ? 2 : 1);
     return 0;
 }
 
-static long long start(long long saving, void* key, void* path, void* records, bool bundle)
+static long long start(long long saving, void* key, void* path, void* records, bool bundle, bool png = false)
 {
     WCHAR stored[2048], selected[4096];
     std::string keyCopy(smile_text_utf8(key), static_cast<size_t>(smile_text_byte_length(key)));
@@ -143,6 +158,7 @@ static long long start(long long saving, void* key, void* path, void* records, b
     if (job.thread) { CloseHandle(job.thread); job.thread = nullptr; }
     ++job.id;
     job.bundle = bundle;
+    job.png = png;
     job.saving = saving != 0;
     InterlockedExchange(&job.progress, 0);
     if (!valid || !((selected[0] && selected[1] == L':' && selected[2] == L'\\') ||
@@ -161,6 +177,17 @@ static long long start(long long saving, void* key, void* path, void* records, b
     job.thread = CreateThread(nullptr, 0, transfer, nullptr, 0, nullptr);
     if (!job.thread) { fail(GetLastError()); InterlockedExchange(&job.status, 2); }
     return job.id;
+}
+
+extern "C" long long smile_data_png_start(const char* key, const char* path, long long length)
+{
+    return start(1, smile_text_from_utf8(key, lstrlenA(key)),
+        smile_text_from_utf8(path, length), nullptr, false, true);
+}
+
+extern "C" int smile_data_file_busy()
+{
+    return job.thread && WaitForSingleObject(job.thread, 0) == WAIT_TIMEOUT;
 }
 
 extern "C" long long smile_data_file_start(long long saving, void* key, void* path)

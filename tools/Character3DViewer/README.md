@@ -1,5 +1,35 @@
 # SMILE 2.0 - Sin Star I - Game Engine and Studio
 
+## October 3 authored maps, resident spawns and exports
+
+World Map connections now come only from the maps' yellow Map Load areas. Card
+positions remain editable; connecting/deleting graph lines is no longer available.
+Opening an atlas never adds roads, destinations or other town content. Requested
+road/shoreline corrections are saved in the sixteen permanent maps; loading does
+not rerun a repair script.
+
+**Items > NPCs** shows nine resident portraits and names. Select a resident, choose
+**Place / Move** and click walkable ground. **Face Point** sets facing; rotation,
+Delete and Undo/Redo are supported. Blue circles and facing lines mark spawns.
+Saving validates and grounds exact positions. TWN16 stores the layout, including
+an intentionally empty layout. Prepared maps load directly, one actor per frame.
+Older Neris files resolve legacy defaults in small bounded steps. Loading status
+shows actual progress and occupies separate space from map statistics.
+
+Demo On continues from the displayed camera without teleporting the party or
+resetting the shot. Verdant Reach, Greyglass Pass, Sunglass Expanse, Ancient Relay,
+Neris Relief Quarter, Willowstep Highlands and Silverfall Basin run for 15 seconds,
+switching lighting at 5 seconds and back at 10. Other maps retain 30-second timing.
+
+**Save for Viewer** writes a `.town` and same-name `.png` town preview from the
+saved initial camera and matching map revision, without editor controls. The
+cached preview is 384 x 240 pixels. Windows PNG encoding runs on the background
+file worker; failures for either export are reported. The permanent-map list
+keeps its recovery hint above buttons and pages on smaller windows. Editor-only
+N/S/E/W letters identify actual map edges as the camera rotates.
+
+Rebuild/relaunch native Studio. No .NET/VSIX update or browser refresh is required.
+
 ## October 3 predictable town zoom and initial orbit camera
 
 Town zoom now displays magnification: **1x fits the entire map**. Wheel-up zooms
@@ -35,13 +65,13 @@ Delete on the circle removes it. Map-dialog entry uses that point, then falls ba
 to an inward gate circle. Neris defaults to X=0, Z=-2780. Walking between maps uses
 the destination's matching gate circle. Blue guides are shown in the Town Editor.
 
-**World Map** reopens the last atlas, including after restart. Changed graph links
-update yellow destinations; existing matching areas keep their edited positions.
+**World Map** reopens the last atlas, including after restart. Its links reflect
+authored yellow destinations; the graph cannot edit them.
 The first reopen after restart frames every card automatically; later reopens
 retain the current zoom and pan.
 Reopening regression check: restart Studio, press World Map and confirm every
 saved card fits without Reset View; zoom/pan, leave and reopen to confirm that view remains.
-Deleting/moving an area does not recreate it while the graph stays unchanged.
+Deleting or moving an area is preserved; no graph reconciliation recreates it.
 Sin's latest atlas has two Horizon connections: Neris Town and Sunglass Expanse.
 
 Willowstep's own snowy terrain is restored and failed map loads cannot reuse the

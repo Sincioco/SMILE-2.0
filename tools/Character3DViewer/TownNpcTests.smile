@@ -1,0 +1,140 @@
+''' Saved NPC placement is authored data, with grounding resolved at save time.
+Module Smile.Tools.TownNpcTests
+
+Option Explicit
+
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownDocumentStore As Store
+Import Smile.Tools.TownNpcLayout As Layout
+Import Smile.Tools.TownNpcPreparation As Preparation
+Import Smile.Tools.TownCollisionWorld As Collision
+Import Smile.Tools.TownResidents As Residents
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Simple3D.Precision3D As P
+
+Dim Town As Document.State
+Dim Loaded As Document.State
+Dim Saved As Layout.State
+Dim Work As Preparation.State
+Dim World As Collision.State
+Dim People As Residents.State
+
+Public Function Run() As Number
+
+    Dim Ok As Boolean
+    Dim Index As Number
+    Dim Failures As Number
+
+    Ok = Document.Blank(Town, "NPC Fixture", 12, 12, 20.0)
+    Ok = Store.SaveDocument(Town, "NPC.Legacy", False) And Ok
+
+    Call Grid.PaintRectangle(Town.Surface, 0, 0, 11, 11, Grid.SURFACE_ROAD)
+    Call Collision.Build(World, Town)
+
+    Town.Npcs.Authored = True
+    Town.Npcs.People[6].Active = True
+    Town.Npcs.People[6].Position = P.Vector(13.25, 900.0, -27.75)
+    Town.Npcs.People[6].Heading = 73.5
+    Saved = Town.Npcs
+
+    Call Preparation.Begin(Work, Town)
+
+    For Index = 0 To 9
+        Call Preparation.Update(Work, Town, World)
+    End For
+
+    If (Not Work.Ready Or
+        Work.Failed Or
+        Work.Query.Started Or
+        Town.Npcs.People[6].Position.X <> Saved.People[6].Position.X Or
+        Town.Npcs.People[6].Position.Z <> Saved.People[6].Position.Z Or
+        Town.Npcs.People[6].Heading <> 73.5 Or
+        Town.Npcs.People[6].Position.Y <> Collision.GroundHeight(World, 13.25, -27.75)) Then
+        Print "FAIL Saving Grounds NPCs Without Relocating Or Searching"
+        Failures = Failures + 1
+    End If
+
+    Ok = Store.SaveDocument(Town, "NPC.Authored", False) And Ok
+    Ok = Store.LoadDocument(Loaded, "NPC.Authored", True) And Ok
+
+    If (Not Ok Or
+        Not Layout.Same(Loaded.Npcs, Town.Npcs) Or
+        Loaded.HasInitialCamera) Then
+        Print "FAIL NPC Positions And Facing Round Trip Without Requiring An Initial Camera"
+        Failures = Failures + 1
+    End If
+
+    Ok = Store.LoadDocument(Loaded, "NPC.Legacy", True)
+
+    If (Not Ok Or
+        Loaded.Npcs.Authored Or
+        Layout.Population(Loaded.Npcs) <> 0) Then
+        Print "FAIL Opening A Legacy Town Must Not Inherit Previously Decoded NPCs"
+        Failures = Failures + 1
+    End If
+
+    Town.Npcs.People[6].Active = False
+    Ok = Store.SaveDocument(Town, "NPC.Empty", False)
+    Ok = Store.LoadDocument(Loaded, "NPC.Empty", True) And Ok
+
+    If (Not Ok Or
+        Not Loaded.Npcs.Authored Or
+        Layout.Population(Loaded.Npcs) <> 0) Then
+        Print "FAIL Deleting All NPCs Must Remain An Explicit Empty Layout"
+        Failures = Failures + 1
+    End If
+
+    Town.Npcs.People[6].Active = True
+    Town.Npcs.People[6].Position.X = 90000.0
+
+    Call Preparation.Begin(Work, Town)
+
+    For Index = 0 To 9
+        Call Preparation.Update(Work, Town, World)
+    End For
+
+    If Not Work.Failed Or Town.Npcs.People[6].Position.X <> 90000.0 Then
+        Print "FAIL Invalid NPC Placement Must Reject Save Without Moving It"
+        Failures = Failures + 1
+    End If
+
+    People.Enabled = True
+    People.Total = 9
+    People.Loaded = 2
+    People.Nearest = -1
+    People.Speaking = -1
+
+    If Residents.OverlayHeight(People) < 174 Then
+        Print "FAIL Resident Loading Must Reserve Space Above Its Overlay"
+        Failures = Failures + 1
+    End If
+
+    People.Loaded = 9
+
+    If Residents.OverlayHeight(People) <> 0 Then
+        Print "FAIL Completed Residents Must Release Their Overlay Space"
+        Failures = Failures + 1
+    End If
+
+    Town.HasInitialCamera = True
+    Town.HasTeleportSpawn = True
+    Town.LandmarkRotation = 180.0
+    Town.WorldLinksStamp = 123
+    Ok = Document.Blank(Town, "Fresh Town", 8, 8, 20.0)
+
+    If (Not Ok Or
+        Town.Npcs.Authored Or
+        Layout.Population(Town.Npcs) <> 0 Or
+        Town.HasInitialCamera Or
+        Town.HasTeleportSpawn Or
+        Town.LandmarkRotation <> 0.0 Or
+        Town.WorldLinksStamp <> 0) Then
+        Print "FAIL New Town Must Not Inherit Another Map's Camera, Spawns Or Rotation"
+        Failures = Failures + 1
+    End If
+
+    Return Failures
+
+End Function
+
+End Module
