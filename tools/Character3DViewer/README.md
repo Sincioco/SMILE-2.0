@@ -26,7 +26,8 @@ saved initial camera and matching map revision, without editor controls. The
 cached preview is 384 x 240 pixels. Windows PNG encoding runs on the background
 file worker; failures for either export are reported. The permanent-map list
 keeps its recovery hint above buttons and pages on smaller windows. Editor-only
-N/S/E/W letters identify actual map edges as the camera rotates.
+N/S/E/W letters sit outside the map edges with a twelve-pixel gap as the camera
+rotates or zooms.
 
 Rebuild/relaunch native Studio. No .NET/VSIX update or browser refresh is required.
 

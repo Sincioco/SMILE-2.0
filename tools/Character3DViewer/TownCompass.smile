@@ -1,4 +1,4 @@
-''' Cardinal letters remain attached to the town's world-space edges during editing.
+''' Cardinal letters sit outside the town's projected edges during editing.
 Module Smile.Tools.TownCompass
 
 Option Explicit
@@ -14,6 +14,13 @@ Public Sub Draw(ByRef Town As Document.State, View As P.Camera3D, RightEdge As N
     Dim Position As P.Vector3
     Dim Ground As Terrain.Sample
     Dim Point As Camera.ProjectedPoint
+    Dim AlongEdge As P.Vector3
+    Dim EdgePoint As Camera.ProjectedPoint
+    Dim Center As Camera.ProjectedPoint
+    Dim NormalX As Double
+    Dim NormalY As Double
+    Dim Length As Double
+    Dim Clearance As Double
     Dim LowX As Double
     Dim HighX As Double
     Dim LowZ As Double
@@ -47,19 +54,51 @@ Public Sub Draw(ByRef Town As Document.State, View As P.Camera3D, RightEdge As N
 
         Ground = Terrain.SamplePoint(Town.Surface, Position.X, Position.Z)
         Position.Y = Ground.Offset + 25.0
+        AlongEdge = Position
+
+        If Index = 0 Or Index = 2 Then
+            AlongEdge.X = LowX
+        Else
+            AlongEdge.Z = LowZ
+        End If
+
         Point = Camera.ProjectViewerPoint(Position, View, Window_Width(), Window_Height())
+        EdgePoint = Camera.ProjectViewerPoint(AlongEdge, View, Window_Width(), Window_Height())
+        Position.X = (LowX + HighX) * 0.5
+        Position.Z = (LowZ + HighZ) * 0.5
+        Center = Camera.ProjectViewerPoint(Position, View, Window_Width(), Window_Height())
 
-        If Point.Visible Then
+        If (Point.Visible And
+            EdgePoint.Visible And
+            Center.Visible) Then
 
-            X = ToNumber(Point.X)
-            Y = ToNumber(Point.Y)
+            NormalX = Point.Y - EdgePoint.Y
+            NormalY = EdgePoint.X - Point.X
+            Length = Sqrt(NormalX * NormalX + NormalY * NormalY)
 
-            If (X >= 14 And
-                X < RightEdge - 14 And
-                Y >= 146 And
-                Y < Window_Height() - 56) Then
-                Fill Rectangle X - 12, Y - 13, 25, 27, RGB(12, 23, 36)
-                Draw Text Label At X - 7, Y - 11 Size 22 Color RGB(70, 225, 220)
+            If Length > 0.001 Then
+
+                NormalX = NormalX / Length
+                NormalY = NormalY / Length
+
+                If NormalX * (Center.X - Point.X) + NormalY * (Center.Y - Point.Y) > 0.0 Then
+                    NormalX = -NormalX
+                    NormalY = -NormalY
+                End If
+
+                ' Keep the complete badge twelve pixels beyond the edge, even when rotated.
+                Clearance = 12.0 + 13.0 * Abs(NormalX) + 14.0 * Abs(NormalY)
+                X = ToNumber(Point.X + NormalX * Clearance)
+                Y = ToNumber(Point.Y + NormalY * Clearance)
+
+                If (X >= 14 And
+                    X < RightEdge - 14 And
+                    Y >= 146 And
+                    Y < Window_Height() - 56) Then
+                    Fill Rectangle X - 12, Y - 13, 25, 27, RGB(12, 23, 36)
+                    Draw Text Label At X - 7, Y - 11 Size 22 Color RGB(70, 225, 220)
+                End If
+
             End If
 
         End If

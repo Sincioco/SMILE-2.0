@@ -23,7 +23,10 @@ rotation and link metadata; codec validation caught this existing state leak.
 Demo activation is consumed after idle activation in the update path, preserving
 the displayed camera/pivot and easing into the next orbit frame. `TownDemo` owns
 per-town duration and lighting thirds. `TownCompass` projects four letters at
-map edges. The panel owns permanent-map pagination and non-overlapping hint text.
+map edges, offset outward along each projected edge's normal so the complete
+label stays twelve pixels clear of the border at any rotation or zoom. This
+presentation-only placement remains in that owner and does not alter map bounds.
+The panel owns permanent-map pagination and non-overlapping hint text.
 
 `TownFileJobs` freezes a matching photograph before exporting the town snapshot.
 `TownWorldPreviews` retains bounded 384 x 240 captures. The reusable native
