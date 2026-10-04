@@ -1,5 +1,17 @@
 # SMILE 2.0 Repository Instructions for Codex
 
+### Permanent Studio authority for Sin Star I
+
+- Studio is authoritative for Battle Systems, Battle Simulations, and Towns/Maps.
+  Sin builds and approves these in Studio, then the implementation and authored
+  content are brought into the independent Sin Star I project.
+- Preserve the Studio version's behavior when copying or integrating it into
+  `D:\SMILE 2.0 - Sin Star I`. Reuse existing shared owners where practical;
+  do not maintain a divergent game implementation. Game-specific title navigation
+  and lifecycle may wrap the Studio version.
+- Develop changes to these systems through Studio first unless Sin explicitly
+  requests otherwise. Keep the game aligned with the approved Studio version.
+
 ### Sin Star I repository separation (October 4, 2026)
 
 - The canonical native game is now `D:\SMILE 2.0 - Sin Star I`, in `Sincioco/SinStarI`.

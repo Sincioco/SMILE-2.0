@@ -1,5 +1,18 @@
 # Character Viewer Architecture
 
+## October 4 Sin Star I Battle System host
+
+The independent Sin Star I game now embeds `NativeViewerHost.Session` for its
+Battle System. The optional `NavigationEnabled` start parameter defaults to true
+for Studio; the game disables Studio tabs and supplies its own title-return row.
+Studio's header-free visibility state is retained, with Escape still returning
+to the title when nested menus and edits are settled. Encounter rules, planning, cameras,
+statistics, rewards and presentation remain with the existing battle owners.
+`CanLeaveBattle` and `HeaderVisible` expose the UI boundary without mutable state.
+The game retains the host across title visits for session EXP and owns its Viewer
+lifetime, music and window-close deferral. No battle algorithms, renderer code,
+asset formats or language features are copied or extended.
+
 ## October 4 all-map nighttime water and 112% moonlight
 
 The earlier two-map selection is removed. `TownWaterAppearance.Configure` now

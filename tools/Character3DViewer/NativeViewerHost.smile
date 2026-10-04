@@ -37,13 +37,22 @@ Public Class Session
     Private Paused As Boolean
     Private TownScene As Town.State
     Private Navigation As Tabs.State
+    Private NavigationEnabled As Boolean
 
-    Public Sub Start(Viewer As Workflow.Session, InitialTab As Number, Hosted As Boolean, Width As Number, Height As Number)
+    Public Sub Start(
+        Viewer As Workflow.Session,
+        InitialTab As Number,
+        Hosted As Boolean,
+        Width As Number,
+        Height As Number,
+        Optional NavigationEnabled As Boolean = True
+    )
 
         Dim ViewerTab As Number
 
         Me.Camera.Enabled = True
         Me.BattlePanel = True
+        Me.NavigationEnabled = NavigationEnabled
 
         Call Tabs.Remember(Me.Navigation, InitialTab)
 
@@ -74,6 +83,27 @@ Public Class Session
         Me.PreviousTime = Timer()
 
     End Sub
+
+    ''' The embedding game may leave only after nested menus and edits are settled.
+    Public Function CanLeaveBattle(Viewer As Workflow.Session) As Boolean
+
+        Dim Result As Boolean
+
+        Result = Not Me.Menus.Stats.Visible And Me.Menus.Page = 0 And Viewer.CanSwitchTab()
+
+        Return Result
+
+    End Function
+
+    Public Function HeaderVisible() As Boolean
+
+        Dim Result As Boolean
+
+        Result = Not Me.HeaderHidden
+
+        Return Result
+
+    End Function
 
     Public Sub SelectTab(Viewer As Workflow.Session, Index As Number)
 
@@ -191,7 +221,8 @@ Public Class Session
             Call Town.ObserveDemoInput(Me.TownScene, Key)
         End If
 
-        Blocked = Not Me.HeaderHidden And UI.Contains(18, Tabs.RowY(Me.SelectedTab), 980, 26)
+        Blocked = (Not Me.HeaderHidden And Me.NavigationEnabled And
+            UI.Contains(18, Tabs.RowY(Me.SelectedTab), 980, 26))
 
         Call BattleUi.ObserveActivity(Me.Menus, Key)
 
@@ -244,7 +275,9 @@ Public Class Session
 
         End If
 
-        If Not Me.Menus.Stats.Visible And Not Me.HeaderHidden Then
+        If (Not Me.Menus.Stats.Visible And
+            Not Me.HeaderHidden And
+            Me.NavigationEnabled) Then
 
             Index = Tabs.Input(Me.Navigation, Me.SelectedTab)
 
@@ -427,13 +460,15 @@ Public Class Session
             Call Viewer.DrawStandaloneOverlay()
         End If
 
-        If Not Me.HeaderHidden Then
+        If Not Me.HeaderHidden And Me.NavigationEnabled Then
             Call Tabs.Draw(Me.SelectedTab)
         End If
 
         If Me.BattleActive Then
 
-            If Viewer.PanelVisibility() = 2 And Not Me.HeaderHidden Then
+            If (Viewer.PanelVisibility() = 2 And
+                Not Me.HeaderHidden And
+                Me.NavigationEnabled) Then
                 Draw Text "SMILE 2.0 - Battle System" At 18, 12 Size 22 Color WHITE
             End If
 
