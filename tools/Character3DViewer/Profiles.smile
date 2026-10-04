@@ -234,12 +234,12 @@ Public Function ProfileAt(Index As Number) As CharacterViewer.Profile
     Else If Index = PROFILE_DRAGON Then
 
         Result.AssetId = "sin-star-i.boss.red-dragon"
-        Result.CandidateVersion = "v1.1"
+        Result.CandidateVersion = "v1.3"
         Result.DisplayName = "Dragon"
         Result.PartyRole = "Boss"
         Result.ProductionStatus = "Preview"
         Result.AssetPath = "Assets\Generation2\RedDragon\RedDragon.sm3d"
-        Result.ExpectedClipCount = 6
+        Result.ExpectedClipCount = 8
         Result.ExpectedSocketCount = 6
         Result.DesiredWorldHeight = 250
 
@@ -403,7 +403,7 @@ Public Function ModelFileName(ProfileIndex As Number) As Text
     Else If ProfileIndex = PROFILE_ORIN Then
         Result = "orin-v1.3-animation-checkpoint.glb"
     Else If ProfileIndex = PROFILE_DRAGON Then
-        Result = "red-dragon-v1.1-animated.glb"
+        Result = "red-dragon-v1.3-animated.glb"
     Else If ProfileIndex = PROFILE_MIRA Then
         Result = "mira-animation-checkpoint.glb"
     Else If ProfileIndex = PROFILE_MIRA1 Then
@@ -439,7 +439,7 @@ Public Function ClipCount(ProfileIndex As Number) As Number
     Else If ProfileIndex = PROFILE_VRAX Then
         Result = 24
     Else If ProfileIndex = PROFILE_DRAGON Then
-        Result = 6
+        Result = 8
     Else If ProfileIndex = PROFILE_KAEL Then
         Result = 16
     Else If IsSwordFighter(ProfileIndex) Then
@@ -585,6 +585,10 @@ Public Function ClipName(ProfileIndex As Number, ClipIndex As Number) As Text
             Result = "Hit"
         Else If ClipIndex = 5 Then
             Result = "Roar"
+        Else If ClipIndex = 6 Then
+            Result = "Walk"
+        Else If ClipIndex = 7 Then
+            Result = "Run"
         End If
 
     Else If ProfileIndex = PROFILE_ORIN Then
@@ -1002,7 +1006,7 @@ Public Function ClipLoops(ProfileIndex As Number, ClipIndex As Number) As Boolea
     Else If IsMiraCharacter(ProfileIndex) Then
         Result = ClipIndex >= 0 And ClipIndex <= 2
     Else If ProfileIndex = PROFILE_DRAGON Then
-        Result = ClipIndex = 0
+        Result = ClipIndex = 0 Or ClipIndex = 6 Or ClipIndex = 7
     Else If ProfileIndex = PROFILE_ORIN Then
         Result = ClipIndex = 0 Or ClipIndex = 8 Or ClipIndex = 9
     Else If IsPartyCharacter(ProfileIndex) Then

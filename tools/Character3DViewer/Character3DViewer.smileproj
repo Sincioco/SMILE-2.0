@@ -395,8 +395,8 @@
                   Profile="Character"
                   Identity="sin-star-i.character-1.paladin"
                   ProductionState="Prototype" />
-    <Model3DAsset Include="BuildAssets\RedDragon\red-dragon-v1.1-animated.glb"
-                  Descriptor="BuildAssets\RedDragon\RedDragonV11.sm3d.json"
+    <Model3DAsset Include="BuildAssets\RedDragon\red-dragon-v1.3-animated.glb"
+                  Descriptor="BuildAssets\RedDragon\RedDragonV13.sm3d.json"
                   LogicalPath="Assets\Generation2\RedDragon\RedDragon.sm3d"
                   TextureOutputDirectory="Assets\Generation2\RedDragon\Textures"
                   Profile="Character"

@@ -3158,6 +3158,13 @@ Call Check(Profile.DefaultPlaybackSpeed = 100)
 Call Check(ViewerProfiles.SocketCount(ViewerProfiles.PROFILE_DRAGON) = 6)
 Call Check(ViewerProfiles.ClipLoops(ViewerProfiles.PROFILE_DRAGON, 0))
 Call Check(Not ViewerProfiles.ClipLoops(ViewerProfiles.PROFILE_DRAGON, 1))
+Call CheckNamed(ViewerProfiles.ClipCount(ViewerProfiles.PROFILE_DRAGON) = 8 And
+    ViewerProfiles.ClipName(ViewerProfiles.PROFILE_DRAGON, 6) = "Walk" And
+    ViewerProfiles.ClipName(ViewerProfiles.PROFILE_DRAGON, 7) = "Run",
+    "Dragon exposes its authored walk and run after the six preserved combat slots")
+Call CheckNamed(ViewerProfiles.ClipLoops(ViewerProfiles.PROFILE_DRAGON, 6) And
+    ViewerProfiles.ClipLoops(ViewerProfiles.PROFILE_DRAGON, 7),
+    "Dragon locomotion loops while attacks retain their one-shot policy")
 
 Profile = ViewerProfiles.ProfileAt(ViewerProfiles.PROFILE_ORIN)
 

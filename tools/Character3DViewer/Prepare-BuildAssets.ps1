@@ -144,12 +144,12 @@ $copies = @(
         Destination = Join-Path $buildAssets 'ArinPrototype\ArinPrototype.sm3d.json'
     },
     @{
-        Source = Join-Path $dragonRoot 'RedDragonV11\red-dragon-v1.1-animated.glb'
-        Destination = Join-Path $buildAssets 'RedDragon\red-dragon-v1.1-animated.glb'
+        Source = Join-Path $dragonRoot 'RedDragonV13\red-dragon-v1.3-animated.glb'
+        Destination = Join-Path $buildAssets 'RedDragon\red-dragon-v1.3-animated.glb'
     },
     @{
-        Source = Join-Path $dragonRoot 'RedDragonV11\RedDragonV11.sm3d.json'
-        Destination = Join-Path $buildAssets 'RedDragon\RedDragonV11.sm3d.json'
+        Source = Join-Path $dragonRoot 'RedDragonV13\RedDragonV13.sm3d.json'
+        Destination = Join-Path $buildAssets 'RedDragon\RedDragonV13.sm3d.json'
     },
     @{
         Source = Join-Path $technicalRoot 'AnimationArticulated.sm3d'
@@ -188,7 +188,7 @@ foreach ($copy in $copies) {
     }
 }
 
-$audioRoots = @((Join-Path $arinRoot 'Audio'), (Join-Path $dragonRoot 'RedDragonV11\Audio'),
+$audioRoots = @((Join-Path $arinRoot 'Audio'), (Join-Path $dragonRoot 'RedDragonV13\Audio'),
     (Join-Path $miraTripoRoot 'Audio'))
 $fireFiles = @('fire-shape-atlas.png', 'smoke-shape-atlas.png', 'ember-shape.png')
 $lightningFiles = @('lightning-ribbon.png', 'lightning-spark.png', 'thunder.wav')

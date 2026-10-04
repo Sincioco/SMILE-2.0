@@ -1,5 +1,30 @@
 # Character Viewer Architecture
 
+## October 5 Dragon full-body animation
+
+The independent game's `SourceAssets/Bosses/RedDragon/RedDragonV13` owns the
+editable Blender rig, original sources, eight performances, baked GLB, descriptor,
+audio, validation and previews. `animate.py` owns motion; `build.py` owns rigging,
+weights and export. Four paw bones and four two-bone IK chains replace the former
+fixed-leg preview. Export removes authoring controls after baking all 28 deform
+bones. Geometry, UVs, texture, accepted scale and six socket definitions survive.
+
+`Profiles.smile` owns the eight-clip presentation and looping policy, appending
+Walk/Run after the six existing combat slots. `Prepare-BuildAssets.ps1` mirrors
+the canonical package; both Studio and the game project declare the same model.
+Character3D still owns sampling; existing Dragon attack/VFX owners keep their
+cue times. No runtime IK, compiler extension, entry-point logic or navigation
+state was added. In-place gaits do not translate the actor through the arena.
+
+Production growth is four net lines in Profiles and zero in asset preparation;
+the project declaration changes two paths. Focused hardening grows seven SMILE
+lines and ten net PowerShell lines. No limits, exclusions or exceptions changed.
+The native hardening suite, calibration isolation, focused formatting and diff
+checks pass. The package validates all 668 exported samples, floor clearance,
+foot paths, planted contacts and exact loop seams. Native Studio was rebuilt,
+relaunched, and reviewed on Dragon Walk/Run, attack poses/effects and Party Dragon.
+Original angular wing topology remains an art limitation, recorded in the package.
+
 ## October 4 Metropolis daytime water reflections
 
 `TownWaterAppearance.Configure` accepts the active map name and keeps the existing

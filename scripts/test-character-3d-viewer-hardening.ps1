@@ -1295,7 +1295,7 @@ try {
     Assert-Contains $cookedProjectSource '<ResponsiveWindow>true</ResponsiveWindow>' `
         'Character 3D Viewer project'
     Assert-Contains $cookedProjectSource `
-        'BuildAssets\RedDragon\red-dragon-v1.1-animated.glb' 'Cooked Character 3D Viewer project'
+        'BuildAssets\RedDragon\red-dragon-v1.3-animated.glb' 'Cooked Character 3D Viewer project'
     Assert-Contains $cookedProjectSource `
         'LogicalPath="Assets\Generation2\RedDragon\RedDragon.sm3d"' `
         'Cooked Character 3D Viewer project'
@@ -1304,7 +1304,7 @@ try {
         $_.LogicalPath -eq 'Assets\Generation2\RedDragon\RedDragon.sm3d'
     })
     Assert-True ($dragonAssets.Count -eq 1 -and $dragonAssets[0].Profile -ceq 'Character' -and `
-        $dragonAssets[0].Descriptor -ceq 'BuildAssets\RedDragon\RedDragonV11.sm3d.json') `
+        $dragonAssets[0].Descriptor -ceq 'BuildAssets\RedDragon\RedDragonV13.sm3d.json') `
         'The animated Dragon must use its own Character cooking descriptor.'
     Assert-True ((Get-FileHash -LiteralPath $dragonSourcePath -Algorithm SHA256).Hash -ceq `
         '4A90AC7BCD5E0BEA9D0747CBB3E4B3B9379E1DCE2303DBA7797F6D0E72996D88') `
@@ -1324,6 +1324,16 @@ try {
         'The Dragon preview rig, six clips and unchanged geometry contract changed.'
     Assert-True ((Get-FileHash (Join-Path $dragonPackagePath 'red-dragon-v1.1-animated.glb')).Hash -ceq `
         $dragonPackage.modelSha256) 'The animated Dragon differs from its canonical package manifest.'
+    $dragonRevisionPath = Join-Path $repositoryRoot 'games\SinStarI\SourceAssets\Bosses\RedDragon\RedDragonV13'
+    $dragonRevision = Get-Content (Join-Path $dragonRevisionPath 'package.json') -Raw | ConvertFrom-Json
+    $dragonValidation = Get-Content (Join-Path $dragonRevisionPath 'validation.json') -Raw | ConvertFrom-Json
+    $dragonHash = (Get-FileHash (Join-Path $dragonRevisionPath 'red-dragon-v1.3-animated.glb')).Hash
+    Assert-True ($dragonRevision.deformBones -eq 28 -and $dragonRevision.controlBones -eq 8 -and
+        -not $dragonRevision.geometryChanged -and $dragonRevision.clips.Walk -eq 60 -and
+        $dragonRevision.clips.Run -eq 30 -and $dragonValidation.passed -and
+        $dragonHash -ieq $dragonRevision.modelSha256 -and
+        $dragonHash -ieq $dragonValidation.modelSha256) `
+        'The Dragon IK revision must have current passing contact and export evidence.'
     Assert-Contains $profileSource `
         'Result.AssetId = "sin-star-i.character-1.paladin"' 'Viewer profile'
     Assert-Contains $profileSource 'Result.CandidateVersion = "v5.7"' 'Viewer profile'

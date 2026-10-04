@@ -1,5 +1,20 @@
 # SMILE 2.0 - Sin Star I - Game Engine and Studio
 
+## October 5 Dragon creature animation
+
+**Characters → Dragon** uses the canonical `RedDragonV13` package. Select **Walk**
+or **Run** to leave Demo and preview the new in-place gait loops. The six combat
+slots retain their order; Idle, Roar, Fire Breath, Claw Strike, Hit and Fireball
+now include coordinated torso/leg/wing/tail movement. Existing battle impact and
+fire-release timings, six sockets and the Party Dragon route are preserved.
+
+The editable Blender rig has four foot targets, knee poles and independent paw
+orientation. Studio plays baked skeletal keys through the existing Character3D
+owner; it does not solve terrain-adaptive IK. Original mesh/texture/scale remain.
+Package, source, repair history, frame-contact evidence and 720p previews live in
+`D:\SMILE 2.0 - Sin Star I\SourceAssets\Bosses\RedDragon\RedDragonV13`.
+Rebuild/relaunch native Studio to adopt the asset. Web work remains paused.
+
 Neris Metropolis (October 4) is the first/default map. Its 47 reusable templates,
 current layout, exports and runtime effect limits are documented in
 [the package README](../../games/SinStarI/SourceAssets/Towns/Neris/NerisMetropolisV1/README.md).
@@ -1997,8 +2012,9 @@ save origin. Packaged defaults seed missing storage without overwriting existing
 working keys. Keep private roster publication separate from public distribution.
 
 Orin's storm clouds are light/flash presentation, not volumetric weather; one-boss
-Chain Arcs do not imply multi-enemy combat. Dragon is a preview rig without flight
-or foot-plant IK. Current calibration tools are not a full Blender replacement.
+Chain Arcs do not imply multi-enemy combat. Dragon v1.3 has Blender foot-plant IK
+baked into its clips; flight and terrain-adaptive runtime IK remain unsupported.
+Current calibration tools are not a full Blender replacement.
 
 ### Complete pose recovery check (September 20, 2026)
 
