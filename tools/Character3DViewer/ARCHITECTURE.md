@@ -1,5 +1,32 @@
 # Character Viewer Architecture
 
+## October 4 five-building lake fireworks
+
+`TownWaterfrontShow` keeps the existing four launch sites and adds rooftop emitters
+on the five user-selected Burj-lake landmark identities. Each origin uses the current
+assembly transform and roof bounds; independent 5–5.7 second periods and larger
+bursts make this lake's display denser without adding global random launch sites.
+Town revisions refresh moved/deleted attachments. Existing Marina/Petronas timing
+is unchanged. Two immutable particle submissions keep both displays visible in the
+shared water reflection pass: 2,304 existing particles plus 2,880 rooftop particles.
+
+`TownSpireLight` now reserves 363 particles per actual spire instead of preallocating
+4,096 for a single placed spire. The current city therefore reserves 5,547 particles
+for these effects, below its previous 6,400. The shared 8,192-particle pool and all
+renderer limits remain unchanged. Ownership stays in these existing focused modules;
+no entry-point, renderer, compiler, map geometry or saved placement changes are needed.
+
+The native regression checks all five roof attachments, move/delete behavior,
+overlapping bursts, separate native submissions, available particle capacity,
+night water reflection, and travel to Neris Town after releasing the city effects.
+The fixture runner now extracts the document envelope when seeding internal save
+storage from a prepared `.town`; production portable save/open remains tested separately.
+Native evidence `metropolis-be5466e8bb5a47b0a7c495c562ea5206` passes, including the
+existing editor/save/reopen/resource-release checks and a lake review photograph.
+The photograph uses the existing bounded 640 × 384 capture size; an attempted
+1280 × 720 diagnostic exceeded the cached-image save envelope's 1 MiB limit.
+Focused style and diff checks pass. No architectural limits or exclusions changed.
+
 
 ## October 4 Neris Metropolis native delivery
 

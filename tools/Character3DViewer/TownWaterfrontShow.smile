@@ -13,10 +13,26 @@ Import Smile.Tools.TownGeometry As Geometry
 
 Public Type State
     Display As Fireworks.State
-    Sources[4] As Fireworks.Emitter
+    LakeDisplay As Fireworks.State
+    Sources[9] As Fireworks.Emitter
     SourceCount As Number
+    LakeStart As Number
     Revision As Number
 End Type
+
+Private Function LakeLandmark(Item As Document.Item) As Boolean
+
+    Dim Result As Boolean
+
+    Result = ((Item.Identity = 2 And Item.Template = 40) Or
+        (Item.Identity = 7 And Item.Template = 45) Or
+        (Item.Identity = 10 And Item.Template = 48) Or
+        (Item.Identity = 12 And Item.Template = 50) Or
+        (Item.Identity = 21 And Item.Template = 60))
+
+    Return Result
+
+End Function
 
 Public Sub Resolve(ByRef Value As State, ByRef Town As Document.State)
 
@@ -34,6 +50,7 @@ Public Sub Resolve(ByRef Value As State, ByRef Town As Document.State)
     Dim Burj As P.Vector3
 
     Value.SourceCount = 0
+    Value.LakeStart = 0
     Value.Revision = Town.Revision
 
     If Town.Name <> "Neris Metropolis" Then
@@ -140,6 +157,29 @@ Public Sub Resolve(ByRef Value As State, ByRef Town As Document.State)
         Value.Sources[Index].Seed = 53 + Index * 17
     End For
 
+    Value.LakeStart = Value.SourceCount
+
+    For Index = 0 To Town.ItemCount - 1
+
+        Item = Town.Items[Index]
+
+        If Item.Active And LakeLandmark(Item) Then
+
+            Shape = Catalog.TemplateAt(Item.Template)
+            Slot = Value.SourceCount
+            Value.Sources[Slot].Origin = Geometry.ToWorld(Item,
+                P.Vector(0.0, Shape.High.Y + 30.0, 0.0))
+            Value.Sources[Slot].Height = 1500.0 + ToDouble(Item.Identity Mod 4) * 250.0
+            Value.Sources[Slot].Radius = 2250.0 + ToDouble(Item.Identity Mod 3) * 220.0
+            Value.Sources[Slot].Period = 5000 + (Item.Identity * 137 Mod 701)
+            Value.Sources[Slot].Delay = Item.Identity * 719 Mod Value.Sources[Slot].Period
+            Value.Sources[Slot].Seed = Item.Identity * 41
+            Value.SourceCount = Value.SourceCount + 1
+
+        End If
+
+    End For
+
 End Sub
 
 Public Function Draw(ByRef Value As State, ByRef Town As Document.State,
@@ -149,6 +189,7 @@ Public Function Draw(ByRef Value As State, ByRef Town As Document.State,
     Dim Ok As Boolean
 
     Value.Display.ParticleCount = 0
+    Value.LakeDisplay.ParticleCount = 0
 
     If Night <= 0.0 Or Town.Name <> "Neris Metropolis" Then
         Return True
@@ -162,9 +203,17 @@ Public Function Draw(ByRef Value As State, ByRef Town As Document.State,
         Return True
     End If
 
-    If Value.Display.Particles.Handle = 0 Then
+    If Value.LakeStart > 0 And Value.Display.Particles.Handle = 0 Then
 
         If Not Fireworks.Create(Value.Display, "Assets/Fire/ember-shape.png", 2304) Then
+            Return False
+        End If
+
+    End If
+
+    If Value.SourceCount > Value.LakeStart And Value.LakeDisplay.Particles.Handle = 0 Then
+
+        If Not Fireworks.Create(Value.LakeDisplay, "Assets/Fire/ember-shape.png", 2880) Then
             Return False
         End If
 
@@ -173,10 +222,17 @@ Public Function Draw(ByRef Value As State, ByRef Town As Document.State,
     Ok = True
 
     For Index = 0 To Value.SourceCount - 1
-        Ok = Fireworks.Add(Value.Display, Value.Sources[Index], Time, Night) And Ok
+
+        If Index < Value.LakeStart Then
+            Ok = Fireworks.Add(Value.Display, Value.Sources[Index], Time, Night) And Ok
+        Else
+            Ok = Fireworks.Add(Value.LakeDisplay, Value.Sources[Index], Time, Night) And Ok
+        End If
+
     End For
 
     Ok = Fireworks.Draw(Value.Display) And Ok
+    Ok = Fireworks.Draw(Value.LakeDisplay) And Ok
 
     Return Ok
 
@@ -185,8 +241,10 @@ End Function
 Public Sub Destroy(ByRef Value As State)
 
     Call Fireworks.Destroy(Value.Display)
+    Call Fireworks.Destroy(Value.LakeDisplay)
 
     Value.SourceCount = 0
+    Value.LakeStart = 0
     Value.Revision = -1
 
 End Sub

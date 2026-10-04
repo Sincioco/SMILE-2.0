@@ -46,7 +46,14 @@ $storage = & (Join-Path $PSScriptRoot 'get-smile-data-root.ps1')
 $data = Join-Path $storage "$(Get-Hash $applicationId)/Data"
 $null = New-Item -ItemType Directory -Path $data -Force
 $town = Join-Path $root 'games/SinStarI/SourceAssets/Towns/Neris/NerisMetropolisV1/Town/Neris Metropolis.town'
-Copy-Item -LiteralPath $town -Destination (Join-Path $data "$(Get-Hash 'Metropolis.Fixture').bin")
+# LoadDocument reads a Save Data envelope, whereas a portable .town may append
+# prepared renderer records. Seed only its checked document envelope here;
+# the fixture separately tests the production prepared-file save/open path.
+$townBytes = [IO.File]::ReadAllBytes($town)
+$documentLength = 44 + [BitConverter]::ToUInt32($townBytes, 8)
+if ($documentLength -gt $townBytes.Length) { throw 'Incomplete Metropolis fixture envelope.' }
+[IO.File]::WriteAllBytes((Join-Path $data "$(Get-Hash 'Metropolis.Fixture').bin"),
+    $townBytes[0..($documentLength - 1)])
 $neris = Join-Path $storage "$(Get-Hash 'smile.tools.character3d-viewer')/Data/$(Get-Hash 'TownEditor.PermanentNeris').bin"
 Copy-Item -LiteralPath $neris -Destination (Join-Path $data "$(Get-Hash 'Neris.Fixture').bin")
 # Preserve the user's approved right-of-Codex placement in the isolated test app.

@@ -44,6 +44,10 @@ on the rooftop. Merdeka and One World Trade Center have distinct angular geometr
 - Localized fireworks on Marina Bay Sands, Petronas, their nearby water, and the
   lake in front of Burj Khalifa. Burj's source resolves independently from its
   current placement to an inset water point; no global random launch positions.
+- The Burj lake also has larger rooftop bursts from its five surrounding landmarks:
+  Burj Khalifa, Shanghai World Financial Center, Ping An, One World Trade Center,
+  and Aether Gate Observatory. Their independent 5–5.7 second cycles overlap,
+  follow moved buildings, and disappear when the corresponding building is removed.
 - Darkened nighttime water reflects buildings, lights and submitted fireworks
   using the shared native planar reflection pass.
 - A per-pixel emissive Sphere display blends between aurora, plasma, ripple and
@@ -64,7 +68,7 @@ not part of this native delivery.
 uses an isolated application ID and a read-only copy of the current fixture.
 It verifies real catalog material loading, bridge/water depth separation, drag
 and cancellation, all 47 template placements, beacon intervals, spacecraft timing,
-four localized launch sites, actual rendered photographs, Sphere pattern frames,
+nine localized launch sites, actual rendered photographs, Sphere pattern frames,
 native prepared town/PNG save and reopen, and transition from nighttime city to
 the real Neris Town including castle resources.
 

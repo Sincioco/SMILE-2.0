@@ -31,6 +31,7 @@ Import Smile.Tools.NerisTown As StudioTown
 Import Smile.Tools.TownEditorSession As Session
 Import Smile.Tools.TownWorldPreviews As Previews
 Import Smile.Tools.TownFileJobs As Files
+Import Smile.Tools.TownGeometry As Geometry
 
 Dim Town As Document.State
 Dim Assets As Renderer.State
@@ -73,11 +74,13 @@ Call Check(Ok And Town.ItemCount > 500, "Real Authored City Loads")
 Call CheckPlacement()
 Call CheckStartupOrder()
 Call Waterfront.Resolve(Assets.CityMaterials.Fireworks, Town)
-Call Check(Assets.CityMaterials.Fireworks.SourceCount = 4, "Four Localized Landmark And Lake Launch Sites Resolve")
+Call Check(Assets.CityMaterials.Fireworks.SourceCount = 9 And
+    Assets.CityMaterials.Fireworks.LakeStart = 4, "Existing Waterfront And Five Lake Rooftop Launch Sites Resolve")
 Call Check(Grid.ReadPoint(Town.Surface, Assets.CityMaterials.Fireworks.Sources[3].Origin.X,
     Assets.CityMaterials.Fireworks.Sources[3].Origin.Z) = Grid.SURFACE_WATER And
     Assets.CityMaterials.Fireworks.Sources[3].Origin.X < 0.0,
     "Burj Fireworks Are Over Their Own Lake On The Opposite Side Of The City")
+Call CheckLakeLaunches()
 Call Renderer.SyncDocument(Assets, Town)
 
 For Index = 0 To Assets.Required - 1
@@ -206,7 +209,7 @@ Loop Until Ground.Stage = 0 Or Ground.Failed Or Timer() >= Deadline
 
 Call Check(Ok And Ground.Stage = 0 And Not Ground.Failed, "Real City Terrain Builds Within Bound")
 
-For Frame = 0 To 11
+For Frame = 0 To 12
 
     View.Position = P.Vector(50000.0 - ToDouble(Frame) * 450.0, 6000.0, -34000.0)
     View.Target = P.Vector(0.0, 20.0, 0.0)
@@ -282,8 +285,18 @@ For Frame = 0 To 11
 
     End If
 
+    If Frame = 12 Then
+
+        Town.Light = Town.Presets.Night
+        View.Position = P.Vector(-34913.0, 14584.0, 4337.0)
+        View.Target = P.Vector(-11818.0, 4000.0, -1484.0)
+        ShotName = "five-building-lake-fireworks"
+
+    End If
+
     View.NearPlane = 500.0
     Ok = G.SetViewport3D(0, 0, 640, 384, True)
+
     Ok = Lighting.Apply(Town.Light) And Ok
     Ok = Lighting.ConfigureBounds(Town) And Ok
     Ok = WaterAppearance.Configure(Town, Town.Light.Intensity) And Ok
@@ -302,7 +315,13 @@ For Frame = 0 To 11
             "Water Receives Native Planar Scene And VFX Reflection")
         Call Check(Assets.CityMaterials.Beam.PointCount = 363, "Night Spire Beam Is Continuous And Bounded")
         Call Check(Assets.CityMaterials.Fireworks.Display.Particles.Capacity = 2304,
-            "Waterfront Display Leaves Particle Capacity For Other Scene Effects")
+            "Existing Waterfront Display Keeps Its Bounded Particle Batch")
+        Call Check(Assets.CityMaterials.Fireworks.LakeDisplay.Particles.Capacity = 2880 And
+            Assets.CityMaterials.Beam.Particles.Capacity = 363,
+            "Five Rooftop Bursts Fit Alongside The Actual Placed Spire")
+        Call Check(G.VfxValue3D(G.VFX_QUERY_STAGED_PARTICLE_CAPACITY) <
+            G.VfxValue3D(G.VFX_QUERY_MAX_STAGED_PARTICLES),
+            "Dense Fireworks Leave Shared Particle Capacity For Other Effects")
 
     End If
 
@@ -332,6 +351,9 @@ Ok = Scene.EndScene() And Ok
 
 Call Check(Ok And Assets.CityMaterials.Fireworks.Display.ParticleCount > 0,
     "Localized Night Fireworks Submit Particles At A Known Burst Time")
+Call Check(Assets.CityMaterials.Fireworks.LakeDisplay.ParticleCount >= 2304 And
+    G.VfxValue3D(G.VFX_QUERY_PARTICLE_SUBMISSIONS) = 2,
+    "Four Simultaneous Rooftop Bursts And Existing Waterfront Submit Separate Reflection-Safe Batches")
 
 Show Screen
 
@@ -411,6 +433,69 @@ Sub Check(Accepted As Boolean, Label As Text)
         Failures = Failures + 1
         Print "FAIL " + Label
     End If
+
+End Sub
+
+Sub CheckLakeLaunches()
+
+    Dim ItemIndex As Number
+    Dim SourceIndex As Number
+    Dim Found As Number
+    Dim Shape As Catalog.Template
+    Dim Expected As P.Vector3
+    Dim Saved As Document.Item
+    Dim Before As P.Vector3
+
+    For ItemIndex = 0 To Town.ItemCount - 1
+
+        If (Town.Items[ItemIndex].Identity = 2 Or
+            Town.Items[ItemIndex].Identity = 7 Or
+            Town.Items[ItemIndex].Identity = 10 Or
+            Town.Items[ItemIndex].Identity = 12 Or
+            Town.Items[ItemIndex].Identity = 21) Then
+
+            Shape = Catalog.TemplateAt(Town.Items[ItemIndex].Template)
+            Expected = Geometry.ToWorld(Town.Items[ItemIndex], P.Vector(0.0, Shape.High.Y + 30.0, 0.0))
+
+            For SourceIndex = Assets.CityMaterials.Fireworks.LakeStart To Assets.CityMaterials.Fireworks.SourceCount - 1
+
+                If M.Distance(Assets.CityMaterials.Fireworks.Sources[SourceIndex].Origin, Expected) < 0.001 Then
+                    Found = Found + 1
+
+                    Call Check(Assets.CityMaterials.Fireworks.Sources[SourceIndex].Period >= 5000 And
+                        Assets.CityMaterials.Fireworks.Sources[SourceIndex].Period <= 5700,
+                        "Each Of The Five Lake Buildings Launches Frequently")
+                End If
+
+            End For
+
+        End If
+
+        If Town.Items[ItemIndex].Identity = 12 Then
+
+            Saved = Town.Items[ItemIndex]
+            Before = Assets.CityMaterials.Fireworks.Sources[7].Origin
+            Town.Items[ItemIndex].Position.X = Saved.Position.X + 450.0
+
+            Call Waterfront.Resolve(Assets.CityMaterials.Fireworks, Town)
+            Call Check(Abs(Assets.CityMaterials.Fireworks.Sources[7].Origin.X - Before.X - 450.0) < 0.001,
+                "Rooftop Fireworks Follow A User-Moved Building")
+
+            Town.Items[ItemIndex].Active = False
+
+            Call Waterfront.Resolve(Assets.CityMaterials.Fireworks, Town)
+            Call Check(Assets.CityMaterials.Fireworks.SourceCount = 8,
+                "Removing A Building Removes Its Rooftop Fireworks")
+
+            Town.Items[ItemIndex] = Saved
+
+            Call Waterfront.Resolve(Assets.CityMaterials.Fireworks, Town)
+
+        End If
+
+    End For
+
+    Call Check(Found = 5, "All Five Requested Landmarks Launch From Their Actual Roofs")
 
 End Sub
 

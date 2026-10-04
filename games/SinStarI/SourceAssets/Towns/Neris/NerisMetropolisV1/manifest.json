@@ -11,7 +11,7 @@
   "catalog_chunks": 61,
   "runtime_assets": 401,
   "terrain_patches": 77553,
-  "native_evidence": "metropolis-0cc136aaedb04f80963e7218806741c7",
+  "native_evidence": "metropolis-be5466e8bb5a47b0a7c495c562ea5206",
   "reflection_evidence": "metropolis-reflection-8b4897ea54ab4b1ab2d9155aaa5625c6",
   "blender_round_trip": {
     "items": 630,
@@ -25,19 +25,9 @@
       "sha256": "cee7564192f5191bf28de6bbe4d03839220dda4eb1de84b74df4b02cf75b8b26",
       "encoding": "UTF-8 with LF for checksum"
     },
-    "Authoring/catalog-extension.json": {
-      "bytes": 70121,
-      "sha256": "511feefacab5b22650efc7c4cb859e266b2db6ec32dc2438201797c34c5bd7e6",
-      "encoding": "UTF-8 with LF for checksum"
-    },
     "Authoring/Catalog.sm3d.json": {
       "bytes": 14,
       "sha256": "50208d78350a7a160dec59a82df1499b6ca7da33e54c5eb11c97e342118e68bb",
-      "encoding": "UTF-8 with LF for checksum"
-    },
-    "Authoring/layout.json": {
-      "bytes": 49670,
-      "sha256": "474199d407e46ba11a3540a9bf4e6d3376bc237f8a06f5493d34644a40dd666e",
       "encoding": "UTF-8 with LF for checksum"
     },
     "Authoring/Templates/Catalog-38.glb": {
@@ -147,6 +137,16 @@
     "Authoring/Town-Palette.png": {
       "bytes": 846876,
       "sha256": "5a5922ffe743c1e7a0115d54feaed77806578ccda2ad6789f75a85ec9e35e117"
+    },
+    "Authoring/catalog-extension.json": {
+      "bytes": 70121,
+      "sha256": "511feefacab5b22650efc7c4cb859e266b2db6ec32dc2438201797c34c5bd7e6",
+      "encoding": "UTF-8 with LF for checksum"
+    },
+    "Authoring/layout.json": {
+      "bytes": 49670,
+      "sha256": "474199d407e46ba11a3540a9bf4e6d3376bc237f8a06f5493d34644a40dd666e",
+      "encoding": "UTF-8 with LF for checksum"
     },
     "Blender/Neris-Metropolis - V1.blend": {
       "bytes": 2695178,
@@ -392,6 +392,10 @@
       "bytes": 1557013,
       "sha256": "1fcddc0ee95220294aaeee23a5b2d5a53706960afb07a9c53d1b90735f1efb9d"
     },
+    "Previews/five-building-lake-fireworks.png": {
+      "bytes": 267766,
+      "sha256": "cc8247448976df2827ff3d6f8fb5fc25695445d69be494649885db7af0aac404"
+    },
     "Previews/landmark-study-01.png": {
       "bytes": 1711895,
       "sha256": "8f7bfc387080486a548df6342444e8e9b43075e41524280706ff37d2fa430ac0"
@@ -409,8 +413,8 @@
       "sha256": "5237ab1f37530629664e1f9fe98e94d4f76353f81a03ce761ac93b8912734614"
     },
     "README.md": {
-      "bytes": 5418,
-      "sha256": "12a66996dfff5a5a1ed80042bff7fc007000ce90e4b47f57cf7b5ded1063d4b3",
+      "bytes": 5748,
+      "sha256": "aa48e3a5e39a062e7558653f6367ff66a9e6ea3ee43a0326f7a6ddcc39ac4905",
       "encoding": "UTF-8 with LF for checksum"
     },
     "Source/build_city.py": {

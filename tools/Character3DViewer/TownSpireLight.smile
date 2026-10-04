@@ -17,6 +17,40 @@ Public Type State
     PointCount As Number
 End Type
 
+''' Reserve only the particles used by placed spires, leaving room for other city effects.
+Private Function Reserve(ByRef Value As State, ByRef Town As Document.State) As Boolean
+
+    Dim Index As Number
+    Dim Required As Number
+    Dim Ok As Boolean
+
+    For Index = 0 To Town.ItemCount - 1
+
+        If Town.Items[Index].Active And Town.Items[Index].Template = 57 Then
+            Required = Min(3993, Required + 363)
+        End If
+
+    End For
+
+    If Required = 0 Or Value.Particles.Capacity >= Required Then
+        Return True
+    End If
+
+    Call G.DestroyParticleBatch3D(Value.Particles)
+
+    If Value.Material.Handle = 0 Then
+        Value.Texture = G.LoadTexture3DEx("Assets/Fire/ember-shape.png",
+            G.TEXTURE_USAGE_COLOR, G.TEXTURE_FILTER_LINEAR, G.TEXTURE_WRAP_CLAMP, 1)
+        Value.Material = G.CreateEffectMaterial3D(Value.Texture, G.MATERIAL_ALPHA_ADDITIVE, 140)
+    End If
+
+    Value.Particles = G.CreateParticleBatch3D(Required, Value.Material, G.VFX_BILLBOARD_CAMERA, 1, 1)
+    Ok = Value.Texture.Handle <> 0 And Value.Particles.Handle <> 0
+
+    Return Ok
+
+End Function
+
 Public Function Draw(ByRef Value As State, ByRef Town As Document.State, Night As Double) As Boolean
 
     Dim Index As Number
@@ -37,26 +71,17 @@ Public Function Draw(ByRef Value As State, ByRef Town As Document.State, Night A
         Return True
     End If
 
+    If Not Reserve(Value, Town) Then
+        Return False
+    End If
+
     For Index = 0 To Town.ItemCount - 1
 
         Item = Town.Items[Index]
 
         If (Item.Active And
             Item.Template = 57 And
-            Value.PointCount + 363 <= 4096) Then
-
-            If Value.Particles.Handle = 0 Then
-
-                Value.Texture = G.LoadTexture3DEx("Assets/Fire/ember-shape.png",
-                    G.TEXTURE_USAGE_COLOR, G.TEXTURE_FILTER_LINEAR, G.TEXTURE_WRAP_CLAMP, 1)
-                Value.Material = G.CreateEffectMaterial3D(Value.Texture, G.MATERIAL_ALPHA_ADDITIVE, 140)
-                Value.Particles = G.CreateParticleBatch3D(4096, Value.Material, G.VFX_BILLBOARD_CAMERA, 1, 1)
-
-                If Value.Texture.Handle = 0 Or Value.Particles.Handle = 0 Then
-                    Return False
-                End If
-
-            End If
+            Value.PointCount + 363 <= Value.Particles.Capacity) Then
 
             Phase = ToDouble((Timer() + Item.Identity * 137) Mod 7000) / 7000.0
 
