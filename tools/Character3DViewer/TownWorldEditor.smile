@@ -25,10 +25,10 @@ Private Dim Images As Previews.State
 Private Dim Enabled As Boolean
 Private Dim Dirty As Boolean
 Private Dim Choosing As Boolean
-Private Dim TownNames[16] As Text
+Private Dim TownNames[17] As Text
 Private Dim TownCount As Number
 Private Dim ReturnTown As Text
-Private Dim PreviewFailed[16] As Boolean
+Private Dim PreviewFailed[17] As Boolean
 Private Dim Entering As Boolean
 Private Dim Routes As Travel.State
 
@@ -104,7 +104,7 @@ Public Sub Open(CreateNew As Boolean, Town As Text)
         ReturnTown = Town
     End If
 
-    For Index = 0 To 15
+    For Index = 0 To 16
         PreviewFailed[Index] = False
     End For
 

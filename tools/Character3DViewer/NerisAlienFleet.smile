@@ -7,7 +7,6 @@ Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As G
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Tools.NerisSpaceportRoute As Route
-Import Smile.Tools.Character3DViewerCalibration As Numbers
 
 Public Type State
     Models[4] As Core.Model3D
@@ -93,7 +92,7 @@ Public Sub LoadNext(ByRef Value As State)
     End If
 
     Value.Models[Value.Loaded] = G.LoadModelGeometry3D("Assets/Neris/Spaceport01/Alien-" +
-        Numbers.NumberText(Value.Loaded) + ".sm3d")
+        Text_From_Code(48 + Value.Loaded) + ".sm3d")
     Ok = Value.Models[Value.Loaded].GeometryReady And Value.Models[Value.Loaded].PartCount = 3
     Ok = G.PrepareModelPbr3D(Value.Models[Value.Loaded], G.TEXTURE_FILTER_ANISOTROPIC, 1, 16) And Ok
 

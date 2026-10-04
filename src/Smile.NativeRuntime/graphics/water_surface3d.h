@@ -7,8 +7,11 @@ struct SmileWaterTextureBinding3D
     ID3D11DeviceContext* context;
     SmileWaterTextureBinding3D(ID3D11DeviceContext* value,
         ID3D11ShaderResourceView* texture, ID3D11SamplerState* sampler,
-        ID3D11ShaderResourceView* shadow, ID3D11SamplerState* shadow_sampler) : context(value)
+        ID3D11ShaderResourceView* shadow, ID3D11SamplerState* shadow_sampler,
+        ID3D11ShaderResourceView* reflection, ID3D11SamplerState* reflection_sampler) : context(value)
     {
+        context->PSSetShaderResources(4, 1, &reflection);
+        context->PSSetSamplers(4, 1, &reflection_sampler);
         context->PSSetShaderResources(5, 1, &shadow);
         context->PSSetSamplers(5, 1, &shadow_sampler);
         context->PSSetShaderResources(7, 1, &texture);
@@ -17,12 +20,15 @@ struct SmileWaterTextureBinding3D
     ~SmileWaterTextureBinding3D()
     {
         ID3D11ShaderResourceView* empty = 0;
+        context->PSSetShaderResources(4, 1, &empty);
         context->PSSetShaderResources(5, 1, &empty);
         context->PSSetShaderResources(7, 1, &empty);
     }
 };
 
 static const char smile_water_surface_hlsl[] = R"water(
+Texture2D waterPlanarScene : register(t4);
+SamplerState waterPlanarSampler : register(s4);
 Texture2D waterScene : register(t7);
 SamplerState waterSampler : register(s7);
 Texture2D waterShadowMap : register(t5);
@@ -126,6 +132,28 @@ float3 WaterReflection(float3 origin, float3 direction, float3 fallback)
     return fallback;
 }
 
+// The mirrored camera agrees with the main camera at the receiver plane.
+// Sample that projection with bounded animated ripples and a five-tap roughness filter.
+float3 WaterPlanarReflection(float3 world, float3 normal, float3 fallback)
+{
+    if (waterPlanar.w < .5 || abs(world.y-waterPlanar.z) > .02) return fallback;
+    float4 projected = mul(float4(world.x,waterPlanar.z,world.z,1),vp);
+    if (projected.w <= 0) return fallback;
+    float2 uv = float2(projected.x/projected.w*.5+.5,.5-projected.y/projected.w*.5);
+    float wave = sin(world.z*.015 + waterCamera.w*1.8) * sin(world.x*.008-waterCamera.w*.7);
+    uv += float2(wave*.002, wave*.0006) * saturate(waterLightDirection.w*10);
+    uv += normal.xz * .003;
+    if (any(uv < 0) || any(uv > 1)) return fallback;
+    float2 blur = (waterPlanar.y*3 + waterParameters.y*2)/waterViewport.zw;
+    float3 color = waterPlanarScene.SampleLevel(waterPlanarSampler,uv,0).rgb*.4;
+    color += waterPlanarScene.SampleLevel(waterPlanarSampler,uv+float2(blur.x,0),0).rgb*.15;
+    color += waterPlanarScene.SampleLevel(waterPlanarSampler,uv-float2(blur.x,0),0).rgb*.15;
+    color += waterPlanarScene.SampleLevel(waterPlanarSampler,uv+float2(0,blur.y),0).rgb*.15;
+    color += waterPlanarScene.SampleLevel(waterPlanarSampler,uv-float2(0,blur.y),0).rgb*.15;
+    if (atlasOutput.z < .5) color = ToLinear(saturate(color));
+    return lerp(fallback,color,waterPlanar.x);
+}
+
 float4 ShadeWater(float4 pixel, float2 uv, float4 base, float3 world, float3 surfaceNormal)
 {
     float3 view = normalize(waterCamera.xyz - world);
@@ -144,7 +172,10 @@ float4 ShadeWater(float4 pixel, float2 uv, float4 base, float3 world, float3 sur
     // Water reflects little head-on and more strongly at grazing angles.
     float fresnel = .0204 + .9796 * pow(1-facing, 5);
     float3 reflected = reflect(-view, normal);
-    float3 reflection = WaterReflection(world + normal*2, reflected, WaterEnvironment(reflected));
+    bool planar = waterPlanar.w > .5 && abs(world.y-waterPlanar.z) <= .02;
+    float3 reflection = planar
+        ? WaterPlanarReflection(world,normal,WaterEnvironment(reflected))
+        : WaterReflection(world + normal*2, reflected, WaterEnvironment(reflected));
 
     float3 light = normalize(waterLightDirection.xyz);
     float3 halfway = normalize(light + view);
@@ -208,9 +239,10 @@ float4 ShadeWater(float4 pixel, float2 uv, float4 base, float3 world, float3 sur
     float3 waterTint = ToLinear(saturate(base.rgb));
     float tintPeak = max(max(waterTint.r, waterTint.g), max(waterTint.b, .001));
     float3 reflectionTint = lerp(float3(1,1,1), waterTint/tintPeak, .72);
-    reflection *= reflectionTint;
+    if (!planar) reflection *= reflectionTint;
     highlight *= lerp(float3(1,1,1), reflectionTint, .55);
     float reflectedAmount = min(.34, fresnel * (1 - roughness * .65));
+    if (planar) reflectedAmount = max(.12, fresnel) * (1-roughness*.4);
     // Material opacity also bounds optical transmission. At 100% the submerged
     // bed cannot tint the surface black or expose underwater geometry. Reflection
     // still samples nearby opaque scenery independently of this bulk water color.

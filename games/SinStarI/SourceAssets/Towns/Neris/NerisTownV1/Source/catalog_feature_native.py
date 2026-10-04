@@ -7,8 +7,9 @@ ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT.parents[5] / 'tools/Character3DViewer/TownCatalogFeatures.smile'
 
 
-def generate():
-    catalog = json.loads((ROOT / 'Authoring/catalog.json').read_text(encoding='utf-8'))
+def generate(catalog=None):
+    if catalog is None:
+        catalog = json.loads((ROOT / 'Authoring/catalog.json').read_text(encoding='utf-8'))
     f = lambda v: f'{v:.6f}'
     lines = ["''' Generated local entrance, collision and water data. No state ownership.",
         'Module Smile.Tools.TownCatalogFeatures', '', 'Option Explicit', '',

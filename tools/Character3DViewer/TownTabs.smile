@@ -12,10 +12,10 @@ Import Smile.Tools.TownMapPicker As Picker
 Import Smile.Tools.TownWorldPreviews As Previews
 Import Smile.Tools.TownDemo As Demo
 
-Public Const CAPACITY = 16
+Public Const CAPACITY = 17
 
 Public Type State
-    Documents[16] As Document.State
+    Documents[17] As Document.State
     TabCount As Number
     Active As Number
     Message As Text
@@ -36,13 +36,24 @@ Public Sub Ensure(ByRef Value As State, ByRef Town As Document.State)
         Value.Active = 0
         Value.Documents[0] = Town
 
-        If Town.Name <> "Neris Town" Then
+        If Text_Length(Library.PermanentKey(Town.Name)) = 0 Then
             Return
         End If
 
-        For Index = 1 To Library.PERMANENT_COUNT - 1
+        Value.TabCount = 0
 
-            Ok = Library.RecoverNamed(Value.Documents[Value.TabCount], Library.PermanentName(Index))
+        For Index = 0 To Library.PERMANENT_COUNT - 1
+
+            If Library.PermanentName(Index) = Town.Name Then
+
+                Value.Documents[Value.TabCount] = Town
+                Value.Active = Value.TabCount
+                Ok = True
+
+            Else
+                Ok = Library.RecoverNamed(Value.Documents[Value.TabCount], Library.PermanentName(Index))
+
+            End If
 
             If Ok Then
                 Value.TabCount = Value.TabCount + 1
@@ -173,7 +184,7 @@ Public Function Add(ByRef Value As State, ByRef Town As Document.State,
     Call Ensure(Value, Town)
 
     If Value.TabCount >= CAPACITY Then
-        Value.Message = "Close a town tab first (limit 16)."
+        Value.Message = "Close a town tab first (limit 17)."
         Return False
     End If
 
@@ -252,7 +263,7 @@ Public Function SelectTab(ByRef Value As State, ByRef Town As Document.State,
     If Close Then
 
         If Index = 0 Then
-            Value.Message = "Neris Town is the permanent tab."
+            Value.Message = Value.Documents[0].Name + " is the permanent tab."
             Return False
         End If
 

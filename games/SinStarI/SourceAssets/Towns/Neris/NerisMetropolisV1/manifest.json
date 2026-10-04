@@ -1,0 +1,547 @@
+{
+  "schema": 1,
+  "name": "Neris Metropolis",
+  "map_metres": [
+    6400,
+    6400
+  ],
+  "placed_items": 630,
+  "new_templates": 47,
+  "total_templates": 87,
+  "catalog_chunks": 61,
+  "runtime_assets": 401,
+  "terrain_patches": 77553,
+  "native_evidence": "metropolis-0cc136aaedb04f80963e7218806741c7",
+  "reflection_evidence": "metropolis-reflection-8b4897ea54ab4b1ab2d9155aaa5625c6",
+  "blender_round_trip": {
+    "items": 630,
+    "patches": 77553,
+    "max_transform_error": 0.0012109999988751952,
+    "sha256": "4c5e1baf59b292536daeaacc2c354ae10e66577171d8798f1beb9f079de4f6ea"
+  },
+  "files": {
+    ".gitignore": {
+      "bytes": 20,
+      "sha256": "cee7564192f5191bf28de6bbe4d03839220dda4eb1de84b74df4b02cf75b8b26",
+      "encoding": "UTF-8 with LF for checksum"
+    },
+    "Authoring/catalog-extension.json": {
+      "bytes": 70121,
+      "sha256": "511feefacab5b22650efc7c4cb859e266b2db6ec32dc2438201797c34c5bd7e6",
+      "encoding": "UTF-8 with LF for checksum"
+    },
+    "Authoring/Catalog.sm3d.json": {
+      "bytes": 14,
+      "sha256": "50208d78350a7a160dec59a82df1499b6ca7da33e54c5eb11c97e342118e68bb",
+      "encoding": "UTF-8 with LF for checksum"
+    },
+    "Authoring/layout.json": {
+      "bytes": 49670,
+      "sha256": "474199d407e46ba11a3540a9bf4e6d3376bc237f8a06f5493d34644a40dd666e",
+      "encoding": "UTF-8 with LF for checksum"
+    },
+    "Authoring/Templates/Catalog-38.glb": {
+      "bytes": 6795056,
+      "sha256": "b355dbaad3114dca5329d1b4ac64dc90c5a615e9667e3ecab7a2783d67719512"
+    },
+    "Authoring/Templates/Catalog-39.glb": {
+      "bytes": 6656820,
+      "sha256": "8fbb47655027ef38968798bb59d50ff5a491764d216c2602b65b241419514c5d"
+    },
+    "Authoring/Templates/Catalog-40.glb": {
+      "bytes": 6653332,
+      "sha256": "b852e26d19babb3784fbe1e1359f50b3f9bda5cebb1af31e600e17be0871d1c1"
+    },
+    "Authoring/Templates/Catalog-41.glb": {
+      "bytes": 6708460,
+      "sha256": "36f1713167c00e3e5dfe761f36a4ee62272b432bbfa4b4bce1586245f7b83341"
+    },
+    "Authoring/Templates/Catalog-42.glb": {
+      "bytes": 6720588,
+      "sha256": "01e69ed5a2862787eff76c8edc95f95492d5786f1b7cef0e9342d47bd5632260"
+    },
+    "Authoring/Templates/Catalog-43.glb": {
+      "bytes": 6682920,
+      "sha256": "170e2a66b690b9a2fcab534cfd719ed98ae05799deefbc9744f86aaca4439e11"
+    },
+    "Authoring/Templates/Catalog-44.glb": {
+      "bytes": 6708512,
+      "sha256": "316a0f8e072c07522f1e2c4a258e282b501cf8cf0fec86227e566f314ae805e0"
+    },
+    "Authoring/Templates/Catalog-45.glb": {
+      "bytes": 6703584,
+      "sha256": "b16152df4e3868f0d9d7357d09355fe6d992eeda8c27cfd86823f8d4e8c94371"
+    },
+    "Authoring/Templates/Catalog-46.glb": {
+      "bytes": 6649152,
+      "sha256": "5460548d4e3b481a66e01af75a3c3b5758897850b5466707da62666ea5f722d1"
+    },
+    "Authoring/Templates/Catalog-47.glb": {
+      "bytes": 6733888,
+      "sha256": "5e460ab17d04cf05ba9c4919223772f06180c673cd4e49f167f255995c664680"
+    },
+    "Authoring/Templates/Catalog-48.glb": {
+      "bytes": 6785184,
+      "sha256": "af9d2e289e1800dbdd42e269ceb6af183795df8c44add42a2d42484bb59c2977"
+    },
+    "Authoring/Templates/Catalog-49.glb": {
+      "bytes": 6786028,
+      "sha256": "157cca731fd7881b1b7192fa2b6ff6ea9169db1f6c0147c4dd3c6fc35247b3be"
+    },
+    "Authoring/Templates/Catalog-50.glb": {
+      "bytes": 6892584,
+      "sha256": "480119a72162d8ae5fd5d35ce8e5ea146e2d8638997956a1c0cc909c8ccb73f2"
+    },
+    "Authoring/Templates/Catalog-51.glb": {
+      "bytes": 2938148,
+      "sha256": "c95d51c2809b7a8324e89e2722ca235f83f2b521268846ca4165246f8de1286b"
+    },
+    "Authoring/Templates/Catalog-52.glb": {
+      "bytes": 1540476,
+      "sha256": "ba222f5a2139fa1626469b6dfa8bfb8366d3337211682961e109cba7a3c4e83c"
+    },
+    "Authoring/Templates/Catalog-53.glb": {
+      "bytes": 642448,
+      "sha256": "9a3f0a3df7859325c993016df474c5d63c2bba98fb4b18b1dc961d605d54a94a"
+    },
+    "Authoring/Templates/Catalog-54.glb": {
+      "bytes": 445072,
+      "sha256": "314d0f8ac83c08be55fa4cc408b02716cccdd666c637fd3c2643a656a57111a5"
+    },
+    "Authoring/Templates/Catalog-55.glb": {
+      "bytes": 184828,
+      "sha256": "5891ed06affaf262c330feeddcad56b842ff7927343b10079635c486341fb71f"
+    },
+    "Authoring/Templates/Catalog-56.glb": {
+      "bytes": 180912,
+      "sha256": "83652bdf3abc3bf76e29efc88e4e271186f60cc875190a9988d2dc39be7a73e7"
+    },
+    "Authoring/Templates/Catalog-57.glb": {
+      "bytes": 118024,
+      "sha256": "2efe2aa83eeda5728bbea22e3e14a3afb7b458331b98de9ea650dca81c83e01d"
+    },
+    "Authoring/Templates/Catalog-58.glb": {
+      "bytes": 66240,
+      "sha256": "0b9925f6c4a5678aedf9f31ab937ac034ba61fa0ecd89f4e7f92318ebc40fda7"
+    },
+    "Authoring/Templates/Catalog-59.glb": {
+      "bytes": 42816,
+      "sha256": "271f87391ff784bb0fc0222edae7ef259e304dcdab1b2698d951174ac47592f5"
+    },
+    "Authoring/Templates/Catalog-60.glb": {
+      "bytes": 23508,
+      "sha256": "813f991e8e790c0558d1cbb8ccd3c83fbe63b9f718a4b68dd91846d84195ecca"
+    },
+    "Authoring/Templates/Catalog-61.glb": {
+      "bytes": 145264,
+      "sha256": "8239fe39d8a7b868c61dc1b9a0bae3b454672fc52899805c95dbd0b0697a7168"
+    },
+    "Authoring/Templates/Catalog-62.glb": {
+      "bytes": 145256,
+      "sha256": "47943706277595cf35f00c7e0a692fd8269e42246a8a1aaf1bc4cc457ea116d4"
+    },
+    "Authoring/Templates/Catalog-63.glb": {
+      "bytes": 9440,
+      "sha256": "97a9457c692df1c4328ee97ce58602894607d0b53ae09e6d09e30a8eccce1c28"
+    },
+    "Authoring/Town-Palette.png": {
+      "bytes": 846876,
+      "sha256": "5a5922ffe743c1e7a0115d54feaed77806578ccda2ad6789f75a85ec9e35e117"
+    },
+    "Blender/Neris-Metropolis - V1.blend": {
+      "bytes": 2695178,
+      "sha256": "a99caf79d488249aea766e4af15563567ee36a0006c7fc18a4673cd4e264ffae"
+    },
+    "Blender/Neris-Metropolis - V2.blend": {
+      "bytes": 24777471,
+      "sha256": "0508ffd0c30b734dce26929d0582c922c73a57bcb4356c672db877c0cc00fc9e"
+    },
+    "Blender/Neris-Metropolis - V3.blend": {
+      "bytes": 24768596,
+      "sha256": "f89ccd5d41f46bd0df64b7a2e7820e630e40b7daa8ea113d3ebce0f3b250585f"
+    },
+    "Blender/Neris-Metropolis - V4.blend": {
+      "bytes": 24766407,
+      "sha256": "98329c6f7da74c252ec4af515f52ac1f18a8fc43f1dbc2321f4218d93f8ad1d5"
+    },
+    "Blender/Neris-Metropolis - V5.blend": {
+      "bytes": 15555638,
+      "sha256": "53b65aeac85a7e5d9f17dde99db4383478996a2f1b1e6a6a35573f08a335afc0"
+    },
+    "Blender/Neris-Metropolis - V6.blend": {
+      "bytes": 15554935,
+      "sha256": "1c0cb283bf7e320099803ea65995abdcd23016e748d29948137cd4f9d1d6ad1f"
+    },
+    "Blender/Neris-Metropolis - V7.blend": {
+      "bytes": 5421888,
+      "sha256": "4a92b63abca3c8c7a07dad9790f1d02c283f4c4ce1e8898e33b199a4fc495cd0"
+    },
+    "Blender/Neris-Metropolis - V8.blend": {
+      "bytes": 5429624,
+      "sha256": "9631a789ce78835c86f6e883567d0c46eda9624fba0f06d10931abe757e13eb6"
+    },
+    "Blender/Neris-Metropolis-Studio.blend": {
+      "bytes": 46733209,
+      "sha256": "4c5e1baf59b292536daeaacc2c354ae10e66577171d8798f1beb9f079de4f6ea"
+    },
+    "Blender/Neris-Metropolis.blend": {
+      "bytes": 30962977,
+      "sha256": "f39942436e770f2cc7003a66ccd2a1988d5032e137232b9cabc945857586a232"
+    },
+    "Previews/Catalog/40.png": {
+      "bytes": 7080,
+      "sha256": "80cf92c92b24ef8acf8406b0eb9ea5c17781878ce38a543fc03f5f713f9b14c6"
+    },
+    "Previews/Catalog/41.png": {
+      "bytes": 7170,
+      "sha256": "aaa160ba4d2895858dc7bce13bf0bd77b4b2798446dfa518aec658799e2f39ab"
+    },
+    "Previews/Catalog/42.png": {
+      "bytes": 9171,
+      "sha256": "8a10ac5ac6fea03e9d5fe5a2879d60bcbd85a6e5af986e730304e29992243893"
+    },
+    "Previews/Catalog/43.png": {
+      "bytes": 10193,
+      "sha256": "0b0f61f84075fa5e72488b26cffd65b349a73894bcf695706f4f619f90bd9e6b"
+    },
+    "Previews/Catalog/44.png": {
+      "bytes": 6421,
+      "sha256": "e8898391b9178b4267f8dfd0647355ec8d8e4121914fd1f0aa5f9da512598136"
+    },
+    "Previews/Catalog/45.png": {
+      "bytes": 7744,
+      "sha256": "46955b3ca72c1d334132431615f47b22ab092b78c82218e7187840f6657140ee"
+    },
+    "Previews/Catalog/46.png": {
+      "bytes": 6169,
+      "sha256": "3ebf4b212a6d9afeedb218ba04bc4d45dba37510250425a7d8eb72dc52f23a04"
+    },
+    "Previews/Catalog/47.png": {
+      "bytes": 7871,
+      "sha256": "6310a15eac7477ac424fb38229c9b06371da9f82f9510f6e02047c0ecc17b4fa"
+    },
+    "Previews/Catalog/48.png": {
+      "bytes": 7793,
+      "sha256": "1668782febddb87c9d1ec619a5c4b85a0ef445083963f3023fedcbbd27c89c70"
+    },
+    "Previews/Catalog/49.png": {
+      "bytes": 7318,
+      "sha256": "44d0fbfee333ba90bbb7b0042fcbe921d1d8311d8b30c4bb50b96915063042ed"
+    },
+    "Previews/Catalog/50.png": {
+      "bytes": 6728,
+      "sha256": "9923fcb9c92816979754a67338e61ca8bbb2c2ff2ce003bd5f570893959286d5"
+    },
+    "Previews/Catalog/51.png": {
+      "bytes": 7271,
+      "sha256": "e067348a36dc79780e96bd55cc90ae9d2c1d780c8177b37d732046d80c20767e"
+    },
+    "Previews/Catalog/52.png": {
+      "bytes": 7690,
+      "sha256": "203cc0e99ffaf798f68a65b21142861665ca1d78990c21d85ac2299ef60e35a6"
+    },
+    "Previews/Catalog/53.png": {
+      "bytes": 8488,
+      "sha256": "742be4c6187892a0fdad987a52606bd12c8084f7077f2d5be508fedffab86bd1"
+    },
+    "Previews/Catalog/54.png": {
+      "bytes": 7605,
+      "sha256": "caeaedb094cd8b4d784e2fe707d4e54ab9d3854bcce26b0e0702c19fb21cd5f8"
+    },
+    "Previews/Catalog/55.png": {
+      "bytes": 8057,
+      "sha256": "e11da11394592a65040597657142cf81c7db6ab60b2eb0a7f7880b3114f34609"
+    },
+    "Previews/Catalog/56.png": {
+      "bytes": 6567,
+      "sha256": "761a293c5c4129aeeb65f7aa7faead6ea9f28fb1ee9d45d23f0415f8cca93c85"
+    },
+    "Previews/Catalog/57.png": {
+      "bytes": 7972,
+      "sha256": "4845d759dcdc5503f468b05e2c124376e21ff139387002eb2372777c7f3b23b3"
+    },
+    "Previews/Catalog/58.png": {
+      "bytes": 9955,
+      "sha256": "43a69620ad908eeccc4c80feb11e85bed9fea6132918fa48b79334e2e93b32ba"
+    },
+    "Previews/Catalog/59.png": {
+      "bytes": 12976,
+      "sha256": "d92f941933ee48463c3c524eda7ecbd20f0cb7c114d5434c858c4f3c82a195f1"
+    },
+    "Previews/Catalog/60.png": {
+      "bytes": 9689,
+      "sha256": "f376ab768caded43224e2a3d5244dbb620b5d3fb0487947eb02294cab4b57012"
+    },
+    "Previews/Catalog/61.png": {
+      "bytes": 11382,
+      "sha256": "80bfa5c05ed6a2fea82f6713caaeec997258e7c9e0e1e658e516da829db5813c"
+    },
+    "Previews/Catalog/62.png": {
+      "bytes": 10251,
+      "sha256": "f2188707f83fb1616e633d2d12acb01e4312d4d18681933d44211efe5292780f"
+    },
+    "Previews/Catalog/63.png": {
+      "bytes": 11570,
+      "sha256": "15e82e82787180ed70f7cf97e5d2e27cddf7b41ed03ce291a5fe0cfac50304d3"
+    },
+    "Previews/Catalog/64.png": {
+      "bytes": 6931,
+      "sha256": "460884a8e48616d3b982085332623d095406329efb3984c55e24835d4de46ed7"
+    },
+    "Previews/Catalog/65.png": {
+      "bytes": 6522,
+      "sha256": "ccc5e38d2f3399cf9211eb469592a79da00c01c203e7213077e6c425c40ec5d2"
+    },
+    "Previews/Catalog/66.png": {
+      "bytes": 5692,
+      "sha256": "2761ac06425ba5e4be40ce16da72075d3794f66eb3c85ff98f7e0de9a1f4a936"
+    },
+    "Previews/Catalog/67.png": {
+      "bytes": 6241,
+      "sha256": "e79939d0f3608ab8c828497c3f5931bdd9c4ef18fc0b24912b113814fe5c0b02"
+    },
+    "Previews/Catalog/68.png": {
+      "bytes": 18994,
+      "sha256": "619cb93f13b4de5838eb866bff4860e6b0d3d7c43dc30f715bd2e5633ce165c9"
+    },
+    "Previews/Catalog/69.png": {
+      "bytes": 21295,
+      "sha256": "fcaad1bb78b7811540e99b8e3de7800de517adccc36d5933c21013562259682b"
+    },
+    "Previews/Catalog/70.png": {
+      "bytes": 19051,
+      "sha256": "abca79a5c00a798453ac5d23f81ff00d87bf2dc55bf610e52cf81992b592fcce"
+    },
+    "Previews/Catalog/71.png": {
+      "bytes": 18422,
+      "sha256": "a7a1612ab2ec5e9f37f64e748048f1250d34d5bde22966f24ed0ff995d331855"
+    },
+    "Previews/Catalog/72.png": {
+      "bytes": 20386,
+      "sha256": "c93d1727a3f50a21c681cced794c9dbea114fa8ff3e3f094dfcfb50b4667cd49"
+    },
+    "Previews/Catalog/73.png": {
+      "bytes": 16180,
+      "sha256": "86a0f1e761305f713bc36b28c5693ea4ee5a797e7fbf52775466d6d5727762a6"
+    },
+    "Previews/Catalog/74.png": {
+      "bytes": 20808,
+      "sha256": "737ed79cd082803b2e5c710b2e6e59238d52df02ad4713e2b72ec3ac3824d2af"
+    },
+    "Previews/Catalog/75.png": {
+      "bytes": 21086,
+      "sha256": "7e05fa2cbd4b62158019f99248c3fa2c21dee6ebc09459c4de9530ded3f26b49"
+    },
+    "Previews/Catalog/76.png": {
+      "bytes": 20465,
+      "sha256": "5c9afa738455a471eebd6bbf5a1866172c21cf31e57362abd2c5a302f78dd76b"
+    },
+    "Previews/Catalog/77.png": {
+      "bytes": 21015,
+      "sha256": "283837322dc4e2ae019d89b7de61a5bd54c5277b0516161e977e3a76c9388264"
+    },
+    "Previews/Catalog/78.png": {
+      "bytes": 18184,
+      "sha256": "5f036f48ca16def1a5805068b36ed86c07b1d7b8ef8b1c40014abbdced089be0"
+    },
+    "Previews/Catalog/79.png": {
+      "bytes": 19898,
+      "sha256": "44ae3d192b8a2322683c0f9173dad132d75ff37e476110996179d1b9528d42b7"
+    },
+    "Previews/Catalog/80.png": {
+      "bytes": 20486,
+      "sha256": "f2b2734a3686ccfcacf71f23d921a876bddf359eb54b333ac7b25220cdd59eac"
+    },
+    "Previews/Catalog/81.png": {
+      "bytes": 17456,
+      "sha256": "94aba1e806f49e7993b75020db4aecb0723a1152be6773b025096907a8637aa6"
+    },
+    "Previews/Catalog/82.png": {
+      "bytes": 22174,
+      "sha256": "5a6b550d185b52a1142e5c4b46880bd9c3f4533d99f39a9ad5b88a8899817059"
+    },
+    "Previews/Catalog/83.png": {
+      "bytes": 21137,
+      "sha256": "977626726188d9bb16ee24fe456bedbffc679b8e9b1e2c86f68a3e545abf34cc"
+    },
+    "Previews/Catalog/84.png": {
+      "bytes": 8996,
+      "sha256": "497a668fecd8e5609ff93c216d27cb9c4c34bc33d41497884150507922f2be59"
+    },
+    "Previews/Catalog/85.png": {
+      "bytes": 7960,
+      "sha256": "e73877283f69b8e0255e25217f5a88f09e9d520c940651ca45d7593288afdf44"
+    },
+    "Previews/Catalog/86.png": {
+      "bytes": 14048,
+      "sha256": "35deb43f31e6d3dee3db99c6c6d15c13079c2f8064d915a351140ebdf779f934"
+    },
+    "Previews/city-depth-7.png": {
+      "bytes": 246804,
+      "sha256": "b219e2f7f3b0f2c4255a175bd807ec65493761069c211784f575dffd080d0921"
+    },
+    "Previews/city-layout-01.png": {
+      "bytes": 2148520,
+      "sha256": "c1a32d039e7b3cd3c7cb111f16f3fd98b0c9435fe365df205bd42976ad54d9b0"
+    },
+    "Previews/crystal-cathedral-study.png": {
+      "bytes": 959415,
+      "sha256": "5f220103d6cb37f23d0fa76151059c0b1b0e6f595b32c3e6fd4b7e77b2395ec2"
+    },
+    "Previews/crystal-center-preview.png": {
+      "bytes": 1557013,
+      "sha256": "1fcddc0ee95220294aaeee23a5b2d5a53706960afb07a9c53d1b90735f1efb9d"
+    },
+    "Previews/landmark-study-01.png": {
+      "bytes": 1711895,
+      "sha256": "8f7bfc387080486a548df6342444e8e9b43075e41524280706ff37d2fa430ac0"
+    },
+    "Previews/neris-sphere.png": {
+      "bytes": 188539,
+      "sha256": "427760d2902c0d02ef5c47dc5697ced5e2c6e566e5e63120efa08c9b37cd1e9a"
+    },
+    "Previews/waterfront-night.png": {
+      "bytes": 185343,
+      "sha256": "4eb1a16ea74607631c2409bb9e007957aee00219c8bc776aec0483cef558eed0"
+    },
+    "Previews/world-trade-center.png": {
+      "bytes": 235159,
+      "sha256": "5237ab1f37530629664e1f9fe98e94d4f76353f81a03ce761ac93b8912734614"
+    },
+    "README.md": {
+      "bytes": 5418,
+      "sha256": "12a66996dfff5a5a1ed80042bff7fc007000ce90e4b47f57cf7b5ded1063d4b3",
+      "encoding": "UTF-8 with LF for checksum"
+    },
+    "Source/build_city.py": {
+      "bytes": 3797,
+      "sha256": "771b9653468f48dce17f140e03da2e718dd4b6aea7db19011b8546b43c987952",
+      "encoding": "UTF-8 with LF for checksum"
+    },
+    "Source/city_layout.py": {
+      "bytes": 5110,
+      "sha256": "5150ccbbf791dad2feb05d52c86c50c159b4e3e67c9735576653bf5fb9b5dc0d",
+      "encoding": "UTF-8 with LF for checksum"
+    },
+    "Source/facades.py": {
+      "bytes": 2583,
+      "sha256": "979d211ff6a92bff7a834590c24baf58de997b3d218e36bd00e60c2678811fc8",
+      "encoding": "UTF-8 with LF for checksum"
+    },
+    "Source/geometry.py": {
+      "bytes": 8281,
+      "sha256": "5bfb33bfd6e8df27c44201d2aa860ec3bc74c0d284fba4f4c26e167aace09f6d",
+      "encoding": "UTF-8 with LF for checksum"
+    },
+    "Source/landmarks.py": {
+      "bytes": 11181,
+      "sha256": "e3b53c7a5c7d1264a33a806a47905e81d2426b4678ce18cf389f0af048c56143",
+      "encoding": "UTF-8 with LF for checksum"
+    },
+    "Source/landscape.py": {
+      "bytes": 4569,
+      "sha256": "c9c30d55a49f34cd387667f04ee36a0d9a685a3b3850cb53271d781c61bc107c",
+      "encoding": "UTF-8 with LF for checksum"
+    },
+    "Source/luma_landmarks.py": {
+      "bytes": 5421,
+      "sha256": "adc0777faf6a5c3a5b0e6c278f9f8a3bdac74000a3e061d8a1ef337d04ad1d60",
+      "encoding": "UTF-8 with LF for checksum"
+    },
+    "Source/neighborhoods.py": {
+      "bytes": 5825,
+      "sha256": "6d3445cf1386a702c27db721115bb460cba8bcfe6cdbb9ab5e40e6e00db3954b",
+      "encoding": "UTF-8 with LF for checksum"
+    },
+    "Source/presentation.py": {
+      "bytes": 3901,
+      "sha256": "0f0fb6398877eebcb6338e03d77810b0bbbf9c2237053ab6c478885f04344e81",
+      "encoding": "UTF-8 with LF for checksum"
+    },
+    "Source/publish_catalog.py": {
+      "bytes": 6017,
+      "sha256": "cf0e44a1cb32279e4b6d77b0f04c71b257b63f503aa8e3aac58ac7220f2074a2",
+      "encoding": "UTF-8 with LF for checksum"
+    },
+    "Source/publish_town.py": {
+      "bytes": 3691,
+      "sha256": "b0ffc57ac6409406e9f62d9a32550742ed8081d7d27f340bc4a41a2f1b3c7473",
+      "encoding": "UTF-8 with LF for checksum"
+    },
+    "Source/render_catalog.py": {
+      "bytes": 2913,
+      "sha256": "e0f140be648c2678046826c691003322c679d6b205e63c7d54357f292423aafc",
+      "encoding": "UTF-8 with LF for checksum"
+    },
+    "Source/sphere_venue.py": {
+      "bytes": 2101,
+      "sha256": "b9e09913cf6131f96da359185c0d964c997cbd10da1cbc3d77401581be0ea4d0",
+      "encoding": "UTF-8 with LF for checksum"
+    },
+    "Source/studio_trees.py": {
+      "bytes": 1424,
+      "sha256": "0661a5d87fc12a28df60bd223dde5de6542379ff26dee72232d82fb13d19f8d3",
+      "encoding": "UTF-8 with LF for checksum"
+    },
+    "Textures/Azure-Glass.png": {
+      "bytes": 27216,
+      "sha256": "e1aae24453b6b0c56fc5e311a8b9121dc8958a0fb18dabab1e80875b9c94326e"
+    },
+    "Textures/Azure-Lights.png": {
+      "bytes": 2075,
+      "sha256": "7025a2c5d3665ca44931c15a6db5e41a496d12aed7fba1cc7b4ac5b0dc4afc81"
+    },
+    "Textures/Blue-Glass-Facade.png": {
+      "bytes": 28134,
+      "sha256": "7d98dab52a897d087300d06174e700a2e1174a644f02be1ea30236fe6abf4969"
+    },
+    "Textures/Cerulean-Glass.png": {
+      "bytes": 25176,
+      "sha256": "121750f81464f7e4222e56db40adf19c9e7ca9324edb76eaa1f901fedc2d2982"
+    },
+    "Textures/Cerulean-Lights.png": {
+      "bytes": 2021,
+      "sha256": "71ff027325de612b9707fcb7b3be0be4f7b505bdaf798dfe7af54b2d7db308b4"
+    },
+    "Textures/Glacier-Glass.png": {
+      "bytes": 27608,
+      "sha256": "bb0e5aed3f96795cea0d327ecc2c803e691434765f658d882ef5eafc211ff763"
+    },
+    "Textures/Glacier-Lights.png": {
+      "bytes": 2079,
+      "sha256": "604d40cc8adf5eb58db1a9be2c07b5f661d302a0823c6bf46bffceaad2cc5c54"
+    },
+    "Textures/Midnight-Glass.png": {
+      "bytes": 27077,
+      "sha256": "88cd14ec10d71af2c14cc7c652f2e91dd43278c647d067507543a0b197a88ae8"
+    },
+    "Textures/Midnight-Lights.png": {
+      "bytes": 2056,
+      "sha256": "49044d7e39e334e5a9aca8eb00fb360658c653b4525f3c27ff970bdc6ccbf9c5"
+    },
+    "Textures/Sapphire-Glass.png": {
+      "bytes": 29832,
+      "sha256": "6725b82f73ae0f70c2aa0bf9895636c0b6aa2f9e8866e6854809733f1512d740"
+    },
+    "Textures/Sapphire-Lights.png": {
+      "bytes": 2144,
+      "sha256": "be14deedcb0b39b757ef8931fb7151d4140f281153bec4de560484f08f00af97"
+    },
+    "Textures/SilverBlue-Glass.png": {
+      "bytes": 27008,
+      "sha256": "5e967f6edd68bacec68266b0bb59318b348da457ed4ff06666bce328f2937d72"
+    },
+    "Textures/SilverBlue-Lights.png": {
+      "bytes": 1975,
+      "sha256": "3ad80bbf44f2ff28ea444c3bfd9798e49d8a61a7632760ca5e314b63023295bd"
+    },
+    "Town/Neris Metropolis.png": {
+      "bytes": 83410,
+      "sha256": "f2df3f8bd76b8527872db6c50a6a7fd8ff9c9bd2e953783e748c624d93af41ca"
+    },
+    "Town/Neris Metropolis.town": {
+      "bytes": 3090183,
+      "sha256": "aa069ecfc5e68ae2d16de7bfb615632afd64474511c1b5fa9ff17d8f45d95cc5"
+    }
+  }
+}

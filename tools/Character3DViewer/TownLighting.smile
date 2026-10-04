@@ -12,6 +12,7 @@ Import Smile.Tools.TownCatalogData As Catalog
 Import Smile.Tools.TownGeometry As Geometry
 Import Smile.Tools.NerisHorizonLighting As Horizon
 Import Smile.Tools.NerisSpaceportGlow As Spaceport
+Import Smile.Tools.TownCityLighting As City
 
 ''' Demo lighting is presentation only; retain the authored document and thumbnail inputs.
 Public Function DisplayedSun(ByRef Town As Document.State, Alternate As Boolean) As Document.Sun
@@ -70,6 +71,43 @@ Public Function Apply(Light As Document.Sun) As Boolean
 
 End Function
 
+''' Fit the directional shadow volume to this authored map, including its tall buildings.
+Public Function ConfigureBounds(ByRef Town As Document.State) As Boolean
+
+    Dim Index As Number
+    Dim Shape As Catalog.Template
+    Dim Width As Double
+    Dim Depth As Double
+    Dim Height As Double
+    Dim Span As Double
+    Dim Center As P.Vector3
+    Dim Ok As Boolean
+
+    Width = Town.Surface.XEdges[Town.Surface.Columns] - Town.Surface.OriginX
+    Depth = Town.Surface.ZEdges[Town.Surface.Rows] - Town.Surface.OriginZ
+    Center.X = Town.Surface.OriginX + Width * 0.5
+    Center.Z = Town.Surface.OriginZ + Depth * 0.5
+    Height = 1000.0
+
+    For Index = 0 To Town.ItemCount - 1
+
+        If Town.Items[Index].Active Then
+            Shape = Catalog.TemplateAt(Town.Items[Index].Template)
+            Height = Max(Height, Town.Items[Index].Position.Y +
+                Shape.High.Y * Town.Items[Index].Scale.Y / 1000.0)
+        End If
+
+    End For
+
+    Center.Y = Height * 0.5
+    Span = Sqrt(Width * Width + Depth * Depth + Height * Height) * 1.05
+    Ok = Scene.SetShadowArea(ToNumber(Center.X), ToNumber(Center.Y), ToNumber(Center.Z),
+        ToNumber(Span), ToNumber(Span), 1, ToNumber(Span * 2.0 + 100.0))
+
+    Return Ok
+
+End Function
+
 ''' Slots 0-3 remain Royal Court's washes. Placed lights use the reported native capacity.
 ''' Recompute from the document so moved/deleted lamps cannot leave phantom lights.
 Public Function ApplyLocal(ByRef Town As Document.State, Optional Intensity As Number = -1) As Boolean
@@ -86,6 +124,7 @@ Public Function ApplyLocal(ByRef Town As Document.State, Optional Intensity As N
     Dim Height As Double
     Dim Range As Double
     Dim Ok As Boolean
+    Dim CityMode As Boolean
 
     If Intensity < 0 Then
         Intensity = Town.Light.Intensity
@@ -98,6 +137,12 @@ Public Function ApplyLocal(ByRef Town As Document.State, Optional Intensity As N
 
     Ok = Horizon.Apply(Slot, Night) And Ok
     Ok = Spaceport.Apply(Slot, Night) And Ok
+
+    CityMode = City.HasCity(Town)
+
+    If CityMode Then
+        Ok = City.ApplyLights(Town, Slot, Night) And Ok
+    End If
 
     For Index = 0 To Town.ItemCount - 1
 
@@ -122,7 +167,7 @@ Public Function ApplyLocal(ByRef Town As Document.State, Optional Intensity As N
 
                 Slot = Slot + 1
 
-            Else If Shape.Label = "Crystal Lamp" Then
+            Else If Shape.Label = "Crystal Lamp" And Not CityMode Then
 
                 If Slot < Capacity Then
                     Point = Geometry.ToWorld(Item, P.Vector(0.0, Shape.High.Y * 0.82, 0.0))

@@ -9,10 +9,10 @@ Import Smile.Tools.TownTabs As Tabs
 Import Smile.Tools.TownLibrary As Library
 
 Public Type State
-    Names[16] As Text
-    Revisions[16] As Number
-    Known[16] As Boolean
-    Missing[16] As Boolean
+    Names[17] As Text
+    Revisions[17] As Number
+    Known[17] As Boolean
+    Missing[17] As Boolean
 End Type
 
 ''' One directed edge per destination; repeated tiles do not duplicate lines.
@@ -25,7 +25,7 @@ Public Sub ReadTown(ByRef Map As World.State, Node As Number, ByRef Town As Docu
     Dim Side As Number
     Dim Edge As Double
     Dim Distance As Double
-    Dim Best[16] As Double
+    Dim Best[17] As Double
 
     For Other = 0 To Map.NodeCount - 1
         Map.Links[Node, Other] = False

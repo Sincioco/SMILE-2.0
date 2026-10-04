@@ -22,6 +22,7 @@ Import Smile.Tools.TownAttachments As Attachments
 Import Smile.Tools.TownCampfires As Campfires
 Import Smile.Tools.TownFountains As Fountains
 Import Smile.Tools.TownLighting As Lighting
+Import Smile.Tools.TownWaterAppearance As WaterAppearance
 Import Smile.Tools.TownDocumentNavigation As Navigation
 Import Smile.Tools.TownDocumentStore As Storage
 Import Smile.Tools.TownLibrary As Library
@@ -1118,7 +1119,7 @@ Public Sub Update(Leader As P.Vector3, Elapsed As Number)
     Controls.Ui.Busy = Ground.Stage <> 0 Or Transfers.RequestId > 0 Or QueuedSaves.Active Or Assets.Loaded < Assets.Required
 
     If Assets.Loaded < Assets.Required Then
-        Controls.Ui.ProgressPercent = (Assets.Loaded - Catalog.CHUNK_COUNT) * 100 / 14
+        Controls.Ui.ProgressPercent = Assets.Loaded * 100 / Max(1, Assets.Required)
         Controls.Ui.Message = "Loading Old Castle..."
     End If
 
@@ -1295,19 +1296,28 @@ End Sub
 Public Function Draw() As Boolean
 
     Dim Ok As Boolean
+    Dim Light As Document.Sun
+    Dim CityIntensity As Number
+
+    Light = Lighting.DisplayedSun(Town, DemoLightingAlternate)
+    CityIntensity = -1
+
+    If Town.Name = "Neris Metropolis" Then
+        CityIntensity = Light.Intensity
+    End If
 
     If Controls.SectionGesture.Pending Then
 
-        Ok = Renderer.Draw(Assets, Controls.SectionGesture.Before)
-        Ok = Terrain.Draw(Ground) And Ok
+        Ok = Terrain.Draw(Ground, CityIntensity)
+        Ok = Renderer.Draw(Assets, Controls.SectionGesture.Before, Light.Intensity) And Ok
         Ok = Attachments.Draw(Details, Controls.SectionGesture.Before) And Ok
 
         Return Ok
 
     End If
 
-    Ok = Renderer.Draw(Assets, Town)
-    Ok = Terrain.Draw(Ground) And Ok
+    Ok = Terrain.Draw(Ground, CityIntensity)
+    Ok = Renderer.Draw(Assets, Town, Light.Intensity) And Ok
     Ok = Attachments.Draw(Details, Town) And Ok
     Ok = Campfires.Draw(Fires) And Ok
 
@@ -1341,6 +1351,8 @@ Public Function ApplyLocalLighting() As Boolean
 
     Light = Lighting.DisplayedSun(Town, Demo.AlternateLighting(Showcase))
     Ok = Lighting.ApplyLocal(Town, Light.Intensity)
+    Ok = WaterAppearance.Configure(Town, Light.Intensity) And Ok
+    Ok = Lighting.ConfigureBounds(Town) And Ok
 
     If Not Ok Then
         Controls.Ui.Message = "Night-light capacity reached; some lights are unavailable."

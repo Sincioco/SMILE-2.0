@@ -12,6 +12,7 @@ Import Smile.Tools.TownCatalogData As Catalog
 Import Smile.Tools.TownCatalogFeatures As Features
 Import Smile.Tools.TownGeometry As Geometry
 Import Smile.Tools.TownFountains As Fountains
+Import Smile.Tools.TownCityTraffic As Traffic
 
 Public Type State
     Model As Core.Model3D
@@ -27,6 +28,7 @@ Public Type State
     Clock As Number
     Ready As Boolean
     Streams As Fountains.State
+    Flyovers As Traffic.State
 End Type
 
 Public Function Create(ByRef Value As State) As Boolean
@@ -121,6 +123,8 @@ Public Sub Update(ByRef Value As State, ByRef Town As Document.State,
     Value.Clock = (Value.Clock + Max(0, Elapsed)) Mod 3600000
     Value.Ready = G.SetEffectMaterialWater3D(Value.Material, True, 45, 0, Value.Clock / 8, 2)
     Value.Ready = Fountains.Update(Value.Streams, Town, Leader, Elapsed) And Value.Ready
+
+    Call Traffic.Update(Value.Flyovers, Town, Elapsed)
 
     For Index = 0 To Town.ItemCount - 1
 
@@ -250,6 +254,7 @@ Public Function Draw(ByRef Value As State, ByRef Town As Document.State) As Bool
     End If
 
     Ok = Fountains.Draw(Value.Streams) And Ok
+    Ok = Traffic.Draw(Value.Flyovers) And Ok
 
     Return Ok
 
@@ -269,6 +274,7 @@ Public Sub Destroy(ByRef Value As State)
     Call G.DestroyRibbonBatch3D(Value.Water)
     Call G.DestroyMaterial3D(Value.Material)
     Call Fountains.Destroy(Value.Streams)
+    Call Traffic.Destroy(Value.Flyovers)
 
     Value.Ready = False
 

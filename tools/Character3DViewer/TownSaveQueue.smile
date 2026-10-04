@@ -10,7 +10,7 @@ Import Smile.Tools.TownWorldPreviews As Previews
 Import Smile.Tools.TownDocumentStore As Store
 
 Public Type State
-    Documents[16] As Document.State
+    Documents[17] As Document.State
     MapCount As Number
     NextIndex As Number
     Failed As Number
@@ -210,7 +210,7 @@ Public Sub Release(ByRef Value As State)
 
     Dim Index As Number
 
-    For Index = 0 To 15
+    For Index = 0 To 16
         Call Previews.ReleaseFrozen(PhotoKey(Index))
     End For
 
@@ -226,7 +226,7 @@ Private Sub ClearDocuments(ByRef Value As State)
 
     Dim Index As Number
 
-    For Index = 0 To 15
+    For Index = 0 To 16
         Call Document.ReleaseSnapshot(Value.Documents[Index])
     End For
 

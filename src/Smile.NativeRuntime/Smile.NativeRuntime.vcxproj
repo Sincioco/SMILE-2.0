@@ -118,6 +118,8 @@
     <ClInclude Include="graphics\graphics_directx.h" />
     <ClInclude Include="graphics\graphics3d.h" />
     <ClInclude Include="graphics\graphics3d_reflections.h" />
+    <ClInclude Include="graphics\reflection_receiver3d.h" />
+    <ClInclude Include="graphics\procedural_display3d.h" />
     <ClInclude Include="graphics\graphics_gdi.h" />
     <ClInclude Include="graphics\graphics_gdi_image.h" />
     <ClInclude Include="graphics\image_resource.h" />

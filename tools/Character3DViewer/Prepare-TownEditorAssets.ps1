@@ -11,6 +11,11 @@ Copy-Item -LiteralPath (Join-Path $townRoot 'Authoring\Catalog.sm3d.json') -Dest
 foreach ($chunk in $catalog.chunks) {
     Copy-Item -LiteralPath (Join-Path $townRoot ('Authoring\' + $chunk.file)) -Destination $destination -Force
 }
+$metropolisRoot = Join-Path (Split-Path $townRoot -Parent) 'NerisMetropolisV1'
+$extension = Get-Content -LiteralPath (Join-Path $metropolisRoot 'Authoring\catalog-extension.json') -Raw | ConvertFrom-Json
+foreach ($chunk in $extension.chunks) {
+    Copy-Item -LiteralPath (Join-Path $metropolisRoot ('Authoring\' + $chunk.file)) -Destination $destination -Force
+}
 # Wind derivatives preserve the exact catalog part slots and static bind geometry.
 foreach ($wind in Get-ChildItem -LiteralPath (Join-Path $townRoot 'Authoring\Wind') -Filter 'Catalog-*.glb') {
     Copy-Item -LiteralPath $wind.FullName -Destination $destination -Force
@@ -18,7 +23,11 @@ foreach ($wind in Get-ChildItem -LiteralPath (Join-Path $townRoot 'Authoring\Win
 $textureRoot = Join-Path $PSScriptRoot 'Assets\Neris'
 $null = New-Item -ItemType Directory -Force -Path $textureRoot
 Copy-Item -LiteralPath (Join-Path $townRoot 'Textures\Neris-Grass-Color.png') -Destination $textureRoot -Force
-Copy-Item -LiteralPath (Join-Path $townRoot 'Authoring\Town-Palette.png') -Destination $textureRoot -Force
+Copy-Item -LiteralPath (Join-Path $metropolisRoot 'Authoring\Town-Palette.png') -Destination $textureRoot -Force
+$cityTextures = Join-Path $textureRoot 'Metropolis'
+$null = New-Item -ItemType Directory -Force -Path $cityTextures
+Get-ChildItem -LiteralPath (Join-Path $metropolisRoot 'Textures') -Filter '*-Glass.png' |
+    Copy-Item -Destination $cityTextures -Force
 Copy-Item -LiteralPath (Join-Path $repositoryRoot 'games\SinStarI\SourceAssets\Towns\Neris\StoryTownsV1\Textures\Greyglass-Strata.png') -Destination $textureRoot -Force
 Copy-Item -LiteralPath (Join-Path $repositoryRoot 'games\SinStarI\SourceAssets\Towns\Neris\StoryTownsV1\Textures\Green-Slope-Tile.png') -Destination $textureRoot -Force
 Copy-Item -LiteralPath (Join-Path $repositoryRoot 'games\SinStarI\SourceAssets\Towns\Neris\StoryTownsV1\Textures\Snow-Slope-Tile.png') -Destination $textureRoot -Force

@@ -64,12 +64,20 @@
     <SmileSource Include="TownTerrainSeams.smile" />
     <SmileSource Include="TownTerrainCache.smile" />
     <SmileSource Include="TownTerrainStyles.smile" />
+    <SmileSource Include="TownCityData.smile" />
+    <SmileSource Include="TownCityLighting.smile" />
+    <SmileSource Include="TownSpireLight.smile" />
+    <SmileSource Include="TownWaterfrontShow.smile" />
+    <SmileSource Include="TownWaterAppearance.smile" />
+    <SmileSource Include="TownSphereDisplay.smile" />
     <SmileSource Include="TownLighting.smile" />
     <SmileSource Include="NerisSpaceportGlow.smile" />
+    <SmileSource Include="NerisAlienFleet.smile" />
     <SmileSource Include="NerisSpaceportRoute.smile" />
     <SmileSource Include="NerisSpaceportGround.smile" />
     <SmileSource Include="NerisHorizonRoute.smile" />
     <SmileSource Include="NerisHorizonLighting.smile" />
+    <SmileSource Include="TownCityTraffic.smile" />
     <SmileSource Include="TownAttachments.smile" />
     <SmileSource Include="TownFountains.smile" />
     <Model3DAsset Include="BuildAssets\Neris\Castle-00.glb" Descriptor="BuildAssets\Neris\Castle.sm3d.json" LogicalPath="Assets\Neris\Castle-00.sm3d" TextureOutputDirectory="Assets\Neris\CastleTextures" Profile="Static" Identity="sin-star-i.town.neris.castle-tripo-v1" ProductionState="Prototype" />
@@ -137,5 +145,29 @@
     <Asset Include="Assets\Fire\fire-shape-atlas.png" />
     <Asset Include="Assets\Fire\smoke-shape-atlas.png" />
     <Asset Include="Assets\Fire\ember-shape.png" />
+    <Model3DAsset Include="BuildAssets\Neris\Catalog\Catalog-38.glb" Descriptor="BuildAssets\Neris\Catalog\Catalog.sm3d.json" LogicalPath="Assets\Neris\Catalog\Catalog-38.sm3d" TextureOutputDirectory="Assets\Neris\Catalog\Textures" Profile="Static" Identity="sin-star-i.town.metropolis-v1" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Catalog\Catalog-39.glb" Descriptor="BuildAssets\Neris\Catalog\Catalog.sm3d.json" LogicalPath="Assets\Neris\Catalog\Catalog-39.sm3d" TextureOutputDirectory="Assets\Neris\Catalog\Textures" Profile="Static" Identity="sin-star-i.town.metropolis-v1" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Catalog\Catalog-40.glb" Descriptor="BuildAssets\Neris\Catalog\Catalog.sm3d.json" LogicalPath="Assets\Neris\Catalog\Catalog-40.sm3d" TextureOutputDirectory="Assets\Neris\Catalog\Textures" Profile="Static" Identity="sin-star-i.town.metropolis-v1" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Catalog\Catalog-41.glb" Descriptor="BuildAssets\Neris\Catalog\Catalog.sm3d.json" LogicalPath="Assets\Neris\Catalog\Catalog-41.sm3d" TextureOutputDirectory="Assets\Neris\Catalog\Textures" Profile="Static" Identity="sin-star-i.town.metropolis-v1" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Catalog\Catalog-42.glb" Descriptor="BuildAssets\Neris\Catalog\Catalog.sm3d.json" LogicalPath="Assets\Neris\Catalog\Catalog-42.sm3d" TextureOutputDirectory="Assets\Neris\Catalog\Textures" Profile="Static" Identity="sin-star-i.town.metropolis-v1" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Catalog\Catalog-43.glb" Descriptor="BuildAssets\Neris\Catalog\Catalog.sm3d.json" LogicalPath="Assets\Neris\Catalog\Catalog-43.sm3d" TextureOutputDirectory="Assets\Neris\Catalog\Textures" Profile="Static" Identity="sin-star-i.town.metropolis-v1" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Catalog\Catalog-44.glb" Descriptor="BuildAssets\Neris\Catalog\Catalog.sm3d.json" LogicalPath="Assets\Neris\Catalog\Catalog-44.sm3d" TextureOutputDirectory="Assets\Neris\Catalog\Textures" Profile="Static" Identity="sin-star-i.town.metropolis-v1" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Catalog\Catalog-45.glb" Descriptor="BuildAssets\Neris\Catalog\Catalog.sm3d.json" LogicalPath="Assets\Neris\Catalog\Catalog-45.sm3d" TextureOutputDirectory="Assets\Neris\Catalog\Textures" Profile="Static" Identity="sin-star-i.town.metropolis-v1" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Catalog\Catalog-46.glb" Descriptor="BuildAssets\Neris\Catalog\Catalog.sm3d.json" LogicalPath="Assets\Neris\Catalog\Catalog-46.sm3d" TextureOutputDirectory="Assets\Neris\Catalog\Textures" Profile="Static" Identity="sin-star-i.town.metropolis-v1" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Catalog\Catalog-47.glb" Descriptor="BuildAssets\Neris\Catalog\Catalog.sm3d.json" LogicalPath="Assets\Neris\Catalog\Catalog-47.sm3d" TextureOutputDirectory="Assets\Neris\Catalog\Textures" Profile="Static" Identity="sin-star-i.town.metropolis-v1" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Catalog\Catalog-48.glb" Descriptor="BuildAssets\Neris\Catalog\Catalog.sm3d.json" LogicalPath="Assets\Neris\Catalog\Catalog-48.sm3d" TextureOutputDirectory="Assets\Neris\Catalog\Textures" Profile="Static" Identity="sin-star-i.town.metropolis-v1" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Catalog\Catalog-49.glb" Descriptor="BuildAssets\Neris\Catalog\Catalog.sm3d.json" LogicalPath="Assets\Neris\Catalog\Catalog-49.sm3d" TextureOutputDirectory="Assets\Neris\Catalog\Textures" Profile="Static" Identity="sin-star-i.town.metropolis-v1" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Catalog\Catalog-50.glb" Descriptor="BuildAssets\Neris\Catalog\Catalog.sm3d.json" LogicalPath="Assets\Neris\Catalog\Catalog-50.sm3d" TextureOutputDirectory="Assets\Neris\Catalog\Textures" Profile="Static" Identity="sin-star-i.town.metropolis-v1" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Catalog\Catalog-51.glb" Descriptor="BuildAssets\Neris\Catalog\Catalog.sm3d.json" LogicalPath="Assets\Neris\Catalog\Catalog-51.sm3d" TextureOutputDirectory="Assets\Neris\Catalog\Textures" Profile="Static" Identity="sin-star-i.town.metropolis-v1" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Catalog\Catalog-52.glb" Descriptor="BuildAssets\Neris\Catalog\Catalog.sm3d.json" LogicalPath="Assets\Neris\Catalog\Catalog-52.sm3d" TextureOutputDirectory="Assets\Neris\Catalog\Textures" Profile="Static" Identity="sin-star-i.town.metropolis-v1" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Catalog\Catalog-53.glb" Descriptor="BuildAssets\Neris\Catalog\Catalog.sm3d.json" LogicalPath="Assets\Neris\Catalog\Catalog-53.sm3d" TextureOutputDirectory="Assets\Neris\Catalog\Textures" Profile="Static" Identity="sin-star-i.town.metropolis-v1" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Catalog\Catalog-54.glb" Descriptor="BuildAssets\Neris\Catalog\Catalog.sm3d.json" LogicalPath="Assets\Neris\Catalog\Catalog-54.sm3d" TextureOutputDirectory="Assets\Neris\Catalog\Textures" Profile="Static" Identity="sin-star-i.town.metropolis-v1" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Catalog\Catalog-55.glb" Descriptor="BuildAssets\Neris\Catalog\Catalog.sm3d.json" LogicalPath="Assets\Neris\Catalog\Catalog-55.sm3d" TextureOutputDirectory="Assets\Neris\Catalog\Textures" Profile="Static" Identity="sin-star-i.town.metropolis-v1" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Catalog\Catalog-56.glb" Descriptor="BuildAssets\Neris\Catalog\Catalog.sm3d.json" LogicalPath="Assets\Neris\Catalog\Catalog-56.sm3d" TextureOutputDirectory="Assets\Neris\Catalog\Textures" Profile="Static" Identity="sin-star-i.town.metropolis-v1" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Catalog\Catalog-57.glb" Descriptor="BuildAssets\Neris\Catalog\Catalog.sm3d.json" LogicalPath="Assets\Neris\Catalog\Catalog-57.sm3d" TextureOutputDirectory="Assets\Neris\Catalog\Textures" Profile="Static" Identity="sin-star-i.town.metropolis-v1" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Catalog\Catalog-58.glb" Descriptor="BuildAssets\Neris\Catalog\Catalog.sm3d.json" LogicalPath="Assets\Neris\Catalog\Catalog-58.sm3d" TextureOutputDirectory="Assets\Neris\Catalog\Textures" Profile="Static" Identity="sin-star-i.town.metropolis-v1" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Catalog\Catalog-59.glb" Descriptor="BuildAssets\Neris\Catalog\Catalog.sm3d.json" LogicalPath="Assets\Neris\Catalog\Catalog-59.sm3d" TextureOutputDirectory="Assets\Neris\Catalog\Textures" Profile="Static" Identity="sin-star-i.town.metropolis-v1" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Catalog\Catalog-60.glb" Descriptor="BuildAssets\Neris\Catalog\Catalog.sm3d.json" LogicalPath="Assets\Neris\Catalog\Catalog-60.sm3d" TextureOutputDirectory="Assets\Neris\Catalog\Textures" Profile="Static" Identity="sin-star-i.town.metropolis-v1" ProductionState="Prototype" />
+    <Asset Include="Assets\Neris\Metropolis\*.png" />
   </ItemGroup>
 </SmileProject>

@@ -13,6 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from town_blender_save import TOWN, populate_items, terrain, lighting
 from town_document_codec import decode, encode, unwrap, respond, key_path, atomic_write, landmark, require_blender_support
 from town_blender_terrain import read_prepared
+from town_catalog import load_catalog
 
 
 def matrix_close(a, b):
@@ -36,6 +37,8 @@ def import_document(path, catalog):
         samples = {}
         for source in catalog['instances']:
             samples.setdefault(source['template'], source)
+        for template in catalog['templates'][catalog.get('base_template_count',len(catalog['templates'])):]:
+            samples[template['id']]={'members':[template['label']]}
         for anchor in anchors:
             original = previous.get(anchor['town_assembly'])
             if original is None or anchor.get('town_template') != original['template']:
@@ -119,7 +122,7 @@ def export_document(document, catalog, target, request_id, status, patches=None)
 def main():
     mode, request_id, chosen, folder = sys.argv[sys.argv.index('--')+1:]
     mode, request_id, path, folder = int(mode), int(request_id), Path(chosen), Path(folder)
-    catalog = json.loads((TOWN / 'Authoring/catalog.json').read_text(encoding='utf-8'))
+    catalog = load_catalog()
     def status(progress, message):
         respond(folder, request_id, 0, progress, message, 'TownEditor.File.Response')
     try:

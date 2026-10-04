@@ -19,6 +19,7 @@ Import Smile.Tools.TownTerrainCache As Cache
 Import Smile.Tools.TownTerrainBuilder As Builder
 Import Smile.Tools.TownDerivedCache As Derived
 Import Smile.Tools.TownTerrainLighting As Lighting
+Import Smile.Tools.TownWaterAppearance As WaterAppearance
 
 Private Dim CacheTown As Document.State
 
@@ -457,6 +458,10 @@ Private Sub UploadNext(ByRef Value As State)
                         Height = Part.Y0
                     End If
 
+                    If Value.Kind = 6 Then
+                        Height = Builder.WaterBedHeight(Part.Y0, Value.Recipe.Surface.CellSize)
+                    End If
+
                     Ok = Vertex(Value, Mesh, Point, Part.X0, Height, Part.Z0, Value.Kind) And Ok
                     Ok = Vertex(Value, Mesh, Point + 1, Part.X0, Height, Part.Z1, Value.Kind) And Ok
                     Ok = Vertex(Value, Mesh, Point + 2, Part.X1, Height, Part.Z1, Value.Kind) And Ok
@@ -784,12 +789,12 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
 
 End Sub
 
-Public Function Draw(ByRef Value As State) As Boolean
+Public Function Draw(ByRef Value As State, Optional CityIntensity As Number = -1) As Boolean
 
     Dim Index As Number
     Dim Ok As Boolean
 
-    Ok = True
+    Ok = WaterAppearance.Apply(Value.Materials[2], CityIntensity)
 
     For Index = 0 To Value.ObjectCount - 1
         Ok = G.DrawObject3D(Value.Objects[Index]) And Ok

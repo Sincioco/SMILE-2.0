@@ -1,5 +1,12 @@
 # SMILE 2.0 - Sin Star I - Game Engine and Studio
 
+Neris Metropolis (October 4) is the first/default map. Its 47 reusable templates,
+current layout, exports and runtime effect limits are documented in
+[the package README](../../games/SinStarI/SourceAssets/Towns/Neris/NerisMetropolisV1/README.md).
+Use `scripts/test-metropolis-native.ps1 -PublicationDirectory <built Studio folder>`
+for isolated native placement, presentation and prepared town/PNG save/reopen checks.
+
+
 ## October 3 21:00 handoff: export identity and native acceptance
 
 Save All for Viewer now freezes each available matching photograph when it captures

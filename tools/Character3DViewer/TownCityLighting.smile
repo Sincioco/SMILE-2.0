@@ -1,0 +1,274 @@
+''' Studio-only city presentation. Owns shared facade overrides and bounded local lights.
+Module Smile.Tools.TownCityLighting
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownCatalogData As Catalog
+Import Smile.Tools.TownGeometry As Geometry
+Import Smile.Tools.TownSphereDisplay As Sphere
+Import Smile.Tools.TownSpireLight As Spire
+Import Smile.Tools.TownWaterfrontShow As Waterfront
+
+Public Type State
+    Materials[7] As Core.Material3D
+    Textures[7] As Core.Texture3D
+    Display As Sphere.State
+    Beam As Spire.State
+    Fireworks As Waterfront.State
+End Type
+
+Public Function BeaconOn(Time As Number, Identity As Number) As Boolean
+
+    Dim Interval As Number
+    Dim Phase As Number
+    Dim Result As Boolean
+
+    ' Stable seeded intervals keep each placed tower independent, including
+    ' duplicated templates, without frame-rate-dependent random flickering.
+    Interval = 1000 + (Abs(Identity) * 613 Mod 2001)
+    Phase = Abs(Identity) * 379 Mod Interval
+    Result = (Time + Phase) Mod Interval < 180
+
+    Return Result
+
+End Function
+
+Public Function Bind(ByRef Value As State, ByRef Object As Core.Object3D, Kind As Number) As Boolean
+
+    Dim Empty As Core.Texture3D
+    Dim Name As Text
+    Dim Ok As Boolean
+    Dim Index As Number
+
+    If Kind < 1 Or Kind > 7 Then
+        Ok = Sphere.Bind(Value.Display, Object, Kind)
+        Return Ok
+    End If
+
+    Index = Kind - 1
+
+    If Value.Materials[Index].Handle = 0 Then
+
+        Select Case Kind
+            Case 1
+                Name = "Glacier"
+            Case 2
+                Name = "Azure"
+            Case 3
+                Name = "Sapphire"
+            Case 4
+                Name = "Cerulean"
+            Case 5
+                Name = "SilverBlue"
+            Case 6
+                Name = "Midnight"
+        End Select
+
+        If Kind < 7 Then
+
+            Value.Textures[Index] = G.LoadTexture3DEx("Assets/Neris/Metropolis/" + Name + "-Glass.png",
+                G.TEXTURE_USAGE_COLOR, G.TEXTURE_FILTER_ANISOTROPIC, G.TEXTURE_WRAP_REPEAT, 16)
+
+            If Value.Textures[Index].Handle = 0 Then
+                Return False
+            End If
+
+        End If
+
+        Value.Materials[Index] = G.CreatePbrMaterial3D(Value.Textures[Index], Empty, Empty, Empty,
+            G.MATERIAL_ALPHA_OPAQUE, True)
+        Ok = G.SetPbrMaterialFactors3D(Value.Materials[Index], 255, 255, 255, 100, 48, 16, 0, 100)
+
+        If Kind = 7 Then
+            Ok = G.SetPbrMaterialFactors3D(Value.Materials[Index], 14, 59, 94, 100, 50, 19, 0, 100) And Ok
+        End If
+
+        If Not Ok Then
+            Return False
+        End If
+
+    End If
+
+    Ok = G.SetObjectMaterial3D(Object, Value.Materials[Index])
+
+    Return Ok
+
+End Function
+
+Public Function Update(ByRef Value As State, Intensity As Number) As Boolean
+
+    Dim Index As Number
+    Dim Night As Double
+    Dim Ok As Boolean
+
+    Night = Clamp((180.0 - ToDouble(Intensity)) / 180.0, 0.0, 1.0)
+    Ok = Sphere.Update(Value.Display, Timer())
+
+    For Index = 0 To 6
+
+        If Value.Materials[Index].Handle <> 0 Then
+
+            If Index = 6 Then
+                Ok = G.SetPbrMaterialEmissive3D(Value.Materials[Index],
+                    ToNumber(Night * 45.0), ToNumber(Night * 31.0), ToNumber(Night * 15.0)) And Ok
+            Else
+                Ok = G.SetPbrMaterialEmissive3D(Value.Materials[Index],
+                    ToNumber(Night * 3.0), ToNumber(Night * 7.0), ToNumber(Night * 12.0)) And Ok
+            End If
+
+        End If
+
+    End For
+
+    Return Ok
+
+End Function
+
+Public Sub Destroy(ByRef Value As State)
+
+    Dim Index As Number
+
+    For Index = 0 To 6
+        Call G.DestroyMaterial3D(Value.Materials[Index])
+        Call G.DestroyTexture3D(Value.Textures[Index])
+    End For
+
+    Call Sphere.Destroy(Value.Display)
+    Call Spire.Destroy(Value.Beam)
+    Call Waterfront.Destroy(Value.Fireworks)
+
+End Sub
+
+Public Function Draw(ByRef Value As State, ByRef Town As Document.State, Intensity As Number) As Boolean
+
+    Dim Ok As Boolean
+    Dim Night As Double
+
+    Night = Clamp((180.0 - ToDouble(Intensity)) / 180.0, 0.0, 1.0)
+    Ok = Spire.Draw(Value.Beam, Town, Night)
+    Ok = Waterfront.Draw(Value.Fireworks, Town, Night, Timer()) And Ok
+
+    Return Ok
+
+End Function
+
+Public Function HasCity(ByRef Town As Document.State) As Boolean
+
+    Dim Index As Number
+
+    For Index = 0 To Town.ItemCount - 1
+
+        If Town.Items[Index].Active And Town.Items[Index].Template >= 40 Then
+            Return True
+        End If
+
+    End For
+
+    Return False
+
+End Function
+
+''' Nearby lamps illuminate streets; distant lamps retain their visible model lenses.
+Public Function ApplyLights(ByRef Town As Document.State, ByRef Slot As Number, Night As Double) As Boolean
+
+    Dim Selected[64] As Number
+    Dim Distances[64] As Double
+    Dim SelectedCount As Number
+    Dim Limit As Number
+    Dim Index As Number
+    Dim InsertIndex As Number
+    Dim Move As Number
+    Dim Distance As Double
+    Dim Camera As P.Camera3D
+    Dim Point As P.Vector3
+    Dim Item As Document.Item
+    Dim Shape As Catalog.Template
+    Dim Ok As Boolean
+
+    Ok = True
+    Limit = Min(64, Max(0, G.MaximumLocalLightCount3D() - Slot - 40))
+    Camera = P.AcceptedCamera()
+
+    For Index = 0 To Town.ItemCount - 1
+
+        Item = Town.Items[Index]
+
+        If (Item.Active And
+            Item.Template = 15 And
+            Night > 0.0) Then
+
+            Distance = M.Distance(Item.Position, Camera.Position)
+            InsertIndex = SelectedCount
+
+            For Move = 0 To SelectedCount - 1
+
+                If Distance < Distances[Move] Then
+                    InsertIndex = Move
+                    Exit For
+                End If
+
+            End For
+
+            If InsertIndex < Limit Then
+
+                Move = Min(SelectedCount, Limit - 1)
+
+                Do
+
+                    If Move <= InsertIndex Then
+                        Exit Do
+                    End If
+
+                    Selected[Move] = Selected[Move - 1]
+                    Distances[Move] = Distances[Move - 1]
+                    Move = Move - 1
+
+                Loop
+
+                Selected[InsertIndex] = Index
+                Distances[InsertIndex] = Distance
+                SelectedCount = Min(SelectedCount + 1, Limit)
+
+            End If
+
+        Else If (Item.Active And
+            Item.Template >= 40 And
+            Item.Template <= 60 And
+            Night > 0.0 And
+            Slot < G.MaximumLocalLightCount3D() - 64) Then
+
+            Shape = Catalog.TemplateAt(Item.Template)
+            Point = Geometry.ToWorld(Item, P.Vector(Shape.Low.X - 120.0,
+                Shape.High.Y * 0.18, Shape.Low.Z - 120.0))
+            Ok = G.SetPointLight3D(Slot, ToNumber(Point.X), ToNumber(Point.Y), ToNumber(Point.Z),
+                155, 200, 255, ToNumber(Night * 650.0), ToNumber(Shape.High.Y * Item.Scale.Y / 500.0)) And Ok
+            Slot = Slot + 1
+
+            If Item.Template = 57 And Slot < G.MaximumLocalLightCount3D() - 68 Then
+                Ok = Spire.ApplyLights(Item, Slot, Night) And Ok
+            End If
+
+        End If
+
+    End For
+
+    For Index = 0 To SelectedCount - 1
+
+        Item = Town.Items[Selected[Index]]
+        Shape = Catalog.TemplateAt(Item.Template)
+        Point = Geometry.ToWorld(Item, P.Vector(0.0, Shape.High.Y * 0.82, 0.0))
+        Ok = G.SetPointLight3D(Slot, ToNumber(Point.X), ToNumber(Point.Y), ToNumber(Point.Z),
+            255, 215, 158, ToNumber(Night * 540.0), 2200) And Ok
+        Slot = Slot + 1
+    End For
+
+    Return Ok
+
+End Function
+
+End Module

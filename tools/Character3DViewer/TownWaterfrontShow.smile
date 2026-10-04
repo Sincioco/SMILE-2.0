@@ -1,0 +1,194 @@
+''' Independent landmark fireworks; each launch site stays attached to its own waterfront.
+Module Smile.Tools.TownWaterfrontShow
+
+Option Explicit
+
+Import Smile.Simple3D.Fireworks3D As Fireworks
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownCatalogData As Catalog
+Import Smile.Tools.TownGeometry As Geometry
+
+Public Type State
+    Display As Fireworks.State
+    Sources[4] As Fireworks.Emitter
+    SourceCount As Number
+    Revision As Number
+End Type
+
+Public Sub Resolve(ByRef Value As State, ByRef Town As Document.State)
+
+    Dim Index As Number
+    Dim Slot As Number
+    Dim X As Number
+    Dim Z As Number
+    Dim Found[3] As Boolean
+    Dim Item As Document.Item
+    Dim Shape As Catalog.Template
+    Dim Center As P.Vector3
+    Dim Candidate As P.Vector3
+    Dim Distance As Double
+    Dim Best As Double
+    Dim Burj As P.Vector3
+
+    Value.SourceCount = 0
+    Value.Revision = Town.Revision
+
+    If Town.Name <> "Neris Metropolis" Then
+        Return
+    End If
+
+    For Index = 0 To Town.ItemCount - 1
+
+        Item = Town.Items[Index]
+        Slot = -1
+
+        If (Item.Active And
+            Item.Identity = 5 And
+            Item.Template = 43) Then
+            Slot = 0
+        Else If (Item.Active And
+            Item.Identity = 4 And
+            Item.Template = 42) Then
+            Slot = 1
+        Else If (Item.Active And
+            Item.Identity = 2 And
+            Item.Template = 40) Then
+            Burj = Item.Position
+            Found[2] = True
+        End If
+
+        If Slot >= 0 Then
+
+            Shape = Catalog.TemplateAt(Item.Template)
+            Value.Sources[Slot].Origin = Geometry.ToWorld(Item, P.Vector(0.0, Shape.High.Y, 0.0))
+            Found[Slot] = True
+
+        End If
+
+    End For
+
+    If Found[0] And Found[1] Then
+
+        Value.SourceCount = 2
+        Center = M.Scale(M.Add(Value.Sources[0].Origin, Value.Sources[1].Origin), 0.5)
+        Center.Y = 25.0
+        Best = 1000000000.0
+
+        For Z = -5 To 5
+
+            For X = -5 To 5
+
+                Candidate = P.Vector(Center.X + ToDouble(X) * 500.0, 25.0,
+                    Center.Z + ToDouble(Z) * 500.0)
+                Distance = M.Distance(Candidate, Center)
+
+                If (Grid.ReadPoint(Town.Surface, Candidate.X, Candidate.Z) = Grid.SURFACE_WATER And
+                    Distance < Best) Then
+
+                    Best = Distance
+                    Value.Sources[2].Origin = Candidate
+                    Value.SourceCount = 3
+
+                End If
+
+            End For
+        End For
+
+    End If
+
+    If Found[2] Then
+
+        Best = 1000000000.0
+
+        For Z = -14 To 14
+
+            For X = -14 To 14
+
+                Candidate = P.Vector(Burj.X + ToDouble(X) * 500.0, 25.0,
+                    Burj.Z + ToDouble(Z) * 500.0)
+                Distance = M.Distance(Candidate, Burj)
+
+                If (Distance < Best And
+                    Grid.ReadPoint(Town.Surface, Candidate.X, Candidate.Z) = Grid.SURFACE_WATER And
+                    Grid.ReadPoint(Town.Surface, Candidate.X - 900.0, Candidate.Z) = Grid.SURFACE_WATER And
+                    Grid.ReadPoint(Town.Surface, Candidate.X + 900.0, Candidate.Z) = Grid.SURFACE_WATER And
+                    Grid.ReadPoint(Town.Surface, Candidate.X, Candidate.Z - 900.0) = Grid.SURFACE_WATER And
+                    Grid.ReadPoint(Town.Surface, Candidate.X, Candidate.Z + 900.0) = Grid.SURFACE_WATER) Then
+                    Best = Distance
+                    Center = Candidate
+                End If
+
+            End For
+        End For
+
+        If Best < 1000000000.0 Then
+            Value.Sources[Value.SourceCount].Origin = Center
+            Value.SourceCount = Value.SourceCount + 1
+        End If
+
+    End If
+
+    For Index = 0 To Value.SourceCount - 1
+
+        Value.Sources[Index].Height = 1800.0 + ToDouble(Index) * 450.0
+        Value.Sources[Index].Radius = 1650.0 + ToDouble(Index) * 160.0
+        Value.Sources[Index].Period = 6200 + Index * 1700
+        Value.Sources[Index].Delay = 800 + Index * 1800
+        Value.Sources[Index].Seed = 53 + Index * 17
+    End For
+
+End Sub
+
+Public Function Draw(ByRef Value As State, ByRef Town As Document.State,
+    Night As Double, Time As Number) As Boolean
+
+    Dim Index As Number
+    Dim Ok As Boolean
+
+    Value.Display.ParticleCount = 0
+
+    If Night <= 0.0 Or Town.Name <> "Neris Metropolis" Then
+        Return True
+    End If
+
+    If Value.Revision <> Town.Revision Or Value.SourceCount = 0 Then
+        Call Resolve(Value, Town)
+    End If
+
+    If Value.SourceCount = 0 Then
+        Return True
+    End If
+
+    If Value.Display.Particles.Handle = 0 Then
+
+        If Not Fireworks.Create(Value.Display, "Assets/Fire/ember-shape.png", 2304) Then
+            Return False
+        End If
+
+    End If
+
+    Ok = True
+
+    For Index = 0 To Value.SourceCount - 1
+        Ok = Fireworks.Add(Value.Display, Value.Sources[Index], Time, Night) And Ok
+    End For
+
+    Ok = Fireworks.Draw(Value.Display) And Ok
+
+    Return Ok
+
+End Function
+
+Public Sub Destroy(ByRef Value As State)
+
+    Call Fireworks.Destroy(Value.Display)
+
+    Value.SourceCount = 0
+    Value.Revision = -1
+
+End Sub
+
+End Module

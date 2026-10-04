@@ -11,8 +11,8 @@ Public Sub Draw()
 
     Caption = Build_Info()
     X = Max(8, Window_Width() - Text_Width(Caption, 11) - 18)
-    Y = Window_Height() - 18
-    Draw Text Caption At X, Y + 2 Size 11 Color LIGHT_GRAY
+    Y = Window_Height() - 13
+    Draw Text Caption At X, Y Size 11 Color LIGHT_GRAY
 
 End Sub
 

@@ -77,6 +77,29 @@ Public Function Run() As Number
     Call Check(Shot.OrthographicHeight < 600.0 And Shot.OrthographicHeight > 0.0,
         "Orthographic Zoom Changes Parallel View Scale")
 
+    View.OrthographicHeight = 0.0
+    View.Position = P.Vector(52000.0, 54000.0, -63000.0)
+    View.Target = P.Vector(0.0, 23.12, 0.0)
+    View.UpDirection = P.Vector(0.0, 1.0, 0.0)
+    View.FovDegrees = 45.0
+    View.NearPlane = 5400.0
+    View.FarPlane = 250000.0
+    Ok = Picking.Ground(View, 700, 450, 1400, 900, Point)
+
+    Call Check(Ok And M.Distance(Point, View.Target) < 0.0001,
+        "City Scale Ground Picking Survives An Adaptive Near Plane Above 1000")
+
+    View.NearPlane = 999.0
+    Ok = Picking.Ground(View, 700, 450, 1400, 900, Point)
+
+    Call Check(Ok And M.Distance(Point, View.Target) < 0.0001,
+        "Ground Picking Does Not Collapse As The Near Plane Approaches 1000")
+
+    View.FarPlane = 2000.0
+
+    Call Check(Not Picking.Ground(View, 700, 450, 1400, 900, Point),
+        "Ground Outside The Visible Camera Range Cannot Start A Drag")
+
     Guide.Spacing = 2.0
     Ok = Guides.Add(Guide.Ink, P.Vector(0.0, 0.0, 0.0), P.Vector(100.0, 0.0, 50.0), True)
     Guide.Ink.Markers[0].Name = "Market Boundary"

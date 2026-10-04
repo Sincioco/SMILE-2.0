@@ -1,0 +1,164 @@
+''' Two bounded flyover slots reuse Spaceport craft; no authored objects are moved.
+Module Smile.Tools.TownCityTraffic
+
+Option Explicit
+
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownCatalogData As Catalog
+Import Smile.Tools.NerisAlienFleet As Fleet
+
+Public Type State
+    Assets As Fleet.State
+    Starts[2] As P.Vector3
+    Ends[2] As P.Vector3
+    Ships[2] As Number
+    ShipCount As Number
+    Clock As Number
+    UntilNext As Number
+    Interval As Number
+    Heading As Double
+End Type
+
+Public Sub Destroy(ByRef Value As State)
+
+    Call Fleet.Destroy(Value.Assets)
+
+    Value.ShipCount = 0
+    Value.Clock = 0
+    Value.UntilNext = 0
+
+End Sub
+
+Private Sub Launch(ByRef Value As State, ByRef Town As Document.State)
+
+    Dim Low As P.Vector3
+    Dim High As P.Vector3
+    Dim Center As P.Vector3
+    Dim Height As Double
+    Dim Offset As Double
+    Dim Direction As Number
+    Dim ShipCount As Number
+    Dim Ship As Number
+    Dim Delay As Number
+    Dim Index As Number
+    Dim Shape As Catalog.Template
+
+    Low = P.Vector(Town.Surface.OriginX - 4000.0, 0.0, Town.Surface.OriginZ - 4000.0)
+    High = P.Vector(Town.Surface.XEdges[Town.Surface.Columns] + 4000.0, 0.0,
+        Town.Surface.ZEdges[Town.Surface.Rows] + 4000.0)
+    Center = M.Scale(M.Add(Low, High), 0.5)
+    Height = 1500.0
+
+    For Index = 0 To Town.ItemCount - 1
+
+        If Town.Items[Index].Active Then
+            Shape = Catalog.TemplateAt(Town.Items[Index].Template)
+            Height = Max(Height, Town.Items[Index].Position.Y +
+                Shape.High.Y * Town.Items[Index].Scale.Y / 1000.0 + 1500.0)
+        End If
+
+    End For
+
+    Random Direction From 0 To 3
+    Random ShipCount From 1 To 2
+    Random Ship From 0 To 3
+    Random Delay From 5000 To 15000
+
+    Value.ShipCount = ShipCount
+    Value.Ships[0] = Ship
+    Value.Ships[1] = (Ship + 1) Mod 4
+    Value.Clock = 0
+    Value.Interval = Delay
+    Value.UntilNext = Delay
+    Value.Heading = ToDouble(Direction) * 90.0
+
+    For Index = 0 To ShipCount - 1
+
+        Offset = ToDouble(Index) * 1800.0 - 900.0
+        Value.Starts[Index] = P.Vector(Center.X + Offset, Height, Low.Z)
+        Value.Ends[Index] = P.Vector(Center.X + Offset, Height, High.Z)
+
+        If Direction = 1 Then
+            Value.Starts[Index] = P.Vector(Low.X, Height, Center.Z + Offset)
+            Value.Ends[Index] = P.Vector(High.X, Height, Center.Z + Offset)
+        Else If Direction = 2 Then
+            Value.Starts[Index] = P.Vector(Center.X + Offset, Height, High.Z)
+            Value.Ends[Index] = P.Vector(Center.X + Offset, Height, Low.Z)
+        Else If Direction = 3 Then
+            Value.Starts[Index] = P.Vector(High.X, Height, Center.Z + Offset)
+            Value.Ends[Index] = P.Vector(Low.X, Height, Center.Z + Offset)
+        End If
+
+    End For
+
+End Sub
+
+Public Sub Update(ByRef Value As State, ByRef Town As Document.State, Elapsed As Number)
+
+    If Town.Name <> "Neris Metropolis" Then
+
+        If Value.Assets.Loaded > 0 Then
+            Call Destroy(Value)
+        End If
+
+        Return
+
+    End If
+
+    If Not Value.Assets.Ready Then
+
+        Call Fleet.LoadNext(Value.Assets)
+
+        Value.UntilNext = 5000
+        Return
+
+    End If
+
+    Value.Clock = Value.Clock + Max(0, Elapsed)
+    Value.UntilNext = Value.UntilNext - Max(0, Elapsed)
+
+    If Value.Clock >= 5000 Then
+        Value.ShipCount = 0
+    End If
+
+    If Value.UntilNext <= 0 Then
+        Call Launch(Value, Town)
+    End If
+
+End Sub
+
+Public Function Draw(ByRef Value As State) As Boolean
+
+    Dim Index As Number
+    Dim Part As Number
+    Dim Slot As Number
+    Dim Point As P.Vector3
+    Dim Amount As Double
+    Dim Ok As Boolean
+
+    Ok = Not Value.Assets.Failed
+    Amount = Clamp(ToDouble(Value.Clock) / 5000.0, 0.0, 1.0)
+
+    For Index = 0 To Value.ShipCount - 1
+
+        Point = M.Add(Value.Starts[Index],
+            M.Scale(M.Subtract(Value.Ends[Index], Value.Starts[Index]), Amount))
+
+        For Part = 0 To 2
+
+            Slot = Value.Ships[Index] * 3 + Part
+            Ok = P.SetPosition(Value.Assets.Objects[Slot], Point.X, Point.Y, Point.Z) And Ok
+            Ok = P.SetRotation(Value.Assets.Objects[Slot], 0.0, Value.Heading, 0.0) And Ok
+            Ok = P.SetScale(Value.Assets.Objects[Slot], 2200.0, 2200.0, 2200.0) And Ok
+            Ok = G.DrawObject3D(Value.Assets.Objects[Slot]) And Ok
+        End For
+    End For
+
+    Return Ok
+
+End Function
+
+End Module

@@ -1,0 +1,41 @@
+''' Native city water appearance; authored terrain and other towns stay independent.
+Module Smile.Tools.TownWaterAppearance
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Tools.TownDocument As Document
+
+Public Function Configure(ByRef Town As Document.State, Intensity As Number) As Boolean
+
+    Dim Enabled As Boolean
+    Dim Ok As Boolean
+
+    Enabled = Town.Name = "Neris Metropolis" And Intensity < 180
+    Ok = G.ConfigureReflections3D(Enabled, 100, 12, 75, -1, False, True)
+
+    Return Ok
+
+End Function
+
+Public Function Apply(ByRef Material As Core.Material3D, Intensity As Number) As Boolean
+
+    Dim Night As Double
+    Dim Ok As Boolean
+
+    If Intensity < 0 Then
+        Return True
+    End If
+
+    ' The approved city night preset retains a bright moon (104); water still darkens fully.
+    Night = Clamp((180.0 - ToDouble(Intensity)) / 76.0, 0.0, 1.0)
+    Ok = G.SetEffectMaterial3D(Material, G.MATERIAL_ALPHA_BLEND,
+        ToNumber(30.0 - Night * 23.0), ToNumber(100.0 - Night * 84.0),
+        ToNumber(240.0 - Night * 207.0), 100, 100)
+
+    Return Ok
+
+End Function
+
+End Module

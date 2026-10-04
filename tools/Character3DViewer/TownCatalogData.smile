@@ -7,8 +7,9 @@ Import Smile.Simple3D.Precision3D As P
 Import Smile.Tools.TownDocument As Document
 
 Public Const FINGERPRINT = "a0be1e73b6bd14876474e016d063eb257fd031c2de7ad2a332cbac25d8541d9d"
-Public Const CHUNK_COUNT = 38
-Public Const TEMPLATE_COUNT = 40
+Public Const CHUNK_COUNT = 61
+Public Const BASE_CHUNK_COUNT = 38
+Public Const TEMPLATE_COUNT = 87
 Public Const INITIAL_ITEMS = 358
 
 Public Type Template
@@ -225,34 +226,34 @@ Public Function TemplateAt(Index As Number) As Template
             Result.FloorCount = 0
             Result.DoorCount = 0
             Result.WaterCount = 0
-            Result.Parts[0] = 608
-            Result.Parts[1] = 609
-            Result.Parts[2] = 624
-            Result.Parts[3] = 625
-            Result.Parts[4] = 640
-            Result.Parts[5] = 641
-            Result.Parts[6] = 656
-            Result.Parts[7] = 657
-            Result.Parts[8] = 672
-            Result.Parts[9] = 673
-            Result.Parts[10] = 688
-            Result.Parts[11] = 689
-            Result.Parts[12] = 704
-            Result.Parts[13] = 705
-            Result.Parts[14] = 720
-            Result.Parts[15] = 721
-            Result.Parts[16] = 736
-            Result.Parts[17] = 737
-            Result.Parts[18] = 752
-            Result.Parts[19] = 753
-            Result.Parts[20] = 768
-            Result.Parts[21] = 769
-            Result.Parts[22] = 784
-            Result.Parts[23] = 785
-            Result.Parts[24] = 800
-            Result.Parts[25] = 801
-            Result.Parts[26] = 816
-            Result.Parts[27] = 817
+            Result.Parts[0] = 976
+            Result.Parts[1] = 977
+            Result.Parts[2] = 992
+            Result.Parts[3] = 993
+            Result.Parts[4] = 1008
+            Result.Parts[5] = 1009
+            Result.Parts[6] = 1024
+            Result.Parts[7] = 1025
+            Result.Parts[8] = 1040
+            Result.Parts[9] = 1041
+            Result.Parts[10] = 1056
+            Result.Parts[11] = 1057
+            Result.Parts[12] = 1072
+            Result.Parts[13] = 1073
+            Result.Parts[14] = 1088
+            Result.Parts[15] = 1089
+            Result.Parts[16] = 1104
+            Result.Parts[17] = 1105
+            Result.Parts[18] = 1120
+            Result.Parts[19] = 1121
+            Result.Parts[20] = 1136
+            Result.Parts[21] = 1137
+            Result.Parts[22] = 1152
+            Result.Parts[23] = 1153
+            Result.Parts[24] = 1168
+            Result.Parts[25] = 1169
+            Result.Parts[26] = 1184
+            Result.Parts[27] = 1185
 
         Case 7
             Result.Label = "Military HQ"
@@ -1025,6 +1026,949 @@ Public Function TemplateAt(Index As Number) As Template
             Result.Parts[1] = 593
             Result.Parts[2] = 594
             Result.Parts[3] = 595
+
+        Case 40
+            Result.Label = "Burj Khalifa"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 30
+            Result.Low = P.Vector(-688.000031, 0.000000, -977.160034)
+            Result.High = P.Vector(943.000031, 8312.000122, 916.538315)
+            Result.PartCount = 3
+            Result.SolidCount = 1
+            Result.CameraCount = 1
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 811
+            Result.Parts[1] = 812
+            Result.Parts[2] = 692
+
+        Case 41
+            Result.Label = "Shanghai Tower"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 31
+            Result.Low = P.Vector(-445.886459, -0.911328, -365.899658)
+            Result.High = P.Vector(445.886459, 6320.000000, 365.899658)
+            Result.PartCount = 2
+            Result.SolidCount = 1
+            Result.CameraCount = 1
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 722
+            Result.Parts[1] = 802
+
+        Case 42
+            Result.Label = "Petronas Twin Towers"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 32
+            Result.Low = P.Vector(-700.000000, 0.000000, -260.000000)
+            Result.High = P.Vector(700.000000, 4552.000122, 260.000000)
+            Result.PartCount = 3
+            Result.SolidCount = 2
+            Result.CameraCount = 2
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 785
+            Result.Parts[1] = 707
+            Result.Parts[2] = 899
+
+        Case 43
+            Result.Label = "Marina Bay Sands"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 33
+            Result.Low = P.Vector(-1790.000000, -10.000000, -345.000000)
+            Result.High = P.Vector(1790.000000, 2141.125641, 310.000000)
+            Result.PartCount = 20
+            Result.SolidCount = 3
+            Result.CameraCount = 3
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 608
+            Result.Parts[1] = 609
+            Result.Parts[2] = 624
+            Result.Parts[3] = 625
+            Result.Parts[4] = 640
+            Result.Parts[5] = 641
+            Result.Parts[6] = 656
+            Result.Parts[7] = 657
+            Result.Parts[8] = 672
+            Result.Parts[9] = 705
+            Result.Parts[10] = 720
+            Result.Parts[11] = 768
+            Result.Parts[12] = 770
+            Result.Parts[13] = 739
+            Result.Parts[14] = 810
+            Result.Parts[15] = 829
+            Result.Parts[16] = 850
+            Result.Parts[17] = 871
+            Result.Parts[18] = 948
+            Result.Parts[19] = 949
+
+        Case 44
+            Result.Label = "Jeddah Tower"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 34
+            Result.Low = P.Vector(-730.000000, -10.000000, -682.504959)
+            Result.High = P.Vector(668.000031, 10032.000122, 682.504959)
+            Result.PartCount = 3
+            Result.SolidCount = 1
+            Result.CameraCount = 1
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 838
+            Result.Parts[1] = 845
+            Result.Parts[2] = 758
+
+        Case 45
+            Result.Label = "Shanghai World Financial Center"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 35
+            Result.Low = P.Vector(-320.000000, -1.211916, -219.987106)
+            Result.High = P.Vector(320.000000, 4920.000000, 219.987106)
+            Result.PartCount = 3
+            Result.SolidCount = 1
+            Result.CameraCount = 1
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 846
+            Result.Parts[1] = 900
+            Result.Parts[2] = 776
+
+        Case 46
+            Result.Label = "Merdeka 118"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 36
+            Result.Low = P.Vector(-393.359985, -1.055146, -434.167557)
+            Result.High = P.Vector(413.489990, 6822.000122, 363.899612)
+            Result.PartCount = 3
+            Result.SolidCount = 1
+            Result.CameraCount = 1
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 627
+            Result.Parts[1] = 660
+            Result.Parts[2] = 919
+
+        Case 47
+            Result.Label = "Makkah Royal Clock Tower"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 37
+            Result.Low = P.Vector(-580.000000, 0.000000, -505.000000)
+            Result.High = P.Vector(580.000000, 6042.000122, 505.000000)
+            Result.PartCount = 5
+            Result.SolidCount = 1
+            Result.CameraCount = 1
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 847
+            Result.Parts[1] = 868
+            Result.Parts[2] = 740
+            Result.Parts[3] = 920
+            Result.Parts[4] = 921
+
+        Case 48
+            Result.Label = "Ping An Finance Center"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 38
+            Result.Low = P.Vector(-592.986984, -0.297618, -592.986984)
+            Result.High = P.Vector(592.986984, 5990.000000, 592.986984)
+            Result.PartCount = 2
+            Result.SolidCount = 1
+            Result.CameraCount = 1
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 626
+            Result.Parts[1] = 906
+
+        Case 49
+            Result.Label = "Lotte World Tower"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 39
+            Result.Low = P.Vector(-461.136360, 0.000000, -361.742439)
+            Result.High = P.Vector(461.136360, 5550.432739, 361.742439)
+            Result.PartCount = 2
+            Result.SolidCount = 1
+            Result.CameraCount = 1
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 801
+            Result.Parts[1] = 875
+
+        Case 50
+            Result.Label = "One World Trade Center"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 40
+            Result.Low = P.Vector(-310.000000, 0.000000, -310.000000)
+            Result.High = P.Vector(310.000000, 5442.000122, 310.000000)
+            Result.PartCount = 4
+            Result.SolidCount = 1
+            Result.CameraCount = 1
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 809
+            Result.Parts[1] = 628
+            Result.Parts[2] = 922
+            Result.Parts[3] = 676
+
+        Case 51
+            Result.Label = "Guangzhou CTF Finance Centre"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 41
+            Result.Low = P.Vector(-385.999985, 0.000000, -339.000015)
+            Result.High = P.Vector(385.000000, 5307.000122, 335.000000)
+            Result.PartCount = 4
+            Result.SolidCount = 1
+            Result.CameraCount = 1
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 840
+            Result.Parts[1] = 691
+            Result.Parts[2] = 861
+            Result.Parts[3] = 907
+
+        Case 52
+            Result.Label = "Tianjin CTF Finance Centre"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 42
+            Result.Low = P.Vector(-511.500015, 0.000000, -431.749992)
+            Result.High = P.Vector(511.500015, 5300.000000, 431.749992)
+            Result.PartCount = 2
+            Result.SolidCount = 1
+            Result.CameraCount = 1
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 803
+            Result.Parts[1] = 866
+
+        Case 53
+            Result.Label = "CITIC Tower"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 43
+            Result.Low = P.Vector(-550.000000, 0.000000, -550.000000)
+            Result.High = P.Vector(550.000000, 5280.000000, 550.000000)
+            Result.PartCount = 2
+            Result.SolidCount = 1
+            Result.CameraCount = 1
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 820
+            Result.Parts[1] = 708
+
+        Case 54
+            Result.Label = "Taipei 101"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 44
+            Result.Low = P.Vector(-345.000000, 0.000000, -345.000000)
+            Result.High = P.Vector(345.000000, 5112.000122, 345.000000)
+            Result.PartCount = 5
+            Result.SolidCount = 1
+            Result.CameraCount = 1
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 830
+            Result.Parts[1] = 723
+            Result.Parts[2] = 901
+            Result.Parts[3] = 923
+            Result.Parts[4] = 950
+
+        Case 55
+            Result.Label = "Jin Mao Tower"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 45
+            Result.Low = P.Vector(-345.000000, 0.000000, -345.000000)
+            Result.High = P.Vector(345.000000, 4242.000122, 345.000000)
+            Result.PartCount = 5
+            Result.SolidCount = 1
+            Result.CameraCount = 1
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 832
+            Result.Parts[1] = 878
+            Result.Parts[2] = 902
+            Result.Parts[3] = 924
+            Result.Parts[4] = 951
+
+        Case 56
+            Result.Label = "Oriental Pearl Tower"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 46
+            Result.Low = P.Vector(-339.987946, -14.076357, -472.853851)
+            Result.High = P.Vector(535.299988, 4712.000122, 472.853851)
+            Result.PartCount = 6
+            Result.SolidCount = 1
+            Result.CameraCount = 1
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 831
+            Result.Parts[1] = 843
+            Result.Parts[2] = 844
+            Result.Parts[3] = 874
+            Result.Parts[4] = 794
+            Result.Parts[5] = 925
+
+        Case 57
+            Result.Label = "Luma Crown Spire"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 47
+            Result.Low = P.Vector(-1640.000000, 0.000000, -1640.000000)
+            Result.High = P.Vector(1640.000000, 12531.999512, 1640.000000)
+            Result.PartCount = 5
+            Result.SolidCount = 1
+            Result.CameraCount = 1
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 808
+            Result.Parts[1] = 848
+            Result.Parts[2] = 903
+            Result.Parts[3] = 926
+            Result.Parts[4] = 927
+
+        Case 58
+            Result.Label = "Neris Tide Arcology"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 48
+            Result.Low = P.Vector(-1102.222519, 0.000000, -272.999992)
+            Result.High = P.Vector(1102.222519, 4300.000000, 272.999992)
+            Result.PartCount = 3
+            Result.SolidCount = 2
+            Result.CameraCount = 2
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 807
+            Result.Parts[1] = 610
+            Result.Parts[2] = 814
+
+        Case 59
+            Result.Label = "Starweave Civic Hall"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 49
+            Result.Low = P.Vector(-870.000000, 0.000000, -870.000000)
+            Result.High = P.Vector(870.000000, 1340.000000, 870.000000)
+            Result.PartCount = 4
+            Result.SolidCount = 1
+            Result.CameraCount = 1
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 659
+            Result.Parts[1] = 611
+            Result.Parts[2] = 879
+            Result.Parts[3] = 881
+
+        Case 60
+            Result.Label = "Aether Gate Observatory"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 50
+            Result.Low = P.Vector(-894.997330, -14.112897, -894.997330)
+            Result.High = P.Vector(894.997330, 3050.000000, 894.997330)
+            Result.PartCount = 3
+            Result.SolidCount = 1
+            Result.CameraCount = 1
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 690
+            Result.Parts[1] = 827
+            Result.Parts[2] = 849
+
+        Case 61
+            Result.Label = "Cloud Forest"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 51
+            Result.Low = P.Vector(-430.622673, 0.000000, -756.500015)
+            Result.High = P.Vector(430.622673, 605.606766, 751.306763)
+            Result.PartCount = 4
+            Result.SolidCount = 1
+            Result.CameraCount = 1
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 817
+            Result.Parts[1] = 833
+            Result.Parts[2] = 841
+            Result.Parts[3] = 952
+
+        Case 62
+            Result.Label = "Flower Dome"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 52
+            Result.Low = P.Vector(-555.604019, 0.000000, -906.500015)
+            Result.High = P.Vector(555.604019, 405.623398, 900.943146)
+            Result.PartCount = 4
+            Result.SolidCount = 1
+            Result.CameraCount = 1
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 818
+            Result.Parts[1] = 834
+            Result.Parts[2] = 842
+            Result.Parts[3] = 953
+
+        Case 63
+            Result.Label = "Supertree Grove"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 53
+            Result.Low = P.Vector(-837.483978, 0.000000, -837.483978)
+            Result.High = P.Vector(837.483978, 462.496147, 837.483978)
+            Result.PartCount = 4
+            Result.SolidCount = 9
+            Result.CameraCount = 9
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 835
+            Result.Parts[1] = 836
+            Result.Parts[2] = 837
+            Result.Parts[3] = 855
+
+        Case 64
+            Result.Label = "Golden Gate Bridge"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 54
+            Result.Low = P.Vector(-3255.191650, -15.880001, -250.000000)
+            Result.High = P.Vector(3255.191650, 1100.000000, 250.000000)
+            Result.PartCount = 4
+            Result.SolidCount = 4
+            Result.CameraCount = 4
+            Result.StepCount = 0
+            Result.FloorCount = 1
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 826
+            Result.Parts[1] = 839
+            Result.Parts[2] = 934
+            Result.Parts[3] = 954
+
+        Case 65
+            Result.Label = "Millau Viaduct"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 55
+            Result.Low = P.Vector(-3261.967773, -15.880001, -225.411930)
+            Result.High = P.Vector(3261.967773, 945.406799, 225.411930)
+            Result.PartCount = 5
+            Result.SolidCount = 5
+            Result.CameraCount = 5
+            Result.StepCount = 0
+            Result.FloorCount = 1
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 828
+            Result.Parts[1] = 882
+            Result.Parts[2] = 935
+            Result.Parts[3] = 936
+            Result.Parts[4] = 955
+
+        Case 66
+            Result.Label = "Beipanjiang Bridge"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 56
+            Result.Low = P.Vector(-3250.000000, -15.880001, -225.411930)
+            Result.High = P.Vector(3250.000000, 945.406799, 225.411930)
+            Result.PartCount = 5
+            Result.SolidCount = 2
+            Result.CameraCount = 2
+            Result.StepCount = 0
+            Result.FloorCount = 1
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 675
+            Result.Parts[1] = 908
+            Result.Parts[2] = 937
+            Result.Parts[3] = 938
+            Result.Parts[4] = 956
+
+        Case 67
+            Result.Label = "Ada Bridge"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 57
+            Result.Low = P.Vector(-3250.000000, -15.880001, -205.000000)
+            Result.High = P.Vector(3250.000000, 1404.120026, 205.000000)
+            Result.PartCount = 4
+            Result.SolidCount = 1
+            Result.CameraCount = 1
+            Result.StepCount = 0
+            Result.FloorCount = 1
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 867
+            Result.Parts[1] = 904
+            Result.Parts[2] = 939
+            Result.Parts[3] = 957
+
+        Case 68
+            Result.Label = "Neighborhood 0"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 58
+            Result.Low = P.Vector(-490.918846, 0.000000, -473.499985)
+            Result.High = P.Vector(490.918846, 490.000000, 473.499985)
+            Result.PartCount = 5
+            Result.SolidCount = 2
+            Result.CameraCount = 2
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 804
+            Result.Parts[1] = 851
+            Result.Parts[2] = 884
+            Result.Parts[3] = 885
+            Result.Parts[4] = 940
+
+        Case 69
+            Result.Label = "Neighborhood 1"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 59
+            Result.Low = P.Vector(-470.000000, 0.000000, -485.000000)
+            Result.High = P.Vector(470.000000, 744.000015, 405.000000)
+            Result.PartCount = 5
+            Result.SolidCount = 7
+            Result.CameraCount = 7
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 788
+            Result.Parts[1] = 869
+            Result.Parts[2] = 887
+            Result.Parts[3] = 888
+            Result.Parts[4] = 889
+
+        Case 70
+            Result.Label = "Neighborhood 2"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 60
+            Result.Low = P.Vector(-475.000000, 0.000000, -445.000000)
+            Result.High = P.Vector(475.000000, 1050.000000, 445.000000)
+            Result.PartCount = 5
+            Result.SolidCount = 7
+            Result.CameraCount = 7
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 753
+            Result.Parts[1] = 862
+            Result.Parts[2] = 876
+            Result.Parts[3] = 890
+            Result.Parts[4] = 928
+
+        Case 71
+            Result.Label = "Neighborhood 3"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 61
+            Result.Low = P.Vector(-480.000000, 0.000000, -440.000000)
+            Result.High = P.Vector(470.000000, 644.000015, 350.000000)
+            Result.PartCount = 5
+            Result.SolidCount = 3
+            Result.CameraCount = 3
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 787
+            Result.Parts[1] = 816
+            Result.Parts[2] = 872
+            Result.Parts[3] = 941
+            Result.Parts[4] = 942
+
+        Case 72
+            Result.Label = "Neighborhood 4"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 62
+            Result.Low = P.Vector(-485.000000, 0.000000, -465.000000)
+            Result.High = P.Vector(485.000000, 544.000015, 465.000000)
+            Result.PartCount = 6
+            Result.SolidCount = 4
+            Result.CameraCount = 4
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 773
+            Result.Parts[1] = 857
+            Result.Parts[2] = 909
+            Result.Parts[3] = 910
+            Result.Parts[4] = 911
+            Result.Parts[5] = 958
+
+        Case 73
+            Result.Label = "Neighborhood 5"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 63
+            Result.Low = P.Vector(-561.934586, 0.000000, -467.500000)
+            Result.High = P.Vector(597.286377, 800.000000, 472.500000)
+            Result.PartCount = 6
+            Result.SolidCount = 3
+            Result.CameraCount = 3
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 786
+            Result.Parts[1] = 852
+            Result.Parts[2] = 929
+            Result.Parts[3] = 930
+            Result.Parts[4] = 943
+            Result.Parts[5] = 959
+
+        Case 74
+            Result.Label = "Neighborhood 6"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 64
+            Result.Low = P.Vector(-465.000000, -10.000000, -475.000000)
+            Result.High = P.Vector(465.000000, 715.000000, 475.000000)
+            Result.PartCount = 6
+            Result.SolidCount = 2
+            Result.CameraCount = 2
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 772
+            Result.Parts[1] = 757
+            Result.Parts[2] = 863
+            Result.Parts[3] = 864
+            Result.Parts[4] = 912
+            Result.Parts[5] = 944
+
+        Case 75
+            Result.Label = "Neighborhood 7"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 65
+            Result.Low = P.Vector(-470.000000, 0.000000, -460.000000)
+            Result.High = P.Vector(455.000000, 751.999969, 455.000000)
+            Result.PartCount = 6
+            Result.SolidCount = 4
+            Result.CameraCount = 4
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 790
+            Result.Parts[1] = 877
+            Result.Parts[2] = 913
+            Result.Parts[3] = 960
+            Result.Parts[4] = 961
+            Result.Parts[5] = 962
+
+        Case 76
+            Result.Label = "Neighborhood 8"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 66
+            Result.Low = P.Vector(-490.918846, 0.000000, -473.499985)
+            Result.High = P.Vector(490.918846, 590.000000, 473.499985)
+            Result.PartCount = 5
+            Result.SolidCount = 2
+            Result.CameraCount = 2
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 800
+            Result.Parts[1] = 853
+            Result.Parts[2] = 883
+            Result.Parts[3] = 886
+            Result.Parts[4] = 945
+
+        Case 77
+            Result.Label = "Neighborhood 9"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 67
+            Result.Low = P.Vector(-470.000000, 0.000000, -485.000000)
+            Result.High = P.Vector(470.000000, 744.000015, 405.000000)
+            Result.PartCount = 5
+            Result.SolidCount = 7
+            Result.CameraCount = 7
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 789
+            Result.Parts[1] = 870
+            Result.Parts[2] = 891
+            Result.Parts[3] = 892
+            Result.Parts[4] = 893
+
+        Case 78
+            Result.Label = "Neighborhood 10"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 68
+            Result.Low = P.Vector(-475.000000, 0.000000, -445.000000)
+            Result.High = P.Vector(475.000000, 1150.000000, 445.000000)
+            Result.PartCount = 6
+            Result.SolidCount = 7
+            Result.CameraCount = 7
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 752
+            Result.Parts[1] = 865
+            Result.Parts[2] = 894
+            Result.Parts[3] = 895
+            Result.Parts[4] = 896
+            Result.Parts[5] = 931
+
+        Case 79
+            Result.Label = "Neighborhood 11"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 69
+            Result.Low = P.Vector(-480.000000, 0.000000, -440.000000)
+            Result.High = P.Vector(470.000000, 794.000015, 350.000000)
+            Result.PartCount = 6
+            Result.SolidCount = 3
+            Result.CameraCount = 3
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 756
+            Result.Parts[1] = 774
+            Result.Parts[2] = 873
+            Result.Parts[3] = 946
+            Result.Parts[4] = 963
+            Result.Parts[5] = 964
+
+        Case 80
+            Result.Label = "Neighborhood 12"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 70
+            Result.Low = P.Vector(-485.000000, 0.000000, -465.000000)
+            Result.High = P.Vector(485.000000, 544.000015, 465.000000)
+            Result.PartCount = 6
+            Result.SolidCount = 4
+            Result.CameraCount = 4
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 784
+            Result.Parts[1] = 858
+            Result.Parts[2] = 914
+            Result.Parts[3] = 915
+            Result.Parts[4] = 916
+            Result.Parts[5] = 965
+
+        Case 81
+            Result.Label = "Neighborhood 13"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 71
+            Result.Low = P.Vector(-561.934586, 0.000000, -467.500000)
+            Result.High = P.Vector(597.286377, 1000.000000, 472.500000)
+            Result.PartCount = 5
+            Result.SolidCount = 3
+            Result.CameraCount = 3
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 771
+            Result.Parts[1] = 854
+            Result.Parts[2] = 905
+            Result.Parts[3] = 932
+            Result.Parts[4] = 966
+
+        Case 82
+            Result.Label = "Neighborhood 14"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 72
+            Result.Low = P.Vector(-465.000000, -10.000000, -475.000000)
+            Result.High = P.Vector(465.000000, 815.000000, 475.000000)
+            Result.PartCount = 6
+            Result.SolidCount = 2
+            Result.CameraCount = 2
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 755
+            Result.Parts[1] = 793
+            Result.Parts[2] = 859
+            Result.Parts[3] = 860
+            Result.Parts[4] = 917
+            Result.Parts[5] = 947
+
+        Case 83
+            Result.Label = "Neighborhood 15"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 73
+            Result.Low = P.Vector(-470.000000, 0.000000, -460.000000)
+            Result.High = P.Vector(455.000000, 751.999969, 455.000000)
+            Result.PartCount = 7
+            Result.SolidCount = 4
+            Result.CameraCount = 4
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 791
+            Result.Parts[1] = 880
+            Result.Parts[2] = 918
+            Result.Parts[3] = 933
+            Result.Parts[4] = 967
+            Result.Parts[5] = 968
+            Result.Parts[6] = 969
+
+        Case 84
+            Result.Label = "Park Grove 4"
+            Result.Category = 3
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 74
+            Result.Low = P.Vector(-515.795059, -1.704104, -513.453751)
+            Result.High = P.Vector(521.427994, 232.609196, 531.510620)
+            Result.PartCount = 8
+            Result.SolidCount = 7
+            Result.CameraCount = 7
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 673
+            Result.Parts[1] = 688
+            Result.Parts[2] = 689
+            Result.Parts[3] = 704
+            Result.Parts[4] = 736
+            Result.Parts[5] = 737
+            Result.Parts[6] = 738
+            Result.Parts[7] = 805
+
+        Case 85
+            Result.Label = "Park Grove 7"
+            Result.Category = 3
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 75
+            Result.Low = P.Vector(-271.051102, -1.490211, -114.180717)
+            Result.High = P.Vector(274.349899, 203.217888, 94.261637)
+            Result.PartCount = 4
+            Result.SolidCount = 2
+            Result.CameraCount = 2
+            Result.StepCount = 0
+            Result.FloorCount = 0
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 721
+            Result.Parts[1] = 754
+            Result.Parts[2] = 769
+            Result.Parts[3] = 806
+
+        Case 86
+            Result.Label = "Neris Sphere"
+            Result.Category = 1
+            Result.PaletteVisible = True
+            Result.PreviewIndex = 76
+            Result.Low = P.Vector(-1920.000000, 0.000000, -1920.000000)
+            Result.High = P.Vector(1920.000000, 2700.000000, 1920.000000)
+            Result.PartCount = 17
+            Result.SolidCount = 1
+            Result.CameraCount = 1
+            Result.StepCount = 0
+            Result.FloorCount = 1
+            Result.DoorCount = 0
+            Result.WaterCount = 0
+            Result.Parts[0] = 642
+            Result.Parts[1] = 658
+            Result.Parts[2] = 674
+            Result.Parts[3] = 706
+            Result.Parts[4] = 792
+            Result.Parts[5] = 819
+            Result.Parts[6] = 821
+            Result.Parts[7] = 822
+            Result.Parts[8] = 823
+            Result.Parts[9] = 813
+            Result.Parts[10] = 824
+            Result.Parts[11] = 825
+            Result.Parts[12] = 775
+            Result.Parts[13] = 643
+            Result.Parts[14] = 856
+            Result.Parts[15] = 897
+            Result.Parts[16] = 898
 
     End Select
 
@@ -4618,6 +5562,37 @@ Public Function InitialItem(Index As Number) As Document.Item
             Result.Yaw = -0.000000
 
     End Select
+
+    Return Result
+
+End Function
+
+''' Palette defaults are independent of whether a template occurs in the original town.
+Public Function PlacementSample(TemplateIndex As Number) As Document.Item
+
+    Dim Result As Document.Item
+    Dim Shape As Template
+    Dim Index As Number
+
+    For Index = 0 To INITIAL_ITEMS - 1
+
+        Result = InitialItem(Index)
+
+        If Result.Template = TemplateIndex Then
+            Return Result
+        End If
+
+    End For
+
+    Shape = TemplateAt(TemplateIndex)
+    Result.Template = TemplateIndex
+    Result.Category = Shape.Category
+    Result.SourceIndex = -1
+    Result.Identity = 0
+    Result.Active = Shape.PartCount > 0
+    Result.Position = P.Vector(0.0, 21.0, 0.0)
+    Result.Scale = P.Vector(1000.0, 1000.0, 1000.0)
+    Result.Yaw = 0.0
 
     Return Result
 

@@ -1,9 +1,9 @@
-''' Linked-world authoring data: up to sixteen saved town references and their routes.
+''' Linked-world authoring data: up to seventeen saved town references and their routes.
 Module Smile.Tools.TownWorldDocument
 
 Option Explicit
 
-Public Const MAX_NODES = 16
+Public Const MAX_NODES = 17
 Public Const MAX_COORDINATE = 10000
 
 Public Type Node
@@ -14,10 +14,10 @@ End Type
 
 Public Type State
     Name As Text
-    Nodes[16] As Node
+    Nodes[17] As Node
     NodeCount As Number
-    Links[16, 16] As Boolean
-    Ports[16, 16] As Number
+    Links[17, 17] As Boolean
+    Ports[17, 17] As Number
 End Type
 
 Private Dim Bytes[8192] As Number

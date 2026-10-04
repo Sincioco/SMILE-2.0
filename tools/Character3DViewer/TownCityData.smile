@@ -1,0 +1,135 @@
+''' Generated catalog part classifications; Studio owns effects and timing.
+Module Smile.Tools.TownCityData
+
+Option Explicit
+
+Public Function Kind(Slot As Number) As Number
+
+    Select Case Slot
+        Case 660
+            Return 1
+        Case 690
+            Return 1
+        Case 802
+            Return 1
+        Case 833
+            Return 1
+        Case 834
+            Return 1
+        Case 866
+            Return 1
+        Case 875
+            Return 1
+        Case 659
+            Return 2
+        Case 708
+            Return 2
+        Case 845
+            Return 2
+        Case 920
+            Return 2
+        Case 776
+            Return 3
+        Case 844
+            Return 3
+        Case 723
+            Return 4
+        Case 807
+            Return 4
+        Case 850
+            Return 4
+        Case 907
+            Return 4
+        Case 707
+            Return 5
+        Case 812
+            Return 5
+        Case 878
+            Return 5
+        Case 906
+            Return 5
+        Case 752
+            Return 7
+        Case 753
+            Return 7
+        Case 755
+            Return 7
+        Case 756
+            Return 7
+        Case 771
+            Return 7
+        Case 772
+            Return 7
+        Case 773
+            Return 7
+        Case 784
+            Return 7
+        Case 786
+            Return 7
+        Case 787
+            Return 7
+        Case 788
+            Return 7
+        Case 789
+            Return 7
+        Case 790
+            Return 7
+        Case 791
+            Return 7
+        Case 800
+            Return 7
+        Case 804
+            Return 7
+        Case 897
+            Return 7
+        Case 692
+            Return 9
+        Case 758
+            Return 9
+        Case 899
+            Return 9
+        Case 919
+            Return 9
+        Case 921
+            Return 9
+        Case 922
+            Return 9
+        Case 923
+            Return 9
+        Case 924
+            Return 9
+        Case 925
+            Return 9
+        Case 927
+            Return 9
+        Case 706
+            Return 20
+        Case 658
+            Return 21
+        Case 642
+            Return 22
+        Case 674
+            Return 23
+        Case 792
+            Return 24
+        Case 821
+            Return 25
+        Case 823
+            Return 26
+        Case 824
+            Return 27
+        Case 825
+            Return 28
+        Case 813
+            Return 29
+        Case 822
+            Return 30
+        Case 819
+            Return 31
+    End Select
+
+    Return 0
+
+End Function
+
+End Module

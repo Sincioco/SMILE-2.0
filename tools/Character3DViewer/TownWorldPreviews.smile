@@ -12,7 +12,7 @@ Import Smile.Tools.TownDocumentStore As Store
 Import Smile.Tools.TownDerivedCache As Cache
 
 Public Type State
-    Names[16] As Text
+    Names[17] As Text
 End Type
 
 Private Type Photograph
@@ -23,7 +23,7 @@ Private Type Photograph
     InputKey As Text
 End Type
 
-Private Dim Photos[16] As Photograph
+Private Dim Photos[17] As Photograph
 Private Dim PendingSlot As Number
 Private Dim PendingName As Text
 Private Dim PendingRevision As Number
@@ -37,7 +37,7 @@ Private Function Find(Name As Text) As Number
 
     Dim Index As Number
 
-    For Index = 0 To 15
+    For Index = 0 To 16
 
         If Photos[Index].Name = Name Then
             Return Index
@@ -61,7 +61,7 @@ Private Function SlotFor(Name As Text) As Number
     If Slot < 0 Then
 
         Slot = NextSlot
-        NextSlot = (NextSlot + 1) Mod 16
+        NextSlot = (NextSlot + 1) Mod 17
 
         Call G.ReleaseViewportCapture3D(Photos[Slot].Handle)
 
@@ -346,7 +346,7 @@ Public Sub Destroy()
 
     Dim Index As Number
 
-    For Index = 0 To 15
+    For Index = 0 To 16
         Call G.ReleaseViewportCapture3D(Photos[Index].Handle)
 
         Photos[Index].Handle = 0

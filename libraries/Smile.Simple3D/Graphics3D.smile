@@ -145,6 +145,7 @@ Private Const COMMAND_REPLAY_VIEWPORT = 137
 Private Const COMMAND_CAPTURE_VIEWPORT = 138
 Private Const COMMAND_DRAW_VIEWPORT_CAPTURE = 139
 Private Const COMMAND_RELEASE_VIEWPORT_CAPTURE = 140
+Private Const COMMAND_SET_PROCEDURAL_DISPLAY = 141
 
 Public Const MATERIAL_INSPECTION_LIT = 0
 Public Const MATERIAL_INSPECTION_BASE_COLOR = 1
@@ -2894,6 +2895,20 @@ Public Function SetPbrMaterialEmissive3D(
     If Result Then
         Material.EmissivePercent = Max(RedPercent, Max(GreenPercent, BluePercent))
     End If
+
+    Return Result
+
+End Function
+
+''' Native emissive animation in mesh-local coordinates. Brightness zero restores normal PBR.
+Public Function SetProceduralDisplay3D(ByRef Material As Core.Material3D,
+    TimeMilliseconds As Number, Seed As Number, CenterX As Number, CenterY As Number,
+    CenterZ As Number, Radius As Number, Optional BrightnessPercent As Number = 100) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Dispatch(COMMAND_SET_PROCEDURAL_DISPLAY, Material.Handle, TimeMilliseconds,
+        Seed, CenterX, CenterY, CenterZ, Radius, BrightnessPercent, 0, 0) <> 0
 
     Return Result
 

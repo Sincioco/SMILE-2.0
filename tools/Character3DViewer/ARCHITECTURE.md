@@ -1,5 +1,55 @@
 # Character Viewer Architecture
 
+
+## October 4 Neris Metropolis native delivery
+
+The canonical package is `games/SinStarI/SourceAssets/Towns/Neris/NerisMetropolisV1`.
+Its README records source authority, the 6,400 m map, 47 appended templates,
+current user placements, export evidence and runtime presentation limitations.
+
+`TownCatalogRenderer` owns template GPU lifetime/admission. `TownCityLighting`
+owns shared facade overrides and nearest street lamps, delegating to focused
+`TownSphereDisplay`, `TownSpireLight`, `TownWaterfrontShow` and `TownCityTraffic`.
+`TownWaterAppearance` owns city night tint/reflection configuration. `TownLighting`
+fits shadow coverage to map bounds and the tallest building. The session and
+scene only wire these owners; NativeProgram is unchanged. Generated `TownCityData`
+contains slot classifications. Shared `Fireworks3D` owns caller-clocked particles.
+
+The native renderer resolves flat-water receivers in `reflection_receiver3d.h`
+and composes rippled scene captures in `water_surface3d.h`. The new reusable
+per-pixel material lives in `procedural_display3d.h`, exposed through Graphics3D
+command 141. No grammar, SM3D format or Web implementation changes were made.
+
+Demonstrated fixes include actual glass textures, separated water beds/bridge decks,
+camera-ray picking, new-template Place Copy, city-wide shadow coverage and Blender
+portable member names. A nighttime city-to-Neris transition reproduced exhausted
+particle staging. City effects now release after outgoing model instances; four
+firework sources reserve 2,304 particles. The shared 8,192 pool was not raised.
+Map/tab/queue/preview capacity increases from 16 to 17 for the actual added map.
+Original map storage keys, catalog IDs and fingerprint stay stable.
+
+Validation: latest-layout `metropolis-0cc136aaedb04f80963e7218806741c7` covers actual
+native draws/photos, all new template placements, drag cancellation, timing, four
+localized launch sites, four Sphere pattern frames, prepared town/PNG save/reopen,
+and real Neris Town travel/draw after night-city resource release. Native reflection
+regression `metropolis-reflection-8b4897ea54ab4b1ab2d9155aaa5625c6` passes. Blender
+round trip preserves 630 assemblies and 77,553 patches within 0.001211 native
+transform units. Production publication has 401 verified runtime assets.
+13 formatter integration checks and the 689-file repository style check pass.
+
+Two early export fixture runs hit a too-short 20-second deadline. A bounded
+120-second diagnostic completed preparation in about 30 seconds. The fixture now
+allows 60 seconds; production work remains cooperative with visible progress.
+No broad soak or Web validation was run. Persisted Blender MCP autostart is true
+in a fresh background process. Character calibration JSON remained unchanged.
+
+Growth review: catalog/features additions are generated data. Substantial behavior
+lives in the focused owners above; existing coordinators add delegation/lifetime
+and bounds logic. Extracting receivers reduces the native renderer's net size.
+No baseline, exclusion or architecture threshold changed. Existing oversized
+session/renderer owners remain legacy debt; no separate architecture checker
+exists, so direct dependency/diff review and focused native tests are the evidence.
+
 ## October 3 21:00 review handoff: R04 partial, R05/R06 repaired
 
 Reviewed baseline: `3feda1527fd1c61012fb0917673e0354c4eb1759`, matching the clean

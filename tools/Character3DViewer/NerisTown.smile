@@ -1423,7 +1423,7 @@ Public Sub Draw(ByRef Value As State)
         Return
     End If
 
-    FrameStarted = Arena.BeginFrame(Value.View, Value.BaseCamera, True, False)
+    FrameStarted = Arena.BeginFrame(Value.View, Value.BaseCamera, True, False, Not Value.Edited)
     Ok = FrameStarted And Ok
 
     If FrameStarted Then
@@ -1495,7 +1495,7 @@ Public Sub Overlay(ByRef Value As State)
     Draw Text Text_Slice(Authoring.TownName(), 0, 20) At 18, 12 Size 18 Color WHITE
     Draw Text "Speed: " + Numbers.NumberText(Value.People.SpeedPercent) + "%  (+ / -)" At 405, 18 Size 16 Color WHITE
 
-    Call SunControls.DrawDayNight(Authoring.IsNight(), Layout.ButtonLeft(1), Window_Height() - 38)
+    Call SunControls.DrawDayNight(Authoring.IsNight(), Layout.ButtonLeft(1), Layout.ButtonTop())
     Call Layout.DrawButton(2, Authoring.Editing())
 
     If Not Value.Ready Then

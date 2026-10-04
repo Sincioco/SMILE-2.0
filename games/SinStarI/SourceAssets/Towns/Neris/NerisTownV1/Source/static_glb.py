@@ -63,6 +63,7 @@ def write(path, batch):
         stone = bool(material.get('neris_stone_texture'))
         grass = bool(material.get('neris_grass_texture'))
         planar = material.get('neris_planar_color_texture')
+        facade = material.get('neris_facade_color_texture')
         bounds = material.get('neris_planar_bounds', (0,0,1,1))
         for triangle in triangles:
             for corner in triangle:
@@ -71,7 +72,10 @@ def write(path, batch):
                     p, n = corner
                     positions.extend((p[0], p[2], -p[1]))
                     repeat = 2.0 if grass else 1.8
-                    if planar:
+                    if facade:
+                        axis = 1 if abs(n[0]) > abs(n[1]) else 0
+                        uvs.extend((p[axis]/16, 1-p[2]/16))
+                    elif planar:
                         uvs.extend(((p[0]-bounds[0])/bounds[2], 1-(p[1]-bounds[1])/bounds[3]))
                     else:
                         uvs.extend((p[0]/repeat, p[1]/repeat) if stone or grass else (0.0,0.0))
@@ -92,6 +96,10 @@ def write(path, batch):
         attributes = {"POSITION": position, "NORMAL": accessor(normals, 3), "TANGENT": accessor(tangents, 4),
                       "TEXCOORD_0": accessor(uvs, 2)}
         document["materials"].append(material_json(material))
+        if facade:
+            pbr = document['materials'][-1]['pbrMetallicRoughness']
+            pbr['baseColorFactor'] = [1,1,1,1]
+            pbr['baseColorTexture'] = {'index': texture(Path(facade).name, 'color', facade)}
         if planar:
             document['materials'][-1]['pbrMetallicRoughness']['baseColorTexture'] = {
                 'index':texture(Path(planar).name,'color',planar)}

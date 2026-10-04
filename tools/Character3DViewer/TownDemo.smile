@@ -9,8 +9,8 @@ Public Const IDLE_INTERVAL = 120000
 Private Dim PreferenceByte[1] As Number
 
 Public Type Selection
-    Names[16] As Text
-    Enabled[16] As Boolean
+    Names[17] As Text
+    Enabled[17] As Boolean
     EntryCount As Number
 End Type
 
@@ -62,8 +62,8 @@ Private Function Find(ByRef Value As Selection, Name As Text) As Number
 
     End For
 
-    Index = Value.EntryCount Mod 16
-    Value.EntryCount = Min(16, Value.EntryCount + 1)
+    Index = Value.EntryCount Mod 17
+    Value.EntryCount = Min(17, Value.EntryCount + 1)
     Value.Names[Index] = Name
     Value.Enabled[Index] = DefaultIncluded(Name)
 

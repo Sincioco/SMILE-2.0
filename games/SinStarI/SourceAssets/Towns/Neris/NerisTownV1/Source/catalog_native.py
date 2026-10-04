@@ -60,7 +60,7 @@ def item_fields(item, indent):
             indent + f'Result.Yaw = {number(-math.degrees(item["rotation"][2]))}']
 
 
-def generate(catalog):
+def generate(catalog, include_initial_surface=True):
     fingerprint = catalog.get('document_fingerprint') or hashlib.sha256(json.dumps(catalog, sort_keys=True).encode('utf-8')).hexdigest()
     castle = json.loads((ROOT.parent / 'TripoCastleV1/Runtime/manifest.json').read_text(encoding='utf-8'))
     assert len(castle['chunks']) == 14 and all(p['parts'] == 2 for p in castle['chunks'])
@@ -70,6 +70,7 @@ def generate(catalog):
     count = len(catalog['chunks'])
     lines += [f'Public Const FINGERPRINT = "{fingerprint}"',
               f'Public Const CHUNK_COUNT = {count}',
+              f'Public Const BASE_CHUNK_COUNT = {catalog.get("base_chunk_count",count)}',
               f'Public Const TEMPLATE_COUNT = {len(catalog["templates"])}',
               f'Public Const INITIAL_ITEMS = {len(catalog["instances"])}', '',
               'Public Type Template', '    Label As Text', '    Category As Number',
@@ -115,7 +116,21 @@ def generate(catalog):
                   f'            Result.Template = {item["template"]}',
                   f'            Result.Category = {1 if template["category"] == "building" else 3}',
                   '            Result.Active = True', *item_fields(item, '            '), '']
-    lines += ['    End Select', '', '    Return Result', '', 'End Function', '', 'End Module', '']
+    lines += ['    End Select', '', '    Return Result', '', 'End Function', '',
+        "''' Palette defaults are independent of whether a template occurs in the original town.",
+        'Public Function PlacementSample(TemplateIndex As Number) As Document.Item', '',
+        '    Dim Result As Document.Item', '    Dim Shape As Template', '    Dim Index As Number', '',
+        '    For Index = 0 To INITIAL_ITEMS - 1', '',
+        '        Result = InitialItem(Index)', '',
+        '        If Result.Template = TemplateIndex Then', '            Return Result',
+        '        End If', '', '    End For', '',
+        '    Shape = TemplateAt(TemplateIndex)',
+        '    Result.Template = TemplateIndex', '    Result.Category = Shape.Category',
+        '    Result.SourceIndex = -1', '    Result.Identity = 0',
+        '    Result.Active = Shape.PartCount > 0',
+        '    Result.Position = P.Vector(0.0, 21.0, 0.0)',
+        '    Result.Scale = P.Vector(1000.0, 1000.0, 1000.0)', '    Result.Yaw = 0.0', '',
+        '    Return Result', '', 'End Function', '', 'End Module', '']
     lawns = []
     for model, chunk in enumerate(catalog['chunks']):
         raw = (ROOT / 'Authoring' / chunk['file']).read_bytes()
@@ -129,6 +144,9 @@ def generate(catalog):
         '    Result = ' + ' Or '.join('Slot = ' + str(n) for n in lawns), '',
         '    Return Result', '', 'End Function', '', 'End Module', '']
     (OUTPUT / 'TownCatalogData.smile').write_text('\n'.join(lines), encoding='utf-8')
+
+    if not include_initial_surface:
+        return
 
     terrain = catalog['terrain']
     west, south, east, north = terrain['bounds']

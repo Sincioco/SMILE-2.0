@@ -567,7 +567,7 @@ Public Function Command(ByRef Value As State, ByRef Town As Document.State, Acti
 
 End Function
 
-Private Sub PlaceCopy(ByRef Value As State, ByRef Town As Document.State)
+Public Sub PlaceCopy(ByRef Value As State, ByRef Town As Document.State)
 
     Dim Index As Number
     Dim Sample As Document.Item
@@ -582,16 +582,7 @@ Private Sub PlaceCopy(ByRef Value As State, ByRef Town As Document.State)
         Return
     End If
 
-    For Index = 0 To Catalog.INITIAL_ITEMS - 1
-
-        Sample = Catalog.InitialItem(Index)
-
-        If Sample.Template = Value.Ui.Template Then
-            Exit For
-        End If
-
-    End For
-
+    Sample = Catalog.PlacementSample(Value.Ui.Template)
     Index = Document.Place(Town, Sample, Value.Current.X, Value.Current.Z)
 
     If Index < 0 Then

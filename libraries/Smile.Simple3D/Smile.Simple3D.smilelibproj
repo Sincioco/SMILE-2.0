@@ -24,6 +24,7 @@
     <SmileSource Include="Effects3D.smile" />
     <SmileSource Include="AetherBlade3D.smile" />
     <SmileSource Include="FireEmitter3D.smile" />
+    <SmileSource Include="Fireworks3D.smile" />
     <SmileSource Include="LightningVfx3D.smile" />
     <SmileSource Include="WaterVfx3D.smile" />
     <SmileSource Include="EarthVfx3D.smile" />

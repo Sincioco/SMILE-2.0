@@ -57,6 +57,12 @@ Private Sub AddPatch(ByRef Value As State, X0 As Double, Z0 As Double,
         Return
     End If
 
+    ' A two-centimetre submerged gap loses depth precision in city-scale views.
+
+    If Kind = 6 And Plane = 0 Then
+        Y0 = WaterBedHeight(Y0, Value.Surface.CellSize)
+    End If
+
     If (Kind = Grid.SURFACE_WATER And
         Plane = 0 And
         Value.Detailed) Then
@@ -88,6 +94,17 @@ Private Sub AddPatch(ByRef Value As State, X0 As Double, Z0 As Double,
     Value.Buffer.PatchCount = Value.Buffer.PatchCount + 1
 
 End Sub
+
+''' Apply the same separation to fresh recipes and older cached flat water beds.
+Public Function WaterBedHeight(AuthoredHeight As Double, CellSize As Double) As Double
+
+    Dim Height As Double
+
+    Height = Min(AuthoredHeight, Layers.GROUND_Y - Max(2.0, CellSize * 0.25))
+
+    Return Height
+
+End Function
 
 Private Sub TrianglePatch(ByRef Value As State, PointA As P.Vector3,
     PointB As P.Vector3, PointC As P.Vector3, Kind As Number)

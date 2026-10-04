@@ -2,6 +2,22 @@
 
 `Smile.Simple3D.Graphics3D` exposes one reusable material system for every 3D application. Renderer3D remains unaware of battles, characters, and individual games. M2 adds a PBR-lite path beside the unchanged simple path; it does not replace Renderer2D, SM3D v1, simple materials, or skeletal animation.
 
+## Native procedural displays (October 4)
+
+`Graphics3D.SetProceduralDisplay3D(Material, TimeMilliseconds, Seed, CenterX,
+CenterY, CenterZ, Radius, BrightnessPercent = 100)` enables a smooth emissive
+pattern on an existing PBR material. Center/radius use mesh-local coordinates
+before instance scale. Seed is 0-65535, time is nonnegative, radius is 1-1,000,000,000
+and brightness is 0-400. Zero brightness disables the override. Invalid arguments
+fail without mutation. Native append-only command 141 uses the existing dispatch;
+unsupported backends return False. No grammar, format or resource pool is added.
+
+`procedural_display3d.h` owns four per-pixel pattern families, twelve-second seeded
+selection and two-second crossfades. Callers advance time once. Material snapshots
+retain that time in reflected/replayed draws. It has no city-specific logic,
+texture upload or mesh tessellation dependence. Four supplied times in the native
+Metropolis fixture produce distinct smooth Sphere photographs. Web adoption is paused.
+
 ## Native water effect material
 
 September 28 native appearance: water uses physical head-on Fresnel reflectance

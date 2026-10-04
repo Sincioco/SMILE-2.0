@@ -60,7 +60,7 @@ def mesh_data(patches):
             end_x, end_z = (x1, z0) if plane == 1 else (x0, z1) if plane == 2 else (x1, z1)
             points = [(x0, y0, z0), (x0, y1, z0), (end_x, y1, end_z), (end_x, y0, end_z)]
         else:
-            if y0 > 0:
+            if y0 > 0 or kind == 6:
                 height = y0
             points = [(x0, height, z0), (x0, height, z1), (x1, height, z1), (x1, height, z0)]
         base = len(vertices)

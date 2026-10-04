@@ -48,7 +48,7 @@ Public Type State
     Orthographic As Boolean
     GuideListOpen As Boolean
     HideGuides As Boolean
-    MapNames[16] As Text
+    MapNames[17] As Text
     MapCount As Number
 End Type
 

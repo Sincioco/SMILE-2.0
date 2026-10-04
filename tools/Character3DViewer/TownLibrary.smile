@@ -6,42 +6,44 @@ Option Explicit
 Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownDocumentStore As Storage
 
-Public Const PERMANENT_COUNT = 16
+Public Const PERMANENT_COUNT = 17
 
 Public Function PermanentName(Index As Number) As Text
 
     Select Case Index
         Case 0
-            Return "Neris Town"
+            Return "Neris Metropolis"
         Case 1
-            Return "Neris Spaceport"
+            Return "Neris Town"
         Case 2
-            Return "Horizon Airport"
+            Return "Neris Spaceport"
         Case 3
-            Return "Neris Canals"
+            Return "Horizon Airport"
         Case 4
-            Return "Neris Star Lake"
+            Return "Neris Canals"
         Case 5
-            Return "Neris Crown Isles"
+            Return "Neris Star Lake"
         Case 6
-            Return "East Valley"
+            Return "Neris Crown Isles"
         Case 7
-            Return "Orin's Village"
+            Return "East Valley"
         Case 8
-            Return "Neris Waterworks"
+            Return "Orin's Village"
         Case 9
-            Return "Verdant Reach"
+            Return "Neris Waterworks"
         Case 10
-            Return "Greyglass Pass"
+            Return "Verdant Reach"
         Case 11
-            Return "Sunglass Expanse"
+            Return "Greyglass Pass"
         Case 12
-            Return "Ancient Relay"
+            Return "Sunglass Expanse"
         Case 13
-            Return "Neris Relief Quarter"
+            Return "Ancient Relay"
         Case 14
-            Return "Willowstep Highlands"
+            Return "Neris Relief Quarter"
         Case 15
+            Return "Willowstep Highlands"
+        Case 16
             Return "Silverfall Basin"
     End Select
 
@@ -58,7 +60,7 @@ Public Function PermanentKey(Name As Text) As Text
         Return "TownEditor.PermanentNeris"
     End If
 
-    For Index = 1 To PERMANENT_COUNT - 1
+    For Index = 0 To PERMANENT_COUNT - 1
 
         If Name = PermanentName(Index) Then
             Key = "TownEditor.Permanent." + Name
@@ -123,6 +125,12 @@ End Function
 Public Function Recover(ByRef Town As Document.State) As Boolean
 
     Dim Ok As Boolean
+
+    Ok = RecoverNamed(Town, PermanentName(0))
+
+    If Ok Then
+        Return True
+    End If
 
     Ok = Storage.LoadDocument(Town, "TownEditor.PermanentNeris", True)
 

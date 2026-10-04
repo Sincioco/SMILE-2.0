@@ -72,7 +72,7 @@ Public Function Hovered(Index As Number) As Boolean
 
     Dim Result As Boolean
 
-    Result = UI.Contains(ButtonLeft(Index), Window_Height() - 38, Width(Index), 26)
+    Result = UI.Contains(ButtonLeft(Index), ButtonTop(), Width(Index), 26)
 
     Return Result
 
@@ -104,9 +104,19 @@ Public Sub DrawButton(Index As Number, Selected As Boolean)
 
     End If
 
-    Call UI.DrawButton(ButtonLeft(Index), Window_Height() - 38, Width(Index), 26, Caption, Selected)
+    Call UI.DrawButton(ButtonLeft(Index), ButtonTop(), Width(Index), 26, Caption, Selected)
 
 End Sub
+
+Public Function ButtonTop() As Number
+
+    Dim Y As Number
+
+    Y = Window_Height() - 43
+
+    Return Y
+
+End Function
 
 Public Sub DrawCountdown(Seconds As Number)
 

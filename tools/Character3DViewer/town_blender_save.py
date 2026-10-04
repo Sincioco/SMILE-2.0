@@ -13,6 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from town_document_codec import decode, unwrap, respond, key_path, atomic_write, require_blender_support
 from town_surface_layers import elevation
 from town_surface_decks import footprints, rail_parts
+from town_catalog import load_catalog, append_blender_templates
 
 ROOT = Path(__file__).resolve().parents[2]
 TOWN = ROOT / 'games/SinStarI/SourceAssets/Towns/Neris/NerisTownV1'
@@ -34,6 +35,8 @@ def source_matrix(source):
 
 
 def populate_items(document, catalog):
+    if catalog.get('base_template_count'):
+        append_blender_templates(catalog)
     if catalog.get('royal_detail_revision'):
         sys.path.insert(0, str(TOWN / 'Source'))
         from royal_castle_detail import apply
@@ -68,7 +71,8 @@ def populate_items(document, catalog):
             clone.parent = copies.get(original.parent, anchor)
             clone.matrix_world = delta @ original.matrix_world
             clone['town_identity'] = item['identity']
-            clone['town_member'] = original.name
+            # Blender may suffix appended object names; portable membership uses the template identity.
+            clone['town_member'] = original.get('metropolis_template', original.name)
             local = anchor.matrix_world.inverted() @ clone.matrix_world
             clone['town_local_matrix'] = [n for row in local for n in row]
     bpy.data.batch_remove(ids=list(originals.values()))
@@ -242,6 +246,47 @@ def lighting(document):
     obj.rotation_euler = (-direction).to_track_quat('-Z', 'Y').to_euler()
     world = bpy.context.scene.world
     world.node_tree.nodes['Background'].inputs['Strength'].default_value = ambient / 100
+    if any(item['template'] >= 40 for item in document['items']):
+        city_lighting(document, intensity)
+
+
+def city_lighting(document, intensity):
+    """Export the authored city lamps and landmark washes with the saved night state."""
+    night=max(0,min(1,(180-intensity)/180))
+    catalog=load_catalog()
+    for item in document['items']:
+        template=catalog['templates'][item['template']]
+        low,high=template['bounds']
+        if item['template']==15:
+            local=Vector((0,0,high[2]*.82))
+            color=(1,.843,.62)
+            energy=54000*night
+            radius=4
+        elif 40<=item['template']<=60:
+            local=Vector((low[0]-12,low[1]-12,high[2]*.18))
+            color=(.608,.784,1)
+            energy=65000*night
+            radius=15
+        else:
+            continue
+        data=bpy.data.lights.new('City Light %d'%item['identity'],'POINT')
+        data.color=color
+        data.energy=energy
+        data.shadow_soft_size=radius
+        obj=bpy.data.objects.new(data.name,data)
+        obj.location=item_matrix(item) @ local
+        obj['town_light_owner']=item['identity']
+        bpy.context.scene.collection.objects.link(obj)
+    for mat in bpy.data.materials:
+        if not mat.use_nodes or not mat.name.startswith('Metropolis '):
+            continue
+        node=mat.node_tree.nodes.get('Principled BSDF')
+        if node and mat.name.startswith('Metropolis Glass '):
+            node.inputs['Emission Color'].default_value=(3/255,7/255,12/255,1)
+            node.inputs['Emission Strength'].default_value=night
+        elif node and mat.name.startswith('Metropolis Window Blue'):
+            node.inputs['Emission Color'].default_value=(45/255,31/255,15/255,1)
+            node.inputs['Emission Strength'].default_value=night
 
 
 def destination(document, output_root):
@@ -259,7 +304,7 @@ def main():
     args = sys.argv[sys.argv.index('--')+1:]
     request, data_folder = map(Path, args[:2])
     output_root = Path(args[2]) if len(args) > 2 else TOWN
-    catalog = json.loads((TOWN / 'Authoring/catalog.json').read_text(encoding='utf-8'))
+    catalog = load_catalog()
     document = decode(unwrap(request.read_bytes()), catalog, request=True)
     rid = document['request_id']
     try:

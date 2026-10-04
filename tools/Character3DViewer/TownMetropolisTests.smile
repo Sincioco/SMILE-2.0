@@ -1,0 +1,577 @@
+''' Native regression checks for the demonstrated city material, depth and drag defects.
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Simple3D.Scene3D As Scene
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownDocumentStore As Store
+Import Smile.Tools.TownCatalogRenderer As Renderer
+Import Smile.Tools.TownCatalogFeatures As Features
+Import Smile.Tools.TownCityData As CityData
+Import Smile.Tools.TownSurfaceRenderer As Terrain
+Import Smile.Tools.TownTerrainBuilder As Builder
+Import Smile.Tools.TownCityLighting As City
+Import Smile.Tools.TownLighting As Lighting
+Import Smile.Tools.TownPicking As Picking
+Import Smile.Tools.TownSelection As Selection
+Import Smile.Tools.TownCityTraffic As Traffic
+Import Smile.Tools.TownEditor As Editor
+Import Smile.Tools.TownCatalogData As Catalog
+Import Smile.Tools.TownLibrary As Library
+Import Smile.Tools.TownTabs As Tabs
+Import Smile.Tools.TownWaterAppearance As WaterAppearance
+Import Smile.Tools.TownWaterfrontShow As Waterfront
+Import Smile.Tools.TownSphereDisplay As Sphere
+Import Smile.Simple3D.SurfaceGrid3D As Grid
+Import Smile.Tools.NerisTown As StudioTown
+Import Smile.Tools.TownEditorSession As Session
+Import Smile.Tools.TownWorldPreviews As Previews
+Import Smile.Tools.TownFileJobs As Files
+
+Dim Town As Document.State
+Dim Assets As Renderer.State
+Dim Ground As Terrain.State
+Dim Selected As Selection.State
+Dim View As P.Camera3D
+Dim Point As P.Vector3
+Dim Anchor As P.Vector3
+Dim Box As Features.Box
+Dim Index As Number
+Dim Part As Number
+Dim Style As Number
+Dim Frame As Number
+Dim Failures As Number
+Dim Deadline As Number
+Dim Capture As Number
+Dim Job As Number
+Dim Status As Number
+Dim Ok As Boolean
+Dim WasOn As Boolean
+Dim IsOn As Boolean
+Dim LastFlash As Number
+Dim FlashCount As Number
+Dim Different As Boolean
+Dim Flyovers As Traffic.State
+Dim Launches As Number
+Dim PlacementDraft As Document.State
+Dim PlacementControls As Editor.State
+Dim TestTabs As Tabs.State
+Dim StartupTown As Document.State
+Dim ShotName As Text
+Dim StudioScene As StudioTown.State
+Dim ExportJob As Files.State
+
+Game Window "Metropolis Native Regression" Size 1426 By 1025
+
+Ok = Store.LoadDocument(Town, "Metropolis.Fixture")
+
+Call Check(Ok And Town.ItemCount > 500, "Real Authored City Loads")
+Call CheckPlacement()
+Call CheckStartupOrder()
+Call Waterfront.Resolve(Assets.CityMaterials.Fireworks, Town)
+Call Check(Assets.CityMaterials.Fireworks.SourceCount = 4, "Four Localized Landmark And Lake Launch Sites Resolve")
+Call Check(Grid.ReadPoint(Town.Surface, Assets.CityMaterials.Fireworks.Sources[3].Origin.X,
+    Assets.CityMaterials.Fireworks.Sources[3].Origin.Z) = Grid.SURFACE_WATER And
+    Assets.CityMaterials.Fireworks.Sources[3].Origin.X < 0.0,
+    "Burj Fireworks Are Over Their Own Lake On The Opposite Side Of The City")
+Call Renderer.SyncDocument(Assets, Town)
+
+For Index = 0 To Assets.Required - 1
+    Call Renderer.LoadNext(Assets)
+End For
+
+Call Check(Not Assets.Failed, "City Catalog Geometry And Materials Load")
+
+For Index = 0 To Assets.Required - 1
+
+    For Part = 0 To Assets.Models[Index].PartCount - 1
+
+        Style = CityData.Kind(Index * 16 + Part)
+
+        If Style >= 1 And Style <= 6 Then
+            Call Check(Assets.CityMaterials.Textures[Style - 1].Handle <> 0 And
+                Assets.CityMaterials.Textures[Style - 1].MipLevels > 1,
+                "Every Used Glass Style Loads Its Real Filtered Texture")
+        End If
+
+    End For
+End For
+
+Call Check(Builder.WaterBedHeight(19.7, 250.0) < -40.0 And
+    Builder.WaterBedHeight(-80.0, 250.0) = -80.0,
+    "City Water Bed Separates From Water And Retains Deeper Beds")
+
+For Index = 64 To 67
+    Box = Features.FloorAt(Index, 0)
+
+    Call Check(Abs(Box.Height - 4.12) < 0.00001,
+        "Bridge Deck Has Twenty Centimetres Clearance Above Road Paint")
+End For
+
+View.Position = P.Vector(52000.0, 54000.0, -63000.0)
+View.Target = P.Vector(0.0, 23.12, 0.0)
+View.UpDirection = P.Vector(0.0, 1.0, 0.0)
+View.FovDegrees = 45.0
+View.NearPlane = 5400.0
+View.FarPlane = 250000.0
+Ok = Picking.Ground(View, 700, 450, 1400, 900, Anchor)
+Ok = Ok And M.Distance(Anchor, View.Target) < 0.0001
+Ok = Picking.Ground(View, 710, 450, 1400, 900, Point) And Ok
+
+Call Selection.SetCategory(Selected, 1)
+
+Ok = Selection.Add(Selected, Town, 0) And Ok
+
+Call Selection.BeginDrag(Selected, Town, Anchor)
+Call Selection.Drag(Selected, Town, Point)
+Call Check(Ok And M.Distance(Town.Items[0].Position, P.Vector(0.0, 21.0, 0.0)) > 1.0,
+    "Visible City Ground Starts And Moves A Building Drag")
+Call Selection.EndDrag(Selected, Town, True)
+Call Check(M.Distance(Town.Items[0].Position, P.Vector(0.0, 21.0, 0.0)) < 0.0001,
+    "Cancelling The Drag Restores Exact Placement")
+
+For Index = 1 To 12
+
+    LastFlash = -1
+    FlashCount = 0
+    WasOn = False
+
+    For Frame = 0 To 9000
+
+        IsOn = City.BeaconOn(Frame, Index)
+        Different = Different Or IsOn <> City.BeaconOn(Frame, Index + 1)
+
+        If IsOn And Not WasOn Then
+
+            If LastFlash >= 0 Then
+                Call Check(Frame - LastFlash >= 1000 And Frame - LastFlash <= 3000,
+                    "Independent Beacon Interval Stays Within One To Three Seconds")
+            End If
+
+            LastFlash = Frame
+            FlashCount = FlashCount + 1
+
+        End If
+
+        WasOn = IsOn
+    End For
+
+    Call Check(FlashCount >= 3, "Each Tower Continues Blinking")
+End For
+
+Call Check(Different, "Tower Beacons Do Not Share A Synchronized Clock Phase")
+
+For Index = 0 To 3
+    Call Traffic.Update(Flyovers, Town, 0)
+End For
+
+Call Check(Flyovers.Assets.Ready, "The Actual Spaceport Craft Load For City Flyovers")
+
+For Frame = 0 To 450
+
+    Call Traffic.Update(Flyovers, Town, 100)
+    Call Check(Flyovers.ShipCount >= 0 And Flyovers.ShipCount <= 2, "At Most Two Craft Cross The City")
+
+    If Flyovers.ShipCount > 0 And Flyovers.Clock = 0 Then
+
+        Launches = Launches + 1
+
+        Call Check(Flyovers.Interval >= 5000 And Flyovers.Interval <= 15000,
+            "Flyovers Are Scheduled Five To Fifteen Seconds Apart")
+        Call Check(Flyovers.Starts[0].Y > 11000.0, "Craft Clear The Tallest City Landmark")
+
+    End If
+
+End For
+
+Call Check(Launches >= 3, "City Flyovers Continue After The First Group")
+
+Ok = Terrain.Create(Ground)
+
+Call Terrain.BeginBuild(Ground, Town)
+
+Deadline = Timer() + 20000
+
+Do
+
+    Call Terrain.Update(Ground, 16)
+
+    Show Screen
+
+Loop Until Ground.Stage = 0 Or Ground.Failed Or Timer() >= Deadline
+
+Call Check(Ok And Ground.Stage = 0 And Not Ground.Failed, "Real City Terrain Builds Within Bound")
+
+For Frame = 0 To 11
+
+    View.Position = P.Vector(50000.0 - ToDouble(Frame) * 450.0, 6000.0, -34000.0)
+    View.Target = P.Vector(0.0, 20.0, 0.0)
+
+    If Frame = 2 Then
+        View.Position = P.Vector(10000.0, 9500.0, -18000.0)
+        View.Target = P.Vector(0.0, 6200.0, 0.0)
+    End If
+
+    If Frame >= 3 And Frame <= 6 Then
+
+        For Index = 0 To Town.ItemCount - 1
+
+            If Town.Items[Index].Template = 61 + Frame Then
+                View.Target = Town.Items[Index].Position
+                View.Position = P.Vector(View.Target.X * 1.5 + 3500.0,
+                    View.Target.Y + 3000.0, View.Target.Z * 1.5 + 3500.0)
+            End If
+
+        End For
+
+    End If
+
+    If Frame = 7 Then
+
+        Town.Light = Town.Presets.Night
+        View.Position = P.Vector(25000.0, 16000.0, -33000.0)
+        View.Target = P.Vector(0.0, 3500.0, 0.0)
+
+    Else If Frame = 8 Then
+
+        Town.Light = Town.Presets.Day
+
+        For Index = 0 To Town.ItemCount - 1
+
+            If Town.Items[Index].Template = 43 Then
+                View.Target = M.Add(Town.Items[Index].Position, P.Vector(0.0, 3750.0, 0.0))
+                View.Position = M.Add(View.Target, P.Vector(3000.0, 1800.0, -5500.0))
+            End If
+
+        End For
+
+    End If
+
+    ShotName = "city-depth-" + Text_From_Code(48 + Frame)
+
+    If Frame = 9 Then
+
+        Town.Light = Town.Presets.Night
+        View.Position = P.Vector(29000.0, 4600.0, -29000.0)
+        View.Target = P.Vector(17700.0, 2200.0, -13600.0)
+        ShotName = "waterfront-night"
+
+    Else If Frame = 10 Or Frame = 11 Then
+
+        Town.Light = Town.Presets.Day
+
+        For Index = 0 To Town.ItemCount - 1
+
+            If ((Frame = 10 And Town.Items[Index].Template = 50) Or
+                (Frame = 11 And Town.Items[Index].Template = 86)) Then
+                View.Target = M.Add(Town.Items[Index].Position, P.Vector(0.0, 1700.0, 0.0))
+                View.Position = M.Add(View.Target, P.Vector(6000.0, 1400.0, -8000.0))
+            End If
+
+        End For
+
+        ShotName = "world-trade-center"
+
+        If Frame = 11 Then
+            ShotName = "neris-sphere"
+        End If
+
+    End If
+
+    View.NearPlane = 500.0
+    Ok = G.SetViewport3D(0, 0, 640, 384, True)
+    Ok = Lighting.Apply(Town.Light) And Ok
+    Ok = Lighting.ConfigureBounds(Town) And Ok
+    Ok = WaterAppearance.Configure(Town, Town.Light.Intensity) And Ok
+    Ok = Scene.BeginPrecise(View, 12, 20, 32) And Ok
+    Ok = Lighting.ApplyLocal(Town) And Ok
+    Ok = Terrain.Draw(Ground, Town.Light.Intensity) And Ok
+    Ok = Renderer.Draw(Assets, Town) And Ok
+    Ok = Traffic.Draw(Flyovers) And Ok
+    Ok = Scene.EndScene() And Ok
+
+    Call Check(Ok, "Native Oblique City Draw Succeeds")
+
+    If Frame = 7 Then
+
+        Call Check(G.ReflectionValue3D(G.REFLECTION_QUERY_EFFECTIVE) = 1,
+            "Water Receives Native Planar Scene And VFX Reflection")
+        Call Check(Assets.CityMaterials.Beam.PointCount = 363, "Night Spire Beam Is Continuous And Bounded")
+        Call Check(Assets.CityMaterials.Fireworks.Display.Particles.Capacity = 2304,
+            "Waterfront Display Leaves Particle Capacity For Other Scene Effects")
+
+    End If
+
+    Capture = G.CaptureViewport3D()
+
+    Call Check(Capture > 0, "Native Photograph Captures A Bounded Viewport")
+
+    Job = G.ExportViewportCapturePng3D(Capture,
+        "@EVIDENCE@\" + ShotName + ".png")
+    Deadline = Timer() + 5000
+
+    Do
+        Status = Data_FileStatus(Job)
+        Show Screen
+
+    Loop Until Status <> 0 Or Timer() >= Deadline
+
+    Call Check(Job > 0 And Status = 1, "Native Depth Review Photograph Written")
+    Call G.ReleaseViewportCapture3D(Capture)
+    Call G.ResetViewport3D()
+    Call Terrain.Update(Ground, 1200)
+End For
+
+Ok = Scene.BeginPrecise(View, 12, 20, 32)
+Ok = Waterfront.Draw(Assets.CityMaterials.Fireworks, Town, 1.0, 2000) And Ok
+Ok = Scene.EndScene() And Ok
+
+Call Check(Ok And Assets.CityMaterials.Fireworks.Display.ParticleCount > 0,
+    "Localized Night Fireworks Submit Particles At A Known Burst Time")
+
+Show Screen
+
+Call CheckDisplayPatterns()
+Call CheckSaveRoundTrip()
+
+Call Terrain.Destroy(Ground)
+Call Renderer.Destroy(Assets)
+Call Traffic.Destroy(Flyovers)
+Call Check(G.LiveMeshCount3D() = 0 And G.LiveMaterialCount3D() = 0,
+    "City Renderer Releases Its Owned Resources")
+
+Call StudioTown.Start(StudioScene)
+
+Deadline = Timer() + 20000
+
+Do
+
+    Call StudioTown.LoadNext(StudioScene)
+
+    Show Screen
+
+Loop Until StudioScene.Ready Or StudioScene.Failed Or Timer() > Deadline
+
+Call Check(StudioScene.Ready And Not StudioScene.Failed, "Complete Studio Town And Party Load")
+
+If StudioScene.Ready Then
+
+    If Not Session.IsNight() Then
+        Call Session.ToggleDayNight()
+    End If
+
+    For Frame = 0 To 2
+        Call StudioTown.Update(StudioScene, 16)
+        Call StudioTown.Draw(StudioScene)
+        Call Check(Not StudioScene.Failed, "Complete Studio Frame Including Thumbnail And Party")
+
+        Show Screen
+    End For
+
+    Ok = Session.TravelTo("Neris Town", P.Vector(0.0, 0.0, -2780.0))
+    Deadline = Timer() + 20000
+
+    Do
+
+        Call StudioTown.Update(StudioScene, 16)
+
+        Show Screen
+
+    Loop Until ((StudioScene.LoadingTown = "Neris Town" And StudioScene.Ready) Or
+
+        StudioScene.Failed Or Timer() > Deadline)
+
+    Call Check(Ok And StudioScene.Ready And Not StudioScene.Failed,
+        "Night City To Real Neris Town Releases City Effects For Castle Resources")
+
+    If StudioScene.Ready Then
+
+        Call StudioTown.Draw(StudioScene)
+        Call Check(Not StudioScene.Failed, "Neris Town Draws After Night City Transition")
+
+        Show Screen
+
+    End If
+
+End If
+
+Call StudioTown.Destroy(StudioScene)
+
+If Failures = 0 Then
+    Print "PASS Metropolis Native Regression"
+End If
+
+Sub Check(Accepted As Boolean, Label As Text)
+
+    If Not Accepted Then
+        Failures = Failures + 1
+        Print "FAIL " + Label
+    End If
+
+End Sub
+
+Sub CheckSaveRoundTrip()
+
+    Dim Opened As Boolean
+    Dim Completed As Boolean
+    Dim Request As Number
+    Dim SavedPath As Text
+
+    SavedPath = "@EVIDENCE@\Neris Metropolis.town"
+    Ok = Store.LoadDocument(Town, "Metropolis.Fixture")
+    Ok = Lighting.Apply(Town.Light) And Ok
+    Ok = WaterAppearance.Configure(Town, Town.Light.Intensity) And Ok
+
+    Call Previews.Refresh(Town.Name)
+
+    If Previews.Begin(Town) Then
+
+        Ok = Terrain.Draw(Ground, Town.Light.Intensity) And Ok
+        Ok = Renderer.Draw(Assets, Town) And Ok
+
+        Call Previews.Finish(Ok)
+
+    Else
+        Ok = False
+
+    End If
+
+    Ok = Files.Queue(ExportJob, Town, Files.SAVE_VIEWER, SavedPath, False, True) And Ok
+    ExportJob.SuppressReveal = True
+    Deadline = Timer() + @EXPORT_TIMEOUT@
+
+    Do
+        Completed = Files.Update(ExportJob, Town, 16)
+        Show Screen
+
+    Loop Until ExportJob.RequestId = 0 Or ExportJob.Failed Or Timer() > Deadline
+
+    Call Check(Ok And Not ExportJob.Failed And ExportJob.RequestId = 0 And
+        ExportJob.SavingPng, "Native Editor Saves Prepared Town And Matching PNG")
+
+    If (Not Ok Or
+        ExportJob.Failed Or
+        ExportJob.RequestId <> 0) Then
+
+        Print "Export Diagnostic: " + ExportJob.Message
+        Print "Preparation Stage / Row / Road Cursor / Progress"
+        Print ExportJob.Preparation.Stage
+        Print ExportJob.Preparation.Recipe.Row
+        Print ExportJob.Preparation.Roads.WarmCursor
+        Print ExportJob.Progress
+        Return
+
+    End If
+
+    Ok = Files.Queue(ExportJob, Town, Files.OPEN_VIEWER, SavedPath, False)
+    ExportJob.SuppressReveal = True
+    Request = ExportJob.RequestId
+    Deadline = Timer() + 10000
+
+    Do
+        Opened = Files.Update(ExportJob, Town, 16)
+        Show Screen
+
+    Loop Until ExportJob.RequestId = 0 Or ExportJob.Failed Or Timer() > Deadline
+
+    Call Check(Ok And Opened And Not ExportJob.Failed And
+        Store.MatchesDocument(Town, Files.OpenedKey(Request)),
+        "Native Editor Reopens Its Town With Identical Document Content")
+
+    If (Not Ok Or
+        Not Opened Or
+        ExportJob.Failed) Then
+        Print "Import Diagnostic: " + ExportJob.Message
+    End If
+
+End Sub
+
+Sub CheckStartupOrder()
+
+    Dim Saved As Boolean
+
+    Saved = Store.LoadDocument(StartupTown, "Neris.Fixture")
+    Saved = Store.SaveDocument(StartupTown, Library.PermanentKey(StartupTown.Name)) And Saved
+    StartupTown = Town
+    Saved = Store.SaveDocument(StartupTown, Library.PermanentKey(StartupTown.Name)) And Saved
+    Saved = Library.Recover(StartupTown) And Saved
+
+    Call Tabs.Ensure(TestTabs, StartupTown)
+    Call Check(Saved And StartupTown.Name = "Neris Metropolis" And
+        TestTabs.Active = 0 And TestTabs.Documents[0].Name = "Neris Metropolis" And
+        TestTabs.Documents[1].Name = "Neris Town",
+        "Startup And Shared Tab Picker Order Prefer Metropolis Without Changing Save Identities")
+
+End Sub
+
+Sub CheckPlacement()
+
+    Dim Shape As Catalog.Template
+    Dim TemplateIndex As Number
+
+    Call Editor.Start(PlacementControls)
+
+    PlacementControls.Current = P.Vector(1200.0, 21.0, -800.0)
+
+    For TemplateIndex = 40 To Catalog.TEMPLATE_COUNT - 1
+
+        PlacementControls.Ui.Template = TemplateIndex
+        Shape = Catalog.TemplateAt(TemplateIndex)
+
+        Call Editor.PlaceCopy(PlacementControls, PlacementDraft)
+        Call Check(PlacementDraft.ItemCount = TemplateIndex - 39 And
+            PlacementDraft.Items[PlacementDraft.ItemCount - 1].Template = TemplateIndex,
+            "Place Copy Creates The Selected Catalog Building: " + Shape.Label)
+        Call Check(PlacementDraft.Items[PlacementDraft.ItemCount - 1].Category = Shape.Category And
+            PlacementDraft.Items[PlacementDraft.ItemCount - 1].Scale.X > 0.0,
+            "Placed Catalog Items Have Their Correct Category And Nonzero Scale")
+    End For
+
+End Sub
+
+Sub CheckDisplayPatterns()
+
+    Dim Shape As Catalog.Template
+    Dim Slot As Number
+    Dim DisplayTime As Number
+
+    Shape = Catalog.TemplateAt(86)
+    View.Position = P.Vector(4700.0, 2300.0, -5200.0)
+    View.Target = P.Vector(0.0, 1200.0, 0.0)
+
+    For Frame = 0 To 3
+
+        DisplayTime = 4000 + Frame * 13000
+        Ok = Sphere.Update(Assets.CityMaterials.Display, DisplayTime)
+        Ok = G.SetViewport3D(0, 0, 640, 384, True) And Ok
+        Ok = Scene.BeginPrecise(View, 8, 12, 24) And Ok
+
+        For Part = 0 To Shape.PartCount - 1
+            Slot = Shape.Parts[Part]
+            Ok = P.SetPosition(Assets.Objects[Slot], 0.0, 21.0, 0.0) And Ok
+            Ok = P.SetScale(Assets.Objects[Slot], 1000.0, 1000.0, 1000.0) And Ok
+            Ok = G.DrawObject3D(Assets.Objects[Slot]) And Ok
+        End For
+
+        Ok = Scene.EndScene() And Ok
+        Capture = G.CaptureViewport3D()
+        Job = G.ExportViewportCapturePng3D(Capture,
+            "@EVIDENCE@\sphere-pattern-" + Text_From_Code(48 + Frame) + ".png")
+        Deadline = Timer() + 5000
+
+        Do
+            Status = Data_FileStatus(Job)
+            Show Screen
+
+        Loop Until Status <> 0 Or Timer() >= Deadline
+
+        Call Check(Ok And Job > 0 And Status = 1, "Smooth Sphere Pattern Frame Renders And Exports")
+        Call G.ReleaseViewportCapture3D(Capture)
+        Call G.ResetViewport3D()
+    End For
+
+End Sub

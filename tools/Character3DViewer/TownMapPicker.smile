@@ -10,7 +10,7 @@ Import Smile.Tools.TownDemo As Demo
 Public Type State
     Visible As Boolean
     Consumed As Boolean
-    Names[16] As Text
+    Names[17] As Text
     EntryCount As Number
     Active As Number
     Photos As Previews.State
@@ -28,11 +28,11 @@ Public Function PanelWidth() As Number
 
 End Function
 
-Public Function RowPitch() As Number
+Public Function RowPitch(Optional EntryCount As Number = 16) As Number
 
     Dim Result As Number
 
-    Result = Min(150, Max(80, (Window_Height() - 270) / 4))
+    Result = Min(150, Max(80, (Window_Height() - 270) / Max(1, (EntryCount + 3) / 4)))
 
     Return Result
 
@@ -63,7 +63,7 @@ Public Function Pick(Px As Number, Py As Number, PanelX As Number, EntryCount As
     If (Px < PanelX + 16 Or
         Px >= PanelX + Width - 16 Or
         Py < 222 Or
-        Py >= 222 + Pitch * 4) Then
+        Py >= 222 + Pitch * ((EntryCount + 3) / 4)) Then
         ReturnValue = -1
 
         Return ReturnValue
@@ -163,7 +163,7 @@ Public Function Input(ByRef Value As State, Key As Number) As Number
         Return ReturnValue
     End If
 
-    Result = DemoHit(Pointer_X(), Pointer_Y(), LeftEdge(), Value.EntryCount, PanelWidth(), RowPitch(), True)
+    Result = DemoHit(Pointer_X(), Pointer_Y(), LeftEdge(), Value.EntryCount, PanelWidth(), RowPitch(Value.EntryCount), True)
 
     If Result >= 0 Then
 
@@ -175,7 +175,7 @@ Public Function Input(ByRef Value As State, Key As Number) As Number
 
     End If
 
-    If UI.Contains(LeftEdge() + PanelWidth() - 126, 228 + RowPitch() * 4, 110, 24) Then
+    If UI.Contains(LeftEdge() + PanelWidth() - 126, 228 + RowPitch(Value.EntryCount) * ((Value.EntryCount + 3) / 4), 110, 24) Then
 
         For Index = 0 To Value.EntryCount - 1
             Call Previews.Refresh(Value.Names[Index])
@@ -187,7 +187,7 @@ Public Function Input(ByRef Value As State, Key As Number) As Number
 
     End If
 
-    Result = DemoHit(Pointer_X(), Pointer_Y(), LeftEdge(), Value.EntryCount, PanelWidth(), RowPitch())
+    Result = DemoHit(Pointer_X(), Pointer_Y(), LeftEdge(), Value.EntryCount, PanelWidth(), RowPitch(Value.EntryCount))
 
     If Result >= 0 Then
 
@@ -205,7 +205,7 @@ Public Function Input(ByRef Value As State, Key As Number) As Number
 
     End If
 
-    Result = Pick(Pointer_X(), Pointer_Y(), LeftEdge(), Value.EntryCount, PanelWidth(), RowPitch())
+    Result = Pick(Pointer_X(), Pointer_Y(), LeftEdge(), Value.EntryCount, PanelWidth(), RowPitch(Value.EntryCount))
 
     If Result >= 0 Or UI.Contains(LeftEdge() + PanelWidth() - 94, 172, 78, 30) Then
         Value.Visible = False
@@ -235,11 +235,11 @@ Public Sub Draw(ByRef Value As State)
 
     PanelX = LeftEdge()
     PitchX = (PanelWidth() - 24) / 4
-    PitchY = RowPitch()
+    PitchY = RowPitch(Value.EntryCount)
     PictureWidth = Min(PitchX - 18, (PitchY - 65) * 8 / 5)
     ButtonWidth = Min(70, (PitchX - 24) / 2)
     Fill Rectangle 0, 0, Window_Width(), Window_Height(), RGB(6, 12, 18)
-    Fill Rectangle PanelX, 158, PanelWidth(), 100 + PitchY * 4, RGB(12, 23, 36)
+    Fill Rectangle PanelX, 158, PanelWidth(), 100 + PitchY * ((Value.EntryCount + 3) / 4), RGB(12, 23, 36)
     Draw Text "Choose A Map" At PanelX + 16, 177 Size 22 Color WHITE
 
     Call UI.DrawButton(PanelX + PanelWidth() - 94, 172, 78, 30, "Close", False)
@@ -278,7 +278,7 @@ Public Sub Draw(ByRef Value As State)
         Draw Text "Generating Maps Thumbnail." At Window_Width() / 2, 124 Size 24 Color CYAN Centered
     End If
 
-    Call UI.DrawButton(PanelX + PanelWidth() - 126, 228 + PitchY * 4, 110, 24, "Refresh All", False)
+    Call UI.DrawButton(PanelX + PanelWidth() - 126, 228 + PitchY * ((Value.EntryCount + 3) / 4), 110, 24, "Refresh All", False)
 
     Label = "Choose a map. Demo On includes it in the demo cycle."
 
@@ -286,7 +286,7 @@ Public Sub Draw(ByRef Value As State)
         Label = Value.Message
     End If
 
-    Draw Text Label At PanelX + 16, 235 + PitchY * 4 Size 13 Color CYAN
+    Draw Text Label At PanelX + 16, 235 + PitchY * ((Value.EntryCount + 3) / 4) Size 13 Color CYAN
 
 End Sub
 

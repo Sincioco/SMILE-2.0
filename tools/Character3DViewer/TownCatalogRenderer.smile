@@ -8,13 +8,21 @@ Import Smile.Simple3D.Graphics3D As G
 Import Smile.Simple3D.Precision3D As P
 Import Smile.Tools.TownDocument As Document
 Import Smile.Tools.TownCatalogData As Catalog
+Import Smile.Tools.TownCityData As CityData
+Import Smile.Tools.TownCityLighting As City
+
+Private Const MODEL_CAPACITY = Catalog.CHUNK_COUNT + 14
+Private Const OBJECT_CAPACITY = MODEL_CAPACITY * 16
 
 Public Type State
     Lawn As Core.Material3D
     Grass As Core.Texture3D
-    Models[64] As Core.Model3D
-    Wind[64] As Core.Animator3D
-    Objects[1024] As Core.Object3D
+    Models[MODEL_CAPACITY] As Core.Model3D
+    Wind[MODEL_CAPACITY] As Core.Animator3D
+    Objects[OBJECT_CAPACITY] As Core.Object3D
+    Needed[MODEL_CAPACITY] As Boolean
+    CityMaterials As City.State
+    CityActive As Boolean
     Loaded As Number
     Required As Number
     ObjectCount As Number
@@ -22,27 +30,47 @@ Public Type State
     ErrorCode As Number
 End Type
 
-''' Old Castle remains a palette template; GPU ownership follows actual placements.
+''' Catalog membership does not allocate GPU resources for absent city templates.
 Public Sub SyncDocument(ByRef Value As State, ByRef Town As Document.State)
 
     Dim Index As Number
     Dim Part As Number
     Dim Slot As Number
+    Dim Chunk As Number
+    Dim Shape As Catalog.Template
+    Dim HasCity As Boolean
+
+    For Index = 0 To MODEL_CAPACITY - 1
+        Value.Needed[Index] = False
+    End For
 
     Value.Required = Catalog.CHUNK_COUNT
+    HasCity = City.HasCity(Town)
 
     For Index = 0 To Town.ItemCount - 1
 
-        If Town.Items[Index].Active And Town.Items[Index].Template = 6 Then
-            Value.Required = Catalog.CHUNK_COUNT + 14
-            Exit For
+        If Town.Items[Index].Active Then
+
+            Shape = Catalog.TemplateAt(Town.Items[Index].Template)
+
+            For Part = 0 To Shape.PartCount - 1
+                Chunk = Shape.Parts[Part] / 16
+                Value.Needed[Chunk] = True
+            End For
+
+            If Town.Items[Index].Template = 6 Then
+                Value.Required = MODEL_CAPACITY
+            End If
+
         End If
 
     End For
 
-    If Value.Required = Catalog.CHUNK_COUNT And Value.Loaded > Value.Required Then
+    Value.Loaded = Value.Required
 
-        For Index = Catalog.CHUNK_COUNT To Value.Loaded - 1
+    For Index = 0 To MODEL_CAPACITY - 1
+
+        If Not Value.Needed[Index] And Value.Models[Index].GeometryReady Then
 
             For Part = 0 To Value.Models[Index].PartCount - 1
                 Slot = Index * 16 + Part
@@ -54,11 +82,20 @@ Public Sub SyncDocument(ByRef Value As State, ByRef Town As Document.State)
 
             Call G.DestroyAnimator3D(Value.Wind[Index])
             Call G.DestroyModel3D(Value.Models[Index])
-        End For
 
-        Value.Loaded = Value.Required
+        Else If Value.Needed[Index] And Not Value.Models[Index].GeometryReady Then
 
+            Value.Loaded = Min(Value.Loaded, Index)
+
+        End If
+
+    End For
+
+    If Value.CityActive And Not HasCity Then
+        Call City.Destroy(Value.CityMaterials)
     End If
+
+    Value.CityActive = HasCity
 
 End Sub
 
@@ -75,7 +112,12 @@ Public Sub LoadNext(ByRef Value As State)
         Return
     End If
 
-    If Value.Loaded = 0 Then
+    If Not Value.Needed[Value.Loaded] Or Value.Models[Value.Loaded].GeometryReady Then
+        Value.Loaded = Value.Loaded + 1
+        Return
+    End If
+
+    If Value.Grass.Handle = 0 Then
 
         ' Courtyard grass follows the same editable sun as terrain and paving.
         Value.Grass = G.LoadTexture3DEx("Assets/Neris/Neris-Grass-Color.png",
@@ -114,6 +156,8 @@ Public Sub LoadNext(ByRef Value As State)
 
             Value.Objects[Value.Loaded * 16 + Part] = G.CreateModelPart3D(Value.Models[Value.Loaded], Part)
             Ok = Value.Objects[Value.Loaded * 16 + Part].Handle <> 0 And Ok
+            Ok = City.Bind(Value.CityMaterials, Value.Objects[Value.Loaded * 16 + Part],
+                CityData.Kind(Value.Loaded * 16 + Part)) And Ok
 
             If Catalog.IsLawnPart(Value.Loaded * 16 + Part) Then
                 Ok = G.SetObjectMaterial3D(Value.Objects[Value.Loaded * 16 + Part], Value.Lawn) And Ok
@@ -150,7 +194,8 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
 
 End Sub
 
-Public Function Draw(ByRef Value As State, ByRef Town As Document.State) As Boolean
+Public Function Draw(ByRef Value As State, ByRef Town As Document.State,
+    Optional Intensity As Number = -1) As Boolean
 
     Dim Index As Number
     Dim Part As Number
@@ -161,6 +206,12 @@ Public Function Draw(ByRef Value As State, ByRef Town As Document.State) As Bool
     Dim Ok As Boolean
 
     Ok = Not Value.Failed
+
+    If Intensity < 0 Then
+        Intensity = Town.Light.Intensity
+    End If
+
+    Ok = City.Update(Value.CityMaterials, Intensity) And Ok
 
     For Index = 0 To Town.ItemCount - 1
 
@@ -184,15 +235,23 @@ Public Function Draw(ByRef Value As State, ByRef Town As Document.State) As Bool
             For Part = FirstPart To Shape.PartCount - 1
 
                 Slot = Shape.Parts[Part]
-                Ok = P.SetPosition(Value.Objects[Slot], Item.Position.X, Item.Position.Y, Item.Position.Z) And Ok
-                Ok = P.SetScale(Value.Objects[Slot], Item.Scale.X, Item.Scale.Y, Item.Scale.Z) And Ok
-                Ok = P.SetRotation(Value.Objects[Slot], 0.0, Item.Yaw, 0.0) And Ok
-                Ok = G.DrawObject3D(Value.Objects[Slot]) And Ok
+
+                If CityData.Kind(Slot) <> 9 Or City.BeaconOn(Timer(), Item.Identity) Then
+
+                    Ok = P.SetPosition(Value.Objects[Slot], Item.Position.X, Item.Position.Y, Item.Position.Z) And Ok
+                    Ok = P.SetScale(Value.Objects[Slot], Item.Scale.X, Item.Scale.Y, Item.Scale.Z) And Ok
+                    Ok = P.SetRotation(Value.Objects[Slot], 0.0, Item.Yaw, 0.0) And Ok
+                    Ok = G.DrawObject3D(Value.Objects[Slot]) And Ok
+
+                End If
+
             End For
 
         End If
 
     End For
+
+    Ok = City.Draw(Value.CityMaterials, Town, Intensity) And Ok
 
     Return Ok
 
@@ -202,21 +261,23 @@ Public Sub Destroy(ByRef Value As State)
 
     Dim Index As Number
 
-    For Index = 0 To 1023
+    For Index = 0 To OBJECT_CAPACITY - 1
         Call G.DestroyObjectInstance3D(Value.Objects[Index])
     End For
 
-    For Index = 0 To 63
+    For Index = 0 To MODEL_CAPACITY - 1
         Call G.DestroyAnimator3D(Value.Wind[Index])
         Call G.DestroyModel3D(Value.Models[Index])
     End For
 
     Call G.DestroyMaterial3D(Value.Lawn)
     Call G.DestroyTexture3D(Value.Grass)
+    Call City.Destroy(Value.CityMaterials)
 
     Value.Loaded = 0
     Value.Required = 0
     Value.ObjectCount = 0
+    Value.CityActive = False
     Value.Failed = False
 
 End Sub

@@ -131,8 +131,10 @@ Public Function Ground(View As P.Camera3D, X As Number, Y As Number,
     Dim Distance As Double
 
     RayOrigin = Camera.CursorPointAtDepth(View, X, Y, View.NearPlane, Width, Height)
+    ' Parameterize the visible ray from near to far. A fixed multiplier rejects
+    ' large maps when the adaptive near plane approaches or exceeds 1000.
     Ray = M.Subtract(Camera.CursorPointAtDepth(View, X, Y,
-        Max(1000.0, View.NearPlane + 1.0), Width, Height), RayOrigin)
+        View.FarPlane, Width, Height), RayOrigin)
 
     If Abs(Ray.Y) < 0.00001 Then
         Return False
@@ -140,7 +142,7 @@ Public Function Ground(View As P.Camera3D, X As Number, Y As Number,
 
     Distance = (Layers.ROAD_Y - RayOrigin.Y) / Ray.Y
 
-    If Distance <= 0.0 Or Distance > 100.0 Then
+    If Distance <= 0.0 Or Distance > 1.0 Then
         Return False
     End If
 

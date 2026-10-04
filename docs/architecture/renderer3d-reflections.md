@@ -13,6 +13,22 @@ the receiver, grid, debug helpers, gizmos and unsupported distortion are exclude
 IncludeVfx optionally replays supported transparent meshes,
 committed particles and ribbons without a second simulation or resource admission.
 
+## Native flat-water receivers (October 4)
+
+When no explicit opaque object receiver is present, committed horizontal WATER
+ribbon batches can supply the common plane. `reflection_receiver3d.h` validates
+committed revision and flat heights. Explicit object receivers retain priority;
+one height is supported. Curved water retains its previous screen-space behavior.
+Water at other heights does not receive this capture. Receiver water is skipped
+in reflected replay to prevent feedback.
+
+`water_surface3d.h` binds the captured scene, applies bounded ripple displacement
+and a soft five-tap sample, then blends with the caller's tint. Including VFX
+replays the same committed particles/ribbons without advancing simulation again.
+Metropolis enables this at night and darkens its own water; other map colors stay
+authored. This extension is native-only. Existing receiver sample-error/backdrop-
+seam diagnostics still describe mesh receivers, not water ribbon geometry.
+
 ## Responsibility map
 
 | Responsibility | Native owner | Web/shared owner |

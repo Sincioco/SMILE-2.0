@@ -1,0 +1,146 @@
+''' Night-only ascending crystal light and a soft sky column, owned by city rendering.
+Module Smile.Tools.TownSpireLight
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownGeometry As Geometry
+
+Public Type State
+    Texture As Core.Texture3D
+    Material As Core.Material3D
+    Particles As Core.ParticleBatch3D
+    PointCount As Number
+End Type
+
+Public Function Draw(ByRef Value As State, ByRef Town As Document.State, Night As Double) As Boolean
+
+    Dim Index As Number
+    Dim Row As Number
+    Dim Point As P.Vector3
+    Dim Height As Double
+    Dim Size As Double
+    Dim Phase As Double
+    Dim Pulse As Double
+    Dim Alpha As Number
+    Dim Ok As Boolean
+    Dim Item As Document.Item
+
+    Value.PointCount = 0
+    Ok = True
+
+    If Night <= 0.0 Then
+        Return True
+    End If
+
+    For Index = 0 To Town.ItemCount - 1
+
+        Item = Town.Items[Index]
+
+        If (Item.Active And
+            Item.Template = 57 And
+            Value.PointCount + 363 <= 4096) Then
+
+            If Value.Particles.Handle = 0 Then
+
+                Value.Texture = G.LoadTexture3DEx("Assets/Fire/ember-shape.png",
+                    G.TEXTURE_USAGE_COLOR, G.TEXTURE_FILTER_LINEAR, G.TEXTURE_WRAP_CLAMP, 1)
+                Value.Material = G.CreateEffectMaterial3D(Value.Texture, G.MATERIAL_ALPHA_ADDITIVE, 140)
+                Value.Particles = G.CreateParticleBatch3D(4096, Value.Material, G.VFX_BILLBOARD_CAMERA, 1, 1)
+
+                If Value.Texture.Handle = 0 Or Value.Particles.Handle = 0 Then
+                    Return False
+                End If
+
+            End If
+
+            Phase = ToDouble((Timer() + Item.Identity * 137) Mod 7000) / 7000.0
+
+            For Row = 0 To 359
+
+                Height = ToDouble(Row) * 34000.0 / 359.0
+                Size = 950.0
+                Alpha = ToNumber(Night * 18.0 * Clamp((34000.0 - Height) / 13000.0, 0.0, 1.0))
+
+                If Height < 12500.0 Then
+
+                    Size = 500.0
+                    Pulse = Max(0.0, 1.0 - Abs(Height / 12500.0 - Phase) * 9.0)
+                    Alpha = ToNumber(Night * (13.0 + Pulse * 42.0))
+
+                End If
+
+                Point = Geometry.ToWorld(Item, P.Vector(0.0, Height, 0.0))
+                Ok = P.SetParticle(Value.Particles, Value.PointCount, Point,
+                    Size * Item.Scale.Y / 1000.0, 0.0, 0) And Ok
+                Ok = G.SetParticleColor3D(Value.Particles, Value.PointCount, 135, 218, 255, Alpha) And Ok
+                Value.PointCount = Value.PointCount + 1
+            End For
+
+            For Row = 0 To 2
+
+                Height = 12500.0
+                Size = 1100.0 + ToDouble(Row) * 1300.0
+                Alpha = ToNumber(Night * (65.0 - ToDouble(Row) * 25.0))
+                Point = Geometry.ToWorld(Item, P.Vector(0.0, Height, 0.0))
+                Ok = P.SetParticle(Value.Particles, Value.PointCount, Point,
+                    Size * Item.Scale.Y / 1000.0, 0.0, 0) And Ok
+                Ok = G.SetParticleColor3D(Value.Particles, Value.PointCount, 185, 237, 255, Alpha) And Ok
+                Value.PointCount = Value.PointCount + 1
+            End For
+
+        End If
+
+    End For
+
+    If Value.PointCount > 0 Then
+        Ok = G.CommitParticleBatch3D(Value.Particles, Value.PointCount) And Ok
+        Ok = G.DrawParticleBatch3D(Value.Particles) And Ok
+    End If
+
+    Return Ok
+
+End Function
+
+''' Four ground washes illuminate the crystal and its surrounding plaza.
+Public Function ApplyLights(Item As Document.Item, ByRef Slot As Number, Night As Double) As Boolean
+
+    Dim Side As Number
+    Dim Angle As Double
+    Dim Point As P.Vector3
+    Dim Ok As Boolean
+
+    Ok = True
+
+    For Side = 0 To 3
+
+        If Slot >= G.MaximumLocalLightCount3D() Then
+            Exit For
+        End If
+
+        Angle = ToDouble(Side) * 1.5707963267948966
+        Point = Geometry.ToWorld(Item, P.Vector(Cos(Angle) * 1300.0, 500.0, Sin(Angle) * 1300.0))
+        Ok = G.SetPointLight3D(Slot, ToNumber(Point.X), ToNumber(Point.Y), ToNumber(Point.Z),
+            125, 210, 255, ToNumber(Night * 620.0), ToNumber(4200.0 * Item.Scale.Y / 1000.0)) And Ok
+        Slot = Slot + 1
+    End For
+
+    Return Ok
+
+End Function
+
+Public Sub Destroy(ByRef Value As State)
+
+    Call G.DestroyParticleBatch3D(Value.Particles)
+    Call G.DestroyMaterial3D(Value.Material)
+    Call G.DestroyTexture3D(Value.Texture)
+
+    Value.PointCount = 0
+
+End Sub
+
+End Module

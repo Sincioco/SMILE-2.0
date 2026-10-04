@@ -1,0 +1,176 @@
+''' Bounded deterministic firework emitters. Each caller owns its display and locations.
+Module Smile.Simple3D.Fireworks3D
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Precision3D As P
+
+Public Type Emitter
+    Origin As P.Vector3
+    Height As Double
+    Radius As Double
+    Period As Number
+    Delay As Number
+    Seed As Number
+End Type
+
+Public Type State
+    Texture As Core.Texture3D
+    Material As Core.Material3D
+    Particles As Core.ParticleBatch3D
+    ParticleCount As Number
+End Type
+
+Public Function Create(ByRef Value As State, TexturePath As Text,
+    Optional Capacity As Number = 2048) As Boolean
+
+    Dim Ok As Boolean
+
+    Value.Texture = G.LoadTexture3DEx(TexturePath, G.TEXTURE_USAGE_COLOR,
+        G.TEXTURE_FILTER_LINEAR, G.TEXTURE_WRAP_CLAMP, 1)
+    Value.Material = G.CreateEffectMaterial3D(Value.Texture, G.MATERIAL_ALPHA_ADDITIVE, 240)
+    Value.Particles = G.CreateParticleBatch3D(Capacity, Value.Material, G.VFX_BILLBOARD_CAMERA, 1, 1)
+    Ok = Value.Texture.Handle <> 0 And Value.Material.Handle <> 0 And Value.Particles.Handle <> 0
+
+    Return Ok
+
+End Function
+
+Private Function Spark(ByRef Value As State, Point As P.Vector3, Size As Double,
+    RedValue As Number, GreenValue As Number, BlueValue As Number, Alpha As Number) As Boolean
+
+    Dim Ok As Boolean
+
+    Ok = P.SetParticle(Value.Particles, Value.ParticleCount, Point, Size, 0.0, 0)
+    Ok = G.SetParticleColor3D(Value.Particles, Value.ParticleCount,
+        RedValue, GreenValue, BlueValue, Alpha) And Ok
+    Value.ParticleCount = Value.ParticleCount + 1
+
+    Return Ok
+
+End Function
+
+''' One emitter admits at most 576 particles; a full display rejects it atomically.
+Public Function Add(ByRef Value As State, Source As Emitter, Time As Number,
+    Strength As Double) As Boolean
+
+    Dim Phase As Number
+    Dim Burst As Number
+    Dim Index As Number
+    Dim Tail As Number
+    Dim Palette As Number
+    Dim RedValue As Number
+    Dim GreenValue As Number
+    Dim BlueValue As Number
+    Dim Age As Double
+    Dim Fraction As Double
+    Dim Y As Double
+    Dim Ring As Double
+    Dim Angle As Double
+    Dim Distance As Double
+    Dim Alpha As Number
+    Dim Point As P.Vector3
+    Dim Ok As Boolean
+
+    If Source.Period < 5000 Or Strength <= 0.0 Then
+        Return True
+    End If
+
+    If Value.ParticleCount + 576 > Value.Particles.Capacity Then
+        Return False
+    End If
+
+    Phase = (Max(0, Time) + Source.Delay) Mod Source.Period
+    Burst = (Max(0, Time) + Source.Delay) / Source.Period
+    Ok = True
+
+    If Phase < 1600 Then
+
+        For Tail = 0 To 15
+
+            Fraction = Clamp((ToDouble(Phase) - ToDouble(Tail) * 24.0) / 1600.0, 0.0, 1.0)
+            Point = Source.Origin
+            Point.Y = Point.Y + Source.Height * Fraction
+            Ok = Spark(Value, Point, 84.0, 255, 212, 130,
+                ToNumber(Strength * (90.0 - ToDouble(Tail) * 5.0))) And Ok
+        End For
+
+        Return Ok
+
+    End If
+
+    If Phase > 4600 Then
+        Return True
+    End If
+
+    Palette = (Source.Seed + Burst) Mod 4
+    RedValue = 255
+    GreenValue = 196
+    BlueValue = 85
+
+    Select Case Palette
+        Case 1
+            RedValue = 85
+            GreenValue = 225
+            BlueValue = 255
+        Case 2
+            RedValue = 255
+            GreenValue = 105
+            BlueValue = 195
+        Case 3
+            RedValue = 125
+            GreenValue = 255
+            BlueValue = 160
+    End Select
+
+    For Index = 0 To 95
+
+        Y = 1.0 - 2.0 * (ToDouble(Index) + 0.5) / 96.0
+        Ring = Sqrt(Max(0.0, 1.0 - Y * Y))
+        Angle = ToDouble(Index) * 2.3999632297 + ToDouble(Source.Seed + Burst) * 0.47
+
+        For Tail = 0 To 5
+
+            Age = Max(0.0, ToDouble(Phase - 1600) / 1000.0 - ToDouble(Tail) * 0.045)
+            Distance = Source.Radius * Age / (1.0 + Age * 0.55)
+            Point.X = Source.Origin.X + Cos(Angle) * Ring * Distance
+            Point.Y = Source.Origin.Y + Source.Height + Y * Distance - Age * Age * Source.Radius * 0.07
+            Point.Z = Source.Origin.Z + Sin(Angle) * Ring * Distance
+            Alpha = ToNumber(Strength * Max(0.0, 1.0 - Age / 3.0) * (90.0 - ToDouble(Tail) * 12.0))
+            Ok = Spark(Value, Point, 96.0 + ToDouble(Tail) * 8.0,
+                RedValue, GreenValue, BlueValue, Alpha) And Ok
+        End For
+    End For
+
+    Return Ok
+
+End Function
+
+Public Function Draw(ByRef Value As State) As Boolean
+
+    Dim Ok As Boolean
+
+    If Value.ParticleCount = 0 Then
+        Return True
+    End If
+
+    Ok = G.CommitParticleBatch3D(Value.Particles, Value.ParticleCount)
+    Ok = G.DrawParticleBatch3D(Value.Particles) And Ok
+
+    Return Ok
+
+End Function
+
+Public Sub Destroy(ByRef Value As State)
+
+    Call G.DestroyParticleBatch3D(Value.Particles)
+    Call G.DestroyMaterial3D(Value.Material)
+    Call G.DestroyTexture3D(Value.Texture)
+
+    Value.ParticleCount = 0
+
+End Sub
+
+End Module

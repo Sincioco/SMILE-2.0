@@ -1,0 +1,69 @@
+''' Shared animated LED materials for the reusable Neris Sphere shell.
+Module Smile.Tools.TownSphereDisplay
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As G
+
+Public Const FIRST_KIND = 20
+Public Const BAND_COUNT = 12
+
+Public Type State
+    Materials[12] As Core.Material3D
+End Type
+
+Public Function Bind(ByRef Value As State, ByRef Object As Core.Object3D, Kind As Number) As Boolean
+
+    Dim Index As Number
+    Dim Empty As Core.Texture3D
+    Dim Ok As Boolean
+
+    Index = Kind - FIRST_KIND
+
+    If Index < 0 Or Index >= BAND_COUNT Then
+        Return True
+    End If
+
+    If Value.Materials[Index].Handle = 0 Then
+        Value.Materials[Index] = G.CreatePbrMaterial3D(Empty, Empty, Empty, Empty,
+            G.MATERIAL_ALPHA_OPAQUE, True)
+    End If
+
+    Ok = G.SetObjectMaterial3D(Object, Value.Materials[Index])
+
+    Return Ok
+
+End Function
+
+Public Function Update(ByRef Value As State, Time As Number) As Boolean
+
+    Dim Index As Number
+    Dim Ok As Boolean
+
+    Ok = True
+
+    For Index = 0 To BAND_COUNT - 1
+
+        If Value.Materials[Index].Handle <> 0 Then
+            Ok = G.SetProceduralDisplay3D(Value.Materials[Index], Time, 731,
+                0, 90, 0, 180, 100) And Ok
+        End If
+
+    End For
+
+    Return Ok
+
+End Function
+
+Public Sub Destroy(ByRef Value As State)
+
+    Dim Index As Number
+
+    For Index = 0 To BAND_COUNT - 1
+        Call G.DestroyMaterial3D(Value.Materials[Index])
+    End For
+
+End Sub
+
+End Module
