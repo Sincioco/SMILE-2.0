@@ -413,8 +413,8 @@
       "sha256": "5237ab1f37530629664e1f9fe98e94d4f76353f81a03ce761ac93b8912734614"
     },
     "README.md": {
-      "bytes": 5748,
-      "sha256": "aa48e3a5e39a062e7558653f6367ff66a9e6ea3ee43a0326f7a6ddcc39ac4905",
+      "bytes": 6035,
+      "sha256": "5f8b7d73c66234714491ffe06dbc442975b66210349c96287a5b56c848f173b1",
       "encoding": "UTF-8 with LF for checksum"
     },
     "Source/build_city.py": {
@@ -468,8 +468,8 @@
       "encoding": "UTF-8 with LF for checksum"
     },
     "Source/publish_town.py": {
-      "bytes": 3691,
-      "sha256": "b0ffc57ac6409406e9f62d9a32550742ed8081d7d27f340bc4a41a2f1b3c7473",
+      "bytes": 3693,
+      "sha256": "4c68ace60ca1b727522b539eed4b8b1c91218c698218388ca7264d45aad89a71",
       "encoding": "UTF-8 with LF for checksum"
     },
     "Source/render_catalog.py": {
@@ -545,7 +545,7 @@
     },
     "Town/Neris Metropolis.town": {
       "bytes": 3090183,
-      "sha256": "aa069ecfc5e68ae2d16de7bfb615632afd64474511c1b5fa9ff17d8f45d95cc5"
+      "sha256": "58214ab68fa00cd0c3d2766d1de7b15f1cb43654c7f6c024a2e026717c8c1a6c"
     }
   }
 }

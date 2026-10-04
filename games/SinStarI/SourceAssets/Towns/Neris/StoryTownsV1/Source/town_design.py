@@ -17,7 +17,7 @@ from town_document_codec import atomic_write, decode, encode, unwrap, raster_cur
 CATALOG = json.loads((ROOT / 'games/SinStarI/SourceAssets/Towns/Neris/NerisTownV1/Authoring/catalog.json').read_text(encoding='utf-8'))
 GROUND, WATER, ROAD, BRIDGE = 1, 2, 3, 4
 DAY = [255, 237, 214, 260, 38, 207.0, 54.0, 1, 65]
-NIGHT = [135, 170, 255, 18, 14, 215.0, 32.0, 0, 45]
+NIGHT = [135, 170, 255, 112, 14, 215.0, 32.0, 0, 45]
 
 
 def terrain_offset(doc, x, z):

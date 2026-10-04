@@ -65,7 +65,8 @@ static int smile_3d_receiver_plane(const SmileSubmission3D* receiver,
 
 // Only immutable, flat committed water ribbons can receive a planar capture.
 // Curved water effects retain their existing screen-space reflection path.
-static int smile_3d_water_plane(const SmileSubmission3D* submission, float* height)
+static int smile_3d_water_plane(const SmileSubmission3D* submission, float* height,
+    float* area = 0)
 {
     if (submission->kind != SMILE_3D_SUBMISSION_RIBBON_BATCH ||
         submission->material.vfx_shading_mode != SMILE_3D_VFX_SHADING_WATER) return 0;
@@ -73,9 +74,20 @@ static int smile_3d_water_plane(const SmileSubmission3D* submission, float* heig
     if (!batch || batch->revision != submission->resource_revision ||
         batch->count < 2 || !batch->vertices) return 0;
     *height = batch->vertices[0].position[1];
+    if (area) *area = 0.0f;
     for (unsigned int index = 0; index < batch->count * 2; ++index)
+    {
         if (!isfinite(batch->vertices[index].position[1]) ||
             fabsf(batch->vertices[index].position[1] - *height) > .01f) return 0;
+        if (area && index >= 2)
+        {
+            const float* a = batch->vertices[index - 2].position;
+            const float* b = batch->vertices[index - 1].position;
+            const float* c = batch->vertices[index].position;
+            *area += fabsf((b[0] - a[0]) * (c[2] - a[2]) -
+                (b[2] - a[2]) * (c[0] - a[0])) * .5f;
+        }
+    }
     return 1;
 }
 
@@ -92,6 +104,7 @@ static int smile_3d_resolve_reflection_receiver(
     float effective_height = smile_reflections_requested_floor_height();
     int automatic = effective_height < 0.0f;
     int resolved = 0;
+    float largest_water_area = -1.0f;
     for (unsigned int index = 0; index < smile_frame_submission_count3d; ++index)
     {
         const SmileSubmission3D* submission = &smile_frame_submissions3d[index];
@@ -115,12 +128,15 @@ static int smile_3d_resolve_reflection_receiver(
         for (unsigned int index = 0; index < smile_frame_submission_count3d; ++index)
         {
             const SmileSubmission3D* submission = &smile_frame_submissions3d[index];
-            float water_height;
-            if (!smile_3d_water_plane(submission, &water_height)) continue;
+            float water_height, water_area;
+            if (!smile_3d_water_plane(submission, &water_height, &water_area)) continue;
             if (!automatic && fabsf(water_height - effective_height) > .01f) continue;
-            if (automatic && resolved && fabsf(water_height - effective_height) > .01f) return 0;
+            // Keep the one bounded planar capture on the dominant water surface.
+            // Raised fountains/pools retain screen-space reflections instead of
+            // disabling the entire map's lake or canal reflection pass.
+            if (automatic && water_area <= largest_water_area) continue;
             effective_height = water_height;
-            resolved = 1;
+            largest_water_area = water_area;
             first_receiver = submission;
         }
     if (first_receiver == 0) return 2;

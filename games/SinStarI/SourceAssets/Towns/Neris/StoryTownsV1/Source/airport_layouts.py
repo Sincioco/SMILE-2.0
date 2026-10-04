@@ -2,7 +2,7 @@
 from math import sin, cos, radians
 from town_design import Town, GROUND, WATER, ROAD
 
-SPACEPORT_NIGHT = [150, 185, 255, 65, 32, 215.0, 32.0, 0, 45]
+SPACEPORT_NIGHT = [150, 185, 255, 112, 32, 215.0, 32.0, 0, 45]
 
 
 def point(r, a):

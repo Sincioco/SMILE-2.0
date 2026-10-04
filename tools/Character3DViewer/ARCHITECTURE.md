@@ -1,5 +1,36 @@
 # Character Viewer Architecture
 
+## October 4 all-map nighttime water and 112% moonlight
+
+The earlier two-map selection is removed. `TownWaterAppearance.Configure` now
+takes only displayed intensity; the existing native water-receiver selection
+determines which surfaces receive reflections. `TownEditorSession` always passes
+the displayed light intensity to terrain rendering, including demo lighting.
+`TownSurfaceRenderer` updates both its standing-water material and its three
+bounded flow materials; daytime colors and flow settings are retained.
+
+`TownDocument.NIGHT_INTENSITY` owns the new 112% default. Night water reaches the
+same deep tint at that intensity. Current canonical maps and live permanent,
+named and recovery saves received a one-time intensity-only update with backups.
+All other document fields and prepared bundle records were verified identical;
+future saved night edits are not overridden at load. Existing generators use 112%.
+
+Production growth stays in existing owners: document +1 line, surface renderer
++15, water appearance -8 and session -6. The existing native receiver owner adds
+16 lines to select the largest flat water batch instead of rejecting maps with
+raised pools at another height. Other heights retain screen-space reflections;
+explicit mesh receiver validation is unchanged. No entry-point behavior, renderer
+limit, compiler extension, persistence format or architectural exception was added.
+Native regression covers default intensity, standing/flowing tint, day restoration,
+Metropolis-to-Neris transitions and another named water map, Neris Canals.
+
+Validation: `metropolis-f90a4eddb52f4aecbaf0a9306b4abfa7` passes those native
+checks plus the existing city editor/save/reopen regression. The first Canals run
+exposed the incompatible-water-height rejection; selecting the dominant water
+surface fixes it. The existing native Renderer3D reflection contract, authored-map
+geometry checks and focused formatting pass. Saved-map migration verifies all
+unrelated decoded fields and prepared records remain identical, with local backups.
+
 ## October 4 shared Neris nighttime water
 
 `TownWaterAppearance.Supports` selects Neris Town and Neris Metropolis for the

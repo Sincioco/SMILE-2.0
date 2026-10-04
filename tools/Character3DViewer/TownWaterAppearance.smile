@@ -1,4 +1,4 @@
-''' Shared nighttime water appearance for Neris Town and Neris Metropolis.
+''' Shared nighttime water appearance for every authored map.
 Module Smile.Tools.TownWaterAppearance
 
 Option Explicit
@@ -7,29 +7,20 @@ Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As G
 Import Smile.Tools.TownDocument As Document
 
-Public Function Supports(ByRef Town As Document.State) As Boolean
-
-    Dim Result As Boolean
-
-    Result = Town.Name = "Neris Metropolis" Or Town.Name = "Neris Town"
-
-    Return Result
-
-End Function
-
-Public Function Configure(ByRef Town As Document.State, Intensity As Number) As Boolean
+Public Function Configure(Intensity As Number) As Boolean
 
     Dim Enabled As Boolean
     Dim Ok As Boolean
 
-    Enabled = Supports(Town) And Intensity < 180
+    Enabled = Intensity < 180
     Ok = G.ConfigureReflections3D(Enabled, 100, 12, 75, -1, False, True)
 
     Return Ok
 
 End Function
 
-Public Function Apply(ByRef Material As Core.Material3D, Intensity As Number) As Boolean
+Public Function Apply(ByRef Material As Core.Material3D, Intensity As Number,
+    Optional DayBlue As Number = 240) As Boolean
 
     Dim Night As Double
     Dim Ok As Boolean
@@ -38,11 +29,12 @@ Public Function Apply(ByRef Material As Core.Material3D, Intensity As Number) As
         Return True
     End If
 
-    ' The approved city night preset retains a bright moon (104); water still darkens fully.
-    Night = Clamp((180.0 - ToDouble(Intensity)) / 76.0, 0.0, 1.0)
+    ' Water reaches the same deep night tint at the shared 112% moonlight default.
+    Night = Clamp((180.0 - ToDouble(Intensity)) /
+        (180.0 - ToDouble(Document.NIGHT_INTENSITY)), 0.0, 1.0)
     Ok = G.SetEffectMaterial3D(Material, G.MATERIAL_ALPHA_BLEND,
         ToNumber(30.0 - Night * 23.0), ToNumber(100.0 - Night * 84.0),
-        ToNumber(240.0 - Night * 207.0), 100, 100)
+        ToNumber(ToDouble(DayBlue) - Night * ToDouble(DayBlue - 33)), 100, 100)
 
     Return Ok
 

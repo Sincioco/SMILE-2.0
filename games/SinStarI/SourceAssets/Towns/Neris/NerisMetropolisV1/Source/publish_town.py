@@ -32,7 +32,7 @@ def publish(target):
         curves.append([4,3,2700*math.cos(a),2700*math.sin(a),
             end*10*math.cos(a),end*10*math.sin(a),480])
     day=[255,237,214,260,38,207,54,1,65]
-    night=[140,174,255,8,14,207,25,1,45]
+    night=[140,174,255,112,14,207,25,1,45]
     layout=placements()
     items=[dict(identity=i+1,template=templates[v['name']],source=-1,
         position=[v['x']*10,21,v['y']*10],scale=[v['scale']*1000]*3,

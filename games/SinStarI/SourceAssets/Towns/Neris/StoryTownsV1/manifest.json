@@ -18,7 +18,7 @@
       "Four short bridge approaches and clear waterfront streets"
     ],
     "campfires": 0,
-    "sha256": "0c5ca2030ebc61138a95ab20cc04fbae65866cbf74e4f3c7b08bd7311e62adcc"
+    "sha256": "4cb03ea1ec4fe65336daa67e3988339a185c69d3fbec41e7f870230225f9b12f"
   },
   {
     "name": "Neris Star Lake",
@@ -39,7 +39,7 @@
       "Relay maintenance gardens and an outer ring of homes"
     ],
     "campfires": 0,
-    "sha256": "d04bfcf1164e8e584e3aec3b428b2180a32b8edb18432e97191a504dd73560ab"
+    "sha256": "ddf2390963e118429ac4a4b922fb10a43f0dd5af6ff7547e8b82160923b59f2a"
   },
   {
     "name": "Neris Crown Isles",
@@ -60,7 +60,7 @@
       "A central civic approach and linked outer promenade"
     ],
     "campfires": 0,
-    "sha256": "43919a9c33b613d51b73c1aa2642d3147a68766ac8ccde20bc7abbb8009281c7"
+    "sha256": "72882571c72585b671a68f9b701d401b228bc35921b3c20211b189afc99cd432"
   },
   {
     "name": "East Valley",
@@ -81,7 +81,7 @@
       "All outer districts and travel destinations retained."
     ],
     "campfires": 0,
-    "sha256": "328ae0cca012f39c3dba12ffeb636c811cc6b7facfb1f90f069e60d4651f3cee"
+    "sha256": "c5315a5a722671dce1f7c6394e6b03ed06d45848753edb366b4491e1778103f6"
   },
   {
     "name": "Orin's Village",
@@ -102,7 +102,7 @@
       "Eight satellite fountain gardens with smooth curved banks and lantern-lit paths"
     ],
     "campfires": 0,
-    "sha256": "42174bf94329bd0a8b081cebb72b77c950211cb2d3d2b574c852235e52ecf8ee"
+    "sha256": "0a980bb26237abdb2cfb40c4cbe61c0b05f2a22df6cfcf995f4d13765af3173a"
   },
   {
     "name": "Neris Spaceport",
@@ -123,7 +123,7 @@
       "Original terminal, doors, pads and alien arrival schedules retained"
     ],
     "campfires": 0,
-    "sha256": "0169e5c922f5d1ca2fb9cec10d8c06628bfd1e4bf512e4d30dedd7aea2a4d75b"
+    "sha256": "d42fa8b58dcc383b552f1e2f9ae668e1b20c334ed2011a66a50d45217007611f"
   },
   {
     "name": "Horizon Airport",
@@ -144,7 +144,7 @@
       "Operating terminal, runway, aircraft and navigation beacons retained"
     ],
     "campfires": 0,
-    "sha256": "8be4b81a8b49a3cd3dbf3d04ad0dbbae2ab4af7c7041cc0299165a38abc96029"
+    "sha256": "a4fa1488d65a792cb9b414062acc418a89e056c69ee38cbf11ef2d3eb97b9fcb"
   },
   {
     "name": "Verdant Reach",
@@ -451,7 +451,7 @@
       -30
     ],
     "campfires": 12,
-    "sha256": "2a4d0b574236d5aaebe4ded78799dbf7a50f2255f72fc1f88031c66f61081ea7"
+    "sha256": "4940eda0af435aca3025e533c3bc15c1c5dd815fd0964ed899886ae007151023"
   },
   {
     "name": "Greyglass Pass",
@@ -954,7 +954,7 @@
       55
     ],
     "campfires": 13,
-    "sha256": "55545df8721691be647fe6179624b10448ea29bebfb55f88a36e9c012c9e42ce"
+    "sha256": "a98aea6730ff7541acf7d8ac3e6775918e80af6f8a1af7ac2948c9340104ea2e"
   },
   {
     "name": "Sunglass Expanse",
@@ -1225,7 +1225,7 @@
       -95
     ],
     "campfires": 12,
-    "sha256": "0aaab7b1a68faf7e2d1b52894ca9e2094c82541099cd4650060e44523e15498b"
+    "sha256": "3e853746eb33464e5ee98224a17551d88b5f4ac14c18043bc4f61582bccde46d"
   },
   {
     "name": "Neris Waterworks",
@@ -1245,7 +1245,7 @@
       "Industrial machinery and scripted disaster sequence remain separate story work."
     ],
     "campfires": 0,
-    "sha256": "2c91de1eecdb636261484c392b2611d01d3e698d2a67e6a4a0285e4e41a136f0"
+    "sha256": "79819bd54f178280e9f14b874c512c90def6c389a0708c8dba19bd31191d13c4"
   },
   {
     "name": "Ancient Relay",
@@ -1265,7 +1265,7 @@
       "Not the separate Chapter Five off-world observatory."
     ],
     "campfires": 12,
-    "sha256": "b27b719e9571ac810a4054eafdafca4218da9ebf1f58dfecbf9462b4d3aef685"
+    "sha256": "6ca969b663d5ffb79aa6973dc83ed7add05e51accd85d5e568557ed54faefda3"
   },
   {
     "name": "Neris Relief Quarter",
@@ -1425,7 +1425,7 @@
       0,
       18
     ],
-    "sha256": "951dc55731c50948db267e4e583a91d74cebcffe9f53494ac30205d7d83f56d6"
+    "sha256": "a702054415ac1d8666bf365f91b7f0f81e2152274153021b2b7db51e6bfb1e17"
   },
   {
     "name": "Willowstep Highlands",
@@ -2022,7 +2022,7 @@
       -67.36301500900724
     ],
     "campfires": 25,
-    "sha256": "3d2da73c5fa0d8523875eac3fe58cbb6377cd7426b5f43bc722e6c401c22e880"
+    "sha256": "1f11a0eca581d15be8248bcae7145e680a8458d2962b796d2ddea87fd822599c"
   },
   {
     "name": "Silverfall Basin",
@@ -2527,6 +2527,6 @@
       0
     ],
     "campfires": 35,
-    "sha256": "c867c0b4423fcb4238cf492a417b36575567777614503e9bef3e0dd07929f345"
+    "sha256": "f57465c0931be4e5bd9c2c4d4dc95ba902ffa159f5f743cd637551bf3e7fd0f4"
   }
 ]

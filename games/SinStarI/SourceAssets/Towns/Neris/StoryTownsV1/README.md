@@ -1,3 +1,11 @@
+# October 4 nighttime defaults
+
+All current maps use 112% Night Intensity. Only the saved night intensity (and
+current intensity when night is active) changed; layouts, daytime settings and
+prepared terrain/road records are unchanged. A missing saved night preset uses
+the shared Studio default. Runtime water now receives the same dark night tint
+and reflections as Metropolis; river flow and daytime water colors are retained.
+
 # October 3 authored map corrections
 
 Checked `.town` files are authoritative. World Map arrows now reflect authored

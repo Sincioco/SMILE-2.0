@@ -4,6 +4,11 @@ October 4, 2026 native Studio delivery. The 6,400 × 6,400 metre map is a separa
 town, with 630 placed assemblies in the latest saved user layout. Existing Neris
 Town and other permanent towns keep their identities and saved data.
 
+October 4 night-default update: the `.town` night intensity is now 112%, matching
+all other maps and the shared Studio default. Water retains its deep reflective
+night appearance. The saved Blender files remain the earlier lighting snapshots;
+map geometry and placements are unchanged.
+
 ## Files and authority
 
 - `Town/Neris Metropolis.town`: verified native prepared bundle; includes the

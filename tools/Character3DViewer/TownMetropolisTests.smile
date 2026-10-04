@@ -195,6 +195,7 @@ Call Check(Launches >= 3, "City Flyovers Continue After The First Group")
 
 Ok = Terrain.Create(Ground)
 
+Call CheckWaterDefaults()
 Call Terrain.BeginBuild(Ground, Town)
 
 Deadline = Timer() + 20000
@@ -299,7 +300,7 @@ For Frame = 0 To 12
 
     Ok = Lighting.Apply(Town.Light) And Ok
     Ok = Lighting.ConfigureBounds(Town) And Ok
-    Ok = WaterAppearance.Configure(Town, Town.Light.Intensity) And Ok
+    Ok = WaterAppearance.Configure(Town.Light.Intensity) And Ok
     Ok = Scene.BeginPrecise(View, 12, 20, 32) And Ok
     Ok = Lighting.ApplyLocal(Town) And Ok
     Ok = Terrain.Draw(Ground, Town.Light.Intensity) And Ok
@@ -444,6 +445,7 @@ If StudioScene.Ready Then
 
 End If
 
+Call CheckOtherWaterMap()
 Call StudioTown.Destroy(StudioScene)
 
 If Failures = 0 Then
@@ -455,6 +457,79 @@ Sub Check(Accepted As Boolean, Label As Text)
     If Not Accepted Then
         Failures = Failures + 1
         Print "FAIL " + Label
+    End If
+
+End Sub
+
+Sub CheckWaterDefaults()
+
+    Dim Moon As Document.Sun
+    Dim Applied As Boolean
+
+    Call Document.NightSun(Moon)
+    Call Check(Moon.Intensity = 112, "New Map Night Intensity Defaults To 112 Percent")
+
+    Applied = WaterAppearance.Apply(Ground.Materials[2], Moon.Intensity)
+
+    Call Check(Applied And Ground.Materials[2].ColorRed = 7 And
+        Ground.Materials[2].ColorGreen = 16 And Ground.Materials[2].ColorBlue = 33,
+        "Shared 112 Percent Night Retains The Deep Metropolis Water Tint")
+
+    Applied = WaterAppearance.Apply(Ground.Materials[2], Moon.Intensity, 140)
+
+    Call Check(Applied And Ground.Materials[2].ColorBlue = 33,
+        "Flowing Water Uses The Same Night Tint")
+
+    Applied = WaterAppearance.Apply(Ground.Materials[2], 260, 140)
+
+    Call Check(Applied And Ground.Materials[2].ColorBlue = 140,
+        "Flowing Water Retains Its Authored Daytime Color")
+
+End Sub
+
+Sub CheckOtherWaterMap()
+
+    Dim Loaded As Boolean
+    Dim Limit As Number
+
+    Loaded = Session.TravelTo("Neris Canals", P.Vector(0.0, 0.0, 0.0))
+    Limit = Timer() + 20000
+
+    Do
+
+        Call StudioTown.Update(StudioScene, 16)
+
+        Show Screen
+
+    Loop Until ((StudioScene.LoadingTown = "Neris Canals" And StudioScene.Ready) Or
+
+        StudioScene.Failed Or Timer() > Limit)
+
+    Call Check(Loaded And StudioScene.Ready And Not StudioScene.Failed,
+        "Another Authored Water Map Loads Without City-Specific Resources")
+
+    If StudioScene.Ready And Not StudioScene.Failed Then
+
+        If Not Session.IsNight() Then
+            Call Session.ToggleDayNight()
+        End If
+
+        Call StudioTown.Draw(StudioScene)
+        Call Check(Not StudioScene.Failed And
+            G.ReflectionValue3D(G.REFLECTION_QUERY_EFFECTIVE) = 1,
+            "Neris Canals Uses Shared Night Water Reflections")
+
+        If G.ReflectionValue3D(G.REFLECTION_QUERY_EFFECTIVE) <> 1 Then
+
+            Print "Canals Reflection Requested"
+            Print G.ReflectionValue3D(G.REFLECTION_QUERY_REQUESTED)
+            Print "Canals Reflection Fallback"
+            Print G.ReflectionValue3D(G.REFLECTION_QUERY_FALLBACK_REASON)
+
+        End If
+
+        Show Screen
+
     End If
 
 End Sub
@@ -532,7 +607,7 @@ Sub CheckSaveRoundTrip()
     SavedPath = "@EVIDENCE@\Neris Metropolis.town"
     Ok = Store.LoadDocument(Town, "Metropolis.Fixture")
     Ok = Lighting.Apply(Town.Light) And Ok
-    Ok = WaterAppearance.Configure(Town, Town.Light.Intensity) And Ok
+    Ok = WaterAppearance.Configure(Town.Light.Intensity) And Ok
 
     Call Previews.Refresh(Town.Name)
 

@@ -56,6 +56,12 @@ if ($documentLength -gt $townBytes.Length) { throw 'Incomplete Metropolis fixtur
     $townBytes[0..($documentLength - 1)])
 $neris = Join-Path $storage "$(Get-Hash 'smile.tools.character3d-viewer')/Data/$(Get-Hash 'TownEditor.PermanentNeris').bin"
 Copy-Item -LiteralPath $neris -Destination (Join-Path $data "$(Get-Hash 'Neris.Fixture').bin")
+$canals = Join-Path $root 'games/SinStarI/SourceAssets/Towns/Neris/StoryTownsV1/Towns/Neris Canals.town'
+$canalBytes = [IO.File]::ReadAllBytes($canals)
+$canalLength = 44 + [BitConverter]::ToUInt32($canalBytes, 8)
+if ($canalLength -gt $canalBytes.Length) { throw 'Incomplete Canals fixture envelope.' }
+[IO.File]::WriteAllBytes((Join-Path $data "$(Get-Hash 'TownEditor.Permanent.Neris Canals').bin"),
+    $canalBytes[0..($canalLength - 1)])
 # Preserve the user's approved right-of-Codex placement in the isolated test app.
 $placement = "$(Get-Hash '__smile_internal_window_placement_v2').bin"
 $live = Join-Path $storage "$(Get-Hash 'smile.tools.character3d-viewer')/Data/$placement"

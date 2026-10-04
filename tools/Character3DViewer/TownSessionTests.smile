@@ -1850,7 +1850,7 @@ Sub CheckSunGesture()
     Command = Commands.Command(Controls, Draft, 222)
 
     Call Check(Draft.Light.RedValue = 140 And Draft.Light.GreenValue = 174 And
-        Draft.Light.BlueValue = 255 And Draft.Light.Intensity = 8 And Draft.Light.Ambient = 8 And
+        Draft.Light.BlueValue = 255 And Draft.Light.Intensity = 112 And Draft.Light.Ambient = 8 And
         Draft.Light.Azimuth = 207.0 And Draft.Light.Elevation = 25.0 And
         Draft.Light.ShadowOpacity = 65 And Draft.Light.Shadows,
         "Night Button Applies The Accepted Moonlight Preset")

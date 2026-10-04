@@ -6,10 +6,12 @@ current layout, exports and runtime effect limits are documented in
 Use `scripts/test-metropolis-native.ps1 -PublicationDirectory <built Studio folder>`
 for isolated native placement, presentation and prepared town/PNG save/reopen checks.
 
-Neris Town now shares Neris Metropolis's nighttime water: dark water with rippled
-building, light and VFX reflections. Daytime restores blue water. This is a runtime
-presentation change; existing town files and layouts need no conversion. Rebuild
-and relaunch native Studio to adopt it; no .NET/VSIX rebuild or browser refresh.
+Every map now shares Neris Metropolis's nighttime water: dark water with rippled
+building, light and VFX reflections wherever there is a water receiver. Flowing
+rivers share the night tint and retain their flow animation and daytime colors.
+Night Intensity defaults to 112% for new maps and the current saved map collection;
+saved night overrides remain editable. Rebuild and relaunch native Studio to adopt
+the rendering change; no .NET/VSIX rebuild or browser refresh is required.
 
 ## October 3 21:00 handoff: export identity and native acceptance
 

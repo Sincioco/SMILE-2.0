@@ -12,6 +12,7 @@ Import Smile.Simple3D.TerrainHeights3D As Heights
 
 Public Const MAX_ITEMS = 1024
 Public Const MAX_MAP_TILES = 4096
+Public Const NIGHT_INTENSITY = 112
 Public Const CATEGORY_BUILDINGS = 1
 Public Const CATEGORY_SURFACES = 2
 Public Const CATEGORY_DECORATIONS = 3
@@ -209,7 +210,7 @@ Public Sub NightSun(ByRef Value As Sun)
     Value.RedValue = 140
     Value.GreenValue = 174
     Value.BlueValue = 255
-    Value.Intensity = 8
+    Value.Intensity = NIGHT_INTENSITY
     Value.Ambient = 8
     Value.Elevation = 25.0
 

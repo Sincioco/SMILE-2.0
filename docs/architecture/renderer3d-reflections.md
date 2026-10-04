@@ -17,16 +17,19 @@ committed particles and ribbons without a second simulation or resource admissio
 
 When no explicit opaque object receiver is present, committed horizontal WATER
 ribbon batches can supply the common plane. `reflection_receiver3d.h` validates
-committed revision and flat heights. Explicit object receivers retain priority;
-one height is supported. Curved water retains its previous screen-space behavior.
-Water at other heights does not receive this capture. Receiver water is skipped
+committed revision and flat heights. Explicit object receivers retain priority.
+Automatic water selection uses the flat batch with the largest triangle area;
+raised fountains no longer disable the surrounding canal/lake capture. One height
+is supported. Water at other heights and curved water retain their existing
+screen-space reflections. Receiver water is skipped
 in reflected replay to prevent feedback.
 
 `water_surface3d.h` binds the captured scene, applies bounded ripple displacement
 and a soft five-tap sample, then blends with the caller's tint. Including VFX
 replays the same committed particles/ribbons without advancing simulation again.
-Metropolis enables this at night and darkens its own water; other map colors stay
-authored. This extension is native-only. Existing receiver sample-error/backdrop-
+Studio enables this on all maps at night, with the shared dark water tint and a
+112% night intensity default; daytime colors stay authored. This extension is
+native-only. Existing receiver sample-error/backdrop-
 seam diagnostics still describe mesh receivers, not water ribbon geometry.
 
 ## Responsibility map

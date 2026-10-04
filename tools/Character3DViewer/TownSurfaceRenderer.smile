@@ -792,9 +792,24 @@ End Sub
 Public Function Draw(ByRef Value As State, Optional WaterIntensity As Number = -1) As Boolean
 
     Dim Index As Number
+    Dim DayBlue As Number
     Dim Ok As Boolean
 
-    Ok = WaterAppearance.Apply(Value.Materials[2], WaterIntensity)
+    DayBlue = 240
+
+    If Value.FlowMaterials[0].Handle <> 0 Then
+        DayBlue = 140
+    End If
+
+    Ok = WaterAppearance.Apply(Value.Materials[2], WaterIntensity, DayBlue)
+
+    For Index = 0 To 2
+
+        If Value.FlowMaterials[Index].Handle <> 0 Then
+            Ok = WaterAppearance.Apply(Value.FlowMaterials[Index], WaterIntensity, 140) And Ok
+        End If
+
+    End For
 
     For Index = 0 To Value.ObjectCount - 1
         Ok = G.DrawObject3D(Value.Objects[Index]) And Ok
