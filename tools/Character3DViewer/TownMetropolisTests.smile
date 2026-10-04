@@ -211,7 +211,7 @@ Loop Until Ground.Stage = 0 Or Ground.Failed Or Timer() >= Deadline
 
 Call Check(Ok And Ground.Stage = 0 And Not Ground.Failed, "Real City Terrain Builds Within Bound")
 
-For Frame = 0 To 12
+For Frame = 0 To 13
 
     View.Position = P.Vector(50000.0 - ToDouble(Frame) * 450.0, 6000.0, -34000.0)
     View.Target = P.Vector(0.0, 20.0, 0.0)
@@ -287,12 +287,17 @@ For Frame = 0 To 12
 
     End If
 
-    If Frame = 12 Then
+    If Frame = 12 Or Frame = 13 Then
 
         Town.Light = Town.Presets.Night
         View.Position = P.Vector(-34913.0, 14584.0, 4337.0)
         View.Target = P.Vector(-11818.0, 4000.0, -1484.0)
         ShotName = "five-building-lake-fireworks"
+
+        If Frame = 13 Then
+            Town.Light = Town.Presets.Day
+            ShotName = "daytime-lake-reflections"
+        End If
 
     End If
 
@@ -301,7 +306,7 @@ For Frame = 0 To 12
 
     Ok = Lighting.Apply(Town.Light) And Ok
     Ok = Lighting.ConfigureBounds(Town) And Ok
-    Ok = WaterAppearance.Configure(Town.Light.Intensity) And Ok
+    Ok = WaterAppearance.Configure(Town.Light.Intensity, Town.Name) And Ok
     Ok = Scene.BeginPrecise(View, 12, 20, 32) And Ok
     Ok = Lighting.ApplyLocal(Town) And Ok
     Ok = Terrain.Draw(Ground, Town.Light.Intensity) And Ok
@@ -397,6 +402,22 @@ If StudioScene.Ready Then
     End For
 
     Call CheckInsetLighting()
+
+    Call Session.ToggleDayNight()
+    Call StudioTown.Draw(StudioScene)
+    Call Check(Not StudioScene.Failed And
+        G.ReflectionValue3D(G.REFLECTION_QUERY_EFFECTIVE) = 1,
+        "Metropolis Day Water Keeps Its Planar Reflections")
+
+    Show Screen
+
+    Call Session.ToggleDayNight()
+    Call StudioTown.Draw(StudioScene)
+    Call Check(Not StudioScene.Failed And
+        G.ReflectionValue3D(G.REFLECTION_QUERY_EFFECTIVE) = 1,
+        "Metropolis Night Reflections Remain After Day Toggle")
+
+    Show Screen
 
     Ok = Session.TravelTo("Neris Town", P.Vector(0.0, 0.0, -2780.0))
     Deadline = Timer() + 20000
@@ -668,7 +689,7 @@ Sub CheckSaveRoundTrip()
     SavedPath = "@EVIDENCE@\Neris Metropolis.town"
     Ok = Store.LoadDocument(Town, "Metropolis.Fixture")
     Ok = Lighting.Apply(Town.Light) And Ok
-    Ok = WaterAppearance.Configure(Town.Light.Intensity) And Ok
+    Ok = WaterAppearance.Configure(Town.Light.Intensity, Town.Name) And Ok
 
     Call Previews.Refresh(Town.Name)
 

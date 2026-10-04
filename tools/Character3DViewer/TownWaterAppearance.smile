@@ -1,4 +1,4 @@
-''' Shared nighttime water appearance for every authored map.
+''' Shared nighttime water and all-day reflections for Neris Metropolis.
 Module Smile.Tools.TownWaterAppearance
 
 Option Explicit
@@ -7,12 +7,12 @@ Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As G
 Import Smile.Tools.TownDocument As Document
 
-Public Function Configure(Intensity As Number) As Boolean
+Public Function Configure(Intensity As Number, Optional MapName As Text = "") As Boolean
 
     Dim Enabled As Boolean
     Dim Ok As Boolean
 
-    Enabled = Intensity < 180
+    Enabled = Intensity < 180 Or MapName = "Neris Metropolis"
     Ok = G.ConfigureReflections3D(Enabled, 100, 12, 75, -1, False, True)
 
     Return Ok

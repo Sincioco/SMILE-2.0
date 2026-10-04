@@ -1,5 +1,17 @@
 # Character Viewer Architecture
 
+## October 4 Metropolis daytime water reflections
+
+`TownWaterAppearance.Configure` accepts the active map name and keeps the existing
+planar reflection pass enabled in daylight for Neris Metropolis. The session passes
+its document name alongside displayed intensity. Water tint and ripple settings
+remain with their existing owners; production line counts and dependencies do not
+grow. No renderer, persistence, asset or compiler changes are required.
+Native evidence `metropolis-e9c74507cd3f4bd19b7e7c37c8107801` passes day/night
+reflection switching, existing map-transition and POV checks, and town save/reopen.
+`daytime-lake-reflections.png` records the native daytime lake view. Focused
+formatting and diff checks pass; no limits, exclusions or exceptions changed.
+
 ## October 4 city lighting and party POV isolation
 
 `TownEditorSession.ConfigureLighting` keeps reflection and shadow configuration

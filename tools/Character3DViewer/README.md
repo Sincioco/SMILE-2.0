@@ -13,6 +13,10 @@ Night Intensity defaults to 112% for new maps and the current saved map collecti
 saved night overrides remain editable. Rebuild and relaunch native Studio to adopt
 the rendering change; no .NET/VSIX rebuild or browser refresh is required.
 
+Neris Metropolis also keeps these rippled scene reflections in daylight, retaining
+its blue daytime tint. Day/night switching and map travel apply the water policy
+for the active map; other maps retain their existing daytime appearance.
+
 Nighttime city lights now select nearby lamps independently for the main view,
 town photograph and Arin's POV after each view accepts its camera. This prevents
 the intermittent POV refresh from changing the overview's lamp selection.

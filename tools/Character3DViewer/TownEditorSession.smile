@@ -1384,7 +1384,7 @@ Public Function ConfigureLighting() As Boolean
     Dim Light As Document.Sun
 
     Light = Lighting.DisplayedSun(Town, Demo.AlternateLighting(Showcase))
-    Ok = WaterAppearance.Configure(Light.Intensity)
+    Ok = WaterAppearance.Configure(Light.Intensity, Town.Name)
     Ok = Lighting.ConfigureBounds(Town) And Ok
 
     Return Ok
