@@ -1406,7 +1406,7 @@ Public Sub Draw(ByRef Value As State)
 
     If Value.Edited Then
         Ok = Castle.ApplyLighting(Value.Comparison)
-        Ok = Authoring.ApplyLocalLighting() And Ok
+        Ok = Authoring.ConfigureLighting() And Ok
     End If
 
     If Value.Edited And Authoring.BeginWorldPhotograph() Then
@@ -1460,7 +1460,13 @@ Private Function DrawContents(ByRef Value As State) As Boolean
 
     Dim Ok As Boolean
 
-    Ok = Party.Draw(Value.People)
+    Ok = True
+
+    If Value.Edited Then
+        Ok = Authoring.ApplyLocalLighting()
+    End If
+
+    Ok = Party.Draw(Value.People) And Ok
     Ok = Residents.Draw(Value.Residents, Authoring.TownName()) And Ok
 
     If Value.Edited Then
@@ -1556,7 +1562,9 @@ Public Sub Overlay(ByRef Value As State, Optional PlayOnly As Boolean = False)
 
     End If
 
-    If Value.Edited And Value.Ready And Not PlayOnly Then
+    If (Value.Edited And
+        Value.Ready And
+        Not PlayOnly) Then
         Call Authoring.Overlay(Value.View.LiveCamera)
     End If
 

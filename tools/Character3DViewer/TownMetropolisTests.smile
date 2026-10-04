@@ -32,6 +32,7 @@ Import Smile.Tools.TownEditorSession As Session
 Import Smile.Tools.TownWorldPreviews As Previews
 Import Smile.Tools.TownFileJobs As Files
 Import Smile.Tools.TownGeometry As Geometry
+Import Smile.Tools.TownPartyInset As Inset
 
 Dim Town As Document.State
 Dim Assets As Renderer.State
@@ -395,6 +396,8 @@ If StudioScene.Ready Then
         Show Screen
     End For
 
+    Call CheckInsetLighting()
+
     Ok = Session.TravelTo("Neris Town", P.Vector(0.0, 0.0, -2780.0))
     Deadline = Timer() + 20000
 
@@ -458,6 +461,64 @@ Sub Check(Accepted As Boolean, Label As Text)
         Failures = Failures + 1
         Print "FAIL " + Label
     End If
+
+End Sub
+
+Sub CheckInsetLighting()
+
+    Dim Baseline[512] As Number
+    Dim Previous As Inset.State
+    Dim Slot As Number
+    Dim Property As Number
+    Dim Pass As Number
+    Dim Same As Boolean
+
+    Previous = StudioScene.PointOfView
+    StudioScene.PointOfView.Hidden = True
+
+    Call StudioTown.ResetOverview(StudioScene)
+    Call StudioTown.Draw(StudioScene)
+    Call StudioTown.Draw(StudioScene)
+
+    For Slot = 0 To 127
+
+        For Property = 1 To 4
+            Baseline[Slot * 4 + Property - 1] = G.LightValue3D(G.LIGHT_QUERY_LOCAL, Slot, Property)
+        End For
+    End For
+
+    For Pass = 0 To 1
+
+        StudioScene.PointOfView.Hidden = False
+        StudioScene.PointOfView.HoldRemaining = Inset.HOLD_MILLISECONDS
+        StudioScene.PointOfView.HighFps = Pass = 1
+        StudioScene.PointOfView.UpdatedAt = 0
+
+        Call StudioTown.Draw(StudioScene)
+        Call Check(Not StudioScene.Failed, "Night City And Party POV Render Together")
+
+        ' The next main frame must recover its own light selection immediately,
+        ' as it does between the normal 83 ms inset refreshes or after hiding POV.
+        StudioScene.PointOfView.Hidden = True
+
+        Call StudioTown.Draw(StudioScene)
+
+        Same = Not StudioScene.Failed
+
+        For Slot = 0 To 127
+
+            For Property = 1 To 4
+                Same = (Same And Baseline[Slot * 4 + Property - 1] =
+                    G.LightValue3D(G.LIGHT_QUERY_LOCAL, Slot, Property))
+            End For
+        End For
+
+        Call Check(Same, "Overview Lights Stay Stable After Normal Or High FPS Party POV")
+
+        Show Screen
+    End For
+
+    StudioScene.PointOfView = Previous
 
 End Sub
 

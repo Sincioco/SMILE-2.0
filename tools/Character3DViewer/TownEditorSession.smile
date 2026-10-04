@@ -1377,6 +1377,21 @@ Public Sub UpdateEffects(View As P.Camera3D, Elapsed As Number)
 
 End Sub
 
+''' Frame settings must be configured before Scene3D.Begin opens any viewport.
+Public Function ConfigureLighting() As Boolean
+
+    Dim Ok As Boolean
+    Dim Light As Document.Sun
+
+    Light = Lighting.DisplayedSun(Town, Demo.AlternateLighting(Showcase))
+    Ok = WaterAppearance.Configure(Light.Intensity)
+    Ok = Lighting.ConfigureBounds(Town) And Ok
+
+    Return Ok
+
+End Function
+
+''' Select local lights after this viewport has accepted its own camera.
 Public Function ApplyLocalLighting() As Boolean
 
     Dim Ok As Boolean
@@ -1384,8 +1399,6 @@ Public Function ApplyLocalLighting() As Boolean
 
     Light = Lighting.DisplayedSun(Town, Demo.AlternateLighting(Showcase))
     Ok = Lighting.ApplyLocal(Town, Light.Intensity)
-    Ok = WaterAppearance.Configure(Light.Intensity) And Ok
-    Ok = Lighting.ConfigureBounds(Town) And Ok
 
     If Not Ok Then
         Controls.Ui.Message = "Night-light capacity reached; some lights are unavailable."

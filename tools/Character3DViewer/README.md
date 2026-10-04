@@ -13,6 +13,12 @@ Night Intensity defaults to 112% for new maps and the current saved map collecti
 saved night overrides remain editable. Rebuild and relaunch native Studio to adopt
 the rendering change; no .NET/VSIX rebuild or browser refresh is required.
 
+Nighttime city lights now select nearby lamps independently for the main view,
+town photograph and Arin's POV after each view accepts its camera. This prevents
+the intermittent POV refresh from changing the overview's lamp selection.
+The native Metropolis regression covers normal and High FPS POV rendering and
+the first overview frame after either.
+
 ## October 3 21:00 handoff: export identity and native acceptance
 
 Save All for Viewer now freezes each available matching photograph when it captures

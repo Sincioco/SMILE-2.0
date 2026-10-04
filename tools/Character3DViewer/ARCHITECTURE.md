@@ -1,5 +1,26 @@
 # Character Viewer Architecture
 
+## October 4 city lighting and party POV isolation
+
+`TownEditorSession.ConfigureLighting` keeps reflection and shadow configuration
+before `Scene3D.Begin`. `ApplyLocalLighting` remains with the session and runs from
+`NerisTown.DrawContents` after each overview, photograph or POV accepts its camera.
+Previously the lamp selector read the previous view's accepted camera before the
+main frame began. The 83 ms POV refresh therefore switched the overview between
+city-facing and party-facing lamp sets, causing visible nighttime flicker.
+
+The existing Metropolis native regression compares all 128 light slots' type and
+position before and immediately after normal and High FPS POV rendering. Evidence
+`metropolis-e733a5b0ecc54f43afeaf74f1c92e714` reproduces both failures;
+`metropolis-abd0928d5ab44b0a887d3d909cbdb138` passes with the fix and the existing
+city, reflection and save/reopen checks. Focused formatting and diff checks pass.
+The rebuilt Studio was also reviewed at night with a minimap party route, a
+zoomed-out main view, and both normal and High FPS POV modes. The evidence folder
+includes `party-pov-lighting.png`; the automated slot comparison is the flicker
+regression proof, while the live review confirms the integrated views render.
+The session grows by 13 lines and the scene by 8 (including formatting). No new
+state, entry-point behavior, renderer limits, dependencies or exceptions were added.
+
 ## October 4 Sin Star I Battle System host
 
 The independent Sin Star I game now embeds `NativeViewerHost.Session` for its
