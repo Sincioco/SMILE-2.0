@@ -1,4 +1,4 @@
-''' Native city water appearance; authored terrain and other towns stay independent.
+''' Shared nighttime water appearance for Neris Town and Neris Metropolis.
 Module Smile.Tools.TownWaterAppearance
 
 Option Explicit
@@ -7,12 +7,22 @@ Import Smile.Simple3D.Core As Core
 Import Smile.Simple3D.Graphics3D As G
 Import Smile.Tools.TownDocument As Document
 
+Public Function Supports(ByRef Town As Document.State) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Town.Name = "Neris Metropolis" Or Town.Name = "Neris Town"
+
+    Return Result
+
+End Function
+
 Public Function Configure(ByRef Town As Document.State, Intensity As Number) As Boolean
 
     Dim Enabled As Boolean
     Dim Ok As Boolean
 
-    Enabled = Town.Name = "Neris Metropolis" And Intensity < 180
+    Enabled = Supports(Town) And Intensity < 180
     Ok = G.ConfigureReflections3D(Enabled, 100, 12, 75, -1, False, True)
 
     Return Ok

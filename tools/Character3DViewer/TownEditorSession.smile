@@ -1297,18 +1297,18 @@ Public Function Draw() As Boolean
 
     Dim Ok As Boolean
     Dim Light As Document.Sun
-    Dim CityIntensity As Number
+    Dim WaterIntensity As Number
 
     Light = Lighting.DisplayedSun(Town, DemoLightingAlternate)
-    CityIntensity = -1
+    WaterIntensity = -1
 
-    If Town.Name = "Neris Metropolis" Then
-        CityIntensity = Light.Intensity
+    If WaterAppearance.Supports(Town) Then
+        WaterIntensity = Light.Intensity
     End If
 
     If Controls.SectionGesture.Pending Then
 
-        Ok = Terrain.Draw(Ground, CityIntensity)
+        Ok = Terrain.Draw(Ground, WaterIntensity)
         Ok = Renderer.Draw(Assets, Controls.SectionGesture.Before, Light.Intensity) And Ok
         Ok = Attachments.Draw(Details, Controls.SectionGesture.Before) And Ok
 
@@ -1316,7 +1316,7 @@ Public Function Draw() As Boolean
 
     End If
 
-    Ok = Terrain.Draw(Ground, CityIntensity)
+    Ok = Terrain.Draw(Ground, WaterIntensity)
     Ok = Renderer.Draw(Assets, Town, Light.Intensity) And Ok
     Ok = Attachments.Draw(Details, Town) And Ok
     Ok = Campfires.Draw(Fires) And Ok

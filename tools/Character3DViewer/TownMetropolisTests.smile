@@ -412,8 +412,31 @@ If StudioScene.Ready Then
 
     If StudioScene.Ready Then
 
+        If Not Session.IsNight() Then
+            Call Session.ToggleDayNight()
+        End If
+
         Call StudioTown.Draw(StudioScene)
         Call Check(Not StudioScene.Failed, "Neris Town Draws After Night City Transition")
+        Call Check(G.ReflectionValue3D(G.REFLECTION_QUERY_EFFECTIVE) = 1 And
+            G.ReflectionValue3D(G.REFLECTION_QUERY_INCLUDE_VFX) = 1,
+            "Neris Town Night Water Reflects Its Scene And Lights")
+
+        Show Screen
+
+        Call Session.ToggleDayNight()
+        Call StudioTown.Draw(StudioScene)
+        Call Check(Not StudioScene.Failed And
+            G.ReflectionValue3D(G.REFLECTION_QUERY_REQUESTED) = 0,
+            "Neris Town Day Restores Its Unreflected Water")
+
+        Show Screen
+
+        Call Session.ToggleDayNight()
+        Call StudioTown.Draw(StudioScene)
+        Call Check(Not StudioScene.Failed And
+            G.ReflectionValue3D(G.REFLECTION_QUERY_EFFECTIVE) = 1,
+            "Neris Town Night Reflections Return After Day Toggle")
 
         Show Screen
 

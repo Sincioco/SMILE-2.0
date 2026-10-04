@@ -1,5 +1,24 @@
 # Character Viewer Architecture
 
+## October 4 shared Neris nighttime water
+
+`TownWaterAppearance.Supports` selects Neris Town and Neris Metropolis for the
+same dark nighttime tint and planar scene/light/VFX reflections. The session uses
+that single policy for material tint as well as reflection configuration; the
+terrain renderer still owns its water material. Daytime restores the blue water
+and disables this reflection pass. Authored geometry, placements and lighting
+presets are unchanged, and other maps keep their existing presentation.
+
+The existing native Metropolis-to-Neris transition regression now checks actual
+Neris night reflection activation, day deactivation and return to night. Ownership
+remains in the existing water appearance module (+10 lines), with no net growth
+in the session or terrain renderer, no new dependencies or entry-point changes,
+and no renderer/compiler extension or guardrail exception.
+
+Validation: `metropolis-6f91192ba21048ab922ff3ffb89e2280` passes the native
+transition and day/night reflection checks alongside the existing city regression.
+Focused formatting and diff checks pass; no limits, baselines or exclusions changed.
+
 ## October 4 five-building lake fireworks
 
 `TownWaterfrontShow` keeps the existing four launch sites and adds rooftop emitters

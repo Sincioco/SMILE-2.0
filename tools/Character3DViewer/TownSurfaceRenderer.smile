@@ -789,12 +789,12 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
 
 End Sub
 
-Public Function Draw(ByRef Value As State, Optional CityIntensity As Number = -1) As Boolean
+Public Function Draw(ByRef Value As State, Optional WaterIntensity As Number = -1) As Boolean
 
     Dim Index As Number
     Dim Ok As Boolean
 
-    Ok = WaterAppearance.Apply(Value.Materials[2], CityIntensity)
+    Ok = WaterAppearance.Apply(Value.Materials[2], WaterIntensity)
 
     For Index = 0 To Value.ObjectCount - 1
         Ok = G.DrawObject3D(Value.Objects[Index]) And Ok
