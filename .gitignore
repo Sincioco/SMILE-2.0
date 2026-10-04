@@ -37,3 +37,6 @@ tools/Character3DViewer/Character3DViewer.TownRenderTests.smileproj
 # Local diagnostic projects reference generated sources under artifacts/.
 tools/Character3DViewer/Character3DViewer.TerrainWaterPreview.smileproj
 tools/Character3DViewer/Character3DViewer.Trace.smileproj
+
+# Independent SinStarI checkout; optional local compatibility junction.
+/games/SinStarI/

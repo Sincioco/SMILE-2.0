@@ -167,7 +167,7 @@ his own assets and timing.
 | **Water** | Water Whip, Serpent Orbit and Tidal Surge in Water Lab, the Viewer and Sin Star I. |
 | **Fire** | Ember Strikes, Flame Sweep and Inferno Blast in a separate Fire Lab preview; adoption into Kael's Viewer/game rotation is pending. |
 
-[Kael's versioned package](games/SinStarI/SourceAssets/Characters/Kael/KaelV1/README.md)
+[Kael's versioned package](https://github.com/Sincioco/SinStarI/blob/main/SourceAssets/Characters/Kael/KaelV1/README.md)
 · [Water Lab](tools/WaterVfxLab/README.md)
 · [Fire Lab](tools/AdvancedFireVfxLab/README.md)
 
@@ -187,7 +187,7 @@ sound cues in context.
 *Vrax's individual animation view, with clip selection, playback information and camera controls.*
 
 [Explore Vrax's effects](tools/Character3DViewer/README.md#vrax-attacks)
-· [Read the asset and audio integration journey](games/SinStarI/SourceAssets/Bosses/Vrax/VraxV1/VRAX-CREATION-AND-REPAIR-JOURNEY.md)
+· [Read the asset and audio integration journey](https://github.com/Sincioco/SinStarI/blob/main/SourceAssets/Bosses/Vrax/VraxV1/VRAX-CREATION-AND-REPAIR-JOURNEY.md)
 
 ## The Red Dragon — animation, fire and party reactions
 
@@ -207,7 +207,7 @@ The dragon uses a lightweight preview rig. The goal is to make each animation,
 attachment, effect and camera decision useful to the developing game, while
 keeping the editor focused and responsive.
 
-[Dragon package and rig notes](games/SinStarI/SourceAssets/Bosses/RedDragon/RedDragonV11/README.md)
+[Dragon package and rig notes](https://github.com/Sincioco/SinStarI/blob/main/SourceAssets/Bosses/RedDragon/RedDragonV11/README.md)
 · [Character Viewer workflow](tools/Character3DViewer/README.md)
 
 ## Sin Star I — from script to screen
@@ -246,15 +246,15 @@ characters, worlds and emotional stakes of the RPG.
 
 *Story illustration — A World Hurled: Aevos, the party, and Mira's shield.*
 
-The dedicated [Sin Star I repository](https://github.com/Sincioco/SinStarI)
-contains the illustrated script, storyboard and production materials. Its current
+The native game now lives at the root of the dedicated [Sin Star I repository](https://github.com/Sincioco/SinStarI),
+which also contains the illustrated script, storyboard and production materials. Its current
 storyboard has **122 illustrations across 53 scenes**, connected to script dialogue
 and scene navigation. The local creative workspace also supports animated image
 previews, clip variations and a Video Clips sequence-review view.
 
 [Explore the Script, Storyboard and Video Clips guide](https://github.com/Sincioco/SinStarI/blob/main/Visual%20Script%20and%20Storyboard/Start%20Here.md)
 · [Browse the production materials](https://github.com/Sincioco/SinStarI/tree/main/Visual%20Script%20and%20Storyboard/production)
-· [Explore the native Sin Star I project](games/SinStarI/README.md)
+· [Explore the native Sin Star I project](https://github.com/Sincioco/SinStarI/blob/main/README.md)
 
 Video files stay outside Git. The trailer above is publicly watchable on YouTube;
 the story repository explains local playback and the available online versions.

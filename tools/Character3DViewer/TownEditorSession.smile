@@ -75,6 +75,7 @@ Private Dim AppliedRevision As Number
 Private Dim RecoveryRevision As Number
 Private Dim RecoveryClock As Number
 Private Dim TeleportPending As Boolean
+Private Dim Playing As Boolean
 Private Dim TravelPending As Boolean
 Private Dim TravelArrival As P.Vector3
 Private Dim TabOverviewPending As Boolean
@@ -102,6 +103,40 @@ Public Function Available() As Boolean
     End If
 
     Return HaveDocument
+
+End Function
+
+''' Select an authored map for a game host without opening editor controls.
+Public Function OpenForPlay(Name As Text) As Boolean
+
+    Dim Ok As Boolean
+
+    Ok = Available()
+
+    If Not Ok Then
+        Return False
+    End If
+
+    If Town.Name <> Name Then
+        Ok = Tabs.OpenNamed(OpenTabs, Town, Name)
+    End If
+
+    If Ok Then
+
+        Call Editor.ResetDocument(Controls, Town)
+
+        Playing = True
+        Showcase.Enabled = False
+        Showcase.IdleElapsed = 0
+        DemoCameraPending = False
+        Controls.Enabled = False
+        TeleportPending = True
+        TravelPending = False
+        TabOverviewPending = True
+
+    End If
+
+    Return Ok
 
 End Function
 
@@ -804,6 +839,10 @@ End Function
 Public Sub UpdateDemoIdle(View As P.Camera3D, Elapsed As Number, Active As Boolean)
 
     Dim Available As Boolean
+
+    If Playing Then
+        Return
+    End If
 
     Available = (Ready And Not Editing() And Not World.Active() And
         Not OpenTabs.Menu.Visible And Not Files.BlocksEditing(Transfers) And
@@ -1547,6 +1586,8 @@ End Sub
 Public Sub Release()
 
     Dim Ok As Boolean
+
+    Playing = False
 
     Call RoadTravel.Cancel()
 

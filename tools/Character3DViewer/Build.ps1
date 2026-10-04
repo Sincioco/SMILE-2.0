@@ -402,10 +402,6 @@ if ($Studio) {
     }
     if (-not $PublicRoster) { Prepare-StudioAssets $studioProject }
 }
-if ($PrepareOnly) {
-    Write-Host "Prepared project inputs: $project"
-    return
-}
 if ($Target -in @('Native', 'All')) {
     & (Join-Path $toolRoot 'Prepare-TownEditorAssets.ps1')
     $townSource = Join-Path $repositoryRoot 'games\SinStarI\SourceAssets\Towns\Neris\NerisTownV1\Runtime'
@@ -443,6 +439,10 @@ if ($Target -in @('Native', 'All')) {
     foreach ($file in Get-ChildItem -LiteralPath (Join-Path (Split-Path $townSource -Parent) 'Textures') -Filter 'Neris-Minimap*.png') {
         Copy-Item -LiteralPath $file.FullName -Destination $townImages -Force
     }
+    if ($PrepareOnly) {
+        Write-Host "Prepared native project inputs: $project"
+        return
+    }
     $output = Join-Path $outputRoot 'Character3DViewer.exe'
     if ($Studio) {
         $output = Join-Path $outputRoot 'SmileStudio.exe'
@@ -459,6 +459,10 @@ if ($Target -in @('Native', 'All')) {
     Write-Host "Built Character Viewer/editor: $output"
 }
 
+if ($PrepareOnly) {
+    Write-Host "Prepared project inputs: $project"
+    return
+}
 if ($Target -in @('Web', 'All')) {
     $webFolder = if ($WebQuality -eq 'Full') { 'Web' } else { "Web - Optimized $WebQuality" }
     if ($PublicRoster) { $webFolder += ' - Public' }

@@ -3,7 +3,7 @@ param([switch]$BattleOnly)
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
-$gameRoot = Join-Path $root 'games\SinStarI'
+$gameRoot = Join-Path $root '..\SMILE 2.0 - Sin Star I'
 $testRoot = Join-Path $root ('artifacts\tests\SinStarPresentation-' + [Guid]::NewGuid().ToString('N'))
 $null = New-Item -ItemType Directory -Path $testRoot
 $presentationSource = Get-Content -LiteralPath (Join-Path $gameRoot 'CharacterPresentation.smile') -Raw

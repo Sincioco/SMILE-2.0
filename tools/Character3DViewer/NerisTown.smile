@@ -245,7 +245,7 @@ Public Sub LoadNext(ByRef Value As State)
 End Sub
 
 Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
-    Optional HeaderHovered As Boolean = False)
+    Optional HeaderHovered As Boolean = False, Optional PlayOnly As Boolean = False)
 
     Dim Pointer As Motion.PointerInput
     Dim ArenaKey As Number
@@ -259,7 +259,7 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
 
     If Not Value.Ready Then
 
-        If Authoring.PreviewActive() Or Value.Failed Then
+        If Not PlayOnly And (Authoring.PreviewActive() Or Value.Failed) Then
             Call Authoring.Input(Value.View.LiveCamera, Key, True)
         End If
 
@@ -425,7 +425,7 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
 
     End If
 
-    If Layout.Clicked(2) Then
+    If Not PlayOnly And Layout.Clicked(2) Then
 
         Call Authoring.BeginEditing()
 
@@ -454,8 +454,10 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
 
     If Value.Edited Then
 
-        Call Authoring.Input(Value.View.LiveCamera, Key,
-            Blocked Or CameraPanel.Hovered(Value.Panel.HelpOpen) Or Value.Panel.DragRow > 0)
+        If Not PlayOnly Then
+            Call Authoring.Input(Value.View.LiveCamera, Key,
+                Blocked Or CameraPanel.Hovered(Value.Panel.HelpOpen) Or Value.Panel.DragRow > 0)
+        End If
 
         If Authoring.PreviewActive() Then
             Return
@@ -1481,7 +1483,7 @@ Private Function DrawContents(ByRef Value As State) As Boolean
 
 End Function
 
-Public Sub Overlay(ByRef Value As State)
+Public Sub Overlay(ByRef Value As State, Optional PlayOnly As Boolean = False)
 
     Dim MapStatusY As Number
 
@@ -1496,12 +1498,19 @@ Public Sub Overlay(ByRef Value As State)
     Draw Text "Speed: " + Numbers.NumberText(Value.People.SpeedPercent) + "%  (+ / -)" At 405, 18 Size 16 Color WHITE
 
     Call SunControls.DrawDayNight(Authoring.IsNight(), Layout.ButtonLeft(1), Layout.ButtonTop())
-    Call Layout.DrawButton(2, Authoring.Editing())
+
+    If Not PlayOnly Then
+        Call Layout.DrawButton(2, Authoring.Editing())
+    End If
 
     If Not Value.Ready Then
-        Call Authoring.Overlay(Value.View.LiveCamera, True)
+
+        If Not PlayOnly Then
+            Call Authoring.Overlay(Value.View.LiveCamera, True)
+        End If
 
         Return
+
     End If
 
     If Value.Ready Then
@@ -1547,7 +1556,7 @@ Public Sub Overlay(ByRef Value As State)
 
     End If
 
-    If Value.Edited And Value.Ready Then
+    If Value.Edited And Value.Ready And Not PlayOnly Then
         Call Authoring.Overlay(Value.View.LiveCamera)
     End If
 

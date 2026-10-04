@@ -1,5 +1,15 @@
 # SMILE 2.0 Repository Instructions for Codex
 
+### Sin Star I repository separation (October 4, 2026)
+
+- The canonical native game is now `D:\SMILE 2.0 - Sin Star I`, in `Sincioco/SinStarI`.
+  Its visual script and storyboard remain in that repository's protected production folder.
+- `games/SinStarI` is an ignored local compatibility junction to the independent checkout,
+  not an engine-owned game copy. Do not add it back to this repository.
+- Studio and shared modules remain here. Build the game through its own `Build.ps1`.
+  Scripts that read the game's project file must resolve it from the canonical root so
+  its relative project references remain valid.
+
 ### Permanent Sin Star Studio direction (September 29, 2026)
 
 - The existing native Character Viewer is now **SMILE 2.0 - Sin Star I - Game Engine and Studio**.
