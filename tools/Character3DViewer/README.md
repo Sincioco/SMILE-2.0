@@ -8,6 +8,12 @@ slots retain their order; Idle, Roar, Fire Breath, Claw Strike, Hit and Fireball
 now include coordinated torso/leg/wing/tail movement. Existing battle impact and
 fire-release timings, six sockets and the Party Dragon route are preserved.
 
+The **v1.3.1** correction separates the arms/hands from the wing rig. Idle has a
+bent arm guard, fire attacks include visible wing strokes, Claw Strike reaches
+with the arm, and Hit staggers torso/head/hand/wing recoil before a spring rebound.
+Select **Hit** at 100% speed to review the impact and settling; use the timeline
+to inspect the compression, overshoot and returned resting pose.
+
 The editable Blender rig has four foot targets, knee poles and independent paw
 orientation. Studio plays baked skeletal keys through the existing Character3D
 owner; it does not solve terrain-adaptive IK. Original mesh/texture/scale remain.

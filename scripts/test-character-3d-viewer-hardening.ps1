@@ -1328,7 +1328,7 @@ try {
     $dragonRevision = Get-Content (Join-Path $dragonRevisionPath 'package.json') -Raw | ConvertFrom-Json
     $dragonValidation = Get-Content (Join-Path $dragonRevisionPath 'validation.json') -Raw | ConvertFrom-Json
     $dragonHash = (Get-FileHash (Join-Path $dragonRevisionPath 'red-dragon-v1.3-animated.glb')).Hash
-    Assert-True ($dragonRevision.deformBones -eq 28 -and $dragonRevision.controlBones -eq 8 -and
+    Assert-True ($dragonRevision.deformBones -eq 36 -and $dragonRevision.controlBones -eq 8 -and
         -not $dragonRevision.geometryChanged -and $dragonRevision.clips.Walk -eq 60 -and
         $dragonRevision.clips.Run -eq 30 -and $dragonValidation.passed -and
         $dragonHash -ieq $dragonRevision.modelSha256 -and

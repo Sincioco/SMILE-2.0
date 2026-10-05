@@ -1,5 +1,26 @@
 # Character Viewer Architecture
 
+## October 5 Dragon arm, wing and recoil correction
+
+Sin's visual review exposed a gap in the first v1.3 pass: hands shared the wing
+chain, the spread arms still read as a T-pose, and Hit lacked staggered spring
+recovery. The canonical package now has 36 deform bones: eight added upper-arm,
+forearm, wrist and claw joints, with separate weights and corrected wing roots.
+Its existing `build.py` still owns rigging/export and `animate.py` owns motion.
+No runtime owner, state, dependency or public asset path changed. Profiles only
+updates the candidate label to v1.3.1; the existing hardening assertion expects
+36 bones. Neither engine file grows. No architecture exceptions changed.
+
+Package authoring grows by 77 lines in animate, 57 in build, two in preview and
+46 in validate. These remain focused at 256, 271, 85 and 141 lines respectively.
+The asset regression failed on the old GLB's missing arm chains before correction.
+It now measures actual hand/wing deformation relative to the chest, resting wrist
+height, recoil peak delay and opposite-direction rebound, alongside foot contact
+and loop checks. All 668 samples and the native hardening/calibration suite pass.
+Studio was rebuilt with 401 verified assets and relaunched for native inspection.
+The previous contact-only validation did not establish performance quality;
+the package journey records that lesson and the corrected 720p motion review.
+
 ## October 5 Dragon full-body animation
 
 The independent game's `SourceAssets/Bosses/RedDragon/RedDragonV13` owns the
