@@ -8,6 +8,41 @@ target. Web work is indefinitely paused; separate Studio S1 is abandoned for now
 The existing Viewer is native Sin Star Studio, authoritative for approved Towns,
 Battle Systems and Battle Simulations brought into the independent Sin Star I game.
 
+## Metropolis loading optimization — October 5
+
+`TownDocumentMap.Rebuild` now filters each minimap row's ordered surface brushes
+into 16-pixel-wide regions before sampling. The 256 x 256 raster, four exact
+samples per pixel, brush precedence, eight-row update budget and complete-cache
+publication remain unchanged. This reuses `SurfacePaint3D.SelectRegion`; there is
+no new cache identity, file format, dependency or renderer allocation. Existing
+prepared terrain/road caches and shared catalog model leases remain authoritative.
+
+The isolated native cached-load profile measured **2,973 ms before**, **2,524 ms
+after**, and **2,525 ms during pixel verification** (about 15% faster). These are
+same-machine process launches with prepared terrain, not cold-disk measurements
+or a universal time guarantee. The profile uses copied saves and separate test
+ApplicationIds; live maps are untouched. Evidence is under `artifacts/tests/`:
+`town-loading-baseline-43ffe242d01f462dadb8d44c45d90b64`,
+`town-loading-tiled-879a6bbe341d4423b49a0428aa15f727`, and
+`town-loading-pixel-check-c742e7c20af04e7d853439964708e217`. A test-only native seam
+compared all 65,536 published pixel values against the previous row-wide algorithm at overview,
+cursor zoom, pan and document invalidation: all four comparisons passed.
+`scripts/test-metropolis-native.ps1 -PublicationDirectory tools/Character3DViewer/bin/Release`
+also passed (`metropolis-da6b84c0630347cba93a6bb98ad1d97c`), including real city
+draws, lighting/reflections, map transitions and prepared save/PNG reopen.
+`Launch.ps1 -Build -SkipWindowActivation` rebuilt the complete native Studio,
+verified 401 published assets and gracefully replaced the previous process.
+The relaunched Metropolis scene was visually inspected; its displayed map load
+time was **2,346 ms**. This live observation is separate from the controlled profile.
+
+Ownership stays in the minimap module (583 -> 594 physical lines); the existing
+600-line review trigger and other exceptions are unchanged. A focused style check
+and diff review pass. This bounded performance investigation does not add a
+permanent benchmark suite. Remaining startup work includes renderer/document
+initialization, catalog uploads, terrain uploads and four party actors; retaining
+more GPU assets or preloading other maps would need resource-budget and lifecycle
+validation before adoption.
+
 ## Viewer export R04
 
 **Implemented; bounded native acceptance passes.** An accepted frozen map without

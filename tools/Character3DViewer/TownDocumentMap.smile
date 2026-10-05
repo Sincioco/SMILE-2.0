@@ -353,6 +353,7 @@ Private Sub Rebuild(ByRef Town As Document.State)
     Dim BlueValue As Number
     Dim WX As Double
     Dim WZ As Double
+    Dim RowRegion As Paint.State
     Dim Region As Paint.State
 
     If Not Building Or BuildRevision <> Town.Revision Then
@@ -365,11 +366,21 @@ Private Sub Rebuild(ByRef Town As Document.State)
 
     For Z = BuildRow To Min(255, BuildRow + 7)
 
-        Call Paint.SelectRegion(Town.Surface.Curves, Region, LowX,
+        Call Paint.SelectRegion(Town.Surface.Curves, RowRegion, LowX,
             LowZ + ToDouble(Z) * (HighZ - LowZ) / 256.0, HighX,
             LowZ + ToDouble(Z + 1) * (HighZ - LowZ) / 256.0)
 
         For X = 0 To 255
+
+            ' Keep brush order and exact samples; reject shapes outside this tile.
+
+            If X Mod 16 = 0 Then
+                Call Paint.SelectRegion(RowRegion, Region,
+                    LowX + ToDouble(X) * (HighX - LowX) / 256.0,
+                    LowZ + ToDouble(Z) * (HighZ - LowZ) / 256.0,
+                    LowX + ToDouble(X + 16) * (HighX - LowX) / 256.0,
+                    LowZ + ToDouble(Z + 1) * (HighZ - LowZ) / 256.0)
+            End If
 
             RedValue = 0
             GreenValue = 0
