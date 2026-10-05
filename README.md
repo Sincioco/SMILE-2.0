@@ -279,17 +279,20 @@ browser validation are on hold**.
 
 ### SMILE 2.0 Studio status
 
-Studio has a bounded hosted Viewer and Character Editor using the shared Viewer
-session. **Studio creation, development, final interaction acceptance and next
-phases remain on hold.** The standalone Viewer and labs shown above are the current
-working tools. General scene documents, reusable saved-effect/audio documents,
-declarative scene authoring and faithful scene export remain planned.
+**Studio is the existing native application under `tools/Character3DViewer`.**
+It is authoritative for Sin Star I battle systems, battle simulations and town/map
+authoring. Start with its [current-use guide](tools/Character3DViewer/README.md)
+and [architecture](tools/Character3DViewer/ARCHITECTURE.md) for supported workflows,
+ownership, open issues and validation. The independent Sin Star I game adopts
+approved Studio behavior.
 
-The [accepted Studio architecture](docs/architecture/2026-09-09%20-%20SMILE%202.0%20Studio.md)
-and [working visual design](docs/architecture/studio-visual-design.md) describe the
-direction, not completed product capabilities. Future work resumes only on Sin's
-direction; see the [Studio implementation status](tools/SmileStudio/README.md) and
-[current adoption checkpoint](docs/implementation/party-beat-camera-checkpoint.md).
+The separate `tools/SmileStudio` concept was abandoned for now on September 29.
+Its [S1 implementation record](tools/SmileStudio/README.md),
+[September 9 architecture](docs/architecture/2026-09-09%20-%20SMILE%202.0%20Studio.md)
+and [September 10 visual design](docs/architecture/studio-visual-design.md) preserve
+historical decisions and evidence. They do not authorize resuming that host or
+implementing its planned features. Web development, adoption, publication and
+browser validation remain paused indefinitely.
 
 ## Build and explore
 

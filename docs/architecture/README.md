@@ -1,156 +1,98 @@
 # Compiler and tooling architecture
 
-SMILE stands for **Simple Modern and Intuitive Language for Everyone**.
+SMILE means **Simple Modern and Intuitive Language for Everyone**. This is the
+architecture entry point; each topic owns its detailed contracts and evidence.
 
-The accepted [SMILE 2.0 Studio design](2026-09-09%20-%20SMILE%202.0%20Studio.md)
-governs the next integrated host, general Scene Editor and reusable documents.
-See the root README for current implementation status and the first bounded slice.
-The [current Studio visual design](studio-visual-design.md) records Sin's September 10
-reference image, permanent visual direction and section-by-section UI interpretation.
-Current contracts include [mandatory startup](startup-presentation.md),
-[Double](../language/double.md), [precise 3D](../libraries/precision3d-boundary.md)
-and [planar reflections](renderer3d-reflections.md).
+Current Studio is the existing native application under
+[`tools/Character3DViewer`](../../tools/Character3DViewer/README.md), named
+**SMILE 2.0 - Sin Star I - Game Engine and Studio**. The independent Sin Star I
+game consumes Studio-approved systems and content. The September separate-Studio
+design is historical; Web development, publication and browser acceptance remain
+paused. [AGENTS.md](../../AGENTS.md) owns permanent project direction.
 
-The original educational wireframe layer is documented in [Simple3D software-rendering architecture](simple3d-software-rendering.md). The current indexed-triangle milestone is documented in [true Simple3D Renderer3D architecture](true-simple3d-renderer3d.md), with the reusable [texture and material contract](renderer3d-materials.md), deterministic [SM3D model pipeline](sm3d-model-format.md), [skeletal animation contract](renderer3d-skeletal-animation.md), renderer-neutral [Battle3D presentation bridge](battle3d.md), optional deterministic [BattleTime ATB scheduler](battle-time.md), and reusable [battle camera/VFX layer](battle-camera-vfx.md) documented separately. Renderer2D remains permanent while DirectX/WebGL2 Renderer3D provides filled meshes, textured materials, offline-authored models, GPU-skinned animation, perspective, depth testing, and 2D HUD composition. The [Dragonfall delivery report](../implementation/dragonfall-3d-battle-delivery.md) traces those layers to the complete native/Web boss-fight acceptance evidence.
-
-SMILE 2.0 uses one deliberately direct native pipeline:
+## Core owners and contracts
 
 ```text
-startup .smile + support .smile sources
-    -> Smile.Language analysis
+startup .smile + support .smile + project/package references
+    -> Smile.Language analysis and bound model
     -> Smile.Compiler MASM emitter
     -> ml64.exe and link.exe
     -> native Windows x64 .exe
 ```
 
-`src\Smile.Language` owns source documents, tokenization, keyword and built-in facts, parsing, syntax nodes, diagnostics, modules/imports/visibility, symbols, the unified built-in/nominal type model, package validation, project graphs, and semantic analysis. Each physical source becomes its own syntax tree. A shared exact-provider resolver orders project and package libraries, checks identities, versions and cycles, and validates package-owned modules and API metadata with declared dependencies present. A shared module processor resolves qualified public values and types into stable semantic identities, then one compilation-wide bound model feeds both emitters. `smilec` and the Visual Studio extension both call these same resolution and analysis paths; there is no editor-only parser, dependency resolver, or semantic implementation.
+`src/Smile.Language` is the single authority for language and project/package
+semantics. The compiler and Visual Studio consume that model. The native runtime
+provides generic services; SMILE source owns application rules.
 
-Language evolution follows one permanent hierarchy: use existing syntax when it stays clear; otherwise prefer an established BASIC idea; use the smallest beginner-friendly C#-inspired concept only when BASIC has no suitable precedent. Additions remain general-purpose, avoid aliases and clever punctuation, and receive only proportional diagnostics, tests, examples, and documentation through the shared language authority.
+| Read for | Current document |
+| --- | --- |
+| Emission, packages, lifetime, publication and native services | [Compiler and runtime](compiler-and-runtime.md) |
+| Project commands, workspace analysis, debugging and UI checks | [Visual Studio tooling](visual-studio-tooling.md) |
+| Mandatory logo, visible minimum, progress and artifact metadata | [Startup presentation](startup-presentation.md) |
+| Language/project/package use and supported package limits | [Language](../language/README.md), [libraries](../libraries/README.md) |
+| Numeric semantics and production precision boundary | [Double](../language/double.md), [Precision3D](../libraries/precision3d-boundary.md) |
+| Module, value Type and reference Class design | [Lightweight OOP plan](SMILE-2.0-Lightweight-OOP-Implementation-Plan.md), [hardening](lightweight-oop-hardening-plan.md) |
+| Native Studio ownership, save safety and focused tests | [Viewer architecture](../../tools/Character3DViewer/ARCHITECTURE.md) |
+| Map documents, preparation, World links and terrain layers | [Town authoring](town-authoring.md), [terrain elevation](terrain-elevation.md) |
 
-## Lightweight OOP and package architecture
+## Rendering and assets
 
-SMILE deliberately keeps three distinct composition models:
+Renderer2D remains first-class for images, text, shapes, menus and HUDs.
+Renderer3D composes its filled 3D pass alongside it; backend GPU details stay
+internal. Asset publication is format-neutral, while each runtime resource owns
+its decoding and lifetime. The documents below own numerical budgets and APIs.
 
-- `Module` is a shared service, namespace, bounded handle engine, or intentional singleton.
-- `Type` is a nominal inline value. Assignment and `ByVal` make deep copies; `ByRef` and instance members operate on a stable writable location.
-- `Class` is a nominal reference object. Assignment and `ByVal` retain the same identity; `ByRef` may rebind a scalar reference; `Nothing` is the default reference and `Is`/`Is Not` compare identity.
+| Topic | Contract |
+| --- | --- |
+| Educational projection layer | [Simple3D software rendering](simple3d-software-rendering.md) |
+| Indexed meshes, cameras and Renderer2D coexistence | [Renderer3D](true-simple3d-renderer3d.md) |
+| Texture/color/material response | [Materials](renderer3d-materials.md) |
+| Offline import and deterministic runtime model format | [SM3D model format](sm3d-model-format.md) |
+| Rig, clip, skinning and animation ownership | [Skeletal animation](renderer3d-skeletal-animation.md) |
+| Planar reflection limits and native checks | [Reflections](renderer3d-reflections.md) |
+| Fixed-slot CPU/GPU effects and capacity admission | [GPU particles](renderer3d-gpu-particles.md) |
+| Generation 3 stages and shared effect constraints | [Preflight](renderer3d-vfx-generation-3-preflight.md), [soft depth](renderer3d-soft-depth-m7e-a.md), [distortion](renderer3d-distortion-m7e-b.md), [common GPU particles](renderer3d-gpu-particle-common-m7e-c.md) |
 
-Enums, Optional defaults, named arguments, Type/Class members, constructors, and Properties all enter the same syntax, symbol, semantic, capability, source-location, and package pipelines. A bound call records explicit evaluation in source order separately from declaration/ABI placement. Type methods and Class members receive a hidden `Me`; a Property setter receives hidden contextual `Value`. These hidden values never become source-visible parameters, named arguments, completion candidates, or public package parameters. Method receivers are captured before explicit arguments. Property assignment preserves SMILE's established order by evaluating the right-hand side before resolving the receiver, even though the accessor ABI receives receiver before Value.
+## RPG application composition
 
-Type storage retains the existing generated initialize, deep-copy, and clear helpers. Native Class objects use deterministic automatic reference counting. The compiler retains and releases scalar roots, arguments, returns, staged values, fields, and globals, while generated Class cleanup walks every cleanup-bearing field in reverse declaration order and every fixed array in reverse element order before freeing object storage. A separate native active-frame chain unwinds caller and callee Text, Image, Type, Class, and clip ownership during non-local termination; the staged-call chain continues to own only partially evaluated arguments, receivers, and values. Allocation failure has a distinct deterministic runtime message and exit path. There are no user finalizers, class-reference fields, cycles, or tracing garbage collector in this milestone. The Web target implements the same explicit retain/release and finalization contract in its shared runtime instead of relying on JavaScript garbage-collection timing. Both targets keep generated field storage collision-safe and fail deterministic `Nothing` member access without invoking arbitrary debugger-time code.
+`Smile.Game` owns reusable movement/map/camera/collision mechanics; `Smile.RPG`
+owns reusable RPG definitions and progress. Applications own UI, art, maps and
+gameplay policy. Module re-entry and persistence must retain these boundaries.
 
-`.smilelib` format 7 is the one current package format. Its canonical manifest and public API carry exact logical `name@version` provider identity, normalized `src/...` source IDs, source locations, visibility, capability requirements, Optional/default metadata, Enums, Type members, Classes, constructors, and accessor-specific Property metadata. ZIP entry order, JSON order, timestamps, normalized source bytes, and fingerprints are deterministic; absolute build and extraction paths are forbidden. Formats 1 through 6 are rejected with a rebuild instruction, and packaged source remains authoritative for byte-exact API regeneration. Validation rejects unexpected, duplicated, executable, absolute, traversal, non-normal, missing, or hash-mismatched archive entries before analysis, then regenerates and byte-compares the complete public API so altered identities, dependencies, locations, ordering, defaults, nominal layouts, constructors, members, Properties, visibility, or capabilities cannot be trusted from metadata alone.
+| Topic | Contract and evidence |
+| --- | --- |
+| Top-down world | [Phase 7](phase7-top-down-rpg-world.md) |
+| Dungeons over existing presentation-independent state | [Phase 8](phase8-rpg-dungeon-systems.md), [gap matrix](phase8-rpg-dungeon-gap-matrix.md) |
+| Battle logic and its implementation boundary | [Phase 9](phase9-rpg-battle-system.md), [gap matrix](phase9-rpg-battle-gap-matrix.md) |
+| Renderer-neutral battle presentation | [Battle3D](battle3d.md), [BattleTime](battle-time.md), [battle camera/VFX](battle-camera-vfx.md) |
+| Re-entry, unique persistence domains and cleanup | [RPGSystems hardening](rpg-systems-integration-hardening.md) |
+| Earlier native/Web boss-fight acceptance | [Dragonfall delivery report](../implementation/dragonfall-3d-battle-delivery.md) |
 
-Package loading is bounded by the supported package resource ceilings documented in `docs\libraries\README.md`. Expanded data is counted during streaming, and package publication stages, flushes, validates, and atomically replaces the destination while a finite same-target lock is held. A malformed package, failed write, or competing writer therefore cannot create a trusted partial provider or truncate the last-known-good package.
+## Historical direction and evidence
 
-The editor, formatter, compiler, native/Web emitters, and package validator consume this shared model. Completion, Quick Info, F12, diagnostics, formatter casing/rewrites, debug source mapping, and `requiresGameWindow` propagation therefore agree for project and package sources. Quick Info and debugger hover expose static Property information but never execute a getter. The shipped focused-library results are `Smile.UI` 2.0.0, `Smile.Game` 2.0.0, and the unchanged fifteen-Module `Smile.RPG` compatibility package 1.2.1.
+The [September 9 separate Studio design](2026-09-09%20-%20SMILE%202.0%20Studio.md)
+and [September 10 visual interpretation](studio-visual-design.md) remain design
+history. They do not authorize resuming `tools/SmileStudio` or replacing the current
+native Studio. [Web/mobile controls](web-mobile-virtual-controls.md) preserve the
+existing Web design without changing the indefinite pause.
 
-## Renderer2D and Renderer3D coexistence
+The [original compiler/tooling entry](archive/compiler-tooling-before-2026-10-05.md)
+retains pre-split prose, old measurements and dated VSIX results. The
+[town-authoring archive](archive/town-authoring-2026-09-26-to-10-01.md) retains the
+September 26–October 1 milestones. Historical pass counts are evidence for their
+recorded revision, not current acceptance. Keep future status and evidence in the
+relevant topic; do not grow another diary in this index.
 
-The native `SmileGraphicsBackend` vtable remains the stable **2D** drawing layer despite the historical general name; DirectX and GDI implement that layer behind the compiler-facing C ABI. Web Canvas 2D provides the same role for Web builds. These layers continue to own images, shapes, text, clipping, and painter-order overlays.
+## Previous entry anchors
 
-Renderer3D now sits beside that 2D capability. DirectX renders the 3D pass into the shared D3D11 target before restoring Direct2D; WebGL2 renders into an offscreen canvas before Canvas 2D composition. Backend objects and shaders remain internal, and GDI continues as an unchanged Renderer2D-only fallback.
+<a id="lightweight-oop-and-package-architecture"></a>
 
-The shared project asset resolver and publisher are intentionally file-format-neutral: they validate, identify, copy, and clean declared project assets without assuming PNG, WAV, or any other media format. Runtime ownership and decoding remain type-specific (`SmileImageResource`, WAV caches, and music), so future model, material, or animation resources can add their own lifetime rules without replacing project asset publication or pretending every asset is an image.
+Lightweight OOP and packages moved to [compiler/runtime contracts](compiler-and-runtime.md#lightweight-oop-and-package-architecture).
 
-True Simple3D now includes transforms, cameras, skinnable UV-capable indexed meshes, primitive generation, textured materials, deterministic offline glTF conversion/runtime models, 32-bone animation, simple tint lighting, perspective, and depth testing. General physics, particles, and student shaders remain separate higher milestones.
+<a id="renderer2d-and-renderer3d-coexistence"></a>
 
-The native backend emits MASM x64 and links `Smile.NativeRuntime.lib`. Console programs use the console subsystem. Programs containing `Game Window` use the Windows GUI subsystem and the generic Win32 runtime for:
+Renderer coexistence moved to [compiler/runtime contracts](compiler-and-runtime.md#renderer2d-and-renderer3d-coexistence).
 
-- a backend-neutral graphics interface that preserves the compiler-facing C ABI;
-- `Auto`, `DirectX`, and `GDI` selection, with DirectX-first fallback in `Auto`;
-- Direct3D 11 and a two-buffer flip-model DXGI swap chain for DirectX presentation;
-- Direct2D final-resolution shapes and DirectWrite final-resolution text;
-- a physical-output-size GDI DIB, bounded GDI resource caches, and one-to-one presentation;
-- a 960-by-540 default logical canvas with uniform aspect-preserving viewport mapping;
-- QPC frame measurements, VSync-default frame pacing, and opt-in diagnostic logs;
-- per-monitor DPI handling and Alt+Enter full-screen transitions;
-- queued pressed keys, simultaneous held-key state, and focus-loss clearing;
-- asynchronous WAV effects and C++/WinRT `Windows.Media.Playback.MediaPlayer` MP3 music relative to the executable;
-- application, window-activation, and minimization tracking that silences both audio channels while the game is inactive without changing system volume;
-- bounded executable-relative file-byte loading with zero-fill and safe missing-file behavior;
-- per-executable integer persistence under local application data.
+<a id="shared-audio-focus-contract"></a>
 
-Native and Web builds use a 30-second normalized-path output mutex, so writers targeting the same EXE or Web root cannot interleave while different outputs remain independent. `vswhere` is bounded to 30 seconds; the combined native C/MASM/link toolchain and Visual Studio compiler process are bounded to 10 minutes. Timeout or Visual Studio cancellation terminates the complete child process tree and reports `SML5005` or `SML5006`; output-lock timeout reports `SML5008`. Native intermediates live under the owning project or loose-source `obj\Smile\Compiler\<unique-build-id>`, are removed on every non-`--keep-temp` exit, and never fall back to an arbitrary current directory's `artifacts\temp`.
-
-Native EXE/PDB pairs, Web generated files, and project assets are built in unique same-volume staging directories. Publication backs up every SMILE-managed destination, rolls back a failed commit, writes the new asset manifest only after replacements are ready, and removes stale prior managed files only after the replacement set commits. Unrelated output files are never part of the managed set. A failed emission, tool invocation, generated-file write, or asset copy therefore leaves the previous valid publication intact; ordinary success and failure remove staging and backup residue.
-
-Each native routine has one computed frame layout covering local scalars, inline records and arrays, invocation-owned `For` limits, `Select Case` selectors, record-return temporaries, an active-frame cleanup record, and a separate return slot. Text and record temporary slots start at zero and participate in explicit cleanup. Compiler-generated record initialize/clear/copy helpers recurse through inline fields, retain and release owned `Text`, and make self-assignment safe. Record functions receive a hidden caller-provided return buffer before their explicit Windows x64 arguments. Loop exit contexts retain the cleanup depth at entry, allowing `Return`, `Exit For`, and `Exit Do` to release only the owned temporaries they leave while the common epilogue remains an idempotent safety net. `End Program`, runtime `Nothing`, and Class allocation failure first clean staged calls and then unwind every active routine frame before global teardown. Windows console output detects a real console with `GetConsoleMode`, converts UTF-8 to UTF-16 for `WriteConsoleW`, and retains raw UTF-8 `WriteFile` output for redirection.
-
-Web publication remains browser-native. One emitter-owned mapping assigns each bound `RecordFieldSymbol` a deterministic private JavaScript key from its record and field ordinals. Default helpers, clone helpers, reads, writes, nested access, arrays, `ByRef` locations, and record returns all use that mapping, so source names never become object-storage properties. Generated record default/clone helpers give each array element and value transfer an independent object graph. `scripts\run-web-test.js` supplies a repository-owned Node `vm` host for behavioral regression without npm packages or network access. It provides the minimal DOM, Canvas, storage, timing, audio, and fetch surfaces, captures logical console and `fillText` output, enforces a timeout, and compares generated Web behavior with strict UTF-8 native output.
-
-The compiler emits one stable graphics configuration call before game startup and routes every drawing export—including filled and outlined quadrilaterals—through the active `SmileGraphicsBackend` vtable. DirectX builds quadrilaterals with short-lived Direct2D path geometry; GDI maps the same four logical points into its physical back buffer and uses `Polygon`. Backend implementations own their render targets and caches; windowing, input, audio, persistence, and language-level game logic remain outside the graphics modules.
-
-`Draw Arc CenterX, CenterY, Radius, StartAngle, SweepAngle, Color` follows the same compiler-facing C ABI and backend vtable routing as the other drawing primitives. DirectX renders partial arcs with short-lived Direct2D path geometry and reuses circle rendering for complete arcs. GDI maps the same logical geometry into its physical back buffer, uses the cached outline pen and `Arc`, and restores the prior GDI arc direction after every call. Both backends use integer screen-coordinate degrees (`0` right, `90` down, `180` left, `270` up), with positive clockwise and negative counterclockwise sweeps clamped to one revolution. The primitive adds no fill, chord, radial lines, thickness option, or game-specific wall helper.
-
-Music-bearing generated programs reference a dedicated C-compatible MediaPlayer object and link `WindowsApp.lib` plus the static C/C++ support libraries required by the custom `/entry:main` pipeline. Games without music do not pull that object from `Smile.NativeRuntime.lib`. The MediaPlayer state is allocated lazily, owns no nontrivial global constructor, catches every C++ exception at the C ABI, and is shut down explicitly before each generated process exit.
-
-Native compilation keeps the runtime at warning level 4 with SDL checks and `/GS` buffer-security instrumentation. The C++/WinRT MediaPlayer object alone uses the DLL CRT because the final custom-entry link explicitly selects the DLL CRT import libraries; it owns its state behind a C ABI and never transfers CRT allocations to the C runtime. The generated debug C helper is the narrow exception to `/GS`: it contains no arrays or writable buffers and is compiled `/GS-` because the custom `/entry:main` path deliberately bypasses CRT startup and therefore cannot initialize the normal security cookie. Production SMILE code remains emitted as MASM and does not inherit that debug-helper exception. Any future C/C++ source with writable buffers must stay in the protected runtime project or add explicit cookie initialization before `/GS` is enabled in the custom-entry helper pipeline.
-
-## Shared audio-focus contract
-
-The Win32 window procedure owns one focus state above both graphics backends. Audio is active only while the application is active, its top-level game window is active, and the window is not minimized. An inactive transition stops the current `PlaySoundW` effect and suppresses later WAV requests. The MediaPlayer remains at its current playback position with effective volume zero while its requested volume is retained. Reactivation reapplies that volume only; it does not restart playback or resume a track paused or stopped by SMILE source. Suppressed WAV effects are not queued for replay.
-
-This process-local policy is inherited by every `Game Window` program and requires no game-specific activation code. It never changes Windows master volume or another process, and DirectX and GDI behave identically because focus and audio remain outside their backend implementations.
-
-The runtime does not contain Snake, falling-block, paddle, brick, dungeon, score, level, projection, generation, map-format, pathfinding, or win/loss rules. Those remain in the corresponding files under `games`. Dungeon Star I parses its external map bytes, validates topology, generates pipe graphs, plans its demo, and composes its pseudo-3D projection entirely in `Program.smile`. Dungeon Star II likewise owns its fixed-point camera, bounded DDA traversal, room map parser and generator, collision, doors, BFS attract route, and anti-aliased wall composition in `.smile`. All use only generic file, graphics, audio, storage, input, and timing services available to every program.
-
-The seven complete game projects are Snake, SMILE 2.0 Tetris, Paddle Ball, Brick Breaker, Dungeon Star I, Dungeon Star II, and Maze Muncher. Each game keeps its rules and render composition in `.smile` source. Every game with an attract demo also includes a genuine `Program-NoDemo.smile` teaching edition without demo or AI implementation code.
-
-The Visual Studio extension embeds the same compiler/runtime payload and registers one factory for `.smileproj` and `.smilelibproj`. The shared project model owns startup/support sources, library identity, and project/package references. Project builds pass `--project` to the compiler so editor diagnostics, build diagnostics, native/Web emission, dependency order, and source debugging use the same files and bound model. The project system's existing Stop callback now cancels the active compiler process and its child tree instead of merely changing UI state. Solution Explorer projects References as a live node; add/remove reference commands update XML, hierarchy, and editor analysis immediately.
-
-Source nodes use Visual Studio's standard item menu and icons. The shell/Git
-provider owns Compare With, history, unmodified comparisons and ignore/track
-actions. `SmileProjectSourceControl.cs` supplies real hierarchy paths and provider
-glyphs through `IVsSccProject2`. `SmileProjectFileCommands.cs` is the focused
-project-hierarchy adapter for clipboard operations, inline rename and deletion;
-it reuses the shared project-file editor and existing refresh/document tracking.
-The partial declarations preserve one COM hierarchy identity, not a second project
-model. `SmileProjectEditors.cs` owns normal and specific-editor opening through
-`IVsProject3`, preserving the editor factory, physical/logical view and existing
-document data supplied by Visual Studio. The legacy hierarchy coordinator shrinks
-by 96 lines; the focused file, source-control and editor adapters are 294, 60 and
-131 lines respectively. No size guardrail or exclusion was changed.
-
-Copy Full Path works for file nodes. Copy/Paste handles one `.smile` at a time;
-paste into a project/folder creates a unique name on collision. Cut/Paste moves
-between SMILE project/folder nodes. Cut does not promise Explorer move semantics.
-Physical rename/delete/cut are limited to source files inside the project root;
-the startup source can be renamed but cannot be cut/deleted. Rename preserves
-explicit or implicit startup identity. Delete sends the file to the Recycle Bin;
-Remove from Project preserves the file. Open documents receive save prompts.
-
-For a VSIX regression check, use an ignored disposable project: F2-rename a
-support source, rename an implicit `Program.smile`, verify project membership and
-startup identity, copy/paste a source, and exercise Delete and Remove separately.
-Check a tracked modified source's Git comparison and history in the real solution.
-For the comparison regression, save an exact copy of a tracked `.smile` file,
-append one temporary comment, then invoke Git > Compare with Unmodified and
-Compare With against the copy. Both must show an actual difference view containing
-that comment, including when the ordinary text editor is already open. Merely
-activating the text tab is a failure. Restore the exact original bytes afterward.
-Build/install the VSIX before this UI check; compiler tests alone do not prove
-Visual Studio command routing. No standalone architecture checker exists for
-these adapters; ownership and changed-file growth are reviewed with the diff.
-
-September 20 native VSIX validation: the installed extension passed Copy Full
-Path, source/startup rename, copy/paste, cut/paste, Recycle Bin deletion and
-Remove-from-Project checks in an ignored disposable project. In SinStarI, Git
-history and both comparison commands opened their real views; both comparisons
-showed the expected temporary comment, which was then restored byte-for-byte.
-Git ignore/track menu visibility was inspected; repository tracking was not changed
-as a test. The Release build had no warnings/errors and installation verified all
-35 bundled payload hashes. The comparison regression above remains a manual VSIX
-test because compiler-only tests cannot exercise the shell's COM editor selection.
-
-The editor workspace retains current text snapshots for every open project buffer. A buffer change invalidates analysis caches for the other participating files after the normal debounce. The language analysis carries one direct-provider access context used by project/package validation, editor completion, the compiler, and native/Web emitters; module presence alone never grants import access. Focused per-directory watchers use tolerant participation discovery, preserve last-known reachable paths through partial graph failures, and refresh only the owning project when direct or transitive dependencies change or reappear. Expected graph or package failures become shared `SML32xx` diagnostics while local analysis remains available; unexpected failures are logged and enter a safe diagnostic state instead of faulting the cache. The selected startup uses ordinary supports; an unselected `StartupOnly` file is instead analyzed as a hypothetical startup with those same supports and without the selected complete program. Missing project sources produce a physical-file `SML0001` diagnostic rather than falling back to unrelated single-file semantics. Loose source builds retain their ordinary program behavior while any supplied packages use the shared exact-provider resolver.
-
-Phase 7 adds two source-library layers above the language/runtime: `Smile.Game` owns reusable 2D movement/map/camera/collision mechanics; `Smile.RPG` owns reusable RPG definitions and world/story/encounter progress. Applications own UI, art, audio, maps, and gameplay policy. The complete design is documented in [phase7-top-down-rpg-world.md](phase7-top-down-rpg-world.md).
-
-Phase 8 keeps that architecture unchanged and proves dungeon exploration as application composition. Floors are World scenes, traversable endpoints are spawns, interactive objects are persistent actors, and durable event outcomes are Story, Inventory, Party, Character, Encounter, and World state already covered by transactional SRPG 2 saves. Cardinal first-person and top-down views consume the same presentation-independent state without adding a renderer, scene graph, actor model, or dungeon-specific public API. See [the complete dungeon architecture](phase8-rpg-dungeon-systems.md) and [the pre-implementation gap matrix](phase8-rpg-dungeon-gap-matrix.md).
-
-Generation 3 Renderer3D effects use a persistent, fixed-slot particle resource shared by native and Web. The native D3D11 path simulates two alternating structured buffers with a compute shader. The WebGL2 path simulates two alternating interleaved buffers with transform feedback. Both render current GPU state directly by instance ID, while the deterministic CPU path remains the portable reference and fallback. See [Renderer3D GPU particle architecture](renderer3d-gpu-particles.md).
-
-The consolidated RPGSystems application adds a complementary application-level contract: unique persistence domains within its single ApplicationId, cumulative initialization, fail-closed partial cleanup, and repeated same-process entry for every modal Module. This changes no shared package or lightweight-OOP rule. See [RPGSystems integration hardening](rpg-systems-integration-hardening.md).
-
-Debug builds emit unique source-aware C helpers with physical multi-file `#line` mappings and compile those helpers as explicit UTF-8 with native Just My Code metadata. Helper parameters use deterministic ordinal ASCII names (`smile_debug_v0`, `smile_debug_v1`, and so on), so C keywords, Unicode SMILE identifiers, long names, and sanitization collisions cannot break MSVC compilation. C-safe original names remain local aliases for the established debugger display; identifiers that are not valid safe C aliases use their ordinal helper name. Numbers and Booleans retain readable scalar values, Text values are exposed as read-only strings, and arrays, images, and records retain inspectable native addresses. The native MASM implementation remains below that source surface. Consequently Windows breakpoints bind in startup and support files, hovering an in-scope variable can display its live value, and F10 advances among mapped SMILE statement helpers, including routine returns, instead of stopping in generated implementation ranges. Console and game templates build to `bin\Debug` or `bin\Release`, copy declared assets, populate the SMILE Output pane and Error List, and launch a freshly built executable for F5 or Ctrl+F5.
+Audio focus moved to [compiler/runtime contracts](compiler-and-runtime.md#shared-audio-focus-contract).

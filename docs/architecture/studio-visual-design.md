@@ -2,7 +2,15 @@
 
 **Design designated by:** Sin, September 10, 2026.
 
-**Status:** Current working visual authority until Sin explicitly revises or replaces it.
+**Status:** Historical visual design for the separate Studio concept, abandoned for now on September 29, 2026.
+
+> Current **Studio** is the existing native
+> [Character3DViewer application](../../tools/Character3DViewer/README.md); follow its
+> [architecture](../../tools/Character3DViewer/ARCHITECTURE.md) for current ownership.
+> The original image and interpretations below preserve September 10 design evidence.
+> Their references to current authority and future implementation belong to that
+> historical proposal and do not authorize resuming the separate host. Web work
+> remains paused.
 
 **Source:** User-supplied `Photo 1.jpg`, preserved unchanged in this repository.
 
@@ -20,7 +28,7 @@ assistant-generated alternative to the current reference without that direction.
 
 The [accepted Studio architecture](2026-09-09%20-%20SMILE%202.0%20Studio.md)
 continues to govern module ownership, document semantics, shared runtime behavior
-and exports. The [root README](../../README.md#smile-20-studio-current-status-and-next-action)
+and exports. The [root README](../../README.md#smile-20-studio-status)
 is the implementation-status entry point; verify current source and focused evidence
 when choosing implementation work. This image is a design reference, not a screenshot
 proving that all shown functionality already works.

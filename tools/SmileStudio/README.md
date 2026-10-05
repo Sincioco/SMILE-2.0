@@ -1,8 +1,16 @@
 # SMILE 2.0 Studio S1
 
-Studio hosts the existing Character Viewer and its Arin/Orin pose correction workflow.
-The [canonical Studio design](../../docs/architecture/2026-09-09%20-%20SMILE%202.0%20Studio.md)
-remains the product design. S1 enables Viewer and Character Editor; other workspace
+> **Historical S1 prototype.** Sin abandoned this separate Studio concept for now
+> on September 29, 2026. Current **SMILE 2.0 - Sin Star I - Game Engine and Studio**
+> lives under [Character3DViewer](../Character3DViewer/README.md); follow its
+> [architecture](../Character3DViewer/ARCHITECTURE.md) for current owners and work.
+> The commands, acceptance status and pending checks below record the September 10
+> milestone. They are historical evidence, not a request to resume this host.
+> Web development, adoption, publication and browser validation remain paused.
+
+This S1 prototype hosted the Character Viewer and its Arin/Orin pose correction workflow.
+The [September 9 Studio design](../../docs/architecture/2026-09-09%20-%20SMILE%202.0%20Studio.md)
+was its product design. S1 enables Viewer and Character Editor; other workspace
 labels are unavailable, and do not create hidden editors or loaders. The shell follows
 the [working visual design](../../docs/architecture/studio-visual-design.md): navy
 workspace navigation, left Scene Explorer and Asset Browser, a central live viewport,
