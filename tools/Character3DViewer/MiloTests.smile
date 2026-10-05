@@ -1,0 +1,152 @@
+''' Actual Milo publication: profile, clips, posed draw and independent actor playback.
+
+Option Explicit
+
+Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Simple3D.Precision3D As Precision3D
+Import Smile.Simple3D.PrecisionCamera3D As PrecisionCamera
+Import Smile.Simple3D.ArenaCamera3D As ArenaCamera
+Import Smile.Simple3D.CharacterViewer As CharacterViewer
+Import Smile.Simple3D.Scene3D As Scene3D
+Import Smile.Tools.Character3DViewerProfiles As Profiles
+Import Smile.Tools.NativeViewerTabs As Tabs
+
+Dim First As Character3D.Actor
+Dim Second As Character3D.Actor
+Dim Clip As Text
+Dim Index As Number
+Dim Sample As Number
+Dim Mode As Number
+Dim Failures As Number
+Dim Camera As Precision3D.Camera3D
+
+Game Window "Milo Native Validation" Size 960 By 540
+
+Do
+
+    Call RunChecks()
+
+Loop Until True
+
+Sub RunChecks()
+
+    Call Graphics3D.ResetRenderer3D()
+    Call Check(Tabs.ChildAt(0, 8) = Profiles.CHARACTER_TAB_MILO)
+    Call Check(Profiles.ClipCount(Profiles.PROFILE_MILO) = 8)
+    Call Check(Profiles.NextProfile(Profiles.PROFILE_KAEL) = Profiles.PROFILE_MILO)
+
+    First = Character3D.LoadActor("Assets/Generation2/MiloV1/Milo.sm3d")
+    Second = Character3D.LoadActor("Assets/Generation2/MiloV1/Milo.sm3d")
+    Camera = Precision3D.FromCamera(Graphics3D.DefaultCamera())
+    Camera.Position = Precision3D.Vector(150.0, 120.0, 300.0)
+    Camera.Target = Precision3D.Vector(0.0, 40.0, 0.0)
+
+    Call Check(Character3D.IsValid(First) And Character3D.IsValid(Second))
+    Call Check(Character3D.ClipCount(First) = 8 And Character3D.SocketCount(First) = 8)
+    Call CheckInitialFraming()
+    Call Check(Character3D.AnimatorHandle(First) <> Character3D.AnimatorHandle(Second))
+    Call Check(Character3D.SetScale(First, 10000))
+    Call Check(Character3D.SetScale(Second, 10000))
+    Call Check(Character3D.Place(First, -55, 0, 0))
+    Call Check(Character3D.Place(Second, 55, 0, 0))
+    Call Check(Character3D.PlayMode(Second, "Idle", Graphics3D.ANIMATION_LOOP, 100))
+    Call Check(Character3D.SetAnimationTime(Second, 400))
+
+    For Index = 0 To 7
+
+        Clip = Profiles.ClipName(Profiles.PROFILE_MILO, Index)
+        Mode = Graphics3D.ANIMATION_ONCE
+
+        If Profiles.ClipLoops(Profiles.PROFILE_MILO, Index) Then
+            Mode = Graphics3D.ANIMATION_LOOP
+        End If
+
+        Call Check(Character3D.HasClip(First, Clip))
+        Call Check(Character3D.PlayMode(First, Clip, Mode, 100))
+        Call Check(Character3D.HasSocket(First, Profiles.SocketName(Profiles.PROFILE_MILO, Index)))
+
+        For Sample = 0 To 2
+
+            Call Check(Character3D.SetAnimationTime(First, Sample * 300))
+            Call Check(Character3D.Update(First, 16))
+            Call Check(Character3D.AnimationTime(Second) = 400)
+            Call Check(Scene3D.BeginPrecise(Camera, 10, 18, 30))
+            Call Check(Character3D.Draw(First))
+            Call Check(Character3D.Draw(Second))
+            Call Check(Scene3D.EndScene())
+
+            Show Screen
+        End For
+    End For
+
+    Call Check(Profiles.HoldsFinalPose(Profiles.PROFILE_MILO, "Death"))
+    Call Check(Profiles.HoldsFinalPose(Profiles.PROFILE_MILO, "Defend"))
+    Call Check(Profiles.HoldsFinalPose(Profiles.PROFILE_MILO, "Victory"))
+    Call Character3D.Destroy(First)
+    Call Character3D.Destroy(Second)
+    Call Check(Not Character3D.IsValid(First) And Not Character3D.IsValid(Second))
+
+    If Failures = 0 Then
+        Print "Milo native profile, eight clips, draw and actor isolation PASS"
+    Else
+        Print "Milo native validation FAIL: "; Failures
+    End If
+
+End Sub
+
+''' Regression: the original generic margin cropped Milo at the default zoom.
+Sub CheckInitialFraming()
+
+    Dim Profile As CharacterViewer.Profile
+    Dim Bounds As Character3D.Bounds3D
+    Dim Frame As PrecisionCamera.Framing
+    Dim View As Precision3D.Camera3D
+    Dim Controls As PrecisionCamera.Controls
+    Dim Point As Precision3D.Vector3
+    Dim Projected As PrecisionCamera.ProjectedPoint
+    Dim Corner As Number
+    Dim Scale As Double
+
+    Profile = Profiles.ProfileAt(Profiles.PROFILE_MILO)
+    Bounds = Character3D.LocalBounds(First)
+    Frame = PrecisionCamera.AutoFit(Profile, Bounds, 1160, 920, 55.0)
+    Scale = ToDouble(Frame.ScalePercent) / 100000.0
+    View = Precision3D.FromCamera(Graphics3D.DefaultCamera())
+    View.Position = Precision3D.Vector(0.0, Frame.CameraY, Frame.CameraZ)
+    View.Target = Precision3D.Vector(0.0, Frame.TargetY, 0.0)
+    Controls.Zoom = ToDouble(ArenaCamera.DEFAULT_ZOOM)
+    View = ArenaCamera.ComposeOrbit(View, Controls)
+
+    For Corner = 0 To 7
+
+        Point.X = ToDouble(Bounds.Minimum.X) * Scale + Frame.PositionX
+        Point.Y = ToDouble(Bounds.Minimum.Y) * Scale + Frame.PositionY
+        Point.Z = ToDouble(Bounds.Minimum.Z) * Scale + Frame.PositionZ
+
+        If Corner Mod 2 = 1 Then
+            Point.X = ToDouble(Bounds.Maximum.X) * Scale + Frame.PositionX
+        End If
+
+        If (Corner / 2) Mod 2 = 1 Then
+            Point.Y = ToDouble(Bounds.Maximum.Y) * Scale + Frame.PositionY
+        End If
+
+        If Corner >= 4 Then
+            Point.Z = ToDouble(Bounds.Maximum.Z) * Scale + Frame.PositionZ
+        End If
+
+        Projected = PrecisionCamera.ProjectViewerPoint(Point, View, 1160, 920)
+
+        Call Check(Projected.Visible And Projected.Y > 55.0 And Projected.Y < 865.0)
+    End For
+
+End Sub
+
+Sub Check(Value As Boolean)
+
+    If Not Value Then
+        Failures = Failures + 1
+    End If
+
+End Sub

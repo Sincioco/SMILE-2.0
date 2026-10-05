@@ -4,7 +4,7 @@
 
 ## Roster and packages
 
-Native Characters exposes Arin, Orin, Valor, Zara, Mira, Dragon, Vrax and Kael
+Native Characters exposes Arin, Orin, Valor, Zara, Mira, Dragon, Vrax, Kael and Milo
 (`NativeViewerTabs.ChildAt`). Yalis and Mira1/2/3 remain preserved profiles/packages,
 hidden from the current native strip. Party Dragon, Party Vrax and Kael Party field
 Arin, Orin, Zara and Mira; Valor remains outside that active party. Individual and
@@ -16,6 +16,7 @@ journey before changing model, rig, equipment, grounding, clips, calibration or 
 
 | Package | Authority |
 | --- | --- |
+| [MiloV1](../../../games/SinStarI/SourceAssets/Characters/Pet/MiloV1/MILO-CREATION-AND-REPAIR-JOURNEY.md) | Tripo original, 25-bone canine Blender rig, eight authored clips and floor-contact measurements |
 | [ArinV57](../../../games/SinStarI/SourceAssets/Characters/Paladin/ArinV57/ARIN-CREATION-AND-REPAIR-JOURNEY.md) | Accepted Arin assets, pose JSON and repair workflow |
 | [OrinV13](../../../games/SinStarI/SourceAssets/Characters/Tank/OrinV13/ORIN-CREATION-AND-REPAIR-JOURNEY.md) | Orin assets, grounding and independent calibration |
 | [ValorV1](../../../games/SinStarI/SourceAssets/Characters/Knight/ValorV1/VALOR-CREATION-AND-REPAIR-JOURNEY.md) / [ZaraV1](../../../games/SinStarI/SourceAssets/Characters/Warrior/ZaraV1/ZARA-CREATION-AND-REPAIR-JOURNEY.md) | Licensed originals, conversion, equipment sockets and checksums |

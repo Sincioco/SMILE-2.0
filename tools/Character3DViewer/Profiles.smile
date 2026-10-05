@@ -22,6 +22,7 @@ Public Const PROFILE_MIRA = 12
 Public Const MIRA_DEFAULT_PLAYBACK_SPEED = 200
 Public Const PROFILE_YALIS = 13
 Public Const PROFILE_KAEL = 14
+Public Const PROFILE_MILO = 15
 Public Const ARENA_OPPONENT_X = -208
 Public Const ARENA_OPPONENT_Z = -120
 Public Const CHARACTER_TAB_PARTY_VRAX = 3
@@ -33,6 +34,7 @@ Public Const CHARACTER_TAB_MIRA = 11
 Public Const CHARACTER_TAB_YALIS = 12
 Public Const CHARACTER_TAB_KAEL = 13
 Public Const CHARACTER_TAB_PARTY_KAEL = 14
+Public Const CHARACTER_TAB_MILO = 17
 Public Const INCLUDE_MIRA_COMPARISONS = True
 Public Const INCLUDE_UNITY_CHARACTERS = True
 Public Const INCLUDE_DIAGNOSTIC_PROFILES = True
@@ -91,6 +93,10 @@ Public Function NextProfile(Current As Number) As Number
         Result = PROFILE_KAEL
 
     Else If Current = PROFILE_KAEL Then
+
+        Result = PROFILE_MILO
+
+    Else If Current = PROFILE_MILO Then
 
         If INCLUDE_MIRA_COMPARISONS Then
             Result = PROFILE_MIRA
@@ -166,6 +172,7 @@ Public Function HoldsFinalPose(ProfileIndex As Number, ClipName As Text) As Bool
     Dim Result As Boolean
 
     Result = (ClipName = "Victory" Or
+        (ProfileIndex = PROFILE_MILO And (ClipName = "Defend" Or ClipName = "Death")) Or
         (ProfileIndex = PROFILE_ORIN And ClipName = "Defend") Or
         (IsSwordFighter(ProfileIndex) And (ClipName = "Defend" Or ClipName = "Death")) Or
         (IsMiraCharacter(ProfileIndex) And (ClipName = "Defend" Or ClipName = "Death")) Or
@@ -179,7 +186,7 @@ End Function
 Public Function ProfileCount() As Number
 
     If INCLUDE_MIRA_COMPARISONS And INCLUDE_UNITY_CHARACTERS Then
-        Return 15
+        Return 16
     Else If INCLUDE_MIRA_COMPARISONS Then
         Return 12
     End If
@@ -268,6 +275,19 @@ Public Function ProfileAt(Index As Number) As CharacterViewer.Profile
         Result.ExpectedSocketCount = 11
         Result.DesiredWorldHeight = 100
         Result.DefaultPlaybackSpeed = 200
+
+    Else If Index = PROFILE_MILO Then
+
+        Result.AssetId = "sin-star-i.character.milo"
+        Result.CandidateVersion = "v1"
+        Result.DisplayName = "Milo"
+        Result.PartyRole = "Companion"
+        Result.ProductionStatus = "Candidate"
+        Result.AssetPath = "Assets\Generation2\MiloV1\Milo.sm3d"
+        Result.ExpectedClipCount = 8
+        Result.ExpectedSocketCount = 8
+        Result.DesiredWorldHeight = 65
+        Result.MarginPercent = 75
 
     Else If Index = PROFILE_KAEL Then
 
@@ -416,6 +436,8 @@ Public Function ModelFileName(ProfileIndex As Number) As Text
         Result = "yalis-v1-animation-checkpoint.glb"
     Else If ProfileIndex = PROFILE_KAEL Then
         Result = "kael-v1-animation-checkpoint.glb"
+    Else If ProfileIndex = PROFILE_MILO Then
+        Result = "milo-v1-animated.glb"
     Else If ProfileIndex = PROFILE_ARIN_V56 Then
         Result = "arin-integrated-candidate-v5.6.glb"
     Else If ProfileIndex = PROFILE_ARIN_ORIGINAL Then
@@ -438,7 +460,7 @@ Public Function ClipCount(ProfileIndex As Number) As Number
         Result = 27
     Else If ProfileIndex = PROFILE_VRAX Then
         Result = 24
-    Else If ProfileIndex = PROFILE_DRAGON Then
+    Else If ProfileIndex = PROFILE_DRAGON Or ProfileIndex = PROFILE_MILO Then
         Result = 8
     Else If ProfileIndex = PROFILE_KAEL Then
         Result = 16
@@ -507,7 +529,28 @@ Public Function ClipName(ProfileIndex As Number, ClipIndex As Number) As Text
 
     Dim Result As Text
 
-    If IsSwordFighter(ProfileIndex) Then
+    If ProfileIndex = PROFILE_MILO Then
+
+        Select Case ClipIndex
+            Case 0
+                Result = "Idle"
+            Case 1
+                Result = "Walk"
+            Case 2
+                Result = "Run"
+            Case 3
+                Result = "Attack"
+            Case 4
+                Result = "Defend"
+            Case 5
+                Result = "Hit"
+            Case 6
+                Result = "Death"
+            Case 7
+                Result = "Victory"
+        End Select
+
+    Else If IsSwordFighter(ProfileIndex) Then
 
         If ClipIndex = 0 Then
             Result = "Idle"
@@ -1001,6 +1044,8 @@ Public Function ClipLoops(ProfileIndex As Number, ClipIndex As Number) As Boolea
 
     If IsUnityCharacter(ProfileIndex) Then
         Result = UnityClipLoops(UnityClipName(ProfileIndex, ClipIndex))
+    Else If ProfileIndex = PROFILE_MILO Then
+        Result = ClipIndex >= 0 And ClipIndex <= 2
     Else If IsSwordFighter(ProfileIndex) Then
         Result = ClipIndex >= 0 And ClipIndex <= 2
     Else If IsMiraCharacter(ProfileIndex) Then
@@ -1245,7 +1290,9 @@ Public Function SocketCount(ProfileIndex As Number) As Number
 
     Dim Result As Number
 
-    If ProfileIndex = PROFILE_DRAGON Then
+    If ProfileIndex = PROFILE_MILO Then
+        Result = 8
+    Else If ProfileIndex = PROFILE_DRAGON Then
         Result = 6
     Else If IsSwordFighter(ProfileIndex) Then
         Result = 10
@@ -1267,7 +1314,28 @@ Public Function SocketName(ProfileIndex As Number, SocketIndex As Number) As Tex
 
     Dim Result As Text
 
-    If IsSwordFighter(ProfileIndex) Then
+    If ProfileIndex = PROFILE_MILO Then
+
+        Select Case SocketIndex
+            Case 0
+                Result = "Root"
+            Case 1
+                Result = "Chest"
+            Case 2
+                Result = "Head"
+            Case 3
+                Result = "FrontPawL"
+            Case 4
+                Result = "FrontPawR"
+            Case 5
+                Result = "HindPawL"
+            Case 6
+                Result = "HindPawR"
+            Case 7
+                Result = "Tail3"
+        End Select
+
+    Else If IsSwordFighter(ProfileIndex) Then
 
         If SocketIndex = 0 Then
             Result = "Root"

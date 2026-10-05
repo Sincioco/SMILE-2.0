@@ -84,6 +84,8 @@ Public Function ChildAt(Group As Number, Position As Number) As Number
                 Return 6
             Case 7
                 Return Profiles.CHARACTER_TAB_KAEL
+            Case 8
+                Return Profiles.CHARACTER_TAB_MILO
         End Select
 
     End If
@@ -124,6 +126,8 @@ Private Function Label(Group As Number, Position As Number) As Text
             Return "Dragon"
         Case 6
             Return "Vrax"
+        Case 8
+            Return "Milo"
     End Select
 
     Return "Kael"
@@ -175,7 +179,7 @@ Public Function Input(ByRef Value As State, Selected As Number) As Number
         Width = 110
     End If
 
-    For Index = 0 To 7
+    For Index = 0 To 8
 
         If ChildAt(Group, Index) < 0 Then
             Exit For
@@ -219,7 +223,7 @@ Public Sub Draw(Selected As Number)
         Draw Line 468, Y + 4, 468, Y + 22, RGB(70, 160, 170)
     End If
 
-    For Index = 0 To 7
+    For Index = 0 To 8
 
         If ChildAt(Group, Index) < 0 Then
             Exit For

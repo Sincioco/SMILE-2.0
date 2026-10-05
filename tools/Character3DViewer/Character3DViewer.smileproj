@@ -417,6 +417,13 @@
                   Profile="Character"
                   Identity="sin-star-i.zara.v1"
                   ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\MiloV1\milo-v1-animated.glb"
+                  Descriptor="BuildAssets\MiloV1\MiloV1.sm3d.json"
+                  LogicalPath="Assets\Generation2\MiloV1\Milo.sm3d"
+                  TextureOutputDirectory="Assets\Generation2\MiloV1\Textures"
+                  Profile="Character"
+                  Identity="sin-star-i.character.milo"
+                  ProductionState="Prototype" />
     <Model3DAsset Include="BuildAssets\KaelV1\kael-v1-animation-checkpoint.glb"
                   Descriptor="BuildAssets\KaelV1\KaelV1.sm3d.json"
                   LogicalPath="Assets\Generation2\KaelV1\Kael.sm3d"

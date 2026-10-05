@@ -71,6 +71,13 @@ behavior with its existing state owner; hosts coordinate rather than reimplement
 
 ## State and frame contracts
 
+Milo's individual native tab uses the existing `Profiles`, `NativeViewerTabs` and
+`ViewerSession` owners. Profile 15 and tab 17 leave Battle System/Town identities
+unchanged. His canonical `Pet/MiloV1` package owns Blender skinning and baked
+canine motion; Studio adds no rig solver or animation algorithm. `MiloTests`
+checks the cooked asset's eight clips/sockets, actual draw and two independent
+animators. The current Party roster and calibration banks remain unchanged.
+
 The [runtime guide](docs/architecture-runtime.md) preserves frame order and the
 boundaries between playback, calibration, camera, effects and rendering. Every
 actor owns mutable pose/equipment/clock/effect state. Immutable assets may share

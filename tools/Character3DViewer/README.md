@@ -66,7 +66,7 @@ before using a custom EXE or running focused native fixtures.
 - **Sin Star I** starts on **Neris Metropolis**. Maps offers 17 permanent map names;
   open town documents and World atlases each have a 17-entry bound. Saved documents
   and authored initial cameras win over old layout descriptions.
-- **Characters** exposes Arin, Orin, Valor, Zara, Mira, Dragon, Vrax and Kael. Yalis
+- **Characters** exposes Arin, Orin, Valor, Zara, Mira, Dragon, Vrax, Kael and Milo. Yalis
   and older Mira comparisons are preserved but hidden in the native strip.
 - **Battles** offers Party Dragon, Party Vrax and Kael Party with Arin, Orin, Zara
   and Mira. These are presentation simulations; **Battle System** adds orders,

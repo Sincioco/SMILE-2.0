@@ -35,6 +35,14 @@ $technicalRoot = Join-Path $repositoryRoot `
 $buildAssets = Join-Path $toolRoot 'BuildAssets'
 $copies = @(
     @{
+        Source = Join-Path $repositoryRoot 'games\SinStarI\SourceAssets\Characters\Pet\MiloV1\milo-v1-animated.glb'
+        Destination = Join-Path $buildAssets 'MiloV1\milo-v1-animated.glb'
+    },
+    @{
+        Source = Join-Path $repositoryRoot 'games\SinStarI\SourceAssets\Characters\Pet\MiloV1\MiloV1.sm3d.json'
+        Destination = Join-Path $buildAssets 'MiloV1\MiloV1.sm3d.json'
+    },
+    @{
         Source = Join-Path $repositoryRoot 'games\SinStarI\Assets\Music\Starforge Ascend (Kael).mp3'
         Destination = Join-Path $toolRoot 'Assets\Music\Starforge Ascend (Kael).mp3'
     },

@@ -1,0 +1,22 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Game</ProjectKind>
+    <StartupFile>MiloTests.smile</StartupFile>
+    <OutputName>MiloTests</OutputName>
+    <ApplicationId>smile.tests.milo-v1</ApplicationId>
+    <GraphicsBackend>DirectX</GraphicsBackend>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="MiloTests.smile" />
+    <SmileSource Include="Profiles.smile" />
+    <SmileSource Include="NativeViewerTabs.smile" />
+    <Model3DAsset Include="BuildAssets\MiloV1\milo-v1-animated.glb"
+                  Descriptor="BuildAssets\MiloV1\MiloV1.sm3d.json"
+                  LogicalPath="Assets\Generation2\MiloV1\Milo.sm3d"
+                  TextureOutputDirectory="Assets\Generation2\MiloV1\Textures"
+                  Profile="Character" Identity="sin-star-i.character.milo"
+                  ProductionState="Prototype" />
+    <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
+    <SmileProjectReference Include="..\..\libraries\Smile.UI\Smile.UI.smilelibproj" />
+  </ItemGroup>
+</SmileProject>

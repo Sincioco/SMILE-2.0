@@ -61,6 +61,16 @@ comes from the artifact, not the current clock. See the
 
 ## Focused validation
 
+Milo's isolated native fixture is `MiloTests.smileproj`. Compile with the installed
+`artifacts/compiler/smilec.exe --project tools/Character3DViewer/MiloTests.smileproj
+--target windows-x64 --configuration Release --graphics DirectX
+-o artifacts/milo-native/MiloTests.exe`, then run it through
+`scripts/Invoke-TownNativeCheck.ps1` with the exact expected line
+`Milo native profile, eight clips, draw and actor isolation PASS`.
+It checks all eight cooked clips/sockets, actual draws, independent animators and
+the regression for Milo's initially cropped framing. Package export/loop/contact
+validation runs separately in Blender via `Pet/MiloV1/preview_milo.py`.
+
 Choose the checks that exercise the change; do not treat this list as a requirement
 to rerun unrelated suites. Inspect each script's prerequisites and target flags.
 Run native town checks sequentially against complete assets:
