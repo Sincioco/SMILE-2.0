@@ -1,0 +1,251 @@
+''' One request-owned photograph scene. Never selects a tab or changes the live document.
+Module Smile.Tools.TownExportScene
+
+Option Explicit
+
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownDocumentStore As Store
+Import Smile.Tools.TownSurfaceRenderer As Terrain
+Import Smile.Tools.TownCatalogRenderer As Catalog
+Import Smile.Tools.TownAttachments As Attachments
+Import Smile.Tools.TownResidents As Residents
+Import Smile.Tools.TownCampfires As Campfires
+Import Smile.Tools.TownLighting As Lighting
+Import Smile.Tools.TownWaterAppearance As Water
+Import Smile.Tools.TownStartingCamera As Starting
+Import Smile.Tools.NerisTownLandmarks As Landmarks
+Import Smile.Tools.NerisCastlePreview As Court
+Import Smile.Tools.NerisSpaceportPreview As Port
+Import Smile.Tools.NerisHorizonPreview As Horizon
+Import Smile.Tools.NerisCastleRoute As CourtRoute
+Import Smile.Tools.NerisSpaceportRoute As PortRoute
+Import Smile.Tools.NerisHorizonRoute As HorizonRoute
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Scene3D As Scene
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.StaticBackdrop3D As Backdrop
+
+Public Type State
+    Map As Document.State
+    Ground As Terrain.State
+    Assets As Catalog.State
+    Details As Attachments.State
+    People As Residents.State
+    Fires As Campfires.State
+    Sites As Landmarks.State
+    Castle As Court.State
+    Spaceport As Port.State
+    Airport As Horizon.State
+    CourtContext As CourtRoute.State
+    PortContext As PortRoute.State
+    HorizonContext As HorizonRoute.State
+    Stage As Number
+    Started As Number
+    Failed As Boolean
+    Ready As Boolean
+End Type
+
+Private Sub ExchangeRoutes(ByRef Value As State)
+
+    Call CourtRoute.Exchange(Value.CourtContext)
+    Call PortRoute.Exchange(Value.PortContext)
+    Call HorizonRoute.Exchange(Value.HorizonContext)
+
+End Sub
+
+Public Sub Release(ByRef Value As State)
+
+    Call ExchangeRoutes(Value)
+    Call Landmarks.Destroy(Value.Sites, Value.Castle, Value.Spaceport, Value.Airport)
+    Call ExchangeRoutes(Value)
+    Call Residents.Destroy(Value.People)
+    Call Campfires.Destroy(Value.Fires, False)
+    Call Attachments.Destroy(Value.Details)
+    Call Catalog.Destroy(Value.Assets)
+    Call Terrain.Destroy(Value.Ground)
+    Call Document.ReleaseSnapshot(Value.Map)
+
+    Value.Stage = 0
+    Value.Ready = False
+
+End Sub
+
+Public Sub Begin(ByRef Value As State, ByRef Map As Document.State, PreparedKey As Text,
+    SourceName As Text)
+
+    Dim Center As P.Vector3
+    Dim Ok As Boolean
+
+    Call Release(Value)
+
+    Value.Map = Map
+    Value.Map.Name = SourceName
+    Value.Started = Timer()
+    Value.Stage = 1
+    Value.Failed = False
+
+    Center = P.Vector((Map.Surface.OriginX + Map.Surface.XEdges[Map.Surface.Columns]) * 0.5,
+        0.0, (Map.Surface.OriginZ + Map.Surface.ZEdges[Map.Surface.Rows]) * 0.5)
+
+    Call ExchangeRoutes(Value)
+    Call CourtRoute.Enable(False)
+    Call CourtRoute.Place(Map.CourtOffsetX, Map.CourtOffsetZ)
+    Call PortRoute.Enable(False)
+    Call HorizonRoute.Enable(False)
+    Call PortRoute.Configure(Center, Map.LandmarkRotation)
+    Call HorizonRoute.Configure(Center, Map.LandmarkRotation)
+    Call ExchangeRoutes(Value)
+    Call Catalog.SyncDocument(Value.Assets, Value.Map)
+
+    Ok = Terrain.Create(Value.Ground)
+    Ok = Attachments.Create(Value.Details) And Ok
+
+    Call Terrain.BeginBuild(Value.Ground, Value.Map, PreparedKey)
+
+    Value.Failed = Not Ok Or Value.Ground.Failed
+
+End Sub
+
+''' One bounded catalog/terrain/landmark/resident step; no viewport spans an update.
+Public Sub Update(ByRef Value As State)
+
+    Dim Ok As Boolean
+
+    If (Value.Failed Or
+        Value.Ready Or
+        Value.Stage = 0) Then
+        Return
+    End If
+
+    If Timer() - Value.Started > 30000 Then
+        Value.Failed = True
+        Return
+    End If
+
+    If Value.Stage = 1 Then
+
+        Call Catalog.LoadNext(Value.Assets)
+
+        Value.Failed = Value.Assets.Failed
+
+        If Value.Assets.Loaded >= Value.Assets.Required Then
+            Value.Stage = 2
+        End If
+
+    Else If Value.Stage = 2 Then
+
+        Call Terrain.Update(Value.Ground, 0)
+
+        Value.Failed = Value.Ground.Failed
+
+        If Value.Ground.Stage = 0 Then
+            Value.Stage = 3
+        End If
+
+    Else If Value.Stage = 3 Then
+
+        Call ExchangeRoutes(Value)
+
+        Ok = Landmarks.LoadNext(Value.Sites, Value.Map.Name, Value.Map.Landmark,
+            Value.Map.CourtPlaced, Value.Castle, Value.Spaceport, Value.Airport)
+
+        Call Court.Synchronize(Value.Castle, Value.Map.CourtPlaced,
+            P.Vector(Value.Map.CourtOffsetX, 0.0, Value.Map.CourtOffsetZ))
+        Call Court.Update(Value.Castle, 0)
+        Call ExchangeRoutes(Value)
+
+        Value.Failed = Value.Sites.Failed
+
+        If Ok Then
+            Value.Stage = 4
+        End If
+
+    Else If Value.Stage = 4 Then
+
+        Ok = Residents.PreparePhotograph(Value.People, Value.Map.Name, Value.Map.Npcs)
+        Value.Failed = Value.People.Failed
+
+        If Ok Then
+
+            Call Attachments.Update(Value.Details, Value.Map, P.Vector(0.0, -100000.0, 0.0), 0, True)
+
+            Ok = Campfires.PreparePhotograph(Value.Fires, Value.Map, Starting.Frame(Value.Map))
+            Value.Failed = Not Value.Details.Ready Or Not Ok
+            Value.Ready = Not Value.Failed
+
+        End If
+
+    End If
+
+End Sub
+
+''' Publish only a fully checked frame. Accepted source identity remains in Key.Input.
+Public Function Capture(ByRef Value As State, Key As Text) As Boolean
+
+    Dim Ok As Boolean
+    Dim Began As Boolean
+    Dim Handle As Number
+    Dim PreviousCamera As P.Camera3D
+    Dim PreviousBackdrop As Backdrop.Selection
+
+    If Not Value.Ready Or Value.Failed Then
+        Return False
+    End If
+
+    If Not Backdrop.ExchangeActive(PreviousBackdrop) Then
+        Return False
+    End If
+
+    Call ExchangeRoutes(Value)
+
+    PreviousCamera = P.AcceptedCamera()
+    Ok = Lighting.Apply(Value.Map.Light)
+    Ok = Water.Configure(Value.Map.Light.Intensity, Value.Map.Name) And Ok
+    Ok = Lighting.ConfigureBounds(Value.Map) And Ok
+    Ok = G.SetViewport3D(0, 0, Min(384, Window_Width()), Min(240, Window_Height()), True) And Ok
+
+    If Ok Then
+        Began = Scene.BeginPrecise(Starting.Frame(Value.Map), 12, 20, 32)
+        Ok = Began
+    End If
+
+    If Began Then
+
+        Ok = Court.ApplyLighting(Value.Castle) And Ok
+        Ok = Lighting.ApplyLocal(Value.Map) And Ok
+        Ok = Terrain.Draw(Value.Ground, Value.Map.Light.Intensity) And Ok
+        Ok = Catalog.Draw(Value.Assets, Value.Map) And Ok
+        Ok = Attachments.Draw(Value.Details, Value.Map) And Ok
+        Ok = Residents.Draw(Value.People, Value.Map.Name) And Ok
+        Ok = Campfires.Draw(Value.Fires) And Ok
+        Ok = Court.Draw(Value.Castle) And Ok
+        Ok = Port.Draw(Value.Spaceport) And Ok
+        Ok = Horizon.Draw(Value.Airport) And Ok
+        Ok = Scene.EndScene() And Ok
+
+    End If
+
+    If Ok Then
+
+        Handle = G.CaptureViewport3D()
+        Ok = Handle > 0
+
+        If Ok Then
+            Ok = G.SaveViewportCapture3D(Handle, Key + ".Image")
+            Ok = Store.SaveDocument(Value.Map, Key + ".Rendered", False) And Ok
+        End If
+
+    End If
+
+    Call G.ReleaseViewportCapture3D(Handle)
+    Call G.ResetViewport3D()
+    Call ExchangeRoutes(Value)
+
+    Ok = P.SetCamera(PreviousCamera) And Ok
+    Ok = Backdrop.ExchangeActive(PreviousBackdrop) And Ok
+
+    Return Ok
+
+End Function
+
+End Module

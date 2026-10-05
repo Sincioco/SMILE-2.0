@@ -21,7 +21,7 @@ Public Type State
     MapName As Text
 End Type
 
-Public Sub Destroy(ByRef Value As State)
+Public Sub Destroy(ByRef Value As State, Optional ReleaseFamily As Boolean = True)
 
     Dim Index As Number
     Dim Ok As Boolean
@@ -37,7 +37,7 @@ Public Sub Destroy(ByRef Value As State)
 
     Value.MapName = ""
 
-    If Fire.Value(1, Value.Flames[0]) = 0 Then
+    If ReleaseFamily And Fire.Value(1, Value.Flames[0]) = 0 Then
         Call Fire.Shutdown()
     End If
 
@@ -64,7 +64,7 @@ End Function
 
 ''' Retain the nearest fires without reallocating when their distance order changes.
 Public Sub Update(ByRef Value As State, ByRef Town As Document.State,
-    View As P.Camera3D, Elapsed As Number)
+    View As P.Camera3D, Elapsed As Number, Optional ReleaseFamily As Boolean = True)
 
     Dim Selected[MAX_FIRES] As Number
     Dim Taken[1024] As Boolean
@@ -81,7 +81,7 @@ Public Sub Update(ByRef Value As State, ByRef Town As Document.State,
     Dim Ok As Boolean
 
     If Value.MapName <> Town.Name Then
-        Call Destroy(Value)
+        Call Destroy(Value, ReleaseFamily)
 
         Value.MapName = Town.Name
     End If
@@ -191,6 +191,47 @@ Public Sub Update(ByRef Value As State, ByRef Town As Document.State,
     Ok = Vfx.AdvancePrecise(Value.Clock, View, True, False) And Ok
 
 End Sub
+
+Public Function PreparePhotograph(ByRef Value As State, ByRef Town As Document.State,
+    View As P.Camera3D) As Boolean
+
+    Dim Index As Number
+    Dim FireCount As Number
+    Dim Expected As Number
+    Dim Step As Number
+    Dim Ok As Boolean
+
+    Call Update(Value, Town, View, 0, False)
+
+    Ok = True
+
+    For Index = 0 To Town.ItemCount - 1
+
+        If Town.Items[Index].Active And Town.Items[Index].Template = 39 Then
+            Expected = Expected + 1
+        End If
+
+    End For
+
+    For Index = 0 To MAX_FIRES - 1
+
+        If Value.Flames[Index].Slot <> 0 Then
+
+            FireCount = FireCount + 1
+
+            For Step = 1 To 5
+                Ok = Fire.UpdateEmitter(Value.Flames[Index], 100) And Ok
+            End For
+
+        End If
+
+    End For
+
+    Ok = FireCount = Min(MAX_FIRES, Expected) And Ok
+
+    Return Ok
+
+End Function
 
 Public Function Draw(ByRef Value As State) As Boolean
 

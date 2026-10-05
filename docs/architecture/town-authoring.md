@@ -60,9 +60,12 @@ dependency. Save For Blender is a separate, explicit conversion. Suggested file
 names use local `YYYY-MM-DD HHmm - Town Name`. Persistent progress and errors must
 retain edits on failure; only verified completion reaches 100%, then reveals the
 exact chosen file. A `.town` write and its photograph have separate failure states.
-R04 cold-photograph support is an in-progress, uncommitted working-tree proposal.
-Its real-asset native fixture currently fails; it is not a released or accepted
-contract. Consult [current Studio status](../../tools/Character3DViewer/docs/status.md).
+R04 cold photographs now use a separate prepared scene, preserving source identity
+and live state. The 17-slot warm regression and seven real-asset cold cases pass;
+the final native Studio publication also passes. The Town Editor session fixture
+retains the same 49 failures as HEAD baseline. Consult
+[the export contract](../../tools/Character3DViewer/docs/viewer-export.md) and
+[current evidence](../../tools/Character3DViewer/docs/status.md#viewer-export-r04).
 
 The live editor is authoritative. A Blender import happens only after explicit
 Open; the worker never reloads an old canonical scene over live edits. Blender

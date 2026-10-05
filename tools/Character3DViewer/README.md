@@ -15,10 +15,10 @@ S1 concept and September design plans are historical. They do not replace this a
 | --- | --- |
 | [Build and validation](docs/build-and-validation.md) | Complete native publication, safe staging, launch and focused checks |
 | [Town Editor](docs/town-editor.md) | Maps/travel, cameras, editing, guides, Viewer/Blender exports and recovery |
-| [Viewer export](docs/viewer-export.md) | Frozen warm-photo identities and the unfinished R04 cold-capture work |
+| [Viewer export](docs/viewer-export.md) | Frozen identities, isolated cold capture and bounded native acceptance |
 | [Characters and calibration](docs/characters-and-calibration.md) | Roster/packages, inspection, pose editing, authoritative JSON and transfer |
 | [Battles and cameras](docs/battles-and-cameras.md) | Party simulations, Battle System orders/rewards and Beat Camera editing |
-| [Status and limits](docs/status.md) | Open R04 acceptance, unresolved recovery reports, unsupported operations and evidence |
+| [Status and limits](docs/status.md) | R04 evidence, remaining suite failures, recovery reports and unsupported operations |
 | [ARCHITECTURE](ARCHITECTURE.md) | Compact owner map, runtime contracts, guardrails and architecture archives |
 
 Read repository [AGENTS.md](../../AGENTS.md) before implementation. Shared contracts
@@ -90,8 +90,9 @@ Blender conversion is separate and never mutates an open Blender scene.
 Saves freeze the clicked revision; newer edits remain unsaved. Accepted photographs
 retain their frozen content identity across later edits, replacement and eviction.
 A PNG failure after town success is reported as partial success. Check
-[Viewer export guide](docs/viewer-export.md) and [R04 status](docs/status.md#viewer-export-r04):
-the cold-photo implementation is uncommitted work with failing native acceptance.
+[Viewer export guide](docs/viewer-export.md) and [R04 evidence](docs/status.md#viewer-export-r04):
+isolated cold capture now passes seven real-asset cases beside a live scene, alongside
+the 17-slot warm identity regression. The final native Studio publication also builds successfully.
 Only verified success reaches 100%; failed saves retain edits. Successful single
 saves reveal the exact chosen file. Batch processing continues after an individual
 failure without opening Explorer for every map.

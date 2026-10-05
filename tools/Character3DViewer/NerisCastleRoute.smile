@@ -14,19 +14,34 @@ Public Const SCALE = 17.0
 Public Const DECK_Y = Layers.ROAD_Y + Layers.STRUCTURE_CLEARANCE
 Public Const DISPLAY_NAME = "Royal Court"
 
-Private Dim Enabled As Boolean
-Private Dim Motion As Bridge.State
-Private Dim DoorRotation As Double
-Private Dim DoorHold As Number
-Private Dim Entered As Boolean
-Private Dim PendingEntry As Boolean
-Private Dim OffsetX As Double
-Private Dim OffsetZ As Double
+Public Type State
+    Enabled As Boolean
+    Motion As Bridge.State
+    DoorRotation As Double
+    DoorHold As Number
+    Entered As Boolean
+    PendingEntry As Boolean
+    OffsetX As Double
+    OffsetZ As Double
+End Type
+
+Private Dim Current As State
+
+''' Exchange the full route context, then exchange it back before returning to the live scene.
+Public Sub Exchange(ByRef Other As State)
+
+    Dim Previous As State
+
+    Previous = Current
+    Current = Other
+    Other = Previous
+
+End Sub
 
 Public Sub Place(X As Double, Z As Double)
 
-    OffsetX = X
-    OffsetZ = Z
+    Current.OffsetX = X
+    Current.OffsetZ = Z
 
 End Sub
 
@@ -34,7 +49,7 @@ Public Function CenterX() As Double
 
     Dim Result As Double
 
-    Result = ORIGIN_X + OffsetX
+    Result = ORIGIN_X + Current.OffsetX
 
     Return Result
 
@@ -44,7 +59,7 @@ Public Function CenterZ() As Double
 
     Dim Result As Double
 
-    Result = ORIGIN_Z + OffsetZ
+    Result = ORIGIN_Z + Current.OffsetZ
 
     Return Result
 
@@ -52,25 +67,29 @@ End Function
 
 Public Sub Enable(Value As Boolean)
 
-    Enabled = Value
-    DoorRotation = 0.0
-    DoorHold = 0
-    Entered = False
-    PendingEntry = False
+    Current.Enabled = Value
+    Current.DoorRotation = 0.0
+    Current.DoorHold = 0
+    Current.Entered = False
+    Current.PendingEntry = False
 
-    Call Bridge.Reset(Motion)
+    Call Bridge.Reset(Current.Motion)
 
 End Sub
 
 Public Function Active() As Boolean
 
-    Return Enabled
+    Dim ReturnValue As Boolean
+
+    ReturnValue = Current.Enabled
+
+    Return ReturnValue
 
 End Function
 
 Public Function MapLabel() As Text
 
-    If Enabled Then
+    If Current.Enabled Then
         Return DISPLAY_NAME
     End If
 
@@ -82,7 +101,7 @@ Public Function Angle() As Double
 
     Dim ReturnValue As Double
 
-    ReturnValue = Motion.Angle
+    ReturnValue = Current.Motion.Angle
 
     Return ReturnValue
 
@@ -104,7 +123,7 @@ Public Function Contains(X As Double, Z As Double) As Boolean
     Dim Result As Boolean
 
     Point = LocalPoint(X, Z)
-    Result = Enabled And Abs(Point.X) <= 70.0 And Point.Z >= -84.0 And Point.Z <= 82.0
+    Result = Current.Enabled And Abs(Point.X) <= 70.0 And Point.Z >= -84.0 And Point.Z <= 82.0
 
     Return Result
 
@@ -138,22 +157,22 @@ Public Sub Update(ByRef Path As Trail.State, ActorCount As Number, Elapsed As Nu
             Abs(Path.Positions[Index].Y - DECK_Y - 3.0 * SCALE) < 15.0)
     End For
 
-    Call Bridge.Update(Motion, Occupied, Elapsed)
+    Call Bridge.Update(Current.Motion, Occupied, Elapsed)
 
     If NearDoor Then
 
-        DoorHold = 1000
-        DoorRotation = Min(95.0, DoorRotation + ToDouble(Elapsed) * 0.10)
+        Current.DoorHold = 1000
+        Current.DoorRotation = Min(95.0, Current.DoorRotation + ToDouble(Elapsed) * 0.10)
 
     Else
 
-        DoorHold = Max(0, DoorHold - Elapsed)
+        Current.DoorHold = Max(0, Current.DoorHold - Elapsed)
 
-        If DoorHold = 0 Then
-            DoorRotation = Max(0.0, DoorRotation - ToDouble(Elapsed) * 0.075)
+        If Current.DoorHold = 0 Then
+            Current.DoorRotation = Max(0.0, Current.DoorRotation - ToDouble(Elapsed) * 0.075)
         End If
 
-        Entered = False
+        Current.Entered = False
 
     End If
 
@@ -161,17 +180,21 @@ Public Sub Update(ByRef Path As Trail.State, ActorCount As Number, Elapsed As Nu
 
     If (Abs(Leader.X) < 2.8 And
         Leader.Z >= 15.0 And
-        DoorRotation >= 75.0 And
-        Not Entered) Then
-        PendingEntry = True
-        Entered = True
+        Current.DoorRotation >= 75.0 And
+        Not Current.Entered) Then
+        Current.PendingEntry = True
+        Current.Entered = True
     End If
 
 End Sub
 
 Public Function DoorAngle() As Double
 
-    Return DoorRotation
+    Dim ReturnValue As Double
+
+    ReturnValue = Current.DoorRotation
+
+    Return ReturnValue
 
 End Function
 
@@ -180,8 +203,8 @@ Public Function ConsumeEntry() As Boolean
 
     Dim Result As Boolean
 
-    Result = PendingEntry
-    PendingEntry = False
+    Result = Current.PendingEntry
+    Current.PendingEntry = False
 
     Return Result
 
@@ -198,7 +221,7 @@ Public Function CanStand(X As Double, Z As Double) As Boolean
 
     If Point.Z >= -84.0 And Point.Z < -64.0 Then
 
-        Result = Abs(Point.X) <= 4.8 And Bridge.Passable(Motion)
+        Result = Abs(Point.X) <= 4.8 And Bridge.Passable(Current.Motion)
 
     Else If Point.Z >= -64.0 And Point.Z < -50.0 Then
 
@@ -221,7 +244,7 @@ Public Function CanStand(X As Double, Z As Double) As Boolean
 
     Else If Point.Z >= 14.0 And Point.Z <= 23.2 Then
 
-        Result = Abs(Point.X) <= 2.8 And (Point.Z <= 14.3 Or DoorRotation >= 75.0)
+        Result = Abs(Point.X) <= 2.8 And (Point.Z <= 14.3 Or Current.DoorRotation >= 75.0)
 
     End If
 

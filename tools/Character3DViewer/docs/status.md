@@ -10,41 +10,43 @@ Battle Systems and Battle Simulations brought into the independent Sin Star I ga
 
 ## Viewer export R04
 
-The October 3 implementation freezes accepted document/photograph pairs at queue
-capture. Same-name/same-revision content mismatches are rejected; later cache
-replacement/eviction cannot substitute a newer image. Save As keeps source identity.
-PNG failure after town success remains explicit partial success. Blender-only
-export has no photo requirement. Cancellation releases bounded queued resources.
+**Implemented; bounded native acceptance passes.** An accepted frozen map without
+a matching photograph now prepares and renders its own scene beside the live town.
+Warm photographs retain exact accepted content through later edits, cache replacement
+and eviction. Save As preserves source identity, including legacy NPC defaults;
+per-queue-slot freeze results prevent a failed freeze from adopting stale image data.
+The [export contract](viewer-export.md) describes ownership and remaining limits.
 
-**R04 is unfinished.** Its working-tree implementation is uncommitted and fails
-native acceptance. The released warm-photo contract above remains distinct from
-the [proposed cold-export design](viewer-export.md). Cold capture must preserve
-accepted/prepared identity and live-scene isolation; switching the live tab or
-mutating the editor document is not an acceptable substitute.
-
-The October 5 native evidence is bounded to these fixtures:
-
-| Check | Result and limit |
+| Check | Result and scope |
 | --- | --- |
-| Warm identity, run `c9539632f7954a1b916fd31fea568581` | PASS at the current 17-slot bound |
-| Seven-map cold fixture, run `4b97e0448b0e40f5b1bd1b28c4bbb293` | FAIL overall beside a live Metropolis scene |
-| Cold Cottage + Save As copy | Prepared `.town` reopens exactly; both 384 x 240 PNGs match in this fixture. The earlier reopen mismatch was a fixture import-normalization bug, corrected with `PreserveDirty=True` |
-| Newer map, Royal Court, Spaceport, Horizon | Catalog admission fails at 508–512 materials with live Metropolis's 384-material baseline |
-| Cold Metropolis | Reaches stage 4, with 426 materials reported at peak, then fails capture/composition; the exact failing owner is not localized |
-| Cleanup/isolation checks | No failures reported for live route/camera/resident/fire checks, all 32 capture slots or zero resources after teardown in this run; this does not prove visual isolation |
+| Warm identity, `town-export-f4921740d657403fa8d2f6b45ab90b28` | PASS at 17 slots, including failed-freeze stale-image rejection, legacy Save As NPC preparation, warm provenance, cancellation and PNG partial failure |
+| Real cold scenes, `town-cold-export-6669404964d94d0d99b2711ff89dc4fa` | PASS: Cold, Newer, Copy, Court, Spaceport, Horizon and Metropolis beside a live Metropolis scene; seven exact prepared-document reopens and seven 384 x 240 PNGs |
+| Live isolation and cleanup in that cold run | Route contexts, cameras, resident layout, paused party/fire and light state retained; all 11 resource/reservation counters return to baseline after each job and zero after teardown; 32 capture slots work and the 33rd is rejected |
+| Pixel evidence | Cold/Copy hashes match; Newer differs. Court, Spaceport and Metropolis PNGs were visually reviewed. The separate scoped-backdrop fixture restores a byte-identical before/after image and changes the image while cleared |
+| Native PBR sharing and VFX capacity fixtures | PASS; immutable imported-material leases and native staged-particle admission/lifetime have focused coverage |
+| Studio native publication | PASS: `artifacts/studio-r04-final-20261005/Character3DViewer.exe`, 401 assets; SHA-256 `870AABC5A6F754746DDC868943D32B635B82F97677633780C1A18803641CCD60` |
+| Town Editor suite | Foundations, routes, render and PNG checks PASS. Current and HEAD-baseline session fixtures have the identical 49 failures: one last-Decor-page assertion, 47 palette-visibility assertions and one exhausted-water-budget assertion. Both compile/publish 401 assets and exit normally with empty stderr. The corrected Save All assertion passes: a batch with any failed map ends at 99%; a completely successful batch reaches 100% |
 
-Visual inspection of the small-map PNG found the active arena's static backdrop
-behind the miniature town. Snapshot backdrop policy/isolation therefore remains a
-separate blocker even where native capture succeeds. Shared catalog model leases
-improve admission but do not resolve the larger asset union. R04 requires corrected
-composition, supported resource headroom and a passing real-asset acceptance before
-it can be treated as complete. Independent cold rerenders are not promised identical
-pixels because some authored effects read wall time.
+The final run supersedes the earlier failed native fixture without erasing it.
+Historical run `town-cold-export-4b97e0448b0e40f5b1bd1b28c4bbb293` exposed:
 
-The [original handoff](archive/2026-10.md#october-3-2100-handoff-export-identity-and-native-acceptance)
-retains the October 3 rejection behavior and its historical sixteen-map evidence.
-Current source supports 17 maps/tabs/nodes. No native cold-export code is accepted by
-this documentation change.
+| Earlier failure | Current correction |
+| --- | --- |
+| Large-map admission reached 508–512 materials beside a 384-material live baseline | Shared catalog models plus exact, immutable, untextured native imported-PBR values use reference-counted leases; scene/node overrides remain independent |
+| Cold Metropolis failed during composition | Native staged-particle admission is 16,384 on demand: two 5,547-slot city scenes plus the 4,608-slot CPU Fire allowance total 15,702; Web stays at 8,192 |
+| Small-map PNG inherited the arena backdrop | `StaticBackdrop3D.ExchangeActive` clears the borrowed selection for capture and restores it through common cleanup, with epoch/generation guards |
+| Earlier exact-reopen comparison was invalid | The fixture imports with `PreserveDirty=True`, comparing the prepared serialization without import normalization |
+
+Earlier warm run `town-export-c9539632f7954a1b916fd31fea568581` also passed; the final
+warm run adds the stale-freeze and legacy Save As cases. The
+[October 3 handoff](archive/2026-10.md#october-3-2100-handoff-export-identity-and-native-acceptance)
+retains the original rejection-only behavior and sixteen-map evidence.
+Independent cold rerenders need not be byte-identical because authored beacon,
+firelight and Sphere effects can read wall time. The resource budget is bounded,
+not unlimited scene admission. PBR hardening with the proper manifest passes both
+normal and forced runs. The original legacy fixture still has the same 15 failures
+on baseline and current code (`pbr-baseline-c027fad7d94e`), with identical full output;
+that pre-existing fixture issue is distinct from the passing regressions.
 
 ## Recovery and unresolved reports
 

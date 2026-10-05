@@ -39,7 +39,12 @@ try {
     $expected = (Get-FileHash (Join-Path $output 'Expected.png')).Hash
     if ((Get-FileHash $pair).Hash -ne $expected) { throw 'Queued PNG differs from the frozen original photograph.' }
     if ((Get-FileHash (Join-Path $output 'Newer.png')).Hash -eq $expected) { throw 'Photograph negative control did not change its pixels.' }
-    foreach ($match in [regex]::Matches($text, '(?m)^PNG (.+)\r?$')) {
+    $pngs = [regex]::Matches($text, '(?m)^PNG (.+)\r?$')
+    if ($pngs.Count -ne 17) { throw 'Expected exactly 17 queued photographs.' }
+    if (Test-Path (Join-Path $output 'Cold.town')) { throw 'Canceled cold request wrote a file.' }
+    if (Test-Path (Join-Path $output 'Stale.town')) { throw 'Canceled stale-pair request wrote a file.' }
+    if (Test-Path (Join-Path $output 'LegacyCopy.town')) { throw 'Canceled legacy-copy request wrote a file.' }
+    foreach ($match in $pngs) {
         if ((Get-FileHash $match.Groups[1].Value.Trim()).Hash -ne $expected) {
             throw 'Unchanged queued photograph does not match its native reference.'
         }

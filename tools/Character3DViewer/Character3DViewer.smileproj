@@ -82,6 +82,7 @@
     <SmileSource Include="TownWorldEditor.smile" />
     <SmileSource Include="TownEditorSession.smile" />
     <SmileSource Include="TownFileJobs.smile" />
+    <SmileSource Include="TownExportScene.smile" />
     <SmileSource Include="TownSaveQueue.smile" />
     <SmileSource Include="TownSavePreparation.smile" />
     <SmileSource Include="TownFileLocations.smile" />

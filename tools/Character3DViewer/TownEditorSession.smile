@@ -1384,7 +1384,8 @@ Public Function ConfigureLighting() As Boolean
     Dim Light As Document.Sun
 
     Light = Lighting.DisplayedSun(Town, Demo.AlternateLighting(Showcase))
-    Ok = WaterAppearance.Configure(Light.Intensity, Town.Name)
+    Ok = Lighting.Apply(Light)
+    Ok = WaterAppearance.Configure(Light.Intensity, Town.Name) And Ok
     Ok = Lighting.ConfigureBounds(Town) And Ok
 
     Return Ok
@@ -1613,7 +1614,7 @@ Public Sub Release()
     Call Panel.Release(Controls.Ui)
     Call World.Close()
     Call SaveQueue.Release(QueuedSaves)
-    Call Previews.ReleaseFrozen(Transfers.PhotoKey)
+    Call Files.ReleasePhotograph(Transfers)
     Call Previews.Destroy()
     Call Attachments.Destroy(Details)
     Call Campfires.Destroy(Fires)

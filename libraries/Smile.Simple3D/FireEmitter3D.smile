@@ -1431,6 +1431,33 @@ End Sub
 
 Public Sub Update(ElapsedMilliseconds As Number)
 
+    Call Advance(ElapsedMilliseconds, 0, MAX_EMITTERS - 1)
+
+End Sub
+
+' Advance one owned emitter without changing other actors or scene clocks.
+Public Function UpdateEmitter(Emitter As FireEmitter, ElapsedMilliseconds As Number) As Boolean
+
+    Dim Ok As Boolean
+
+    If Not Valid(Emitter) Then
+        Return False
+    End If
+
+    If Not Mutable(Emitter.Slot - 1) Then
+        Return False
+    End If
+
+    Call Advance(ElapsedMilliseconds, Emitter.Slot - 1, Emitter.Slot - 1)
+
+    Ok = Valid(Emitter)
+
+    Return Ok
+
+End Function
+
+Private Sub Advance(ElapsedMilliseconds As Number, First As Number, Last As Number)
+
     Dim Index As Number
     Dim Layer As Number
     Dim Key As Number
@@ -1459,7 +1486,7 @@ Public Sub Update(ElapsedMilliseconds As Number)
         Return
     End If
 
-    For Index = 0 To MAX_EMITTERS - 1
+    For Index = First To Last
 
         If Items[Index].Active And Not Mutable(Index) Then
             Return
@@ -1467,7 +1494,7 @@ Public Sub Update(ElapsedMilliseconds As Number)
 
     End For
 
-    For Index = 0 To MAX_EMITTERS - 1
+    For Index = First To Last
 
         If Items[Index].Active Then
 

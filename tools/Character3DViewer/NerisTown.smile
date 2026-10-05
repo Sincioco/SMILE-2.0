@@ -1405,8 +1405,8 @@ Public Sub Draw(ByRef Value As State)
     Ok = True
 
     If Value.Edited Then
-        Ok = Castle.ApplyLighting(Value.Comparison)
-        Ok = Authoring.ConfigureLighting() And Ok
+        Ok = Authoring.ConfigureLighting()
+        Ok = Castle.ApplyLighting(Value.Comparison) And Ok
     End If
 
     If Value.Edited And Authoring.BeginWorldPhotograph() Then

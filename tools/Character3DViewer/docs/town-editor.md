@@ -176,8 +176,10 @@ Cancellation releases pending snapshots while an already-started transfer owns i
 copy. A PNG failure after `.town` success reports partial success and retains the
 town file. Blender-only export has no photograph prerequisite. See
 [Viewer export guide](viewer-export.md) for established warm-photo retention and
-the proposed cold-photo path. [R04 status](status.md#viewer-export-r04) records its
-uncommitted implementation and failing native acceptance; it is not a completed feature.
+the isolated cold-photo path. Missing or invalidated warm images now regenerate from
+the prepared frozen document, without changing the editing tab. The 17-slot warm
+regression and seven real cold cases pass; [R04 evidence](status.md#viewer-export-r04)
+records their exact coverage and the 49 pre-existing Town Editor session failures.
 
 Prepared portable files include checked terrain recipes, road connections and
 resident data; legacy files remain readable and rebuild missing/stale preparation

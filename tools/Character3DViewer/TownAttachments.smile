@@ -108,7 +108,7 @@ Private Sub AddWater(ByRef Value As State, Item As Document.Item, Disk As Featur
 End Sub
 
 Public Sub Update(ByRef Value As State, ByRef Town As Document.State,
-    Leader As P.Vector3, Elapsed As Number)
+    Leader As P.Vector3, Elapsed As Number, Optional Photograph As Boolean = False)
 
     Dim Index As Number
     Dim Part As Number
@@ -124,7 +124,9 @@ Public Sub Update(ByRef Value As State, ByRef Town As Document.State,
     Value.Ready = G.SetEffectMaterialWater3D(Value.Material, True, 45, 0, Value.Clock / 8, 2)
     Value.Ready = Fountains.Update(Value.Streams, Town, Leader, Elapsed) And Value.Ready
 
-    Call Traffic.Update(Value.Flyovers, Town, Elapsed)
+    If Not Photograph Then
+        Call Traffic.Update(Value.Flyovers, Town, Elapsed)
+    End If
 
     For Index = 0 To Town.ItemCount - 1
 

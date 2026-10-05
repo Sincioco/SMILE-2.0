@@ -117,8 +117,8 @@ and style preferences; visibility, coupling and saved pose authority remain sepa
 transactional resource admission. Incomplete candidates clean up and can retry.
 
 The scene shares twelve fire emitters and eight lightning effects across actors.
-Native rendering has an 8,192-particle staging limit and a separate persistent GPU
-pool of 32,768 aggregate slots used by Fire; see the
+Native rendering has a 16,384-particle staging limit allocated on demand (Web: 8,192)
+and a separate persistent GPU pool of 32,768 aggregate slots used by Fire; see the
 [renderer particle contract](../../../docs/architecture/renderer3d-gpu-particles.md).
 Budget actors and families together; one equipment style does not reserve the
 renderer. Reflections consume no extra simulation/admission. The

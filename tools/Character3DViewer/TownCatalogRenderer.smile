@@ -1,4 +1,4 @@
-''' Shared template GPU resources. Instance transforms are captured by each draw.
+''' Shared immutable template models; each scene owns its objects, animation and overrides.
 Module Smile.Tools.TownCatalogRenderer
 
 Option Explicit
@@ -13,6 +13,9 @@ Import Smile.Tools.TownCityLighting As City
 
 Private Const MODEL_CAPACITY = Catalog.CHUNK_COUNT + 14
 Private Const OBJECT_CAPACITY = MODEL_CAPACITY * 16
+
+Private Dim SharedModels[MODEL_CAPACITY] As Core.Model3D
+Private Dim ModelOwners[MODEL_CAPACITY] As Number
 
 Public Type State
     Lawn As Core.Material3D
@@ -29,6 +32,73 @@ Public Type State
     Failed As Boolean
     ErrorCode As Number
 End Type
+
+''' Acquire immutable geometry and imported PBR once for each published catalog chunk.
+Private Function AcquireModel(ByRef Model As Core.Model3D, Index As Number,
+    ByRef ErrorCode As Number) As Boolean
+
+    Dim Chunk As Number
+    Dim Path As Text
+    Dim Name As Text
+    Dim Candidate As Core.Model3D
+    Dim Ok As Boolean
+
+    If SharedModels[Index].Handle = 0 Then
+
+        Chunk = Index
+        Path = "Assets/Neris/Catalog/Catalog-"
+
+        If Chunk >= Catalog.CHUNK_COUNT Then
+            Chunk = Chunk - Catalog.CHUNK_COUNT
+            Path = "Assets/Neris/Castle-"
+        End If
+
+        Name = Text_From_Code(48 + Chunk / 10) + Text_From_Code(48 + Chunk Mod 10)
+        Candidate = G.LoadModelGeometry3D(Path + Name + ".sm3d")
+        Ok = Candidate.GeometryReady
+
+        If Ok Then
+            Ok = G.PrepareModelPbr3D(Candidate, G.TEXTURE_FILTER_ANISOTROPIC, 1, 16)
+        End If
+
+        If Not Ok Then
+
+            ErrorCode = G.LastError()
+
+            Call G.DestroyModel3D(Candidate)
+
+            Return False
+
+        End If
+
+        SharedModels[Index] = Candidate
+
+    End If
+
+    Model = SharedModels[Index]
+    ModelOwners[Index] = ModelOwners[Index] + 1
+
+    Return True
+
+End Function
+
+''' Objects and animators must be released before their scene gives up its model lease.
+Private Sub ReleaseModel(ByRef Model As Core.Model3D, Index As Number)
+
+    Dim Empty As Core.Model3D
+
+    If Model.Handle = 0 Then
+        Return
+    End If
+
+    ModelOwners[Index] = ModelOwners[Index] - 1
+    Model = Empty
+
+    If ModelOwners[Index] = 0 Then
+        Call G.DestroyModel3D(SharedModels[Index])
+    End If
+
+End Sub
 
 ''' Catalog membership does not allocate GPU resources for absent city templates.
 Public Sub SyncDocument(ByRef Value As State, ByRef Town As Document.State)
@@ -81,7 +151,7 @@ Public Sub SyncDocument(ByRef Value As State, ByRef Town As Document.State)
             End For
 
             Call G.DestroyAnimator3D(Value.Wind[Index])
-            Call G.DestroyModel3D(Value.Models[Index])
+            Call ReleaseModel(Value.Models[Index], Index)
 
         Else If Value.Needed[Index] And Not Value.Models[Index].GeometryReady Then
 
@@ -101,10 +171,7 @@ End Sub
 
 Public Sub LoadNext(ByRef Value As State)
 
-    Dim Chunk As Number
     Dim Part As Number
-    Dim Path As Text
-    Dim Name As Text
     Dim Ok As Boolean
     Dim EmptyTexture As Core.Texture3D
 
@@ -128,21 +195,11 @@ Public Sub LoadNext(ByRef Value As State)
 
     End If
 
-    Chunk = Value.Loaded
-    Path = "Assets/Neris/Catalog/Catalog-"
+    Ok = AcquireModel(Value.Models[Value.Loaded], Value.Loaded, Value.ErrorCode)
 
-    If Chunk >= Catalog.CHUNK_COUNT Then
-        Chunk = Chunk - Catalog.CHUNK_COUNT
-        Path = "Assets/Neris/Castle-"
-    End If
-
-    Name = Text_From_Code(48 + Chunk / 10) + Text_From_Code(48 + Chunk Mod 10)
-
-    Value.Models[Value.Loaded] = G.LoadModelGeometry3D(Path + Name + ".sm3d")
-    Ok = Value.Models[Value.Loaded].GeometryReady
-
-    If Ok Then
-        Ok = G.PrepareModelPbr3D(Value.Models[Value.Loaded], G.TEXTURE_FILTER_ANISOTROPIC, 1, 16)
+    If Not Ok Then
+        Value.Failed = True
+        Return
     End If
 
     If Ok And Value.Models[Value.Loaded].ClipCount > 0 Then
@@ -267,7 +324,7 @@ Public Sub Destroy(ByRef Value As State)
 
     For Index = 0 To MODEL_CAPACITY - 1
         Call G.DestroyAnimator3D(Value.Wind[Index])
-        Call G.DestroyModel3D(Value.Models[Index])
+        Call ReleaseModel(Value.Models[Index], Index)
     End For
 
     Call G.DestroyMaterial3D(Value.Lawn)

@@ -10,6 +10,7 @@ Import Smile.Tools.TownFileLocations As Locations
 Import Smile.Tools.TownSavePreparation As Preparation
 Import Smile.Tools.TownDerivedCache As Derived
 Import Smile.Tools.TownWorldPreviews As Previews
+Import Smile.Tools.TownExportScene As Photograph
 Import Smile.Simple3D.Graphics3D As G
 
 Public Const SAVE_VIEWER = 1
@@ -21,6 +22,10 @@ Public Const SAVE_PERMANENT = 6
 
 Public Type State
     Preparation As Preparation.State
+    Scene As Photograph.State
+    Photographing As Boolean
+    PhotoReady As Boolean
+    PhotoName As Text
     WithPreview As Boolean
     PhotoKey As Text
     SavingPng As Boolean
@@ -109,7 +114,7 @@ End Sub
 Public Function Queue(ByRef Value As State, ByRef Town As Document.State,
     Operation As Number, Path As Text, Optional RememberCurrent As Boolean = True,
     Optional WithPreview As Boolean = False, Optional PreviewKey As Text = "",
-    Optional SourceName As Text = "") As Boolean
+    Optional SourceName As Text = "", Optional FrozenPhotoReady As Boolean = True) As Boolean
 
     Dim Id As Number
     Dim Ok As Boolean
@@ -166,19 +171,35 @@ Public Function Queue(ByRef Value As State, ByRef Town As Document.State,
     If Value.WithPreview Then
 
         Value.PhotoKey = "TownEditor.ExportPhoto.Single"
-        SavedName = Town.Name
+
+        Call Previews.ReleaseFrozen(Value.PhotoKey)
+
+        Value.Pending = Town
 
         If Text_Length(SourceName) > 0 Then
-            Town.Name = SourceName
+            Value.Pending.Name = SourceName
         End If
 
         If Text_Length(PreviewKey) = 0 Then
-            Ok = Previews.Freeze(Town, Value.PhotoKey)
+            Ok = Previews.Freeze(Value.Pending, Value.PhotoKey)
+        Else If FrozenPhotoReady Then
+            Ok = Previews.CopyFrozen(Value.Pending, PreviewKey, Value.PhotoKey)
         Else
-            Ok = Previews.CopyFrozen(Town, PreviewKey, Value.PhotoKey)
+            Ok = False
         End If
 
-        Town.Name = SavedName
+        Value.PhotoReady = Ok
+        Value.PhotoName = Value.Pending.Name
+
+        If Text_Length(PreviewKey) > 0 Then
+            Ok = Storage.MatchesDocument(Value.Pending, PreviewKey + ".Input")
+        Else
+            Ok = Storage.MatchesDocument(Value.Pending, Value.PhotoKey + ".Input")
+        End If
+
+        If Ok Then
+            Ok = Storage.SaveDocument(Value.Pending, Value.PhotoKey + ".Input", False)
+        End If
 
         If Not Ok Then
 
@@ -186,7 +207,7 @@ Public Function Queue(ByRef Value As State, ByRef Town As Document.State,
 
             Value.PhotoKey = ""
             Value.Failed = True
-            Value.Message = "Matching preview unavailable; no file written. Preview this revision and retry."
+            Value.Message = "Could not preserve accepted photograph input; no file written."
             Return False
 
         End If
@@ -195,6 +216,7 @@ Public Function Queue(ByRef Value As State, ByRef Town As Document.State,
 
     Value.SavingPng = False
     Value.Preparing = False
+    Value.Photographing = False
 
     If (Operation = SAVE_VIEWER Or
         Operation = SAVE_BLENDER Or
@@ -261,7 +283,7 @@ Public Function Queue(ByRef Value As State, ByRef Town As Document.State,
     End If
 
     If Value.Preparing Then
-        Call Preparation.Begin(Value.Preparation, Value.Pending, SnapshotKey(Id), Id)
+        Call Preparation.Begin(Value.Preparation, Value.Pending, SnapshotKey(Id), Id, SourceName)
 
         Value.Message = "Preparing the saved map revision..."
     End If
@@ -356,6 +378,45 @@ Public Function Update(ByRef Value As State, ByRef Town As Document.State, Elaps
     Dim Ok As Boolean
     Dim Opened As Boolean
     Dim Photo As Number
+    Dim SavedName As Text
+
+    If Value.Photographing Then
+
+        Call Photograph.Update(Value.Scene)
+
+        Value.Progress = 80 + Value.Scene.Stage
+        Value.Failed = Value.Scene.Failed
+
+        If Value.Scene.Ready Then
+            Value.PhotoReady = Photograph.Capture(Value.Scene, Value.PhotoKey)
+            Value.Failed = Not Value.PhotoReady
+        End If
+
+        If Value.Failed Or Value.PhotoReady Then
+
+            Call Photograph.Release(Value.Scene)
+
+            Value.Photographing = False
+
+            If Value.Failed Then
+
+                Call Previews.ReleaseFrozen(Value.PhotoKey)
+
+                Value.PhotoKey = ""
+                Value.RequestId = 0
+                Value.Message = "Snapshot photograph could not finish; no file written. Edits retained."
+
+            Else
+
+                Call StartViewerWrite(Value)
+
+            End If
+
+        End If
+
+        Return False
+
+    End If
 
     If Value.Preparing Then
 
@@ -384,9 +445,30 @@ Public Function Update(ByRef Value As State, ByRef Town As Document.State, Elaps
                     Value.Failed = Not SubmitBlender(Value.Operation, Value.RequestId, Value.Path, Value.Pending.Name)
 
                 Else
-                    Value.NativeJob = Data_BundleStart(True, SnapshotKey(Value.RequestId),
-                        Value.Path, Value.Preparation.Records)
-                    Value.Failed = Value.NativeJob = 0
+
+                    If Value.WithPreview Then
+
+                        SavedName = Value.Pending.Name
+                        Value.Pending.Name = Value.PhotoName
+                        Value.PhotoReady = (Value.PhotoReady And
+                            Storage.MatchesDocument(Value.Pending, Value.PhotoKey + ".Input"))
+                        Value.Pending.Name = SavedName
+
+                        If Not Value.PhotoReady Then
+
+                            Call Photograph.Begin(Value.Scene, Value.Pending,
+                                SnapshotKey(Value.RequestId), Value.PhotoName)
+
+                            Value.Photographing = True
+                            Value.Message = "Preparing snapshot photograph..."
+
+                        End If
+
+                    End If
+
+                    If Not Value.Photographing Then
+                        Call StartViewerWrite(Value)
+                    End If
 
                 End If
 
@@ -531,7 +613,8 @@ Public Function Update(ByRef Value As State, ByRef Town As Document.State, Elaps
             If (Ok And
                 Not Value.SaveAsCopy And
                 Town.Name = Value.OriginName And
-                Town.Revision = Value.OriginRevision) Then
+                Town.Revision = Value.OriginRevision And
+                (Not Value.WithPreview Or Storage.MatchesDocument(Town, Value.PhotoKey + ".Input"))) Then
                 Town.Name = Value.Pending.Name
                 Town.SavedRevision = Town.Revision
             End If
@@ -586,6 +669,53 @@ Public Function Update(ByRef Value As State, ByRef Town As Document.State, Elaps
     Return Opened
 
 End Function
+
+Private Sub StartViewerWrite(ByRef Value As State)
+
+    Value.NativeJob = Data_BundleStart(True, SnapshotKey(Value.RequestId),
+        Value.Path, Value.Preparation.Records)
+    Value.Failed = Value.NativeJob = 0
+
+    If Value.Failed Then
+
+        Call Previews.ReleaseFrozen(Value.PhotoKey)
+
+        Value.PhotoKey = ""
+        Value.RequestId = 0
+        Value.Message = "Could not start town transfer; no file written. Edits retained."
+
+    End If
+
+End Sub
+
+' Release render work on session teardown; a submitted native transfer owns its bytes.
+Public Sub ReleasePhotograph(ByRef Value As State)
+
+    Dim PendingOutput As Boolean
+
+    PendingOutput = Value.Photographing Or Value.Preparing
+
+    Call Photograph.Release(Value.Scene)
+
+    Value.Photographing = False
+
+    If (PendingOutput And
+        Value.NativeJob = 0 And
+        Value.RequestId > 0) Then
+
+        Call Previews.ReleaseFrozen(Value.PhotoKey)
+
+        Call Document.ReleaseSnapshot(Value.Pending)
+
+        Value.PhotoKey = ""
+        Value.Preparing = False
+        Value.RequestId = 0
+        Value.Failed = True
+        Value.Message = "Save canceled before file output."
+
+    End If
+
+End Sub
 
 Public Function PngPath(Path As Text) As Text
 

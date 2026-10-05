@@ -21,7 +21,7 @@ Dim Job As Files.State
 Dim Camera As P.Camera3D
 Dim Marker As Core.Object3D
 Dim Handles[32] As Number
-Dim Paths[16] As Text
+Dim Paths[17] As Text
 Dim Ok As Boolean
 Dim Changed As Boolean
 Dim Deadline As Number
@@ -92,9 +92,9 @@ Ok = Photos.Freeze(Current, "Mismatch")
 Call Check(Not Ok, "Same Revision Different Content Is Rejected")
 
 Current = OpenMaps.Documents[0]
-OpenMaps.TabCount = 16
+OpenMaps.TabCount = Tabs.CAPACITY
 
-For Index = 0 To 15
+For Index = 0 To Tabs.CAPACITY - 1
     OpenMaps.Documents[Index] = Current
     OpenMaps.Documents[Index].Name = "Export " + Files.IdText(Index)
 
@@ -103,9 +103,9 @@ End For
 
 Current = OpenMaps.Documents[0]
 
-Call Saves.Begin(Queue, OpenMaps, Current, Output + "Sixteen.town", Files.SAVE_VIEWER, True)
+Call Saves.Begin(Queue, OpenMaps, Current, Output + "Seventeen.town", Files.SAVE_VIEWER, True)
 
-For Index = 0 To 15
+For Index = 0 To Tabs.CAPACITY - 1
     Paths[Index] = Saves.OutputPath(Queue, Index)
 End For
 
@@ -113,11 +113,11 @@ End For
 
 Call Photos.Destroy()
 Call Drain()
-Call Check(Queue.Failed = 0 And Queue.MapCount = 16, "All Sixteen Pairs Survive Cache Eviction")
+Call Check(Queue.Failed = 0 And Queue.MapCount = Tabs.CAPACITY, "All Seventeen Pairs Survive Cache Eviction")
 
-For Index = 0 To 15
+For Index = 0 To Tabs.CAPACITY - 1
     Call ImportTown(Paths[Index])
-    Call Check(Loaded.Name = OpenMaps.Documents[Index].Name, "Parsed Sixteen Map Identity")
+    Call Check(Loaded.Name = OpenMaps.Documents[Index].Name, "Parsed Seventeen Map Identity")
 
     Print "PNG " + Files.PngPath(Paths[Index])
 End For
@@ -135,6 +135,18 @@ Call DrainJob()
 Call Check(Not Job.Failed And Current.Name = "Export 0", "Save As Uses Source Photo Without Renaming Source")
 Call ImportTown(Output + "Copy.town")
 Call Check(Loaded.Name = "Saved Copy", "Save As Writes Requested Copy Name")
+
+Ok = Document.Blank(Loaded, "Legacy Neris Copy", 8, 8, 20.0)
+Ok = Files.Queue(Job, Loaded, Files.SAVE_VIEWER, Output + "LegacyCopy.town", False, True, "", "Neris Town")
+
+Call Check(Ok And Job.Pending.Name = "Legacy Neris Copy", "Legacy Save As Keeps The Output Name")
+Call Check(Job.Preparation.Npcs.Legacy And Not Job.Preparation.Npcs.Ready And
+    Job.Pending.Npcs.People[0].Active And Job.Pending.Npcs.People[8].Active,
+    "Legacy Save As Retains Source NPC Defaults For Grounding")
+Call Check(Loaded.Name = "Legacy Neris Copy" And Not Loaded.Npcs.People[0].Active,
+    "Legacy Save As Preparation Does Not Mutate Its Accepted Input")
+Call Files.ReleasePhotograph(Job)
+Call Check(Job.Failed And Job.RequestId = 0, "Legacy Save As Fixture Cancels Before Output")
 
 Ok = Files.Queue(Job, Current, Files.SAVE_VIEWER, Output + "Broken.town", False, True)
 Job.SuppressReveal = True
@@ -157,11 +169,39 @@ Call Check(Not Job.Failed And Current.Revision <> Current.SavedRevision,
 Ok = Document.Blank(Current, "Cold Unrendered", 8, 8, 20.0)
 Ok = Files.Queue(Job, Current, Files.SAVE_VIEWER, Output + "Cold.town", False, True)
 
-Call Check(Not Ok And Job.RequestId = 0 And Job.Failed,
-    "Cold Missing Photograph Fails Explicitly Without Writing A Mismatched Pair")
+Call Check(Ok And Job.RequestId > 0 And Not Job.PhotoReady,
+    "Cold Missing Photograph Is Accepted With Independent Input Identity")
+Call Check(Store.MatchesDocument(Current, Job.PhotoKey + ".Input"), "Cold Input Is Retained")
+Call Files.ReleasePhotograph(Job)
+Call Check(Job.Failed And Job.RequestId = 0,
+    "Cold Cancellation Before Loading Releases The Accepted Request")
 
-Print "LIMITATION Cold snapshot rendering remains unavailable."
+' Model an old valid image surviving failed slot cleanup beside newly accepted input.
+OpenMaps.TabCount = 1
 
+Call Saves.Begin(Queue, OpenMaps, Current, Output + "Stale.town", Files.SAVE_VIEWER, True)
+Call Check(Not Queue.FrozenPhotoReady[0], "Queue Retains Failed Photograph Freeze")
+
+Handles[0] = G.LoadViewportCapture3D("Expected.Image")
+Ok = Handles[0] > 0 And G.SaveViewportCapture3D(Handles[0], Saves.PhotoKey(0) + ".Image")
+
+Call G.ReleaseViewportCapture3D(Handles[0])
+Call Check(Ok, "Stale Image Failure Fixture Is Prepared")
+
+Ok = Photos.CopyFrozen(Current, Saves.PhotoKey(0), "StaleNegativeControl")
+
+Call Check(Ok, "Stale Payload Reproduces An Ambiguous Frozen Pair")
+Call Photos.ReleaseFrozen("StaleNegativeControl")
+Call Saves.Update(Queue, Job, OpenMaps)
+Call Check(Job.RequestId > 0 And Job.Preparing And Not Job.PhotoReady,
+    "Failed Queue Freeze Cannot Promote Surviving Stale Image")
+Call Check(Store.MatchesDocument(Current, Job.PhotoKey + ".Input"),
+    "Failed Queue Freeze Still Preserves Accepted Cold Input")
+Call Saves.Release(Queue)
+Call Files.ReleasePhotograph(Job)
+Call Check(Job.Failed And Job.RequestId = 0, "Stale Pair Cold Request Can Be Canceled")
+
+OpenMaps.TabCount = Tabs.CAPACITY
 Deadline = Timer() + 1500
 
 Do

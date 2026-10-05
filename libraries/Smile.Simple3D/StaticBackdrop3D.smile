@@ -12,6 +12,12 @@ Public Type Backdrop
     Ready As Boolean
 End Type
 
+''' Borrowed selection only. Keep its texture owner alive during a synchronous scope.
+Public Type Selection
+    TextureHandle As Number
+    Epoch As Number
+End Type
+
 Private Dim ActiveHandle As Number
 Private Dim ActiveEpoch As Number
 
@@ -70,6 +76,68 @@ Public Function ClearActive() As Boolean
     End If
 
     Return Result
+
+End Function
+
+''' Empty selection clears the bitmap and receives the prior selection; exchange again to restore.
+Public Function ExchangeActive(ByRef Value As Selection) As Boolean
+
+    Dim Previous As Selection
+    Dim Texture As Core.Texture3D
+    Dim Epoch As Number
+    Dim Result As Boolean
+
+    If Graphics3D.FrameActive3D() Then
+        Return False
+    End If
+
+    Epoch = Graphics3D.ResourceEpoch3D()
+
+    If Value.TextureHandle <> 0 Then
+
+        If Value.Epoch <> Epoch Then
+            Return False
+        End If
+
+        If Not Graphics3D.TextureHandleValid3D(Value.TextureHandle) Then
+            Return False
+        End If
+
+    End If
+
+    Previous.TextureHandle = ActiveHandle
+    Previous.Epoch = ActiveEpoch
+
+    If Previous.Epoch <> Epoch Or Previous.TextureHandle = 0 Then
+        Previous.TextureHandle = 0
+        Previous.Epoch = 0
+    Else If Not Graphics3D.TextureHandleValid3D(Previous.TextureHandle) Then
+        Previous.TextureHandle = 0
+        Previous.Epoch = 0
+    End If
+
+    If Value.TextureHandle = 0 Then
+        Result = Graphics3D.ClearBackdropTexture3D()
+    Else
+
+        Texture.Handle = Value.TextureHandle
+        Result = Graphics3D.SetBackdropTexture3D(Texture)
+    End If
+
+    If Not Result Then
+        Return False
+    End If
+
+    ActiveHandle = Value.TextureHandle
+    ActiveEpoch = Epoch
+
+    If ActiveHandle = 0 Then
+        ActiveEpoch = 0
+    End If
+
+    Value = Previous
+
+    Return True
 
 End Function
 

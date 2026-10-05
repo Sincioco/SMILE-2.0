@@ -81,8 +81,8 @@ failure reports Unavailable while retaining the usable matte scene. Reflections
 replay accepted poses/effects and create no extra simulation or effect admission.
 Heat distortion is excluded. Shared VFX must budget all actors together: twelve
 fire emitters and eight lightning effects are not per-character quotas. Native
-rendering stages up to 8,192 particles; its separate persistent GPU pool has 32,768
-aggregate slots. Fire uses that persistent pool; consult the
+rendering stages up to 16,384 particles on demand (Web: 8,192); its separate persistent
+GPU pool has 32,768 aggregate slots. Fire uses that persistent pool; consult the
 [renderer particle contract](../../../docs/architecture/renderer3d-gpu-particles.md)
 for per-system, backend and admission limits.
 GPU float32 and depth precision limits still apply despite Double authoring paths.

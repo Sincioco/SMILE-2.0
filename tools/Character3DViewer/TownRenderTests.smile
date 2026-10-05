@@ -433,8 +433,7 @@ WithoutCastle[2] = G.LiveMaterialCount3D()
 WithoutCastle[3] = G.LiveTextureCount3D()
 WithoutCastle[4] = G.LiveObjectCount3D()
 
-Call Check(Assets.Loaded = Catalog.CHUNK_COUNT And WithoutCastle[0] = Catalog.CHUNK_COUNT,
-    "Unplaced Old Castle Owns No Model Resources")
+Call CheckUnplacedCastleModels()
 
 For Index = 0 To Town.ItemCount - 1
 
@@ -531,6 +530,68 @@ If Failures = 0 Then
 Else
     Print "FAIL Town Editor Rendering"
 End If
+
+Sub CheckUnplacedCastleModels()
+
+    Dim Needed[Catalog.CHUNK_COUNT] As Boolean
+    Dim Shape As Catalog.Template
+    Dim Item As Number
+    Dim Part As Number
+    Dim Chunk As Number
+    Dim Models As Number
+
+    ' Derive expected ownership from placed templates, not the renderer's traversal cursor.
+
+    For Item = 0 To Town.ItemCount - 1
+
+        If Town.Items[Item].Active Then
+
+            Shape = Catalog.TemplateAt(Town.Items[Item].Template)
+
+            For Part = 0 To Shape.PartCount - 1
+
+                Chunk = Shape.Parts[Part] / 16
+
+                Call Check(Chunk >= 0 And Chunk < Catalog.CHUNK_COUNT,
+                    "Town Without Old Castle References Only Catalog Chunks")
+
+                If Chunk >= 0 And Chunk < Catalog.CHUNK_COUNT Then
+                    Needed[Chunk] = True
+                End If
+
+            End For
+
+        End If
+
+    End For
+
+    For Chunk = 0 To Catalog.CHUNK_COUNT - 1
+
+        Call Check(Assets.Needed[Chunk] = Needed[Chunk],
+            "Catalog Admission Matches Placed Template Chunks")
+
+        If Needed[Chunk] Then
+            Models = Models + 1
+
+            Call Check(Assets.Models[Chunk].Handle <> 0 And Assets.Models[Chunk].GeometryReady,
+                "Placed Catalog Chunk Owns A Ready Model")
+        Else
+
+            Call Check(Assets.Models[Chunk].Handle = 0 And Not Assets.Models[Chunk].GeometryReady,
+                "Unplaced Catalog Chunk Owns No Model")
+        End If
+
+    End For
+
+    For Chunk = Catalog.CHUNK_COUNT To Catalog.CHUNK_COUNT + 13
+        Call Check(Not Assets.Needed[Chunk] And Assets.Models[Chunk].Handle = 0 And
+            Not Assets.Models[Chunk].GeometryReady, "Unplaced Old Castle Chunk Owns No Model")
+    End For
+
+    Call Check(Assets.Loaded = Catalog.CHUNK_COUNT And WithoutCastle[0] = Models,
+        "Unplaced Old Castle Owns No Model Resources")
+
+End Sub
 
 Sub CheckElevatedTerrain()
 

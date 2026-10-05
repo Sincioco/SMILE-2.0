@@ -1,0 +1,518 @@
+''' Real asset-backed cold exports alongside an unchanged, loaded native Studio scene.
+
+Option Explicit
+
+Import Smile.Tools.TownDocument As Document
+Import Smile.Tools.TownDocumentStore As Store
+Import Smile.Tools.TownFileJobs As Files
+Import Smile.Tools.TownWorldPreviews As Photos
+Import Smile.Tools.TownEditorSession As Session
+Import Smile.Tools.NerisTown As StudioTown
+Import Smile.Tools.NerisCastleRoute As Court
+Import Smile.Tools.NerisSpaceportRoute As Port
+Import Smile.Tools.NerisHorizonRoute As Horizon
+Import Smile.Tools.TownNpcLayout As Npcs
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+Import Smile.Simple3D.FireEmitter3D As Fire
+
+Dim Live As StudioTown.State
+Dim Current As Document.State
+Dim Accepted As Document.State
+Dim Loaded As Document.State
+Dim Job As Files.State
+Dim Cottage As Document.Item
+Dim LiveFire As Fire.FireEmitter
+Dim FireValues[18] As Number
+Dim ViewBefore As P.Camera3D
+Dim BaseBefore As P.Camera3D
+Dim PeopleBefore[5] As P.Vector3
+Dim ResidentsBefore As Npcs.State
+Dim CourtBefore As Court.State
+Dim PortBefore As Port.State
+Dim HorizonBefore As Horizon.State
+Dim Counts[11] As Number
+Dim High[11] As Number
+Dim Lights[512] As Number
+Dim Handles[32] As Number
+Dim Output As Text
+Dim ActiveName As Text
+Dim Key As Text
+Dim Deadline As Number
+Dim Index As Number
+Dim Slot As Number
+Dim Property As Number
+Dim Request As Number
+Dim Transfer As Number
+Dim Failures As Number
+Dim StagedLimit As Number
+Dim StageCount As Number
+Dim LastStage As Number
+Dim Ok As Boolean
+Dim Changed As Boolean
+Dim SeenCold As Boolean
+
+Game Window "Town Cold Export Acceptance" Size 960 By 640
+
+Output = "@OUTPUT@\"
+
+Call StudioTown.Start(Live)
+
+Deadline = Timer() + 30000
+
+Do
+
+    Call StudioTown.LoadNext(Live)
+
+    Show Screen
+
+Loop Until Live.Ready Or Live.Failed Or Timer() > Deadline
+
+Call Check(Live.Ready And Not Live.Failed, "Real Active Metropolis Scene Loads")
+
+If Live.Ready And Not Live.Failed Then
+
+    Call StudioTown.Update(Live, 0)
+    Call StudioTown.ResetOverview(Live)
+
+    If Not Session.IsNight() Then
+        Call Session.ToggleDayNight()
+    End If
+
+    Live.PointOfView.Hidden = True
+
+    Call StudioTown.Draw(Live)
+    Call StudioTown.Draw(Live)
+    Call Check(Not Live.Failed, "Real Active Scene Draws Before Exports")
+
+    Ok = Fire.Initialize("Assets/Fire")
+
+    Call Files.ReleasePhotograph(Job)
+
+    LiveFire = Fire.StartAtPrecise("BrazierFire", P.Vector(0.0, 10.0, 0.0), 147,
+        Fire.QUALITY_MEDIUM, Fire.SIMULATION_AUTO, 5)
+    Ok = Fire.UpdateEmitter(LiveFire, 173) And Ok
+
+    Call Check(Ok And LiveFire.Slot > 0, "Independent Live Fire Emitter Is Ready")
+
+    For Index = 2 To 17
+        FireValues[Index] = Fire.Value(Index, LiveFire)
+    End For
+
+    StagedLimit = G.VfxValue3D(G.VFX_QUERY_MAX_STAGED_PARTICLES)
+
+    Print "NATIVE STAGED PARTICLE LIMIT "; StagedLimit
+
+    Call Check(StagedLimit >= 11094, "Native Particle Budget Can Hold Two Accepted Metropolis Scenes")
+    Call RecordLive()
+
+    Ok = Document.Blank(Current, "Cold Cottage", 8, 8, 50.0)
+    Current.Npcs.Authored = True
+    Cottage.Template = 0
+    Cottage.Category = Document.CATEGORY_BUILDINGS
+    Cottage.Scale = P.Vector(1000.0, 1000.0, 1000.0)
+    Index = Document.Place(Current, Cottage, 0.0, 0.0)
+
+    Call Check(Ok And Index = 0, "Distinct Asset-Backed Cold Input Created")
+
+    Accepted = Current
+
+    Call Photos.Destroy()
+
+    Ok = Files.Queue(Job, Current, Files.SAVE_VIEWER, Output + "Cold.town", False, True)
+    Request = Job.RequestId
+    Job.SuppressReveal = True
+
+    Call Check(Ok And Not Job.PhotoReady, "Cold Queue Accepts Missing Photograph")
+    Call Check(Store.MatchesDocument(Accepted, Job.PhotoKey + ".Input"),
+        "Accepted Input Exists Before Any Snapshot Draw")
+
+    ' Deliberate same-revision edit: exact identity, not revision alone, owns saved marking.
+    Current.Items[0].Position.X = 130.0
+    Current.Light.Ambient = 25
+
+    Call RunJob("Cold", Request)
+    Call Check(Current.Revision <> Current.SavedRevision,
+        "Same-Revision Newer Content Remains Dirty")
+    Call Check(Loaded.Items[0].Position.X = 0.0 And Loaded.Light.Ambient = Accepted.Light.Ambient,
+        "Reopened Cold File Retains Accepted Geometry And Light")
+
+    Cottage.Template = 39
+    Cottage.Category = Document.CATEGORY_DECORATIONS
+    Index = Document.Place(Current, Cottage, -100.0, -75.0)
+
+    Call Check(Index = 1, "Newer Cold Input Includes A Real Campfire")
+    Call ColdSave("Newer", "")
+
+    Current = Accepted
+    Current.Name = "Cold Saved Copy"
+
+    Call Photos.Destroy()
+
+    Ok = Files.Queue(Job, Current, Files.SAVE_VIEWER, Output + "Copy.town", False, True,
+        "", Accepted.Name)
+    Request = Job.RequestId
+    Job.SaveAsCopy = True
+    Job.OriginName = Accepted.Name
+    Job.SuppressReveal = True
+    Current.Name = Accepted.Name
+
+    Call Check(Ok And Not Job.PhotoReady, "Cold Save As Accepts Source Identity")
+    Call RunJob("Copy", Request)
+    Call Check(Current.Name = Accepted.Name And Loaded.Name = "Cold Saved Copy",
+        "Cold Save As Preserves Source And Writes Requested Name")
+    Call Check(Job.Pending.Name = "Cold Saved Copy", "Save As Pending Survives For Tab Adoption")
+
+    Ok = Store.LoadDocument(Current, "Cold.Court")
+    Current.CourtOffsetX = Current.CourtOffsetX + 100.0
+    Current.Revision = Current.Revision + 1
+
+    Call Check(Ok And Current.CourtPlaced, "Authored Court Fixture Loads")
+    Call ColdSave("Court", "")
+
+    Ok = Store.LoadDocument(Current, "Cold.Port")
+    Current.LandmarkRotation = 35.0
+    Current.Revision = Current.Revision + 1
+
+    Call Check(Ok And Current.Landmark = Document.LANDMARK_SPACEPORT,
+        "Authored Spaceport Fixture Loads")
+    Call ColdSave("Spaceport", "")
+
+    Ok = Store.LoadDocument(Current, "Cold.Horizon")
+    Current.LandmarkRotation = 55.0
+    Current.Revision = Current.Revision + 1
+
+    Call Check(Ok And Current.Landmark = Document.LANDMARK_HORIZON,
+        "Authored Horizon Fixture Loads")
+    Call ColdSave("Horizon", "")
+
+    Ok = Store.LoadDocument(Current, "Cold.Metropolis")
+
+    Current.Light.Ambient = Max(0, Current.Light.Ambient - 1)
+    Current.Revision = Current.Revision + 1
+
+    Call Check(Ok And Current.ItemCount > 500, "Authored Heavy Cold City Loads")
+    Call ColdSave("Metropolis", "")
+    Call CheckLive()
+
+End If
+
+Call Files.ReleasePhotograph(Job)
+Call Files.ReleasePhotograph(Job)
+Call Document.ReleaseSnapshot(Job.Pending)
+Call StudioTown.Destroy(Live)
+Call Session.Release()
+Call Photos.Destroy()
+Call Check(Fire.Value(1, LiveFire) = 1, "Only The Independent Live Fire Remains")
+
+Ok = Fire.Destroy(LiveFire)
+
+Call Check(Ok And Fire.Value(1, LiveFire) = 0, "Final Live Fire Releases Cleanly")
+Call Fire.Shutdown()
+
+For Index = 0 To 10
+    Call Check(ResourceCount(Index) = 0, "All Scene Resource Counts And Reserved Capacity Return To Zero")
+End For
+
+For Index = 0 To 31
+    Handles[Index] = G.CaptureViewport3D()
+
+    Call Check(Handles[Index] > 0, "All 32 Capture Slots Recovered")
+End For
+
+Call Check(G.CaptureViewport3D() = 0, "The 33rd Capture Is Still Rejected")
+
+For Index = 0 To 31
+    Call G.ReleaseViewportCapture3D(Handles[Index])
+End For
+
+If Failures = 0 Then
+    Print "PASS Town Cold Export Acceptance"
+Else
+    Print "FAIL Town Cold Export Acceptance"
+End If
+
+Sub Check(Condition As Boolean, Label As Text)
+
+    If Not Condition Then
+        Print "FAIL " + Label
+        Failures = Failures + 1
+    End If
+
+End Sub
+
+Sub ColdSave(Label As Text, SourceName As Text)
+
+    Call Photos.Destroy()
+
+    Ok = Files.Queue(Job, Current, Files.SAVE_VIEWER, Output + Label + ".town", False,
+        True, "", SourceName)
+    Request = Job.RequestId
+    Job.SuppressReveal = True
+
+    Call Check(Ok And Not Job.PhotoReady, Label + " Enters The Cold Path")
+    Call RunJob(Label, Request)
+
+End Sub
+
+Sub RunJob(Label As Text, Id As Number)
+
+    Dim CheckIndex As Number
+    Dim InputKey As Text
+
+    Deadline = Timer() + @EXPORT_TIMEOUT@
+    LastStage = -1
+    StageCount = 0
+    SeenCold = False
+    InputKey = Job.PhotoKey + ".Input"
+
+    Print "BEGIN COLD " + Label
+
+    For CheckIndex = 0 To 10
+        High[CheckIndex] = ResourceCount(CheckIndex)
+    End For
+
+    Do
+
+        Changed = Files.Update(Job, Current, 16)
+        SeenCold = SeenCold Or Job.Photographing
+
+        Call CheckLive()
+        Call Check(ResourceCount(10) <= StagedLimit, Label + " Stays Within Native Particle Capacity")
+
+        If Job.Scene.Stage <> LastStage Then
+
+            LastStage = Job.Scene.Stage
+            StageCount = StageCount + 1
+
+            Print "STAGE " + Label + " " + Files.IdText(LastStage)
+
+        End If
+
+        For CheckIndex = 0 To 10
+            High[CheckIndex] = Max(High[CheckIndex], ResourceCount(CheckIndex))
+        End For
+
+        ' The first live overview following each export step must reselect its own light set.
+
+        Call StudioTown.Draw(Live)
+        Call Check(Not Live.Failed, Label + " Keeps Live Drawing Available")
+        Call CheckLights()
+
+        Show Screen
+
+    Loop Until Job.RequestId = 0 Or Timer() > Deadline
+
+    Print "ADMISSION " + Label + " " + Job.Message
+    Print "OBSERVED HIGH meshes objects textures materials models skeletons clips animators particles ribbons staged-particles"
+
+    For CheckIndex = 0 To 10
+        Print High[CheckIndex]
+
+        Call Check(ResourceCount(CheckIndex) = Counts[CheckIndex],
+            Label + " Releases Snapshot Resource Ownership And Reserved Capacity")
+    End For
+
+    Call Check(SeenCold And StageCount >= 3, Label + " Traverses Incremental Cold Stages")
+    Call Check(Job.RequestId = 0 And Not Job.Failed And Job.Progress = 100 And Job.SavingPng,
+        Label + " Completes A Real Native Town And PNG Pair")
+
+    If Job.RequestId = 0 And Not Job.Failed Then
+
+        Call ImportTown(Output + Label + ".town")
+        Call Check(Store.MatchesDocument(Loaded, Files.SnapshotKey(Id)),
+            Label + " Reopens Exact Prepared Output")
+
+        Print "PNG " + Output + Label + ".png"
+
+    End If
+
+End Sub
+
+Sub ImportTown(Path As Text)
+
+    Transfer = Data_BundleStart(False, "Cold.Reopened", Path, "")
+    Deadline = Timer() + 10000
+
+    Do
+        Show Screen
+
+    Loop Until Data_FileStatus(Transfer) <> 0 Or Timer() > Deadline
+
+    Ok = Store.LoadDocument(Loaded, "Cold.Reopened", True)
+
+    Call Check(Transfer > 0 And Data_FileStatus(Transfer) = 1 And Ok,
+        "Native Bundle Reopens Exported Town")
+
+End Sub
+
+Sub RecordLive()
+
+    Dim ReadIndex As Number
+
+    ActiveName = Session.TownName()
+    ViewBefore = Live.View.LiveCamera
+    BaseBefore = Live.BaseCamera
+    ResidentsBefore = Session.ResidentPlacement()
+
+    Call ReadRoutes(CourtBefore, PortBefore, HorizonBefore)
+
+    For ReadIndex = 0 To 4
+        PeopleBefore[ReadIndex] = Live.People.Path.Positions[ReadIndex]
+    End For
+
+    For ReadIndex = 0 To 10
+        Counts[ReadIndex] = ResourceCount(ReadIndex)
+    End For
+
+    For Slot = 0 To 127
+
+        For Property = 1 To 4
+            Lights[Slot * 4 + Property - 1] = G.LightValue3D(G.LIGHT_QUERY_LOCAL, Slot, Property)
+        End For
+    End For
+
+End Sub
+
+Sub CheckLive()
+
+    Dim C As Court.State
+    Dim PortNow As Port.State
+    Dim H As Horizon.State
+    Dim ReadIndex As Number
+    Dim Same As Boolean
+
+    Call ReadRoutes(C, PortNow, H)
+
+    Same = (C.Enabled = CourtBefore.Enabled And C.Motion.Angle = CourtBefore.Motion.Angle And
+        C.Motion.ClearTime = CourtBefore.Motion.ClearTime And C.DoorRotation = CourtBefore.DoorRotation And
+        C.DoorHold = CourtBefore.DoorHold And C.Entered = CourtBefore.Entered And
+        C.PendingEntry = CourtBefore.PendingEntry And C.OffsetX = CourtBefore.OffsetX And
+        C.OffsetZ = CourtBefore.OffsetZ)
+
+    Call Check(Same, "Every Court Route Field Survives Snapshot Work")
+
+    Same = (PortNow.Enabled = PortBefore.Enabled And PortNow.DoorRotation = PortBefore.DoorRotation And
+        PortNow.DoorHold = PortBefore.DoorHold And PortNow.Entered = PortBefore.Entered And
+        PortNow.PendingEntry = PortBefore.PendingEntry And PortNow.Turn = PortBefore.Turn And
+        M.Distance(PortNow.Pivot, PortBefore.Pivot) = 0.0)
+
+    Call Check(Same, "Every Spaceport Route Field Survives Snapshot Work")
+
+    Same = (H.Enabled = HorizonBefore.Enabled And H.DoorRotation = HorizonBefore.DoorRotation And
+        H.DoorHold = HorizonBefore.DoorHold And H.Entered = HorizonBefore.Entered And
+        H.PendingEntry = HorizonBefore.PendingEntry And H.Turn = HorizonBefore.Turn And
+        M.Distance(H.Pivot, HorizonBefore.Pivot) = 0.0)
+
+    Call Check(Same, "Every Horizon Route Field Survives Snapshot Work")
+    Call Check(Session.TownName() = ActiveName And Live.LoadingTown = ActiveName,
+        "Active Studio Map Never Changes")
+    Call Check(SameCamera(Live.View.LiveCamera, ViewBefore) And SameCamera(Live.BaseCamera, BaseBefore),
+        "Live Overview And Base Cameras Stay Unchanged")
+    Call Check(Npcs.Same(Session.ResidentPlacement(), ResidentsBefore),
+        "Live Authored Resident Layout Stays Unchanged")
+
+    For ReadIndex = 0 To 4
+        Call Check(M.Distance(PeopleBefore[ReadIndex], Live.People.Path.Positions[ReadIndex]) = 0.0,
+            "Paused Live Party Positions Stay Unchanged")
+    End For
+
+    For ReadIndex = 2 To 17
+
+        If ReadIndex <> 12 Then
+            Call Check(Fire.Value(ReadIndex, LiveFire) = FireValues[ReadIndex],
+                "Snapshot Fire Warmup Does Not Advance Or Change The Live Emitter")
+        End If
+
+    End For
+
+End Sub
+
+Sub ReadRoutes(ByRef C As Court.State, ByRef PortNow As Port.State, ByRef H As Horizon.State)
+
+    Dim CourtRead As Court.State
+    Dim PortRead As Port.State
+    Dim HorizonRead As Horizon.State
+
+    Call Court.Exchange(CourtRead)
+
+    C = CourtRead
+
+    Call Court.Exchange(CourtRead)
+    Call Port.Exchange(PortRead)
+
+    PortNow = PortRead
+
+    Call Port.Exchange(PortRead)
+    Call Horizon.Exchange(HorizonRead)
+
+    H = HorizonRead
+
+    Call Horizon.Exchange(HorizonRead)
+
+End Sub
+
+Sub CheckLights()
+
+    Dim Same As Boolean
+
+    Same = True
+
+    For Slot = 0 To 127
+
+        For Property = 1 To 4
+            Same = (Same And Lights[Slot * 4 + Property - 1] =
+                G.LightValue3D(G.LIGHT_QUERY_LOCAL, Slot, Property))
+        End For
+    End For
+
+    Call Check(Same, "First Following Overview Recovers Its Light Selection")
+
+End Sub
+
+Function SameCamera(FirstView As P.Camera3D, SecondView As P.Camera3D) As Boolean
+
+    Dim Same As Boolean
+
+    Same = (M.Distance(FirstView.Position, SecondView.Position) = 0.0 And M.Distance(FirstView.Target, SecondView.Target) = 0.0 And
+        M.Distance(FirstView.UpDirection, SecondView.UpDirection) = 0.0 And FirstView.FovDegrees = SecondView.FovDegrees And
+        FirstView.NearPlane = SecondView.NearPlane And FirstView.FarPlane = SecondView.FarPlane And
+        FirstView.OrthographicHeight = SecondView.OrthographicHeight)
+
+    Return Same
+
+End Function
+
+Function ResourceCount(Kind As Number) As Number
+
+    Dim Total As Number
+
+    Select Case Kind
+        Case 0
+            Total = G.LiveMeshCount3D()
+        Case 1
+            Total = G.LiveObjectCount3D()
+        Case 2
+            Total = G.LiveTextureCount3D()
+        Case 3
+            Total = G.LiveMaterialCount3D()
+        Case 4
+            Total = G.LiveModelCount3D()
+        Case 5
+            Total = G.LiveSkeletonCount3D()
+        Case 6
+            Total = G.LiveAnimationClipCount3D()
+        Case 7
+            Total = G.LiveAnimatorCount3D()
+        Case 8
+            Total = G.LiveParticleBatchCount3D()
+        Case 9
+            Total = G.LiveRibbonBatchCount3D()
+        Case 10
+            Total = G.VfxValue3D(G.VFX_QUERY_STAGED_PARTICLE_CAPACITY)
+    End Select
+
+    Return Total
+
+End Function

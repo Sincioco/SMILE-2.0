@@ -14,19 +14,33 @@ Public Const DECK_Y = Layers.ROAD_Y
 Public Const SCALE = 10.0
 Public Const YAW = 90.0
 
-Private Dim Enabled As Boolean
-Private Dim DoorRotation As Double
-Private Dim DoorHold As Number
-Private Dim Entered As Boolean
-Private Dim PendingEntry As Boolean
+Public Type State
+    Enabled As Boolean
+    DoorRotation As Double
+    DoorHold As Number
+    Entered As Boolean
+    PendingEntry As Boolean
+    Pivot As P.Vector3
+    Turn As Double
+End Type
 
-Private Dim Pivot As P.Vector3
-Private Dim Turn As Double
+Private Dim Current As State
+
+''' Exchange the full route context, then exchange it back before returning to the live scene.
+Public Sub Exchange(ByRef Other As State)
+
+    Dim Previous As State
+
+    Previous = Current
+    Current = Other
+    Other = Previous
+
+End Sub
 
 Public Sub Configure(Center As P.Vector3, Rotation As Double)
 
-    Pivot = Center
-    Turn = Rotation
+    Current.Pivot = Center
+    Current.Turn = Rotation
 
 End Sub
 
@@ -34,7 +48,7 @@ Public Function Placed(Point As P.Vector3) As P.Vector3
 
     Dim Result As P.Vector3
 
-    Result = M.Add(Pivot, M.Rotate(M.Subtract(Point, Pivot), P.Vector(0.0, Turn, 0.0)))
+    Result = M.Add(Current.Pivot, M.Rotate(M.Subtract(Point, Current.Pivot), P.Vector(0.0, Current.Turn, 0.0)))
 
     Return Result
 
@@ -44,7 +58,7 @@ Public Function Original(Point As P.Vector3) As P.Vector3
 
     Dim Result As P.Vector3
 
-    Result = M.Add(Pivot, M.Rotate(M.Subtract(Point, Pivot), P.Vector(0.0, -Turn, 0.0)))
+    Result = M.Add(Current.Pivot, M.Rotate(M.Subtract(Point, Current.Pivot), P.Vector(0.0, -Current.Turn, 0.0)))
 
     Return Result
 
@@ -54,7 +68,7 @@ Public Function Heading(Yaw As Double) As Double
 
     Dim Result As Double
 
-    Result = M.WrapDegrees(Yaw + Turn)
+    Result = M.WrapDegrees(Yaw + Current.Turn)
 
     Return Result
 
@@ -62,17 +76,21 @@ End Function
 
 Public Sub Enable(Value As Boolean)
 
-    Enabled = Value
-    DoorRotation = 0.0
-    DoorHold = 0
-    Entered = False
-    PendingEntry = False
+    Current.Enabled = Value
+    Current.DoorRotation = 0.0
+    Current.DoorHold = 0
+    Current.Entered = False
+    Current.PendingEntry = False
 
 End Sub
 
 Public Function Active() As Boolean
 
-    Return Enabled
+    Dim ReturnValue As Boolean
+
+    ReturnValue = Current.Enabled
+
+    Return ReturnValue
 
 End Function
 
@@ -85,7 +103,7 @@ Public Function Contains(X As Double, Z As Double) As Boolean
     X = Source.X
     Z = Source.Z
 
-    Result = Enabled And X >= 5400.0 And X <= 11400.0 And Z >= -3550.0 And Z <= 6050.0
+    Result = Current.Enabled And X >= 5400.0 And X <= 11400.0 And Z >= -3550.0 And Z <= 6050.0
 
     Return Result
 
@@ -105,17 +123,17 @@ Public Function CanStand(X As Double, Z As Double) As Boolean
     LocalX = (ORIGIN_Z - Z) / SCALE
     LocalZ = (X - ORIGIN_X) / SCALE
 
-    Result = Enabled And Abs(LocalX) <= 475.0 And LocalZ >= -195.0 And LocalZ < -3.0
+    Result = Current.Enabled And Abs(LocalX) <= 475.0 And LocalZ >= -195.0 And LocalZ < -3.0
     ' The entrance walkway reaches the deck edge where the editable road ends.
-    Result = Result Or (Enabled And Abs(LocalX) <= 11.0 And LocalZ >= -200.0 And LocalZ <= 4.0)
-    Result = Result Or (Enabled And GroundFloor(LocalX, LocalZ))
-    Result = Result Or (Enabled And Abs(LocalX) >= 272.0 And Abs(LocalX) <= 292.0 And
+    Result = Result Or (Current.Enabled And Abs(LocalX) <= 11.0 And LocalZ >= -200.0 And LocalZ <= 4.0)
+    Result = Result Or (Current.Enabled And GroundFloor(LocalX, LocalZ))
+    Result = Result Or (Current.Enabled And Abs(LocalX) >= 272.0 And Abs(LocalX) <= 292.0 And
         LocalZ >= -195.0 And LocalZ <= 185.0)
 
     If (Abs(LocalX) <= 11.7 And
         LocalZ > -2.5 And
         LocalZ < 1.5) Then
-        Result = Result And DoorRotation >= 80.0
+        Result = Result And Current.DoorRotation >= 80.0
     End If
 
     Return Result
@@ -223,7 +241,7 @@ Public Sub Update(ByRef Path As Trail.State, ActorCount As Number, Elapsed As Nu
     Dim NearDoor As Boolean
     Dim Source As P.Vector3
 
-    If Not Enabled Then
+    If Not Current.Enabled Then
         Return
     End If
 
@@ -236,15 +254,15 @@ Public Sub Update(ByRef Path As Trail.State, ActorCount As Number, Elapsed As Nu
 
     If NearDoor Then
 
-        DoorHold = 1800
-        DoorRotation = Min(95.0, DoorRotation + ToDouble(Elapsed) * 0.09)
+        Current.DoorHold = 1800
+        Current.DoorRotation = Min(95.0, Current.DoorRotation + ToDouble(Elapsed) * 0.09)
 
     Else
 
-        DoorHold = Max(0, DoorHold - Elapsed)
+        Current.DoorHold = Max(0, Current.DoorHold - Elapsed)
 
-        If DoorHold = 0 Then
-            DoorRotation = Max(0.0, DoorRotation - ToDouble(Elapsed) * 0.06)
+        If Current.DoorHold = 0 Then
+            Current.DoorRotation = Max(0.0, Current.DoorRotation - ToDouble(Elapsed) * 0.06)
         End If
 
     End If
@@ -254,23 +272,27 @@ Public Sub Update(ByRef Path As Trail.State, ActorCount As Number, Elapsed As Nu
     Z = (Source.X - ORIGIN_X) / SCALE
 
     If Z < -8.0 Then
-        Entered = False
+        Current.Entered = False
     End If
 
     If (Abs(X) < 11.0 And
         Z > 1.5 And
         Z < 18.0 And
-        DoorRotation >= 80.0 And
-        Not Entered) Then
-        PendingEntry = True
-        Entered = True
+        Current.DoorRotation >= 80.0 And
+        Not Current.Entered) Then
+        Current.PendingEntry = True
+        Current.Entered = True
     End If
 
 End Sub
 
 Public Function DoorAngle() As Double
 
-    Return DoorRotation
+    Dim ReturnValue As Double
+
+    ReturnValue = Current.DoorRotation
+
+    Return ReturnValue
 
 End Function
 
@@ -278,8 +300,8 @@ Public Function ConsumeEntry() As Boolean
 
     Dim Result As Boolean
 
-    Result = PendingEntry
-    PendingEntry = False
+    Result = Current.PendingEntry
+    Current.PendingEntry = False
 
     Return Result
 

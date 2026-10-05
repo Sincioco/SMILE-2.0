@@ -27,7 +27,7 @@ is first in `TownLibrary`. Native tab visibility comes from `NativeViewerTabs`.
 | [Runtime and frame contracts](docs/architecture-runtime.md) | Shared session, actor/calibration ownership, frame order, effects, Beat editing and battle bridge |
 | [Town authoring](../../docs/architecture/town-authoring.md) | Document/gesture/render/persistence boundaries and surface layering and linked historical evidence |
 | [Terrain elevation](../../docs/architecture/terrain-elevation.md) | Height/flow editing, prepared geometry, validation and bounded terrain behavior |
-| [Viewer export](docs/viewer-export.md) | Established warm retention and proposed R04 cold lifecycle; uncommitted, failing native acceptance |
+| [Viewer export](docs/viewer-export.md) | Warm retention, isolated R04 cold lifecycle and verified bounded native acceptance |
 | [Build and validation](docs/build-and-validation.md) | Safe native publication, launch, fixture identities and evidence standards |
 | [Precision boundary](../../docs/libraries/precision3d-boundary.md) | Double authoring, shared projection and final GPU float narrowing |
 | [Startup presentation](../../docs/architecture/startup-presentation.md) | Official branding, visible minimum, artifact metadata and loading ownership |
@@ -66,7 +66,7 @@ behavior with its existing state owner; hosts coordinate rather than reimplement
 | `TownWorldDocument`, World editor/canvas/view/travel/import/files | Atlas layout and checked imports; directed links projected from Map Load data | World tests; authored connection/reopen checks |
 | `TownLibrary`, `TownTabs`, `TownDocumentStore`, `TownDerivedCache` | Recovery/permanent policy, 17 document slots, strict codecs and derived identity | Save/reopen/recovery/queue checks |
 | `TownSavePreparation`, `TownNpcPreparation`, `TownSaveQueue`, `TownFileJobs` | Frozen preparation, queued transfer, exact dirty checks and partial-failure reporting | Export photograph and real cold-scene fixtures |
-| `TownWorldPreviews`; proposed `TownExportScene` and route changes | Mutable thumbnail cache; uncommitted R04 cold resources and scoped route exchange | [R04 acceptance boundary](docs/viewer-export.md#acceptance-boundary) |
+| `TownWorldPreviews`, `TownExportScene`, route/`StaticBackdrop3D` selection contexts | Mutable thumbnail cache versus request-owned cold resources and scoped restoration | [R04 acceptance boundary](docs/viewer-export.md#acceptance-boundary) |
 | Build/prepare/check/launch scripts | Complete publication, canonical prerequisites, synchronization and graceful replacement | Preservation fixture; manifest/native build checks |
 
 ## State and frame contracts
@@ -104,10 +104,18 @@ photograph or POV camera is accepted. Water policy uses intensity and active map
 
 Explicit saves prepare the immutable clicked revision and include checked terrain
 and road companion records. Viewer transfers run in-process; only Blender conversion
-uses its external worker. Warm photos retain exact accepted pairs. R04 proposes a
+uses its external worker. Warm photos retain exact accepted pairs. R04 renders a
 request-owned cold scene without switching the editing tab, separating accepted
-`.Input`, prepared output and cold `.Rendered` identities. **This implementation is
-uncommitted and fails native acceptance**; see [R04 design and blockers](docs/viewer-export.md).
+`.Input`, prepared output and cold `.Rendered` identities. Per-slot freeze results
+prevent stale image reuse; Save As carries source identity into legacy NPC preparation.
+Scoped routes and backdrop selection restore the live scene after capture.
+
+Catalog model leases and native reference-counted, immutable, untextured imported
+PBR values share resource storage; scene objects, node overrides and animators stay
+independent. Native staged-particle capacity is 16,384, allocated on demand for the
+15,702-slot two-city-plus-CPU-fire budget; Web remains 8,192. Seven real cold cases
+and the 17-slot warm regression pass. See [the export contract](docs/viewer-export.md)
+and [evidence/remaining checks](docs/status.md#viewer-export-r04).
 
 ## Change review and validation
 

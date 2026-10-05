@@ -1,0 +1,277 @@
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As G
+
+Dim Failures As Number
+Dim Checks As Number
+
+Game Window "Renderer3D Imported PBR Sharing Tests" Size 480 By 270
+
+Do
+
+    Call G.ResetRenderer3D()
+    Call Check(G.RendererAvailable(), "native renderer")
+    Call Check(G.PbrShaderAvailable3D(), "PBR shader")
+    Call SharedModels()
+    Call TexturedModels()
+    Call CapacityFailure()
+    Call Check(G.LiveModelCount3D() = 0, "final models")
+    Call Check(G.LiveMeshCount3D() = 0, "final meshes")
+    Call Check(G.LiveObjectCount3D() = 0, "final objects")
+    Call Check(G.LiveTextureCount3D() = 0, "final textures")
+    Call Check(G.LiveMaterialCount3D() = 0, "final materials")
+
+Loop Until True
+
+If Failures = 0 Then
+    Print "PASS Renderer3D Imported PBR Sharing"
+Else
+    Print "FAIL Renderer3D Imported PBR Sharing: "; Failures
+End If
+
+Sub SharedModels()
+
+    Dim First As Core.Model3D
+    Dim Second As Core.Model3D
+    Dim Different As Core.Model3D
+    Dim LeftPart As Core.Object3D
+    Dim RightPart As Core.Object3D
+    Dim Camera As Core.Camera3D
+    Dim Began As Boolean
+    Dim CaptureHandle As Number
+    Dim SubmissionToken As Number
+    Dim Job As Number
+    Dim Started As Number
+
+    First = G.LoadModelGeometry3D("Assets\Duplicate.sm3d")
+
+    Call Check(First.Handle > 0 And First.PartCount = 2, "duplicate geometry")
+    Call Check(Prepare(First), "first preparation")
+    Call Check(First.OwnedMaterialCount = 2, "two imported material slots")
+    Call Check(G.LiveMaterialCount3D() = 1, "duplicate slots share one material")
+
+    Second = G.LoadModelGeometry3D("Assets\Duplicate.sm3d")
+
+    Call Check(Prepare(Second), "second preparation")
+    Call Check(Prepare(Second), "idempotent preparation")
+    Call Check(G.LiveMaterialCount3D() = 1, "models share one material")
+    Call Check(G.LiveTextureCount3D() = 0, "untextured models own no texture")
+
+    Different = G.LoadModelGeometry3D("Assets\Different.sm3d")
+
+    Call Check(Prepare(Different), "different factor preparation")
+    Call Check(G.LiveMaterialCount3D() = 2, "different roughness stays distinct")
+    Call Check(G.TryDestroyModel3D(Different), "destroy mixed shared and unique model")
+    Call Check(G.LiveMaterialCount3D() = 1, "unique material released")
+
+    LeftPart = G.CreateModelPart3D(Second, 0)
+    RightPart = G.CreateModelPart3D(Second, 1)
+
+    Call Check(LeftPart.Handle > 0 And RightPart.Handle > 0, "shared objects created")
+    Call G.SetObjectScale(LeftPart, 15000, 15000, 15000)
+    Call G.SetObjectScale(RightPart, 15000, 15000, 15000)
+    Call Check(G.SetAmbientLight3D(255, 255, 255, 100), "ambient light")
+
+    Camera = G.DefaultCamera()
+    Camera.Position.Y = 0
+    Camera.Position.Z = -600
+    Began = G.Begin3D(Camera, 7, 13, 29)
+
+    Call Check(Began, "begin draw before first owner release")
+
+    If Began Then
+
+        Call Check(G.DrawObject3D(LeftPart), "first PBR draw before release")
+        Call Check(G.DrawObject3D(RightPart), "second PBR draw before release")
+        Call G.End3D()
+        Call Check(G.PbrDrawCount3D() = 2, "two draws before first owner release")
+        Call Check(G.PbrTriangleCount3D() = 4, "four triangles before first owner release")
+
+    End If
+
+    Call Check(G.TryDestroyModel3D(First), "first owner releases with other owner objects alive")
+    Call Check(G.LiveMaterialCount3D() = 1, "second owner retained material")
+    Call Check(Not G.TryDestroyModel3D(Second), "last owner refuses live objects")
+    Call Check(Second.Handle > 0 And G.LiveMaterialCount3D() = 1, "refusal preserves owner")
+    Call Check(G.SetViewport3D(0, 0, 320, 180, True), "preserved viewport")
+
+    Began = G.Begin3D(Camera, 7, 13, 29)
+
+    Call Check(Began, "begin shared draw")
+
+    If Began Then
+
+        SubmissionToken = G.BeginSubmissionGroup3D(2)
+
+        Call Check(SubmissionToken > 0, "retained submission group")
+        Call Check(G.DrawObject3D(LeftPart), "first shared PBR draw")
+        Call Check(G.DrawObject3D(RightPart), "second shared PBR draw")
+        Call Check(G.TryDestroyObjectInstance3D(LeftPart), "release first submitted object")
+        Call Check(G.TryDestroyObjectInstance3D(RightPart), "release second submitted object")
+        Call Check(Not G.TryDestroyModel3D(Second), "last owner refuses in-flight meshes")
+        Call Check(G.CommitSubmissionGroup3D(SubmissionToken), "retained shared submissions commit")
+        Call G.End3D()
+        Call Check(G.PbrDrawCount3D() = 2, "two real PBR draw calls")
+        Call Check(G.PbrTriangleCount3D() = 4, "four real PBR triangles")
+
+        CaptureHandle = G.CaptureViewport3D()
+
+        Call Check(CaptureHandle > 0, "shared viewport capture")
+
+        If CaptureHandle > 0 Then
+
+            Job = G.ExportViewportCapturePng3D(CaptureHandle, "@OUTPUT@\Shared.png")
+
+            Call G.ReleaseViewportCapture3D(CaptureHandle)
+            Call Check(Job > 0, "PNG export started")
+
+            If Job > 0 Then
+
+                Started = Timer()
+
+                Do
+                    Show Screen
+
+                Loop Until Data_FileStatus(Job) <> 0 Or Timer() - Started > 10000
+
+                Call Check(Data_FileStatus(Job) = 1, "PNG export finished")
+
+            End If
+
+        End If
+
+    End If
+
+    Call G.DestroyObjectInstance3D(LeftPart)
+    Call G.DestroyObjectInstance3D(RightPart)
+    Call G.ResetViewport3D()
+    Call Check(G.TryDestroyModel3D(Second), "last owner releases after frame")
+    Call Check(G.LiveMaterialCount3D() = 0, "duplicate slot leases balanced")
+
+End Sub
+
+Sub TexturedModels()
+
+    Dim First As Core.Model3D
+    Dim Second As Core.Model3D
+    Dim Part As Core.Object3D
+    Dim Camera As Core.Camera3D
+    Dim Began As Boolean
+
+    First = G.LoadModelGeometry3D("Assets\Textured.sm3d")
+    Second = G.LoadModelGeometry3D("Assets\Textured.sm3d")
+
+    Call Check(Prepare(First) And Prepare(Second), "textured preparations")
+    Call Check(G.LiveMaterialCount3D() = 4, "textured materials stay independent")
+    Call Check(G.LiveTextureCount3D() = 8, "textured ownership stays independent")
+    Call Check(G.TryDestroyModel3D(First), "first textured model released")
+    Call Check(G.LiveMaterialCount3D() = 2, "second textured materials retained")
+    Call Check(G.LiveTextureCount3D() = 4, "second textured textures retained")
+
+    Part = G.CreateModelPart3D(Second, 0)
+    Camera = G.DefaultCamera()
+    Began = G.Begin3D(Camera, 7, 13, 29)
+
+    Call Check(Began, "begin textured draw")
+
+    If Began Then
+
+        Call Check(G.DrawObject3D(Part), "textured survivor draws")
+        Call G.End3D()
+        Call Check(G.PbrDrawCount3D() = 1, "textured survivor PBR counter")
+
+    End If
+
+    Call G.DestroyObjectInstance3D(Part)
+    Call Check(G.TryDestroyModel3D(Second), "second textured model released")
+    Call Check(G.LiveMaterialCount3D() = 0, "textured material cleanup")
+    Call Check(G.LiveTextureCount3D() = 0, "textured texture cleanup")
+
+End Sub
+
+Sub CapacityFailure()
+
+    Dim Owner As Core.Model3D
+    Dim Candidate As Core.Model3D
+    Dim Empty As Core.Texture3D
+    Dim FillMaterials[512] As Core.Material3D
+    Dim Index As Number
+    Dim FillCount As Number
+
+    Owner = G.LoadModelGeometry3D("Assets\Duplicate.sm3d")
+
+    Call Check(Prepare(Owner), "capacity owner preparation")
+
+    FillCount = G.MaximumMaterialCount3D() - 1
+
+    Call Check(FillCount > 1 And FillCount <= 512, "bounded material fixture capacity")
+
+    If FillCount < 2 Or FillCount > 512 Then
+        Call G.DestroyModel3D(Owner)
+
+        Return
+    End If
+
+    For Index = 0 To FillCount - 1
+        FillMaterials[Index] = G.CreatePbrMaterial3D(Empty, Empty, Empty, Empty)
+
+        Call Check(FillMaterials[Index].Handle > 0, "independent caller material")
+    End For
+
+    Call Check(FillMaterials[0].Handle <> FillMaterials[1].Handle, "identical caller materials are independent")
+    Call Check(G.SetPbrMaterialFactors3D(FillMaterials[0], 255, 255, 255, 100, 0, 27, 100, 100), "caller material mutation")
+    Call Check(G.PbrMaterialValue3D(FillMaterials[0], G.PBR_MATERIAL_ROUGHNESS) = 270, "caller mutation applied")
+    Call Check(G.PbrMaterialValue3D(FillMaterials[1], G.PBR_MATERIAL_ROUGHNESS) = 1000, "caller mutation isolated")
+    Call Check(G.LiveMaterialCount3D() = G.MaximumMaterialCount3D(), "material cap filled exactly")
+
+    Candidate = G.LoadModelGeometry3D("Assets\Different.sm3d")
+
+    Call Check(Not Prepare(Candidate), "new unique material rejected at cap")
+    Call Check(Candidate.GeometryReady And Not Candidate.PbrReady, "capacity failure preserves geometry")
+    Call Check(G.LiveMaterialCount3D() = G.MaximumMaterialCount3D(), "failed preparation leaves pool intact")
+    Call Check(G.TryDestroyModel3D(Candidate), "failed candidate released")
+
+    Candidate = G.LoadModelGeometry3D("Assets\Duplicate.sm3d")
+
+    Call Check(Prepare(Candidate), "existing material reusable at cap")
+    Call Check(G.LiveMaterialCount3D() = G.MaximumMaterialCount3D(), "reuse allocates no extra material")
+    Call Check(G.TryDestroyModel3D(Candidate), "reused candidate released")
+    Call Check(G.LiveMaterialCount3D() = G.MaximumMaterialCount3D(), "original owner survives candidate cleanup")
+
+    For Index = 0 To FillCount - 1
+        Call G.DestroyMaterial3D(FillMaterials[Index])
+    End For
+
+    Call Check(G.LiveMaterialCount3D() = 1, "standalone materials released")
+
+    Candidate = G.LoadModelGeometry3D("Assets\Different.sm3d")
+
+    Call Check(Prepare(Candidate), "failed shape retries after capacity released")
+    Call Check(G.LiveMaterialCount3D() = 2, "retry shares existing and adds distinct material")
+    Call Check(G.TryDestroyModel3D(Owner), "original owner releases before retry")
+    Call Check(G.LiveMaterialCount3D() = 2, "retry retains both materials")
+    Call Check(G.TryDestroyModel3D(Candidate), "retry cleanup")
+    Call Check(G.LiveMaterialCount3D() = 0, "capacity and retry leases balanced")
+
+End Sub
+
+Function Prepare(ByRef Model As Core.Model3D) As Boolean
+
+    Dim Result As Boolean
+
+    Result = G.PrepareModelPbr3D(Model, G.TEXTURE_FILTER_LINEAR, G.TEXTURE_WRAP_CLAMP, 1)
+    Return Result
+
+End Function
+
+Sub Check(Condition As Boolean, Label As Text)
+
+    Checks = Checks + 1
+
+    If Not Condition Then
+        Failures = Failures + 1
+        Print "FAIL "; Checks; ": "; Label
+    End If
+
+End Sub

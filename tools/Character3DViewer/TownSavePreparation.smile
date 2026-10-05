@@ -23,7 +23,8 @@ Public Type State
     Failed As Boolean
 End Type
 
-Public Sub Begin(ByRef Value As State, ByRef Town As Document.State, Key As Text, Revision As Number)
+Public Sub Begin(ByRef Value As State, ByRef Town As Document.State, Key As Text, Revision As Number,
+    Optional SourceName As Text = "")
 
     Value.Key = Key
     Value.BatchCount = 0
@@ -35,7 +36,7 @@ Public Sub Begin(ByRef Value As State, ByRef Town As Document.State, Key As Text
 
     Call Builder.Begin(Value.Recipe, Town)
     Call Graph.Adopt(Value.Roads, Town, Revision)
-    Call Npcs.Begin(Value.Npcs, Town)
+    Call Npcs.Begin(Value.Npcs, Town, SourceName)
 
 End Sub
 

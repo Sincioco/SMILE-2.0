@@ -11,6 +11,7 @@ Import Smile.Tools.TownDocumentStore As Store
 
 Public Type State
     Documents[17] As Document.State
+    FrozenPhotoReady[17] As Boolean
     MapCount As Number
     NextIndex As Number
     Failed As Number
@@ -56,7 +57,6 @@ Public Sub Begin(ByRef Value As State, ByRef OpenTabs As Tabs.State,
     Dim Index As Number
     Dim Separator As Number
     Dim Sequence As Number
-    Dim Ok As Boolean
 
     If Value.Active Or Text_Length(Path) = 0 Then
         Return
@@ -98,7 +98,7 @@ Public Sub Begin(ByRef Value As State, ByRef OpenTabs As Tabs.State,
     If Value.WithPreview Then
 
         For Index = 0 To Value.MapCount - 1
-            Ok = Previews.Freeze(Value.Documents[Index], PhotoKey(Index))
+            Value.FrozenPhotoReady[Index] = Previews.Freeze(Value.Documents[Index], PhotoKey(Index))
         End For
 
     End If
@@ -174,6 +174,11 @@ Public Sub Update(ByRef Value As State, ByRef Job As Files.State,
         Value.Active = False
         Job.Failed = Value.Failed > 0
         Job.Progress = 100
+
+        If Value.Failed > 0 Then
+            Job.Progress = 99
+        End If
+
         Job.BatchLabel = "All Maps"
         Job.Message = ("Saved " + Files.IdText(Value.MapCount - Value.Failed) + " of " +
             Files.IdText(Value.MapCount) + " maps. " + Value.Errors)
@@ -189,7 +194,8 @@ Public Sub Update(ByRef Value As State, ByRef Job As Files.State,
     End If
 
     Ok = Files.Queue(Job, Value.Documents[Value.NextIndex], Value.Operation,
-        OutputPath(Value, Value.NextIndex), False, Value.WithPreview, Preview)
+        OutputPath(Value, Value.NextIndex), False, Value.WithPreview, Preview, "",
+        Value.FrozenPhotoReady[Value.NextIndex])
     Job.SuppressReveal = True
     Job.BatchLabel = "Map " + Files.IdText(Value.NextIndex + 1) + "/" + Files.IdText(Value.MapCount)
     Value.Waiting = True
@@ -228,6 +234,8 @@ Private Sub ClearDocuments(ByRef Value As State)
 
     For Index = 0 To 16
         Call Document.ReleaseSnapshot(Value.Documents[Index])
+
+        Value.FrozenPhotoReady[Index] = False
     End For
 
 End Sub

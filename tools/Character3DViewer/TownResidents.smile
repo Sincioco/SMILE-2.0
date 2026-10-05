@@ -133,6 +133,45 @@ Private Sub LoadNext(ByRef Value As State)
 
 End Sub
 
+''' Request-owned residents at prepared authored spawns; no live navigation or errands.
+Public Function PreparePhotograph(ByRef Value As State, TownName As Text, Spawns As Layout.State) As Boolean
+
+    Dim Index As Number
+    Dim Position As P.Vector3
+    Dim Ok As Boolean
+
+    If Value.TownName <> TownName Then
+
+        Call Destroy(Value)
+
+        Value.Layout = Spawns
+        Value.Layout.Authored = True
+        Value.TownName = TownName
+        Value.Total = Layout.Population(Spawns)
+        Value.Enabled = Value.Total > 0
+
+    End If
+
+    If Value.Loaded < Value.Total And Not Value.Failed Then
+        Call LoadNext(Value)
+    End If
+
+    For Index = 0 To Value.Loaded - 1
+
+        Position = Value.People[Index].Motion.Position
+        Ok = Character.Update(Value.People[Index].Actor, 0)
+        Ok = Character.PlacePrecise(Value.People[Index].Actor, Position.X, Position.Y, Position.Z) And Ok
+        Ok = Character.RotatePrecise(Value.People[Index].Actor, 0.0,
+            Value.People[Index].Motion.Heading, 0.0) And Ok
+        Value.Failed = Value.Failed Or Not Ok
+    End For
+
+    Ok = Value.Loaded = Value.Total And Not Value.Failed
+
+    Return Ok
+
+End Function
+
 Public Function Talking(ByRef Value As State) As Boolean
 
     Dim Result As Boolean

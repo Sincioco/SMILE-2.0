@@ -67,19 +67,28 @@ Run native town checks sequentially against complete assets:
 
 ```powershell
 pwsh -NoProfile -File scripts/test-town-export-photographs.ps1
+pwsh -NoProfile -File scripts/test-town-cold-export.ps1 -PublicationDirectory "artifacts/studio-r04-final-20261005"
+pwsh -NoProfile -File scripts/test-renderer3d-pbr-sharing.ps1
 pwsh -NoProfile -File scripts/test-neris-acceptance-policy.ps1
 pwsh -NoProfile -File scripts/test-neris-town.ps1
 pwsh -NoProfile -File scripts/test-town-editor.ps1
 ```
 
-The [Viewer export guide](viewer-export.md#acceptance-boundary) separates the
-established warm contract from unfinished R04 work. The working-tree-only
-`test-town-cold-export.ps1` uses actual assets beside a live Metropolis scene. On
-October 5 its seven-map fixture **failed overall**: small Cottage/Save As checks
-passed, but larger-map material admission, Metropolis capture and inherited
-backdrop composition remain blockers. Warm identity passed at the actual 17-slot
-bound. See [exact evidence and limits](status.md#viewer-export-r04); a passing build
-or warm fixture does not close cold-scene acceptance.
+The [Viewer export guide](viewer-export.md#acceptance-boundary) distinguishes the
+17-slot warm identity regression from real-asset cold capture. Both pass: the cold
+runner exports seven town/PNG pairs beside a live Metropolis scene, verifies exact
+prepared reopens, state/resource restoration and capture limits. Native PBR-sharing,
+scoped-backdrop and VFX-capacity fixtures also pass. See
+[exact run IDs and limits](status.md#viewer-export-r04).
+
+The final Studio native publication passes with 401 assets. Town Editor foundations,
+routes, render and PNG checks pass. The session fixture retains the exact 49 failures
+also present on HEAD baseline (Decor page, palette visibility and exhausted water
+budget); its corrected partial-failure Save All assertion passes. PBR hardening
+with the proper manifest passes normal/forced runs, while the
+original fixture's 15 baseline/current failures remain a separate known issue. Run
+only the native VFX fixture during this work period: `test-renderer3d-vfx-batches.ps1` also contains
+Web compilation/execution and is not a native-only command.
 
 The Neris/town-session runners accept `-PublicationDirectory <verified folder>`.
 Metropolis has `scripts/test-metropolis-native.ps1 -PublicationDirectory <folder>`.

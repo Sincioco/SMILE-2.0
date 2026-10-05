@@ -48,7 +48,8 @@ static SmileWaterScene3D smile_water_scene3d;
 #define SMILE_3D_MAX_FRAME_PALETTES 512
 #define SMILE_3D_MAX_PARTICLE_BATCHES 64
 #define SMILE_3D_MAX_PARTICLES_PER_BATCH 4096
-#define SMILE_3D_MAX_STAGED_PARTICLES 8192
+// Two independently owned city scenes plus the bounded CPU fire family fit on demand.
+#define SMILE_3D_MAX_STAGED_PARTICLES 16384
 #define SMILE_3D_MAX_RIBBON_BATCHES 16
 #define SMILE_3D_MAX_RIBBON_POINTS_PER_BATCH 8192
 #define SMILE_3D_MAX_STAGED_RIBBON_POINTS 32768
@@ -199,7 +200,8 @@ struct SmileMaterial3D
     unsigned char mode;
     unsigned char double_sided;
     long long texture_handles[4];
-    long long owner_model_handle;
+    unsigned int model_references; // One lease for each prepared model material slot.
+    unsigned char shared_imported; // Immutable, texture-free imported PBR value.
     float color[4];
     float emissive;
     float cutoff;
@@ -1436,8 +1438,6 @@ static int smile_3d_delete_model(SmileModel3D* model)
     if (smile_3d_model_animator_reference_count(model) != 0) return 0;
     for (index = 0; index < model->part_count; ++index)
         if (smile_3d_mesh_reference_count(model->mesh_handles[index]) != 0) return 0;
-    for (index = 0; index < model->prepared_material_count; ++index)
-        if (smile_3d_material_reference_count(model->prepared_material_handles[index]) != 0) return 0;
     if (!smile_3d_clear_model_pbr(model)) return 0;
     for (index = 0; index < model->part_count; ++index)
     {
@@ -1618,7 +1618,8 @@ static void smile_3d_delete_material(SmileMaterial3D* material)
 {
     material->active = 0;
     for (int semantic = 0; semantic < 4; ++semantic) material->texture_handles[semantic] = 0;
-    material->owner_model_handle = 0;
+    material->model_references = 0;
+    material->shared_imported = 0;
     material->mode = 0;
     material->generation++;
     if (material->generation == 0) material->generation = 1;
@@ -2815,7 +2816,7 @@ static long long smile_3d_create_pbr_material(long long base_texture,
     material->generation = generation;
     material->active = 1;
     material->mode = 1;
-    material->owner_model_handle = owner_model_handle;
+    material->model_references = owner_model_handle != 0 ? 1U : 0U;
     material->color[0] = material->color[1] = material->color[2] = material->color[3] = 1.0f;
     material->roughness = 1.0f;
     material->normal_strength = 1.0f;
@@ -2830,6 +2831,73 @@ static long long smile_3d_create_pbr_material(long long base_texture,
     return smile_3d_handle(SMILE_3D_MATERIAL_HANDLE, slot, material->generation);
 }
 
+// Only texture-free imported defaults are interned. Mutable caller materials and
+// per-model imported textures retain their existing ownership and sampler policy.
+static int smile_3d_model_material_untextured(const SmileModel3D* model, int index)
+{
+    for (int semantic = 0; semantic < 4; ++semantic)
+        if (model->materials[index].texture_references[semantic] >= 0) return 0;
+    return 1;
+}
+
+static int smile_3d_model_material_equal(const SmileModel3D* model, int first, int second)
+{
+    const auto& left = model->materials[first];
+    const auto& right = model->materials[second];
+    return left.alpha_mode == right.alpha_mode && left.double_sided == right.double_sided &&
+        memcmp(left.base_color, right.base_color, sizeof(left.base_color)) == 0 &&
+        left.metallic == right.metallic && left.roughness == right.roughness &&
+        left.normal_strength == right.normal_strength && left.occlusion_strength == right.occlusion_strength &&
+        memcmp(left.emissive, right.emissive, sizeof(left.emissive)) == 0 &&
+        left.alpha_cutoff == right.alpha_cutoff;
+}
+
+static long long smile_3d_find_shared_import(const SmileModel3D* model, int index)
+{
+    const auto& source = model->materials[index];
+    for (int slot = 0; slot < SMILE_3D_MAX_MATERIALS; ++slot)
+    {
+        const SmileMaterial3D* material = &smile_materials3d[slot];
+        if (!material->active || !material->shared_imported || material->model_references == 0 ||
+            material->mode != 1) continue;
+        if (material->alpha_mode != source.alpha_mode || material->double_sided != source.double_sided ||
+            memcmp(material->color, source.base_color, sizeof(material->color)) != 0 ||
+            material->metallic != source.metallic || material->roughness != source.roughness ||
+            material->normal_strength != source.normal_strength || material->occlusion_strength != source.occlusion_strength ||
+            memcmp(material->emissive_color, source.emissive, sizeof(material->emissive_color)) != 0 ||
+            material->cutoff != source.alpha_cutoff) continue;
+        return smile_3d_handle(SMILE_3D_MATERIAL_HANDLE, slot, material->generation);
+    }
+    return 0;
+}
+
+static SmileMaterial3D* smile_3d_mutable_pbr_material(long long handle)
+{
+    SmileMaterial3D* material = smile_3d_material(handle);
+    if (material != 0 && material->shared_imported)
+    {
+        smile_last_error3d = 39;
+        return 0;
+    }
+    return material;
+}
+
+static unsigned int smile_3d_model_material_leases(const SmileModel3D* model, long long handle)
+{
+    unsigned int count = 0;
+    for (int index = 0; index < model->prepared_material_count; ++index)
+        if (model->prepared_material_handles[index] == handle) count++;
+    return count;
+}
+
+static void smile_3d_release_imported_material(long long handle)
+{
+    SmileMaterial3D* material = smile_3d_material(handle);
+    if (material == 0 || material->model_references == 0) return;
+    material->model_references--;
+    if (material->model_references == 0) smile_3d_delete_material(material);
+}
+
 static int smile_3d_clear_model_pbr(SmileModel3D* model)
 {
     if (model == 0) return 0;
@@ -2838,13 +2906,21 @@ static int smile_3d_clear_model_pbr(SmileModel3D* model)
         SmileTexture3D* texture = smile_3d_texture(model->owned_texture_handles[index]);
         if (texture != 0 && texture->in_flight != 0) return 0;
     }
-    for (int index = 0; index < model->prepared_material_count; ++index)
-        if (smile_3d_material_reference_count(model->prepared_material_handles[index]) != 0)
-            return 0;
+    // Preflight every last-lease dependency before changing any ownership. A
+    // different model's objects may still use an interned value after this one dies.
     for (int index = 0; index < model->prepared_material_count; ++index)
     {
-        SmileMaterial3D* material = smile_3d_material(model->prepared_material_handles[index]);
-        if (material != 0) smile_3d_delete_material(material);
+        long long handle = model->prepared_material_handles[index];
+        SmileMaterial3D* material = smile_3d_material(handle);
+        if (material == 0) continue;
+        unsigned int releasing = smile_3d_model_material_leases(model, handle);
+        if (material->model_references < releasing ||
+            (material->model_references == releasing && smile_3d_material_reference_count(handle) != 0))
+            return 0;
+    }
+    for (int index = 0; index < model->prepared_material_count; ++index)
+    {
+        smile_3d_release_imported_material(model->prepared_material_handles[index]);
         model->prepared_material_handles[index] = 0;
     }
     for (int index = 0; index < model->owned_texture_count; ++index)
@@ -2987,7 +3063,7 @@ static long long smile_3d_pbr_material_value(SmileMaterial3D* material, long lon
     if (property >= 12 && property <= 14)
         return (long long)llroundf(material->emissive_color[property - 12] * 1000.0f);
     if (property == 15) return (long long)llroundf(material->cutoff * 1000.0f);
-    if (property == 16) return material->owner_model_handle != 0;
+    if (property == 16) return material->model_references != 0;
     smile_last_error3d = 5;
     return 0;
 }
@@ -4409,7 +4485,9 @@ static int smile_3d_prepare_model_pbr(long long model_handle,
     unsigned char usage_by_unique[SMILE_3D_MAX_MODEL_TEXTURES] = {};
     int unique_textures = 0;
     int created_textures = 0;
-    int created_materials = 0;
+    int acquired_materials = 0;
+    int new_materials = 0;
+    unsigned char canonical_material[SMILE_3D_MAX_MODEL_MATERIALS] = {};
     if (model == 0 || model->format_version != 2 || filter < 0 || filter > 3 ||
         wrap < 0 || wrap > 1 || anisotropy < 1 || anisotropy > 16)
     {
@@ -4450,8 +4528,30 @@ static int smile_3d_prepare_model_pbr(long long model_handle,
         unique_for_reference[reference] = (unsigned char)unique;
     }
 
+    // Plan exact new slot demand without acquiring any lease. Duplicate slots
+    // in this model and equal existing immutable imports each need no new slot.
+    for (int index = 0; index < model->material_count; ++index)
+    {
+        canonical_material[index] = (unsigned char)index;
+        if (smile_3d_model_material_untextured(model, index))
+        {
+            material_handles[index] = smile_3d_find_shared_import(model, index);
+            if (material_handles[index] != 0) continue;
+            for (int prior = 0; prior < index; ++prior)
+            {
+                if (smile_3d_model_material_untextured(model, prior) &&
+                    smile_3d_model_material_equal(model, prior, index))
+                {
+                    canonical_material[index] = canonical_material[prior];
+                    break;
+                }
+            }
+        }
+        if (canonical_material[index] == index) new_materials++;
+    }
+
     if (smile_3d_live_texture_count() + unique_textures > SMILE_3D_MAX_TEXTURES ||
-        smile_3d_live_material_count() + model->material_count > SMILE_3D_MAX_MATERIALS)
+        smile_3d_live_material_count() + new_materials > SMILE_3D_MAX_MATERIALS)
     {
         smile_last_error3d = 41;
         model->pbr_failure = 41;
@@ -4489,6 +4589,20 @@ static int smile_3d_prepare_model_pbr(long long model_handle,
 
     for (int index = 0; index < model->material_count; ++index)
     {
+        if (canonical_material[index] != index)
+            material_handles[index] = material_handles[canonical_material[index]];
+        if (material_handles[index] != 0)
+        {
+            SmileMaterial3D* material = smile_3d_material(material_handles[index]);
+            if (material == 0 || !material->shared_imported || material->model_references == 0)
+            {
+                smile_last_error3d = 42;
+                goto rollback_prepare;
+            }
+            material->model_references++;
+            acquired_materials++;
+            continue;
+        }
         long long selected[4] = {};
         for (int semantic = 0; semantic < 4; ++semantic)
         {
@@ -4499,7 +4613,7 @@ static int smile_3d_prepare_model_pbr(long long model_handle,
             selected[2], selected[3], model->materials[index].alpha_mode,
             model->materials[index].double_sided, model_handle);
         if (material_handles[index] == 0) goto rollback_prepare;
-        created_materials++;
+        acquired_materials++;
         {
             SmileMaterial3D* material = smile_3d_material(material_handles[index]);
             memcpy(material->color, model->materials[index].base_color, sizeof(material->color));
@@ -4510,6 +4624,7 @@ static int smile_3d_prepare_model_pbr(long long model_handle,
             memcpy(material->emissive_color, model->materials[index].emissive,
                 sizeof(material->emissive_color));
             material->cutoff = model->materials[index].alpha_cutoff;
+            material->shared_imported = (unsigned char)smile_3d_model_material_untextured(model, index);
         }
     }
     memcpy(model->prepared_texture_by_reference, texture_by_reference,
@@ -4528,11 +4643,8 @@ static int smile_3d_prepare_model_pbr(long long model_handle,
 rollback_prepare:
     for (int index = 0; index < unique_textures; ++index)
         smile_image_resource_release(decoded[index]);
-    for (int index = 0; index < created_materials; ++index)
-    {
-        SmileMaterial3D* material = smile_3d_material(material_handles[index]);
-        if (material != 0) smile_3d_delete_material(material);
-    }
+    for (int index = 0; index < acquired_materials; ++index)
+        smile_3d_release_imported_material(material_handles[index]);
     for (int index = 0; index < created_textures; ++index)
     {
         SmileTexture3D* texture = smile_3d_texture(owned_texture_handles[index]);
@@ -9906,7 +10018,7 @@ extern "C" long long smile_renderer3d_command(long long command,
             material = smile_3d_material(a);
             if (material != 0)
             {
-                if (material->owner_model_handle != 0 || smile_3d_material_reference_count(a) != 0)
+                if (material->model_references != 0 || smile_3d_material_reference_count(a) != 0)
                 { smile_last_error3d = 22; return 0; }
                 smile_3d_delete_material(material); return 1;
             }
@@ -10182,13 +10294,13 @@ extern "C" long long smile_renderer3d_command(long long command,
             { smile_last_error3d = 44; return 0; }
             return smile_3d_create_pbr_material(a, b, c, d, (int)e, (int)f, 0);
         case SMILE_3D_SET_PROCEDURAL_DISPLAY:
-            return smile_3d_set_procedural_display(smile_3d_material(a), b, c, d, e, f, g, h);
+            return smile_3d_set_procedural_display(smile_3d_mutable_pbr_material(a), b, c, d, e, f, g, h);
         case SMILE_3D_SET_PBR_FACTORS:
-            return smile_3d_set_pbr_factors(smile_3d_material(a), b, c, d, e, f, g, h, i, j);
+            return smile_3d_set_pbr_factors(smile_3d_mutable_pbr_material(a), b, c, d, e, f, g, h, i, j);
         case SMILE_3D_SET_PBR_EMISSIVE:
-            return smile_3d_set_pbr_emissive(smile_3d_material(a), b, c, d);
+            return smile_3d_set_pbr_emissive(smile_3d_mutable_pbr_material(a), b, c, d);
         case SMILE_3D_SET_PBR_TEXTURES:
-            return smile_3d_set_pbr_textures(smile_3d_material(a), b, c, d, e, (int)f, (int)g);
+            return smile_3d_set_pbr_textures(smile_3d_mutable_pbr_material(a), b, c, d, e, (int)f, (int)g);
         case SMILE_3D_RESET_LIGHTS: smile_3d_reset_lights(); return 1;
         case SMILE_3D_SET_AMBIENT_LIGHT: return smile_3d_set_ambient(a, b, c, d);
         case SMILE_3D_SET_DIRECTIONAL_LIGHT:

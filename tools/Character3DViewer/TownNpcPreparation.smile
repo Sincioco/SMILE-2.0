@@ -16,16 +16,22 @@ Public Type State
     Ready As Boolean
 End Type
 
-Public Sub Begin(ByRef Value As State, ByRef Town As Document.State)
+Public Sub Begin(ByRef Value As State, ByRef Town As Document.State,
+    Optional SourceName As Text = "")
 
     Dim Empty As State
 
     Value = Empty
+
+    If Text_Length(SourceName) = 0 Then
+        SourceName = Town.Name
+    End If
+
     Value.Legacy = Not Town.Npcs.Authored
-    Value.Ready = Value.Legacy And Town.Name <> "Neris Town"
+    Value.Ready = Value.Legacy And SourceName <> "Neris Town"
 
     If Value.Legacy Then
-        Town.Npcs = Layout.Defaults(Town.Name)
+        Town.Npcs = Layout.Defaults(SourceName)
     End If
 
 End Sub

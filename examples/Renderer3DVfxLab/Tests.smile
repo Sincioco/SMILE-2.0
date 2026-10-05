@@ -54,11 +54,12 @@ Sub RunTests()
     Call Check(Atlas.Handle <> 0)
     Call Check(AlphaMaterial.Handle <> 0)
     Call Check(AdditiveMaterial.Handle <> 0)
+    Call CheckParticleCapacity(AdditiveMaterial)
     Call CheckPreciseBatches(AdditiveMaterial)
     Call Check(Graphics3D.LiveObjectCount3D() = 0)
     Call Check(Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_MAX_PARTICLE_BATCHES) = 64)
     Call Check(Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_MAX_RIBBON_BATCHES) = 16)
-    Call Check(Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_MAX_STAGED_PARTICLES) = 8192)
+    Call Check(Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_MAX_STAGED_PARTICLES) >= 8192)
     Call Check(Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_MAX_STAGED_RIBBON_POINTS) = 32768)
 
     Particle = Graphics3D.CreateParticleBatch3D(
@@ -200,6 +201,59 @@ Sub RunTests()
 
 End Sub
 
+Sub CheckParticleCapacity(Material As Core.Material3D)
+
+    Dim Batches[64] As Core.ParticleBatch3D
+    Dim Rejected As Core.ParticleBatch3D
+    Dim BeforeCapacity As Number
+    Dim BeforeCount As Number
+    Dim BeforeBytes As Number
+    Dim Capacity As Number
+    Dim Remaining As Number
+    Dim BatchCount As Number
+    Dim Index As Number
+
+    BeforeCapacity = Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_STAGED_PARTICLE_CAPACITY)
+    BeforeCount = Graphics3D.LiveParticleBatchCount3D()
+    BeforeBytes = Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_CPU_BYTES)
+    Capacity = Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_MAX_STAGED_PARTICLES)
+    Remaining = Capacity - BeforeCapacity
+
+    Do
+
+        If Remaining <= 0 Or BatchCount >= 64 Then
+            Exit Do
+        End If
+
+        Batches[BatchCount] = Graphics3D.CreateParticleBatch3D(Min(4096, Remaining), Material)
+
+        Call Check(Graphics3D.ParticleBatchHandleValid3D(Batches[BatchCount]))
+
+        Remaining = Remaining - Min(4096, Remaining)
+        BatchCount = BatchCount + 1
+
+    Loop
+
+    Call Check(Remaining = 0)
+    Call Check(Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_STAGED_PARTICLE_CAPACITY) = Capacity)
+
+    Rejected = Graphics3D.CreateParticleBatch3D(1, Material)
+
+    Call Check(Not Graphics3D.ParticleBatchHandleValid3D(Rejected))
+    Call Check(Graphics3D.LastError() = 54)
+    Call Check(Graphics3D.LiveParticleBatchCount3D() = BeforeCount + BatchCount)
+    Call Check(Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_STAGED_PARTICLE_CAPACITY) = Capacity)
+
+    For Index = 0 To BatchCount - 1
+        Call Check(Graphics3D.TryDestroyParticleBatch3D(Batches[Index]))
+    End For
+
+    Call Check(Graphics3D.LiveParticleBatchCount3D() = BeforeCount)
+    Call Check(Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_STAGED_PARTICLE_CAPACITY) = BeforeCapacity)
+    Call Check(Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_CPU_BYTES) = BeforeBytes)
+
+End Sub
+
 Sub RunEffectsTests(AlphaMaterial As Core.Material3D, AdditiveMaterial As Core.Material3D)
 
     Dim AudioRequest As Effects3D.AudioCueRequest3D
@@ -212,6 +266,10 @@ Sub RunEffectsTests(AlphaMaterial As Core.Material3D, AdditiveMaterial As Core.M
     Dim Index As Number
     Dim PartitionBaseline As Number
     Dim ParticleBlocker As Core.ParticleBatch3D
+    Dim CapacityBlockers[64] As Core.ParticleBatch3D
+    Dim CapacityBlockerCount As Number
+    Dim CapacityRemaining As Number
+    Dim ReservedBefore As Number
     Dim Rejected As Effects3D.Effect
     Dim RibbonMaterial As Core.Material3D
     Dim RibbonBlockers[14] As Core.RibbonBatch3D
@@ -243,6 +301,28 @@ Sub RunEffectsTests(AlphaMaterial As Core.Material3D, AdditiveMaterial As Core.M
     Call Check(Graphics3D.End3DChecked())
     Call Check(Effects3D.IsInitialized())
     Call Check(Effects3D.Quality() = Scene3D.QUALITY_HIGH)
+
+    ' Keep the original 8,192-slot pressure on targets with a larger queried pool.
+    ReservedBefore = Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_STAGED_PARTICLE_CAPACITY)
+    CapacityRemaining = Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_MAX_STAGED_PARTICLES) - 8192
+
+    Do
+
+        If CapacityRemaining <= 0 Or CapacityBlockerCount >= 64 Then
+            Exit Do
+        End If
+
+        CapacityBlockers[CapacityBlockerCount] = Graphics3D.CreateParticleBatch3D(
+            Min(4096, CapacityRemaining), AlphaMaterial)
+
+        Call Check(Graphics3D.ParticleBatchHandleValid3D(CapacityBlockers[CapacityBlockerCount]))
+
+        CapacityRemaining = CapacityRemaining - Min(4096, CapacityRemaining)
+        CapacityBlockerCount = CapacityBlockerCount + 1
+
+    Loop
+
+    Call Check(CapacityRemaining = 0)
     Call Check(Not Effects3D.Initialize(
         AlphaMaterial,
         AdditiveMaterial,
@@ -251,7 +331,7 @@ Sub RunEffectsTests(AlphaMaterial As Core.Material3D, AdditiveMaterial As Core.M
     ))
     Call Check(Effects3D.IsInitialized())
     Call Check(Effects3D.Quality() = Scene3D.QUALITY_HIGH)
-    Call Check(Graphics3D.LiveParticleBatchCount3D() = 3)
+    Call Check(Graphics3D.LiveParticleBatchCount3D() = 3 + CapacityBlockerCount)
     Call Check(Graphics3D.LiveRibbonBatchCount3D() = 2)
 
     ParticleBlocker = Graphics3D.CreateParticleBatch3D(2048, AlphaMaterial)
@@ -266,6 +346,12 @@ Sub RunEffectsTests(AlphaMaterial As Core.Material3D, AdditiveMaterial As Core.M
     Call Check(Effects3D.IsInitialized())
     Call Check(Effects3D.Quality() = Scene3D.QUALITY_HIGH)
     Call Check(Graphics3D.TryDestroyParticleBatch3D(ParticleBlocker))
+
+    For Index = 0 To CapacityBlockerCount - 1
+        Call Check(Graphics3D.TryDestroyParticleBatch3D(CapacityBlockers[Index]))
+    End For
+
+    Call Check(Graphics3D.VfxValue3D(Graphics3D.VFX_QUERY_STAGED_PARTICLE_CAPACITY) = ReservedBefore)
     Call Check(Not Effects3D.Initialize(
         InvalidMaterial,
         InvalidMaterial,

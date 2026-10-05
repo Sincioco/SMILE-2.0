@@ -138,8 +138,9 @@ or BlueWhite, defaulting to Fire; both native/Web thermal shaders and the CPU
 fallback use the same palette choice. All mutations reject in-flight changes.
 Intensity is clamped to 0–400; twelve admitted emitters share the renderer pools.
 Both backends allow 64 CPU particle batches, so all twelve emitters can use their
-four-batch fallback (48 batches, at most 4,608 staged particles). The shared staged
-particle ceiling remains 8,192 and the GPU system ceiling remains 32; other effect
+four-batch fallback (48 batches, at most 4,608 staged particles). Staged particle
+capacity is allocated on demand, bounded at 16,384 native slots and 8,192 Web slots.
+The GPU system ceiling remains 32; other effect
 families consume these same resources. The current battle uses four Arin and two
 Orin equipment emitters, plus separate Dragon mouth-heat and attack emitters.
 Reflections replay accepted

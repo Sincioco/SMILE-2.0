@@ -144,13 +144,7 @@ Public Function Freeze(ByRef Map As Town.State, Key As Text) As Boolean
 
     Ok = CopyTo(Map, Key + ".Image")
 
-    If Ok Then
-        Ok = Store.SaveDocument(Map, Key + ".Input", False)
-    End If
-
-    If Not Ok Then
-        Call ReleaseFrozen(Key)
-    End If
+    Ok = Store.SaveDocument(Map, Key + ".Input", False) And Ok
 
     Return Ok
 
@@ -191,6 +185,7 @@ Public Sub ReleaseFrozen(Key As Text)
 
     Save Data Bytes Count 0 To Key + ".Image" Status Status
     Save Data Bytes Count 0 To Key + ".Input" Status Status
+    Save Data Bytes Count 0 To Key + ".Rendered" Status Status
 
 End Sub
 

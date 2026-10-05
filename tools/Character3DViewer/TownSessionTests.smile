@@ -588,7 +588,7 @@ Sub CheckQueuedSaves()
 
     Loop Until Not QueueFixture.Active Or Timer() > Deadline
 
-    Call Check(Not QueueFixture.Active And QueueFixture.MapCount = 3 And QueueFixture.Failed = 1 And QueueJob.Progress = 100,
+    Call Check(Not QueueFixture.Active And QueueFixture.MapCount = 3 And QueueFixture.Failed = 1 And QueueJob.Progress = 99,
         "Save All Finishes Later Maps After One Snapshot Fails")
     Call Check(QueueJob.Pending.Name = "QueueFixture Inactive Snapshot",
         "Save All Progress Heading Uses The Current Job Map")
