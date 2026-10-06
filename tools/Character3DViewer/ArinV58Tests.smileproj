@@ -1,0 +1,24 @@
+<SmileProject Version="1.0">
+  <PropertyGroup>
+    <ProjectKind>Game</ProjectKind>
+    <StartupFile>ArinV58Tests.smile</StartupFile>
+    <OutputName>ArinV58Tests</OutputName>
+    <ApplicationId>smile.tests.arin-v58</ApplicationId>
+    <GraphicsBackend>DirectX</GraphicsBackend>
+  </PropertyGroup>
+  <ItemGroup>
+    <SmileSource Include="ArinV58Tests.smile" />
+    <SmileSource Include="Profiles.smile" />
+    <SmileSource Include="ViewerCalibration.smile" />
+    <SmileSource Include="CalibrationJson.smile" />
+    <SmileSource Include="NativeViewerTabs.smile" />
+    <Model3DAsset Include="BuildAssets\ArinV58\arin-v5.8-animation-checkpoint.glb"
+                  Descriptor="BuildAssets\ArinV58\ArinV58.sm3d.json"
+                  LogicalPath="Assets\Generation2\ArinV58\ArinV58.sm3d"
+                  TextureOutputDirectory="Assets\Generation2\ArinV58\Textures"
+                  Profile="Character" Identity="sin-star-i.character-1.paladin"
+                  ProductionState="Prototype" />
+    <SmileProjectReference Include="..\..\libraries\Smile.Simple3D\Smile.Simple3D.smilelibproj" />
+    <SmileProjectReference Include="..\..\libraries\Smile.UI\Smile.UI.smilelibproj" />
+  </ItemGroup>
+</SmileProject>

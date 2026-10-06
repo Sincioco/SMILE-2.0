@@ -17,7 +17,7 @@ Public Const MAX_KEYFRAMES = 256
 Public Const CHANNEL_COUNT = 20
 Public Const AXIS_COUNT = 3
 
-Private Const TOTAL_CLIPS = 128
+Private Const TOTAL_CLIPS = 192
 Private Const VALUES_PER_CLIP = 5120
 Private Const STORAGE_CAPACITY = 700000
 Private Const STORAGE_VERSION = 3
@@ -100,6 +100,8 @@ Public Sub SelectProfileBank(ByRef Value As State, ProfileIndex As Number)
 
     If ProfileIndex = ViewerProfiles.PROFILE_ORIN Then
         Value.KeyBase = MAX_CLIPS
+    Else If ProfileIndex = ViewerProfiles.PROFILE_ARIN_V58 Then
+        Value.KeyBase = MAX_CLIPS * 2
     End If
 
 End Sub

@@ -10,7 +10,7 @@ param(
     [string]$DataRoot,
     [switch]$MigrateLegacy,
     [switch]$FunctionsOnly,
-    [ValidateSet('Arin', 'Orin')]
+    [ValidateSet('Arin', 'Orin', 'ArinV58')]
     [string]$Character = 'Arin'
 )
 
@@ -45,6 +45,15 @@ if ($Character -eq 'Orin') {
     $descriptorFile = 'OrinV13.sm3d.json'
     $cookedRelativePath = 'OrinV13\OrinV13.sm3d'
     $dataKey = 'CharacterViewer.Orin.v1.3.CalibrationKeyframes'
+}
+if ($Character -eq 'ArinV58') {
+    $packageRoot = Join-Path $repositoryRoot 'games\SinStarI\SourceAssets\Characters\Paladin\ArinV58'
+    $snapshotPath = Join-Path $packageRoot 'Calibration\arin-v5.8-pose-calibration.json'
+    $profileFile = 'Calibration\arin-v5.8-profile.json'
+    $modelFile = 'arin-v5.8-animation-checkpoint.glb'
+    $descriptorFile = 'ArinV58.sm3d.json'
+    $cookedRelativePath = 'ArinV58\ArinV58.sm3d'
+    $dataKey = 'CharacterViewer.Arin.v5.8.CalibrationKeyframes'
 }
 $profile = Get-Content -LiteralPath (Join-Path $packageRoot $profileFile) -Raw |
     ConvertFrom-Json -AsHashtable
@@ -459,7 +468,7 @@ function Normalize-Snapshot($Snapshot) {
         $Snapshot.storageVersion -notin @(1, 2, 3)) {
         throw 'Character calibration JSON identity or schema is invalid.'
     }
-    if ($Character -eq 'Orin' -and $Snapshot.schemaVersion -ne 2) {
+    if ($Character -ne 'Arin' -and $Snapshot.schemaVersion -ne 2) {
         throw 'Orin requires schema-2 calibration JSON with its own asset identity.'
     }
     $null = Assert-Integer $Snapshot.schemaVersion 1 2 'Schema version'

@@ -3134,8 +3134,8 @@ static long long smile_3d_create_mesh(unsigned int vertex_count, unsigned int in
 {
     int slot;
     SmileMesh3D* mesh;
-    if (vertex_count == 0 || vertex_count > 65535 || index_count == 0 ||
-        index_count > 196608 || index_count % 3 != 0)
+    if (vertex_count == 0 || vertex_count > 100000 || index_count == 0 ||
+        index_count > 300000 || index_count % 3 != 0)
     {
         smile_last_error3d = 2;
         return 0;
@@ -4070,8 +4070,8 @@ static long long smile_3d_load_model_v2(const unsigned char* bytes, unsigned int
             part->bounds_index = smile_3d_read_u32(record + 24);
             if (smile_3d_model_v2_string(bytes, strings, part->name_offset, 0) == 0 ||
                 part->first_vertex != expected_vertex || part->first_index != expected_index ||
-                part->vertex_count == 0 || part->vertex_count > 65535 ||
-                part->index_count == 0 || part->index_count > 196608 || part->index_count % 3 != 0 ||
+                part->vertex_count == 0 || part->vertex_count > 100000 ||
+                part->index_count == 0 || part->index_count > 300000 || part->index_count % 3 != 0 ||
                 part->vertex_count > vertex_count - part->first_vertex || part->index_count > index_count - part->first_index ||
                 part->material >= material_count || part->bounds_index != part_index + 1 || smile_3d_read_u32(record + 28) != 0 ||
                 !smile_3d_model_v2_bounds(bytes + bounds_chunk->offset + (part_index + 1) * 32, part_bounds[part_index]))

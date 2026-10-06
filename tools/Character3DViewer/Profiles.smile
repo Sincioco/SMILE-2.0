@@ -23,6 +23,7 @@ Public Const MIRA_DEFAULT_PLAYBACK_SPEED = 200
 Public Const PROFILE_YALIS = 13
 Public Const PROFILE_KAEL = 14
 Public Const PROFILE_MILO = 15
+Public Const PROFILE_ARIN_V58 = 16
 Public Const ARENA_OPPONENT_X = -208
 Public Const ARENA_OPPONENT_Z = -120
 Public Const CHARACTER_TAB_PARTY_VRAX = 3
@@ -35,6 +36,7 @@ Public Const CHARACTER_TAB_YALIS = 12
 Public Const CHARACTER_TAB_KAEL = 13
 Public Const CHARACTER_TAB_PARTY_KAEL = 14
 Public Const CHARACTER_TAB_MILO = 17
+Public Const CHARACTER_TAB_ARIN_V58 = 18
 Public Const INCLUDE_MIRA_COMPARISONS = True
 Public Const INCLUDE_UNITY_CHARACTERS = True
 Public Const INCLUDE_DIAGNOSTIC_PROFILES = True
@@ -88,7 +90,15 @@ Public Function NextProfile(Current As Number) As Number
 
     Dim Result As Number
 
-    If Current = PROFILE_YALIS Then
+    If Current = PROFILE_ARIN Then
+
+        Result = PROFILE_ARIN_V58
+
+    Else If Current = PROFILE_ARIN_V58 Then
+
+        Result = PROFILE_ARIN_V56
+
+    Else If Current = PROFILE_YALIS Then
 
         Result = PROFILE_KAEL
 
@@ -186,7 +196,7 @@ End Function
 Public Function ProfileCount() As Number
 
     If INCLUDE_MIRA_COMPARISONS And INCLUDE_UNITY_CHARACTERS Then
-        Return 16
+        Return 17
     Else If INCLUDE_MIRA_COMPARISONS Then
         Return 12
     End If
@@ -219,6 +229,20 @@ Public Function ProfileAt(Index As Number) As CharacterViewer.Profile
         Result.PrototypeAlias = "dragonfall.arin-v5-7"
         Result.ProductionStatus = "Candidate"
         Result.AssetPath = "Assets\Generation2\ArinV57\ArinV57.sm3d"
+        Result.ExpectedClipCount = 11
+        Result.ExpectedSocketCount = 21
+        Result.DesiredWorldHeight = 100
+        Result.DefaultPlaybackSpeed = 200
+
+    Else If Index = PROFILE_ARIN_V58 Then
+
+        Result.AssetId = "sin-star-i.character-1.paladin"
+        Result.CandidateVersion = "v5.8"
+        Result.DisplayName = "Arin v5.8"
+        Result.PartyRole = "Paladin"
+        Result.PrototypeAlias = "sin-star-i.arin-v5-8"
+        Result.ProductionStatus = "Candidate"
+        Result.AssetPath = "Assets\Generation2\ArinV58\ArinV58.sm3d"
         Result.ExpectedClipCount = 11
         Result.ExpectedSocketCount = 21
         Result.DesiredWorldHeight = 100
@@ -418,6 +442,8 @@ Public Function ModelFileName(ProfileIndex As Number) As Text
 
     If IsUnityCharacter(ProfileIndex) Then
         Result = UnityName(ProfileIndex) + "-v1-animation-set.glb"
+    Else If ProfileIndex = PROFILE_ARIN_V58 Then
+        Result = "arin-v5.8-animation-checkpoint.glb"
     Else If ProfileIndex = PROFILE_ARIN Then
         Result = "arin-v5.7-idle-equipment-checkpoint.glb"
     Else If ProfileIndex = PROFILE_ORIN Then
@@ -466,7 +492,7 @@ Public Function ClipCount(ProfileIndex As Number) As Number
         Result = 16
     Else If IsSwordFighter(ProfileIndex) Then
         Result = 10
-    Else If ProfileIndex = PROFILE_ARIN Then
+    Else If ProfileIndex = PROFILE_ARIN Or ProfileIndex = PROFILE_ARIN_V58 Then
         Result = 11
     Else If ProfileIndex = PROFILE_MIRA Or ProfileIndex = PROFILE_ORIN Then
         Result = 10
@@ -678,9 +704,11 @@ Public Function ClipName(ProfileIndex As Number, ClipIndex As Number) As Text
             Result = "Run"
         Else If ClipIndex = 8 Then
             Result = "Death"
-        Else If ClipIndex = 9 And ProfileIndex = PROFILE_ARIN Then
+        Else If (ClipIndex = 9 And
+            (ProfileIndex = PROFILE_ARIN Or ProfileIndex = PROFILE_ARIN_V58)) Then
             Result = "Victory"
-        Else If ClipIndex = 10 And ProfileIndex = PROFILE_ARIN Then
+        Else If (ClipIndex = 10 And
+            (ProfileIndex = PROFILE_ARIN Or ProfileIndex = PROFILE_ARIN_V58)) Then
             Result = "TownIdle"
         End If
 
@@ -830,6 +858,8 @@ Public Function CalibrationAsset(ProfileIndex As Number) As Text
         Result = "Assets\Calibration\arin-v5.7.smkf"
     Else If ProfileIndex = PROFILE_ORIN Then
         Result = "Assets\Calibration\orin-v1.3.smkf"
+    Else If ProfileIndex = PROFILE_ARIN_V58 Then
+        Result = "Assets\Calibration\arin-v5.8.smkf"
     End If
 
     Return Result
@@ -1059,7 +1089,7 @@ Public Function ClipLoops(ProfileIndex As Number, ClipIndex As Number) As Boolea
             ClipIndex = 3 Or
             ClipIndex = 6 Or
             ClipIndex = 7 Or
-            (ProfileIndex = PROFILE_ARIN And ClipIndex = 10))
+            ((ProfileIndex = PROFILE_ARIN Or ProfileIndex = PROFILE_ARIN_V58) And ClipIndex = 10))
     Else If ProfileIndex = PROFILE_ARIN_V56 Then
         Result = (ClipIndex = 0 Or
             ClipIndex = 3 Or
@@ -1081,6 +1111,11 @@ Public Function ClipVerticalOffset1000(
 ) As Number
 
     Dim Result As Number
+
+    ''' v5.8 measured bind minimum -0.018531 versus grounded Idle 0; see its package audit.
+    If ProfileIndex = PROFILE_ARIN_V58 Then
+        Return -19
+    End If
 
     If ProfileIndex = PROFILE_ARIN And ClipName = "Death" Then
 
@@ -1423,7 +1458,8 @@ Public Function IsPartyCharacter(ProfileIndex As Number) As Boolean
 
     Dim Result As Boolean
 
-    Result = ProfileIndex = PROFILE_ARIN Or ProfileIndex = PROFILE_ORIN
+    Result = (ProfileIndex = PROFILE_ARIN Or ProfileIndex = PROFILE_ARIN_V58 Or
+        ProfileIndex = PROFILE_ORIN)
 
     Return Result
 
@@ -1476,6 +1512,8 @@ Public Function CalibrationKey(ProfileIndex As Number) As Text
 
     If ProfileIndex = PROFILE_ORIN Then
         Result = "CharacterViewer.Orin.v1.3.CalibrationKeyframes"
+    Else If ProfileIndex = PROFILE_ARIN_V58 Then
+        Result = "CharacterViewer.Arin.v5.8.CalibrationKeyframes"
     End If
 
     Return Result
@@ -1490,6 +1528,8 @@ Public Function CalibrationFile(ProfileIndex As Number) As Text
 
     If ProfileIndex = PROFILE_ORIN Then
         Result = "D:\SMILE 2.0\games\SinStarI\SourceAssets\Characters\Tank\OrinV13\Calibration\orin-v1.3-pose-calibration.json"
+    Else If ProfileIndex = PROFILE_ARIN_V58 Then
+        Result = "D:\SMILE 2.0\games\SinStarI\SourceAssets\Characters\Paladin\ArinV58\Calibration\arin-v5.8-pose-calibration.json"
     End If
 
     Return Result
@@ -1504,6 +1544,8 @@ Public Function CalibrationFingerprint(ProfileIndex As Number) As Text
 
     If ProfileIndex = PROFILE_ORIN Then
         Result = "a9e7f41214ab55101c101423db5010289853b48719bf76c9df83f92ebe2aca48"
+    Else If ProfileIndex = PROFILE_ARIN_V58 Then
+        Result = "adb20b078c08025f792f380a362b0c1ecaa5d05cad58e5b3bc890c18d6262a98"
     End If
 
     Return Result
@@ -1518,6 +1560,8 @@ Public Function CalibrationJsonName(ProfileIndex As Number) As Text
 
     If ProfileIndex = PROFILE_ORIN Then
         Result = "orin-v1.3-pose-calibration.json"
+    Else If ProfileIndex = PROFILE_ARIN_V58 Then
+        Result = "arin-v5.8-pose-calibration.json"
     End If
 
     Return Result
@@ -1532,6 +1576,8 @@ Public Function CalibrationMetadataAsset(ProfileIndex As Number) As Text
 
     If ProfileIndex = PROFILE_ORIN Then
         Result = "Assets/Calibration/orin-v1.3.metadata.json"
+    Else If ProfileIndex = PROFILE_ARIN_V58 Then
+        Result = "Assets/Calibration/arin-v5.8.metadata.json"
     End If
 
     Return Result

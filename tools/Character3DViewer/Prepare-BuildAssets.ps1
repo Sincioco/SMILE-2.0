@@ -10,6 +10,8 @@ $toolRoot = $PSScriptRoot
 $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $toolRoot '..\..'))
 $arinRoot = Join-Path $repositoryRoot `
     'games\SinStarI\SourceAssets\Characters\Paladin\ArinV57'
+$arinV58Root = Join-Path $repositoryRoot `
+    'games\SinStarI\SourceAssets\Characters\Paladin\ArinV58'
 $arinV56Root = Join-Path $repositoryRoot `
     'games\Dragonfall\SourceAssets\Arin'
 $paladinRoot = Join-Path $repositoryRoot `
@@ -34,6 +36,14 @@ $technicalRoot = Join-Path $repositoryRoot `
     'games\SinStarI\TechnicalAssets\Generation2'
 $buildAssets = Join-Path $toolRoot 'BuildAssets'
 $copies = @(
+    @{
+        Source = Join-Path $arinV58Root 'arin-v5.8-animation-checkpoint.glb'
+        Destination = Join-Path $buildAssets 'ArinV58\arin-v5.8-animation-checkpoint.glb'
+    },
+    @{
+        Source = Join-Path $arinV58Root 'ArinV58.sm3d.json'
+        Destination = Join-Path $buildAssets 'ArinV58\ArinV58.sm3d.json'
+    },
     @{
         Source = Join-Path $repositoryRoot 'games\SinStarI\SourceAssets\Characters\Pet\MiloV1\milo-v1-animated.glb'
         Destination = Join-Path $buildAssets 'MiloV1\milo-v1-animated.glb'
@@ -224,7 +234,7 @@ foreach ($lightningFile in $lightningFiles) {
     }
 }
 
-foreach ($characterName in @('Arin', 'Orin')) {
+foreach ($characterName in @('Arin', 'Orin', 'ArinV58')) {
     & {
         param($CharacterName, $Synchronizer)
         . $Synchronizer -Character $CharacterName -FunctionsOnly
@@ -262,7 +272,7 @@ Write-Host "Prepared Character Viewer cooking inputs from Sin Star I: $buildAsse
 # Publish current canonical corrections as read-only first-run defaults. Reuse
 # the authoritative serializer; never copy live private SMD4 envelopes or import
 # a historical snapshot over a saved working copy during a build.
-foreach ($characterName in @('Arin', 'Orin')) {
+foreach ($characterName in @('Arin', 'Orin', 'ArinV58')) {
     & {
         param($CharacterName, $CalibrationDirectory, $Synchronizer)
         . $Synchronizer -Character $CharacterName -FunctionsOnly
@@ -274,7 +284,11 @@ foreach ($characterName in @('Arin', 'Orin')) {
         if ($roundTrip.totalKeyframes -ne $appliedKeys) {
             throw 'Packaged calibration lost resolved keyframes during serialization.'
         }
-        $fileName = if ($CharacterName -eq 'Arin') { 'arin-v5.7.smkf' } else { 'orin-v1.3.smkf' }
+        $fileName = switch ($CharacterName) {
+            'Arin' { 'arin-v5.7.smkf' }
+            'Orin' { 'orin-v1.3.smkf' }
+            'ArinV58' { 'arin-v5.8.smkf' }
+        }
         $destination = Join-Path $CalibrationDirectory $fileName
         Write-AtomicBytes $destination $payload (Get-PathHash $destination)
         # Identity-only JSON for the shared Viewer serializer. Values are read

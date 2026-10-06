@@ -25,8 +25,8 @@ internal static partial class Sm3dV2
     private const int MaximumParts = 16;
     private const int MaximumVertices = 131072;
     private const int MaximumIndices = 393216;
-    private const int MaximumVerticesPerPart = 65535;
-    private const int MaximumIndicesPerPart = 196608;
+    private const int MaximumVerticesPerPart = 100000;
+    private const int MaximumIndicesPerPart = 300000;
     private const int MaximumMaterials = 64;
     private const int MaximumTextures = 128;
     private const int MaximumTexturePathBytes = 1024;

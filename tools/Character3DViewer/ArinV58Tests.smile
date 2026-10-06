@@ -1,0 +1,115 @@
+''' Actual v5.8 clip publication and regression for independent calibration banks.
+
+Option Explicit
+
+Import Smile.Simple3D.Character3D As Character3D
+Import Smile.Simple3D.Graphics3D As Graphics3D
+Import Smile.Simple3D.Precision3D As Precision3D
+Import Smile.Simple3D.Scene3D As Scene3D
+Import Smile.Tools.Character3DViewerProfiles As Profiles
+Import Smile.Tools.NativeViewerTabs As Tabs
+Import Smile.Tools.Character3DViewerCalibration As Calibration
+
+Dim Actor As Character3D.Actor
+Dim Current As Calibration.State
+Dim Previous As Calibration.State
+Dim Orin As Calibration.State
+Dim Camera As Precision3D.Camera3D
+Dim Index As Number
+Dim Sample As Number
+Dim Clip As Text
+Dim Failures As Number
+Dim BoundaryMesh As Number
+
+Game Window "Arin v5.8 Native Validation" Size 960 By 540
+
+Do
+
+    Call RunChecks()
+
+Loop Until True
+
+Sub RunChecks()
+
+    Call Graphics3D.ResetRenderer3D()
+
+    BoundaryMesh = Graphics3D.CreateMesh3D(100000, 300000)
+
+    Call Check(BoundaryMesh <> 0)
+    Call Check(Graphics3D.CreateMesh3D(100001, 3) = 0)
+    Call Check(Graphics3D.CreateMesh3D(3, 300003) = 0)
+    Call Graphics3D.ResetRenderer3D()
+    Call Check(Tabs.ChildAt(0, 9) = Profiles.CHARACTER_TAB_ARIN_V58)
+    Call Check(Profiles.NextProfile(Profiles.PROFILE_ARIN) = Profiles.PROFILE_ARIN_V58)
+    Call Calibration.SelectProfileBank(Current, Profiles.PROFILE_ARIN_V58)
+    Call Calibration.SelectProfileBank(Previous, Profiles.PROFILE_ARIN)
+    Call Calibration.SelectProfileBank(Orin, Profiles.PROFILE_ORIN)
+    Call Check(Current.KeyBase <> Previous.KeyBase And Current.KeyBase <> Orin.KeyBase)
+    Call Calibration.SetChannelValue(Current, 0, 0, 23)
+    Call Check(Calibration.ChannelValue(Previous, 0, 0) = 0)
+    Call Check(Calibration.ChannelValue(Orin, 0, 0) = 0)
+    Call Check(Calibration.ChannelValue(Current, 0, 0) = 23)
+    Call Calibration.SetChannelValue(Current, 0, 0, 0)
+    Call Check(Profiles.CalibrationKey(16) <> Profiles.CalibrationKey(0))
+    Call Check(Profiles.CalibrationFile(16) <> Profiles.CalibrationFile(0))
+
+    Actor = Character3D.LoadActor("Assets/Generation2/ArinV58/ArinV58.sm3d")
+    Camera = Precision3D.FromCamera(Graphics3D.DefaultCamera())
+    Camera.Position = Precision3D.Vector(120.0, 100.0, 240.0)
+    Camera.Target = Precision3D.Vector(0.0, 55.0, 0.0)
+
+    Call Check(Character3D.IsValid(Actor))
+    Call Check(Character3D.ClipCount(Actor) = 11)
+    Call Check(Character3D.SocketCount(Actor) = 21)
+    Call Check(Character3D.PartCount(Actor) = 3)
+    Call Check(Profiles.EpicGlowAvailable(Profiles.PROFILE_ARIN_V58))
+    Call Check(Character3D.HasSocket(Actor, "ShieldFireLeft"))
+    Call Check(Character3D.HasSocket(Actor, "ShieldFireRight"))
+    Call Check(Character3D.HasSocket(Actor, "ShieldFireTip"))
+    Call Check(Character3D.HasSocket(Actor, "ShieldRim0"))
+    Call Check(Character3D.HasSocket(Actor, "ShieldRim7"))
+    Call Check(Character3D.SetScale(Actor, 10000))
+
+    For Index = 0 To 10
+
+        Clip = Profiles.ClipName(Profiles.PROFILE_ARIN_V58, Index)
+
+        Call Check(Character3D.HasClip(Actor, Clip))
+        Call Check(Character3D.PlayMode(Actor, Clip, Graphics3D.ANIMATION_ONCE, 100))
+
+        For Sample = 0 To 2
+
+            Call Check(Character3D.SetAnimationTime(Actor, Sample * 350))
+            Call Check(Scene3D.BeginPrecise(Camera, 10, 18, 30))
+            Call Check(Character3D.Draw(Actor))
+            Call Check(Scene3D.EndScene())
+
+            Show Screen
+        End For
+
+        Print "CLIP "; Character3D.ClipName(Actor, Index); " "; Character3D.ClipSampleCount(Actor, Index)
+    End For
+
+    For Index = 0 To 9
+
+        Call Check(Character3D.HasSocket(Actor, Profiles.SocketName(16, Index)))
+
+    End For
+
+    Call Character3D.Destroy(Actor)
+
+    If Failures = 0 Then
+        Print "Arin v5.8 native clips, draw and calibration isolation PASS"
+    Else
+        Print "Arin v5.8 native validation FAIL: "; Failures
+    End If
+
+End Sub
+
+Sub Check(Value As Boolean)
+
+    If Not Value Then
+        Failures = Failures + 1
+    End If
+
+End Sub

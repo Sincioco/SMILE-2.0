@@ -57,7 +57,7 @@ Public Type State
     ShieldRim As ArinShieldRim.Context
     WeaponRim As ArinShieldRim.Context
     IntensityInitialized As Boolean
-    EquipmentIntensity[8] As Number
+    EquipmentIntensity[10] As Number
     StormStyleSelected As Boolean
     StormEquipmentStyle As Number
     Clock As SceneVfx3D.Clock
@@ -137,7 +137,7 @@ Public Sub ResetEquipmentDefaults(ByRef Value As State)
 
     If Not Value.IntensityInitialized Then
 
-        For Index = 0 To 7
+        For Index = 0 To 9
             Value.EquipmentIntensity[Index] = 100
         End For
 
@@ -251,6 +251,8 @@ Public Function IntensityTarget(Profile As Number, Shield As Boolean) As Number
         Result = 4
     Else If Profile = ViewerProfiles.PROFILE_ZARA Then
         Result = 6
+    Else If Profile = ViewerProfiles.PROFILE_ARIN_V58 Then
+        Result = 8
     End If
 
     If Result >= 0 And Shield Then
@@ -1303,6 +1305,7 @@ Public Function UpdateEpicGlow(
     SwordCenter.Z = (SwordBase.Z + SwordTip.Z) / 2.0
 
     If (ProfileIndex = ViewerProfiles.PROFILE_ARIN Or
+        ProfileIndex = ViewerProfiles.PROFILE_ARIN_V58 Or
         ProfileIndex = ViewerProfiles.PROFILE_VALOR) Then
         Call UpdateEpicGlowTrailState(Value, Actor, SwordTip, ShieldCenter,
             SelectedClipName, SwordVisible, ShieldVisible)
@@ -1602,6 +1605,7 @@ Public Function DrawEpicGlow(ByRef Value As State, ProfileIndex As Number,
     Result = True
 
     If (ProfileIndex <> ViewerProfiles.PROFILE_ARIN And
+        ProfileIndex <> ViewerProfiles.PROFILE_ARIN_V58 And
         ProfileIndex <> ViewerProfiles.PROFILE_VALOR) Then
         Return True
     End If

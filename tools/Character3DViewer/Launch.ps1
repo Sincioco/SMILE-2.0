@@ -169,6 +169,12 @@ if (Test-Path -LiteralPath $orinProfile -PathType Leaf) {
     $characters += 'Orin'
 }
 
+$arinV58Profile = Join-Path $repositoryRoot 'games\SinStarI\SourceAssets\Characters\Paladin\ArinV58\Calibration\arin-v5.8-profile.json'
+
+if (Test-Path -LiteralPath $arinV58Profile -PathType Leaf) {
+    $characters += 'ArinV58'
+}
+
 foreach ($character in $characters) {
     & $syncScript -Character $character -Mode Export -AllowMissing
 }

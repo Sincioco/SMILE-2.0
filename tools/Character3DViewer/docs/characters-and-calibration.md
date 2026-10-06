@@ -4,7 +4,7 @@
 
 ## Roster and packages
 
-Native Characters exposes Arin, Orin, Valor, Zara, Mira, Dragon, Vrax, Kael and Milo
+Native Characters exposes Arin, Orin, Valor, Zara, Mira, Dragon, Vrax, Kael, Milo and Arin v5.8
 (`NativeViewerTabs.ChildAt`). Yalis and Mira1/2/3 remain preserved profiles/packages,
 hidden from the current native strip. Party Dragon, Party Vrax and Kael Party field
 Arin, Orin, Zara and Mira; Valor remains outside that active party. Individual and
@@ -17,6 +17,7 @@ journey before changing model, rig, equipment, grounding, clips, calibration or 
 | Package | Authority |
 | --- | --- |
 | [MiloV1](../../../games/SinStarI/SourceAssets/Characters/Pet/MiloV1/MILO-CREATION-AND-REPAIR-JOURNEY.md) | Tripo original, 25-bone canine Blender rig, eight authored clips and floor-contact measurements |
+| [ArinV58](../../../games/SinStarI/SourceAssets/Characters/Paladin/ArinV58/ARIN-CREATION-AND-REPAIR-JOURNEY.md) | Separate 11-clip review profile, approved Idle grip, repaired facial weights and independent zero-key calibration |
 | [ArinV57](../../../games/SinStarI/SourceAssets/Characters/Paladin/ArinV57/ARIN-CREATION-AND-REPAIR-JOURNEY.md) | Accepted Arin assets, pose JSON and repair workflow |
 | [OrinV13](../../../games/SinStarI/SourceAssets/Characters/Tank/OrinV13/ORIN-CREATION-AND-REPAIR-JOURNEY.md) | Orin assets, grounding and independent calibration |
 | [ValorV1](../../../games/SinStarI/SourceAssets/Characters/Knight/ValorV1/VALOR-CREATION-AND-REPAIR-JOURNEY.md) / [ZaraV1](../../../games/SinStarI/SourceAssets/Characters/Warrior/ZaraV1/ZARA-CREATION-AND-REPAIR-JOURNEY.md) | Licensed originals, conversion, equipment sockets and checksums |
@@ -31,6 +32,11 @@ Kael has sixteen live clips with normal/Earth/Water rotation and speed 200; Fire
 Lab's additional preview is not adopted into the current Party rotation. Sword hides
 during bending, which casts from home. Mira also defaults to 200. Character package
 notes retain exact clip, scale and visual limitations instead of duplicating them here.
+
+Arin v5.8 uses its own asset, fingerprint, in-memory bank, data key and canonical
+JSON. `sync-arin-v5-7-calibration.ps1 -Character ArinV58` manages that revision.
+Launch watches it alongside Arin v5.7 and Orin. Party retains v5.7; the v5.8 tab
+is for Sin's manual pose corrections, with no old calibration or fire offsets.
 
 ## Inspection and equipment
 
@@ -62,7 +68,7 @@ notes retain exact clip, scale and visual limitations instead of duplicating the
 - Right-side panel content above Camera scrolls vertically with the mouse wheel when
   it cannot fit. A thin scrollbar appears only while the pointer is over that
   overflowing panel and hides when the pointer leaves.
-- Arin, Orin, Valor and Zara expose independent Weapon and Shield strength sliders in
+- Arin v5.7, Arin v5.8, Orin, Valor and Zara expose independent Weapon and Shield strength sliders in
   Character Status. Each uses the same drag and hover-wheel interaction as H Orbit,
   ranges from 0 to 200 percent and starts at 100 percent for the Viewer session.
 - Arin and Orin start at speed 200. Their individual demos target three seconds per sequence and let an in-progress animation finish before advancing. Orin Block plays once and holds its final pose. Selecting an animation disables Demo; Block remains a one-shot.
@@ -70,7 +76,7 @@ notes retain exact clip, scale and visual limitations instead of duplicating the
 - B/BG cycles colors and two static bitmaps. The default is the Sin Star I landscape without its title.
 - Floor/F toggles the floor independently; G toggles the grid. Glow, Socket, Channel and lighting controls remain available. Profile is Desktop-only and hidden in Party.
 - Pose shows/hides Pose Calibration, which is **hidden at startup and reset**.
-- Sword Fire and Shield Fire independently toggle the default-on thermal effects on Arin v5.7. W/S also hide the corresponding fire with its equipment. The sword has a fuller orange flame and world-space lingering trail; the shield uses much smaller flames instead of the old solid golden glow.
+- Sword Fire and Shield Fire independently toggle the default-on thermal effects on Arin v5.7 and v5.8. W/S also hide the corresponding fire with its equipment. The sword has a fuller orange flame and world-space lingering trail; the shield uses much smaller flames instead of the old solid golden glow.
 - Normal animation loop wraps and clip changes retain existing fire particles until they fade; source velocity inheritance is zeroed for the transition update so the pose reset does not launch particles across the gap. Editing a paused pose clears stale emission. Explicit right-click reset clears the effects for a fresh start.
 - G0 clarification: the retained-tail clip-change behavior applies to automatic Demo advancement. Explicit clip selection/navigation is a cut that clears/reseeds visual history; it is not a corrected-pose cross-fade.
 

@@ -57,6 +57,8 @@ Public Sub SelectCharacterTab(ByRef Value As State, Index As Number)
         Value.ProfileIndex = ViewerProfiles.PROFILE_KAEL
     Else If Index = ViewerProfiles.CHARACTER_TAB_MILO Then
         Value.ProfileIndex = ViewerProfiles.PROFILE_MILO
+    Else If Index = ViewerProfiles.CHARACTER_TAB_ARIN_V58 Then
+        Value.ProfileIndex = ViewerProfiles.PROFILE_ARIN_V58
     End If
 
 End Sub
@@ -75,6 +77,7 @@ Public Function ShouldSelectCharacterTab(ByRef Value As State,
     Result = Result Or Index = ViewerProfiles.CHARACTER_TAB_KAEL
     Result = Result Or Index = ViewerProfiles.CHARACTER_TAB_PARTY_KAEL
     Result = Result Or Index = ViewerProfiles.CHARACTER_TAB_MILO
+    Result = Result Or Index = ViewerProfiles.CHARACTER_TAB_ARIN_V58
 
     Return Result
 
@@ -111,6 +114,8 @@ Public Sub CycleProfile(ByRef Value As State)
         Value.SelectedCharacterTab = ViewerProfiles.CHARACTER_TAB_KAEL
     Else If Value.ProfileIndex = ViewerProfiles.PROFILE_MILO Then
         Value.SelectedCharacterTab = ViewerProfiles.CHARACTER_TAB_MILO
+    Else If Value.ProfileIndex = ViewerProfiles.PROFILE_ARIN_V58 Then
+        Value.SelectedCharacterTab = ViewerProfiles.CHARACTER_TAB_ARIN_V58
     End If
 
 End Sub

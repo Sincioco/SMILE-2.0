@@ -47,8 +47,8 @@ through its own `Build.ps1`. The ignored `games/SinStarI` junction is compatibil
 access, not an engine-owned asset copy. Studio remains authoritative for approved
 town and battle behavior brought into the game.
 
-Launch reconciles Arin/Orin JSON by **content hash**, exports pending accepted live
-saves, and watches both distinct working saves while the editor runs. See
+Launch reconciles Arin v5.7/Arin v5.8/Orin JSON by **content hash**, exports pending accepted live
+saves, and watches all three distinct working saves while the editor runs. See
 [calibration authority and recovery](characters-and-calibration.md#calibration-transfer).
 Output relocation changes neither ApplicationId, storage keys nor fingerprints.
 
@@ -60,6 +60,13 @@ comes from the artifact, not the current clock. See the
 [startup contract](../../../docs/architecture/startup-presentation.md).
 
 ## Focused validation
+
+Arin v5.8 uses `ArinV58Tests.smileproj` and the exact expected line
+`Arin v5.8 native clips, draw and calibration isolation PASS`. It loads/draws all
+11 actual clips, checks the 21-socket publication and three parts, verifies separate calibration
+banks, and exercises the native 100,000-vertex/300,000-index limits. The cooker
+boundary regression is `scripts/test-model3d-part-limit.ps1`. Blender face,
+equipment and floor evidence stays in the canonical ArinV58 package.
 
 Milo's isolated native fixture is `MiloTests.smileproj`. Compile with the installed
 `artifacts/compiler/smilec.exe --project tools/Character3DViewer/MiloTests.smileproj

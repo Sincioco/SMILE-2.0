@@ -33,6 +33,17 @@ is first in `TownLibrary`. Native tab visibility comes from `NativeViewerTabs`.
 | [Startup presentation](../../docs/architecture/startup-presentation.md) | Official branding, visible minimum, artifact metadata and loading ownership |
 | [Battle checkpoint](../../docs/implementation/party-beat-camera-checkpoint.md) | Detailed camera/recovery evidence; obsolete startup/S1 instructions are historical |
 
+Arin v5.8 is an additional profile and native character tab, not a replacement for
+v5.7. `ViewerCalibration` owns three independent 64-clip banks (v5.7, Orin, v5.8).
+`Profiles` owns version identity, grounding and storage paths; the existing build
+and synchronizer own canonical asset/default publication. The ArinV58 package
+owns facial skin repair and the approved-grip animation export. No new host state
+or feature logic is added to startup. Native mesh limit changes stay with the
+existing asset-format and renderer validators; no binary format change is needed.
+`ViewerEffects` reuses the existing blade/shield fire and owns two separate v5.8
+intensity slots. The versioned descriptor owns equipment-derived flame/rim sockets;
+neither flame activation nor intensity changes alter pose calibration.
+
 ## Owner map
 
 Names below are module/file owners in this folder unless explicitly shared. Keep
