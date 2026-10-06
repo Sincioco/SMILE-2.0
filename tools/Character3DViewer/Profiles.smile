@@ -1551,7 +1551,7 @@ Public Function CalibrationFingerprint(ProfileIndex As Number) As Text
     If ProfileIndex = PROFILE_ORIN Then
         Result = "a9e7f41214ab55101c101423db5010289853b48719bf76c9df83f92ebe2aca48"
     Else If ProfileIndex = PROFILE_ARIN_V58 Then
-        Result = "1b229a65d7ff9ba9a6de1eedf814972a6e42a23462390a6969d52970dd13c456"
+        Result = "dc33b903b3dfe907cf61ada16d38af7db047d7a89b099928c01cc6659e92ece8"
     End If
 
     Return Result
