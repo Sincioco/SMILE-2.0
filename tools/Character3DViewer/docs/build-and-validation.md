@@ -67,6 +67,10 @@ Arin v5.8 uses `ArinV58Tests.smileproj` and the exact expected line
 banks, and exercises the native 100,000-vertex/300,000-index limits. The cooker
 boundary regression is `scripts/test-model3d-part-limit.ps1`. Blender face,
 equipment and floor evidence stays in the canonical ArinV58 package.
+The older `test-viewer-calibration-native.ps1` explicitly pins its generated
+profile to v5.7 because its populated parser fixtures and accepted pose matrices
+belong to that historical model. Active v5.8 uses ArinV58Tests plus native
+Party/battle/town validation; historical pose keys are never seeded into v5.8.
 
 Milo's isolated native fixture is `MiloTests.smileproj`. Compile with the installed
 `artifacts/compiler/smilec.exe --project tools/Character3DViewer/MiloTests.smileproj

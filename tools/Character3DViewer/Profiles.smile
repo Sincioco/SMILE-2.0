@@ -5,7 +5,7 @@ Option Explicit
 
 Import Smile.Simple3D.CharacterViewer As CharacterViewer
 
-Public Const PROFILE_ARIN = 0
+Public Const PROFILE_ARIN_V57 = 0
 Public Const ZARA_ATTACK_HIT_PERCENT = 25
 Public Const PROFILE_ARIN_V56 = 1
 Public Const PROFILE_ARIN_ORIGINAL = 2
@@ -23,6 +23,8 @@ Public Const MIRA_DEFAULT_PLAYBACK_SPEED = 200
 Public Const PROFILE_YALIS = 13
 Public Const PROFILE_KAEL = 14
 Public Const PROFILE_MILO = 15
+''' Active Arin identity; versioned indices keep saved poses isolated.
+Public Const PROFILE_ARIN = 16
 Public Const PROFILE_ARIN_V58 = 16
 Public Const ARENA_OPPONENT_X = -208
 Public Const ARENA_OPPONENT_Z = -120
@@ -90,13 +92,17 @@ Public Function NextProfile(Current As Number) As Number
 
     Dim Result As Number
 
-    If Current = PROFILE_ARIN Then
+    If Current = PROFILE_ARIN_V57 Then
 
         Result = PROFILE_ARIN_V58
 
     Else If Current = PROFILE_ARIN_V58 Then
 
-        Result = PROFILE_ARIN_V56
+        If INCLUDE_DIAGNOSTIC_PROFILES Then
+            Result = PROFILE_ARIN_V56
+        Else
+            Result = PROFILE_ORIN
+        End If
 
     Else If Current = PROFILE_YALIS Then
 
@@ -144,7 +150,7 @@ Public Function NextProfile(Current As Number) As Number
 
         Result = (Current + 1) Mod ProfileCount()
 
-    Else If Current = PROFILE_ARIN Then
+    Else If Current = PROFILE_ARIN_V57 Then
 
         Result = PROFILE_ORIN
 
@@ -220,11 +226,11 @@ Public Function ProfileAt(Index As Number) As CharacterViewer.Profile
     Result.MarginPercent = 18
     Result.AnimationMargin = 2
 
-    If Index = PROFILE_ARIN Then
+    If Index = PROFILE_ARIN_V57 Then
 
         Result.AssetId = "sin-star-i.character-1.paladin"
         Result.CandidateVersion = "v5.7"
-        Result.DisplayName = "Arin"
+        Result.DisplayName = "Arin v5.7 (Historical)"
         Result.PartyRole = "Paladin"
         Result.PrototypeAlias = "dragonfall.arin-v5-7"
         Result.ProductionStatus = "Candidate"
@@ -241,7 +247,7 @@ Public Function ProfileAt(Index As Number) As CharacterViewer.Profile
         Result.DisplayName = "Arin v5.8"
         Result.PartyRole = "Paladin"
         Result.PrototypeAlias = "sin-star-i.arin-v5-8"
-        Result.ProductionStatus = "Candidate"
+        Result.ProductionStatus = "Approved"
         Result.AssetPath = "Assets\Generation2\ArinV58\ArinV58.sm3d"
         Result.ExpectedClipCount = 11
         Result.ExpectedSocketCount = 21
@@ -444,7 +450,7 @@ Public Function ModelFileName(ProfileIndex As Number) As Text
         Result = UnityName(ProfileIndex) + "-v1-animation-set.glb"
     Else If ProfileIndex = PROFILE_ARIN_V58 Then
         Result = "arin-v5.8-animation-checkpoint.glb"
-    Else If ProfileIndex = PROFILE_ARIN Then
+    Else If ProfileIndex = PROFILE_ARIN_V57 Then
         Result = "arin-v5.7-idle-equipment-checkpoint.glb"
     Else If ProfileIndex = PROFILE_ORIN Then
         Result = "orin-v1.3-animation-checkpoint.glb"
@@ -492,7 +498,7 @@ Public Function ClipCount(ProfileIndex As Number) As Number
         Result = 16
     Else If IsSwordFighter(ProfileIndex) Then
         Result = 10
-    Else If ProfileIndex = PROFILE_ARIN Or ProfileIndex = PROFILE_ARIN_V58 Then
+    Else If ProfileIndex = PROFILE_ARIN_V57 Or ProfileIndex = PROFILE_ARIN_V58 Then
         Result = 11
     Else If ProfileIndex = PROFILE_MIRA Or ProfileIndex = PROFILE_ORIN Then
         Result = 10
@@ -705,10 +711,10 @@ Public Function ClipName(ProfileIndex As Number, ClipIndex As Number) As Text
         Else If ClipIndex = 8 Then
             Result = "Death"
         Else If (ClipIndex = 9 And
-            (ProfileIndex = PROFILE_ARIN Or ProfileIndex = PROFILE_ARIN_V58)) Then
+            (ProfileIndex = PROFILE_ARIN_V57 Or ProfileIndex = PROFILE_ARIN_V58)) Then
             Result = "Victory"
         Else If (ClipIndex = 10 And
-            (ProfileIndex = PROFILE_ARIN Or ProfileIndex = PROFILE_ARIN_V58)) Then
+            (ProfileIndex = PROFILE_ARIN_V57 Or ProfileIndex = PROFILE_ARIN_V58)) Then
             Result = "TownIdle"
         End If
 
@@ -854,7 +860,7 @@ Public Function CalibrationAsset(ProfileIndex As Number) As Text
 
     Dim Result As Text
 
-    If ProfileIndex = PROFILE_ARIN Then
+    If ProfileIndex = PROFILE_ARIN_V57 Then
         Result = "Assets\Calibration\arin-v5.7.smkf"
     Else If ProfileIndex = PROFILE_ORIN Then
         Result = "Assets\Calibration\orin-v1.3.smkf"
@@ -931,7 +937,7 @@ Public Function PartyAttackName(ProfileIndex As Number, AttackCycle As Number) A
 
         End If
 
-    Else If ProfileIndex = PROFILE_ARIN Then
+    Else If ProfileIndex = PROFILE_ARIN_V57 Or ProfileIndex = PROFILE_ARIN_V58 Then
 
         If AttackCycle Mod 2 = 0 Then
             Result = "SwordAttack"
@@ -1089,7 +1095,7 @@ Public Function ClipLoops(ProfileIndex As Number, ClipIndex As Number) As Boolea
             ClipIndex = 3 Or
             ClipIndex = 6 Or
             ClipIndex = 7 Or
-            ((ProfileIndex = PROFILE_ARIN Or ProfileIndex = PROFILE_ARIN_V58) And ClipIndex = 10))
+            ((ProfileIndex = PROFILE_ARIN_V57 Or ProfileIndex = PROFILE_ARIN_V58) And ClipIndex = 10))
     Else If ProfileIndex = PROFILE_ARIN_V56 Then
         Result = (ClipIndex = 0 Or
             ClipIndex = 3 Or
@@ -1117,7 +1123,7 @@ Public Function ClipVerticalOffset1000(
         Return -19
     End If
 
-    If ProfileIndex = PROFILE_ARIN And ClipName = "Death" Then
+    If ProfileIndex = PROFILE_ARIN_V57 And ClipName = "Death" Then
 
         Frame = Max(0, Min(118, Frame))
 
@@ -1458,7 +1464,7 @@ Public Function IsPartyCharacter(ProfileIndex As Number) As Boolean
 
     Dim Result As Boolean
 
-    Result = (ProfileIndex = PROFILE_ARIN Or ProfileIndex = PROFILE_ARIN_V58 Or
+    Result = (ProfileIndex = PROFILE_ARIN_V57 Or ProfileIndex = PROFILE_ARIN_V58 Or
         ProfileIndex = PROFILE_ORIN)
 
     Return Result
@@ -1545,7 +1551,7 @@ Public Function CalibrationFingerprint(ProfileIndex As Number) As Text
     If ProfileIndex = PROFILE_ORIN Then
         Result = "a9e7f41214ab55101c101423db5010289853b48719bf76c9df83f92ebe2aca48"
     Else If ProfileIndex = PROFILE_ARIN_V58 Then
-        Result = "adb20b078c08025f792f380a362b0c1ecaa5d05cad58e5b3bc890c18d6262a98"
+        Result = "1b229a65d7ff9ba9a6de1eedf814972a6e42a23462390a6969d52970dd13c456"
     End If
 
     Return Result

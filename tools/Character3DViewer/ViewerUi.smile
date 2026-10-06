@@ -787,7 +787,7 @@ Public Function ProfileHasIntensityControls(ProfileIndex As Number) As Boolean
 
     Dim Result As Boolean
 
-    Result = (ProfileIndex = ViewerProfiles.PROFILE_ARIN Or
+    Result = (ProfileIndex = ViewerProfiles.PROFILE_ARIN_V57 Or
         ProfileIndex = ViewerProfiles.PROFILE_ARIN_V58 Or
         ProfileIndex = ViewerProfiles.PROFILE_ORIN Or
         ProfileIndex = ViewerProfiles.PROFILE_VALOR Or
@@ -1236,7 +1236,7 @@ Public Function InspectorActionAtPointer(
 
         Result = INSPECTOR_ACTION_FLAME_PAUSE
 
-    Else If ((ProfileIndex = ViewerProfiles.PROFILE_ARIN Or
+    Else If ((ProfileIndex = ViewerProfiles.PROFILE_ARIN_V57 Or
         ProfileIndex = ViewerProfiles.PROFILE_ARIN_V58 Or
         ProfileIndex = ViewerProfiles.PROFILE_VALOR) And
         ContentHovered And
@@ -1593,7 +1593,7 @@ Public Sub DrawProfileEffectControls(
     Call UI.DrawButton(PanelLeft + 12, 444 - ScrollOffset, 78, 22,
         "Floor", FloorOrGridVisible)
 
-    If (ProfileIndex = ViewerProfiles.PROFILE_ARIN Or
+    If (ProfileIndex = ViewerProfiles.PROFILE_ARIN_V57 Or
         ProfileIndex = ViewerProfiles.PROFILE_ARIN_V58 Or
         ProfileIndex = ViewerProfiles.PROFILE_VALOR) Then
 
@@ -1630,7 +1630,7 @@ Public Sub DrawProfileEffectControls(
     End If
 
     If (SwordFireReady And
-        (ProfileIndex = ViewerProfiles.PROFILE_ARIN Or
+        (ProfileIndex = ViewerProfiles.PROFILE_ARIN_V57 Or
         ProfileIndex = ViewerProfiles.PROFILE_ARIN_V58 Or
         ProfileIndex = ViewerProfiles.PROFILE_VALOR)) Then
         Call UI.DrawButton(PanelLeft + 12, 470 - ScrollOffset, 128, 20,

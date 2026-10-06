@@ -4,7 +4,7 @@
 
 ## Roster and packages
 
-Native Characters exposes Arin, Orin, Valor, Zara, Mira, Dragon, Vrax, Kael, Milo and Arin v5.8
+Native Characters exposes Arin (v5.8), Orin, Valor, Zara, Mira, Dragon, Vrax, Kael and Milo
 (`NativeViewerTabs.ChildAt`). Yalis and Mira1/2/3 remain preserved profiles/packages,
 hidden from the current native strip. Party Dragon, Party Vrax and Kael Party field
 Arin, Orin, Zara and Mira; Valor remains outside that active party. Individual and
@@ -17,8 +17,8 @@ journey before changing model, rig, equipment, grounding, clips, calibration or 
 | Package | Authority |
 | --- | --- |
 | [MiloV1](../../../games/SinStarI/SourceAssets/Characters/Pet/MiloV1/MILO-CREATION-AND-REPAIR-JOURNEY.md) | Tripo original, 25-bone canine Blender rig, eight authored clips and floor-contact measurements |
-| [ArinV58](../../../games/SinStarI/SourceAssets/Characters/Paladin/ArinV58/ARIN-CREATION-AND-REPAIR-JOURNEY.md) | Separate 11-clip review profile, approved Idle grip, repaired facial weights and independent zero-key calibration |
-| [ArinV57](../../../games/SinStarI/SourceAssets/Characters/Paladin/ArinV57/ARIN-CREATION-AND-REPAIR-JOURNEY.md) | Accepted Arin assets, pose JSON and repair workflow |
+| [ArinV58](../../../games/SinStarI/SourceAssets/Characters/Paladin/ArinV58/ARIN-CREATION-AND-REPAIR-JOURNEY.md) | Approved active Arin: 11 clips, approved Idle grip, repaired facial weights and independent calibration |
+| [ArinV57](../../../games/SinStarI/SourceAssets/Characters/Paladin/ArinV57/ARIN-CREATION-AND-REPAIR-JOURNEY.md) | Historical v5.7 assets and pose JSON, preserved separately |
 | [OrinV13](../../../games/SinStarI/SourceAssets/Characters/Tank/OrinV13/ORIN-CREATION-AND-REPAIR-JOURNEY.md) | Orin assets, grounding and independent calibration |
 | [ValorV1](../../../games/SinStarI/SourceAssets/Characters/Knight/ValorV1/VALOR-CREATION-AND-REPAIR-JOURNEY.md) / [ZaraV1](../../../games/SinStarI/SourceAssets/Characters/Warrior/ZaraV1/ZARA-CREATION-AND-REPAIR-JOURNEY.md) | Licensed originals, conversion, equipment sockets and checksums |
 | [VraxV1](../../../games/SinStarI/SourceAssets/Bosses/Vrax/VraxV1/VRAX-CREATION-AND-REPAIR-JOURNEY.md) / [KaelV1](../../../games/SinStarI/SourceAssets/Characters/Kael/KaelV1/README.md) | Boss rigs, clips, sounds and limits |
@@ -35,7 +35,8 @@ notes retain exact clip, scale and visual limitations instead of duplicating the
 
 Arin v5.8 uses its own asset, fingerprint, in-memory bank, data key and canonical
 JSON. `sync-arin-v5-7-calibration.ps1 -Character ArinV58` manages that revision.
-Launch watches it alongside Arin v5.7 and Orin. Party retains v5.7; the v5.8 tab
+Launch watches it alongside historical Arin v5.7 and Orin. Party, battles, towns
+and the game use v5.8. The main Arin tab
 is for Sin's manual pose corrections, with no old calibration or fire offsets.
 
 ## Inspection and equipment
@@ -111,7 +112,7 @@ To turn a fitted sword or shield without pulling its grip away, select **Weapon*
 
 Prev Key / Next Key navigate; Delete Key removes the current saved key. Copy Key / Paste Key transfer complete snapshots. Reload Key discards unsaved changes and restores saved corrections. Reset resets the selected target's correction values; Delete All Key Frames clears only this animation's saved keys after the Confirm Current Clip confirmation. It sits in the lower-left corner with a red warning border. There is no Reset All button. Save Frame and Cancel are together in the lower-right corner of Pose Calibration.
 
-Arin’s saved JSON is `games\SinStarI\SourceAssets\Characters\Paladin\ArinV57\Calibration\arin-v5.7-pose-calibration.json`. Its full path appears below the timeline in muted gray at the original 9-point size; click it to select the file in Explorer. It remains visible with panels hidden, and hides with the full UI. Runtime binary Save Data is disposable infrastructure, not the repository source of truth. Before committing calibration changes, run `scripts\sync-arin-v5-7-calibration.ps1 -Mode Export -AllowMissing`.
+Active Arin’s saved JSON is `games\SinStarI\SourceAssets\Characters\Paladin\ArinV58\Calibration\arin-v5.8-pose-calibration.json`. Its full path appears below the timeline in muted gray at the original 9-point size; click it to select the file in Explorer. It remains visible with panels hidden, and hides with the full UI. Runtime binary Save Data is disposable infrastructure, not the repository source of truth. Before committing calibration changes, run `scripts\sync-arin-v5-7-calibration.ps1 -Character ArinV58 -Mode Export -AllowMissing`, plus the historical Arin and Orin exports required by repository policy.
 
 Orin uses `games\SinStarI\SourceAssets\Characters\Tank\OrinV13\Calibration\orin-v1.3-pose-calibration.json`.
 The same synchronizer accepts `-Character Orin`; its default remains Arin for existing scripts.

@@ -86,8 +86,6 @@ Public Function ChildAt(Group As Number, Position As Number) As Number
                 Return Profiles.CHARACTER_TAB_KAEL
             Case 8
                 Return Profiles.CHARACTER_TAB_MILO
-            Case 9
-                Return Profiles.CHARACTER_TAB_ARIN_V58
         End Select
 
     End If
@@ -130,8 +128,6 @@ Private Function Label(Group As Number, Position As Number) As Text
             Return "Vrax"
         Case 8
             Return "Milo"
-        Case 9
-            Return "Arin v5.8"
     End Select
 
     Return "Kael"
@@ -184,17 +180,13 @@ Public Function Input(ByRef Value As State, Selected As Number) As Number
         Width = 110
     End If
 
-    For Index = 0 To 9
+    For Index = 0 To 8
 
         If ChildAt(Group, Index) < 0 Then
             Exit For
         End If
 
         ChildWidth = Width - 4
-
-        If Group = 0 And Index = 9 Then
-            ChildWidth = 90
-        End If
 
         If UI.Clicked(478 + Index * Width, Y, ChildWidth, 26) Then
             Child = ChildAt(Group, Index)
@@ -235,17 +227,13 @@ Public Sub Draw(Selected As Number)
         Draw Line 468, Y + 4, 468, Y + 22, RGB(70, 160, 170)
     End If
 
-    For Index = 0 To 9
+    For Index = 0 To 8
 
         If ChildAt(Group, Index) < 0 Then
             Exit For
         End If
 
         ChildWidth = Width - 4
-
-        If Group = 0 And Index = 9 Then
-            ChildWidth = 90
-        End If
 
         Call UI.DrawButton(478 + Index * Width, Y, ChildWidth, 26,
             Label(Group, Index), Selected = ChildAt(Group, Index))

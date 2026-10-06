@@ -66,7 +66,7 @@ try {
     if ($LASTEXITCODE -ne 0) { Get-Content "$executable.compile.log" -Tail 15; throw 'Town scene compilation failed.' }
     $scene = & $check -Executable $executable -Expected 'PASS Neris Town Scene' -LogPrefix "$logs/scene"
     Write-Host $scene.Trim()
-    $snapshot = Get-Content (Join-Path $root 'games/SinStarI/SourceAssets/Characters/Paladin/ArinV57/Calibration/arin-v5.7-pose-calibration.json') -Raw | ConvertFrom-Json
+    $snapshot = Get-Content (Join-Path $root 'games/SinStarI/SourceAssets/Characters/Paladin/ArinV58/Calibration/arin-v5.8-pose-calibration.json') -Raw | ConvertFrom-Json
     $keys = @($snapshot.clips | Where-Object index -ge 0 | ForEach-Object keyframes).Count
     if ($scene -notmatch "Arin Pose Keys $keys(?:\r?\n|$)") { throw 'Town did not load current accepted Arin calibration.' }
     Write-Host "PASS Neris native route, authored scene, calibration and resource acceptance. Evidence: $logs"

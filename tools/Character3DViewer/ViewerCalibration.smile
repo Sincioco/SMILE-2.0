@@ -1333,7 +1333,7 @@ Private Sub LoadSaved(ByRef Value As State, ByRef Actor As Character3D.Actor)
 
     If LoadedCount = 0 Then
 
-        If Value.OwnerProfile = ViewerProfiles.PROFILE_ARIN Then
+        If Value.OwnerProfile = ViewerProfiles.PROFILE_ARIN_V57 Then
             Load LegacyVersion From "CharacterViewerCalibrationVersion" Default 0
         End If
 
@@ -1383,7 +1383,7 @@ Private Sub LoadSaved(ByRef Value As State, ByRef Actor As Character3D.Actor)
 
     End If
 
-    If Value.OwnerProfile <> ViewerProfiles.PROFILE_ARIN Then
+    If Value.OwnerProfile <> ViewerProfiles.PROFILE_ARIN_V57 Then
         Return
     End If
 
@@ -1864,7 +1864,7 @@ Public Function Persist(ByRef Value As State, ByRef Actor As Character3D.Actor,
         Value.TransferMessage = "Saved Locally; JSON Download Contains Saved Keys"
         LegacyVersion = 3
 
-        If Value.OwnerProfile = ViewerProfiles.PROFILE_ARIN Then
+        If Value.OwnerProfile = ViewerProfiles.PROFILE_ARIN_V57 Then
             Save LegacyVersion To "CharacterViewerCalibrationVersion"
         End If
 

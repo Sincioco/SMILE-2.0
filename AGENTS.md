@@ -152,6 +152,12 @@ The SMILE 2.0 - Sin Star I - Game Engine and Studio (existing Character Viewer) 
 
 ### Permanent versioned character-package rule
 
+- Arin v5.8 is the approved active revision as of October 6, 2026. Native Studio,
+  Party, battles, towns and Sin Star I use `Paladin\ArinV58`; read that package's
+  creation-and-repair journey before new Arin work. Preserve `ArinV57` and its
+  calibration as history. Export active saves with `-Character ArinV58` in
+  addition to the historical Arin/Orin synchronization required below.
+
 - Sin authors character pose corrections in the 3D Character Viewer. The JSON
   Sin saves/exports there is authoritative now and going forward for that character.
   Keep the accepted export in its canonical versioned package; never replace it

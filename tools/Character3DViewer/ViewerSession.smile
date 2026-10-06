@@ -115,7 +115,7 @@ Public Sub CycleProfile(ByRef Value As State)
     Else If Value.ProfileIndex = ViewerProfiles.PROFILE_MILO Then
         Value.SelectedCharacterTab = ViewerProfiles.CHARACTER_TAB_MILO
     Else If Value.ProfileIndex = ViewerProfiles.PROFILE_ARIN_V58 Then
-        Value.SelectedCharacterTab = ViewerProfiles.CHARACTER_TAB_ARIN_V58
+        Value.SelectedCharacterTab = 0
     End If
 
 End Sub

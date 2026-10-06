@@ -60,6 +60,12 @@ $testPrefix = $testPrefix.Replace(
 $testSource = $testPrefix + ($profileConstants -join "`n") + "`n`n" +
     $testStartup + "`n" + $viewerSource.Substring($helperIndex)
 $encoding = [Text.UTF8Encoding]::new($false)
+# This fixture owns v5.7's accepted pose references and populated parser cases.
+# Keep its historical identity explicit; ArinV58Tests and native Party/Town
+# checks exercise the active v5.8 profile without importing these older keys.
+$legacyProfiles = [IO.File]::ReadAllText((Join-Path $toolRoot 'Profiles.smile')).Replace(
+    'Public Const PROFILE_ARIN = 16', 'Public Const PROFILE_ARIN = 0')
+[IO.File]::WriteAllText((Join-Path $testRoot 'Profiles.smile'), $legacyProfiles, $encoding)
 [IO.File]::WriteAllText((Join-Path $testRoot 'Program.smile'), $testSource, $encoding)
 [xml]$project = Get-Content -LiteralPath (Join-Path $toolRoot 'Character3DViewer.smileproj') -Raw
 $project.SmileProject.PropertyGroup.StartupFile = 'Program.smile'
@@ -160,6 +166,7 @@ foreach ($characterName in @('Arin', 'Orin')) {
 Copy-Item -LiteralPath (Join-Path $toolRoot 'BuildAssets') -Destination $testRoot -Recurse -Force
 foreach ($entry in $project.SmileProject.ItemGroup.ChildNodes) {
     if ($entry.Name -eq 'SmileSource' -and $entry.Include -eq 'Program.smile') { continue }
+    if ($entry.Name -eq 'SmileSource' -and $entry.Include -eq 'Profiles.smile') { continue }
     if ($entry.Name -in @('Asset','Model3DAsset')) {
         if ($entry.Include.StartsWith('ImportFixtures\', [StringComparison]::Ordinal)) { continue }
         foreach ($attribute in @('Include','Descriptor')) {

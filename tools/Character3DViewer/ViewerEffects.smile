@@ -243,7 +243,7 @@ Public Function IntensityTarget(Profile As Number, Shield As Boolean) As Number
 
     Result = -1
 
-    If Profile = ViewerProfiles.PROFILE_ARIN Then
+    If Profile = ViewerProfiles.PROFILE_ARIN_V57 Then
         Result = 0
     Else If Profile = ViewerProfiles.PROFILE_ORIN Then
         Result = 2
@@ -282,12 +282,12 @@ Public Sub SetIntensity(ByRef Value As State, Profile As Number,
 
 End Sub
 
-''' UI target order: Arin, Orin, Valor and Zara weapon/shield pairs. Session preferences only.
+''' UI pairs: historical Arin, Orin, Valor, Zara and Arin v5.8. Session preferences only.
 Public Sub AdjustIntensity(ByRef Value As State, Target As Number, Increase As Boolean)
 
     Dim Step As Number
 
-    If Target < 0 Or Target > 7 Then
+    If Target < 0 Or Target > 9 Then
         Return
     End If
 
@@ -1304,7 +1304,7 @@ Public Function UpdateEpicGlow(
     SwordCenter.Y = (SwordBase.Y + SwordTip.Y) / 2.0
     SwordCenter.Z = (SwordBase.Z + SwordTip.Z) / 2.0
 
-    If (ProfileIndex = ViewerProfiles.PROFILE_ARIN Or
+    If (ProfileIndex = ViewerProfiles.PROFILE_ARIN_V57 Or
         ProfileIndex = ViewerProfiles.PROFILE_ARIN_V58 Or
         ProfileIndex = ViewerProfiles.PROFILE_VALOR) Then
         Call UpdateEpicGlowTrailState(Value, Actor, SwordTip, ShieldCenter,
@@ -1604,7 +1604,7 @@ Public Function DrawEpicGlow(ByRef Value As State, ProfileIndex As Number,
 
     Result = True
 
-    If (ProfileIndex <> ViewerProfiles.PROFILE_ARIN And
+    If (ProfileIndex <> ViewerProfiles.PROFILE_ARIN_V57 And
         ProfileIndex <> ViewerProfiles.PROFILE_ARIN_V58 And
         ProfileIndex <> ViewerProfiles.PROFILE_VALOR) Then
         Return True

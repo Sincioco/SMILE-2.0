@@ -21,8 +21,8 @@ SOURCE = PACKAGES/'Warrior/ZaraV1/Private/Zara-v1-animation-set.glb'
 CONFIG = {
     'Zara': ('Warrior/ZaraV1', 'Private/Zara-v1-animation-set.glb',
              lambda name: name.startswith('Zara_Part') and name != 'Zara_Part_03'),
-    'Arin': ('Paladin/ArinV57', 'arin-v5.7-idle-equipment-checkpoint.glb',
-             lambda name: name.startswith('tripo_part')),
+    'Arin': ('Paladin/ArinV58', 'arin-v5.8-animation-checkpoint.glb',
+             lambda name: name == 'Body'),
     'Orin': ('Tank/OrinV13', 'orin-v1.3-animation-checkpoint.glb', lambda name: name == '02_Body'),
     'Mira': ('Healer/MiraTripoV1', 'mira-animation-checkpoint.glb', lambda name: name == 'Mira.Body'),
 }
@@ -57,7 +57,8 @@ def run(character):
     target = MotionData(accepted, body)
     source = MotionData(SOURCE, lambda name: name.startswith('Zara_Part') and name != 'Zara_Part_03')
     names = {name:name for name in target.names if name in source.names} if character=='Zara' else mapping(character)
-    pairs = {target.names[t]: source.names[s] for t, s in names.items()}
+    pairs = {target.names[t]: source.names[s] for t, s in names.items()
+             if t in target.names and s in source.names}
     inverse_pairs = {s: t for t, s in pairs.items()}
     hip = target.names['pelvis' if character=='Zara' else 'Hip' if character == 'Orin' else 'mixamorig:Hips']
     source_hip = source.names['pelvis']

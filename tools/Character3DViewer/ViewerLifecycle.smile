@@ -301,7 +301,7 @@ Private Sub PrepareEditingAndPresentation(ByRef Session As ViewerSession.State,
         Effects, Dragon.Available Or Session.ProfileIndex = ViewerProfiles.PROFILE_VALOR Or
             Session.ProfileIndex = ViewerProfiles.PROFILE_VRAX Or
             Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN_V58,
-        (CalibrationAvailable And (Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN Or
+        (CalibrationAvailable And (Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN_V57 Or
             Session.ProfileIndex = ViewerProfiles.PROFILE_ARIN_V58)) Or
             Session.ProfileIndex = ViewerProfiles.PROFILE_VALOR Or
             Session.ProfileIndex = ViewerProfiles.PROFILE_MIRA)

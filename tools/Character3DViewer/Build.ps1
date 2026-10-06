@@ -303,7 +303,7 @@ function Assert-WebModelInventory([xml]$ProjectXml) {
 function Assert-CharacterPublication([string]$PublicationRoot) {
     $synchronizer = Join-Path $repositoryRoot 'scripts\sync-arin-v5-7-calibration.ps1'
 
-    foreach ($characterName in @('Arin', 'Orin')) {
+    foreach ($characterName in @('ArinV58', 'Orin')) {
         & {
             param($CharacterName, $Root, $Synchronizer)
             . $Synchronizer -Character $CharacterName -FunctionsOnly
@@ -424,7 +424,7 @@ if ($Target -in @('Native', 'All')) {
     if ($LASTEXITCODE -ne 0) { throw 'Neris Spaceport preparation failed.' }
     $null = New-Item -ItemType Directory -Path $partyMirror -Force
     foreach ($entry in @(
-        @('Arin', 'Paladin\ArinV57', 'ArinV57.sm3d.json'),
+        @('Arin', 'Paladin\ArinV58', 'ArinV58.sm3d.json'),
         @('Orin', 'Tank\OrinV13', 'OrinV13.sm3d.json'),
         @('Zara', 'Warrior\ZaraV1', 'ZaraV1.sm3d.json'),
         @('Mira', 'Healer\MiraTripoV1', 'Mira.sm3d.json')

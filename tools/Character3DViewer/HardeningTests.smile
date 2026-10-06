@@ -400,7 +400,7 @@ Call CheckNamed(CalibrationState.KeyBase = ViewerCalibration.MAX_CLIPS,
     "Calibration owner selects Orin bank")
 Call ViewerCalibration.SelectProfileBank(
     CalibrationState, ViewerProfiles.PROFILE_ARIN)
-Call CheckNamed(CalibrationState.KeyBase = 0,
+Call CheckNamed(CalibrationState.KeyBase = 2 * ViewerCalibration.MAX_CLIPS,
     "Calibration owner selects Arin bank")
 
 Call ViewerSession.ResetFailure(SessionState)
@@ -1249,7 +1249,7 @@ InspectorIdentityView = ViewerInspectorPresentation.CaptureIdentity(
     UiState, Profile, PartyState, SessionState, RenderingState, EffectsState,
     DragonState, EquipmentVisibility, False, 800, 640)
 
-Call CheckNamed(InspectorIdentityView.DisplayName = "Arin" And
+Call CheckNamed(InspectorIdentityView.DisplayName = "Arin v5.8" And
     InspectorIdentityView.PartyRole = "Paladin" And
     InspectorIdentityView.WindowWidth = 800,
     "Inspector presentation captures identity display values")
@@ -1268,7 +1268,7 @@ InspectorStatusView = ViewerInspectorPresentation.CaptureStatus(
     PlaybackState, EffectsState, CameraState, FrameRate, 800, 650, 16000)
 
 Call CheckNamed(InspectorStatusView.ProfileIndex = ViewerProfiles.PROFILE_ARIN And
-    InspectorStatusView.DisplayName = "Arin",
+    InspectorStatusView.DisplayName = "Arin v5.8",
     "Inspector presentation captures status display values")
 
 Call ViewerParty.SetEnabled(PartyState, True)
@@ -3038,10 +3038,10 @@ Profile = ViewerProfiles.ProfileAt(ViewerProfiles.PROFILE_ARIN)
 
 Call Check(CharacterViewer.ValidateProfile(Profile))
 Call Check(Profile.AssetId = "sin-star-i.character-1.paladin")
-Call Check(Profile.CandidateVersion = "v5.7")
-Call Check(Profile.DisplayName = "Arin")
+Call Check(Profile.CandidateVersion = "v5.8")
+Call Check(Profile.DisplayName = "Arin v5.8")
 Call Check(Profile.PartyRole = "Paladin")
-Call Check(Profile.PrototypeAlias = "dragonfall.arin-v5-7")
+Call Check(Profile.PrototypeAlias = "sin-star-i.arin-v5-8")
 Call Check(Profile.GroundOffset = 0)
 Call Check(Profile.DefaultPlaybackSpeed = 200)
 Call Check(ViewerProfiles.ClipCount(ViewerProfiles.PROFILE_ARIN) = 11)
@@ -3202,7 +3202,7 @@ Call Check(ViewerProfiles.ClipVerticalOffset1000(ViewerProfiles.PROFILE_ORIN, "D
 Call Check(ViewerProfiles.ClipVerticalOffset1000(ViewerProfiles.PROFILE_ORIN, "Defend", 100) = -174)
 Call Check(ViewerProfiles.ClipVerticalOffset1000(ViewerProfiles.PROFILE_ORIN, "Death", 118) = -97)
 Call Check(ViewerProfiles.ClipVerticalOffset1000(ViewerProfiles.PROFILE_ORIN, "JumpAttack", 54) = -119)
-Call Check(ViewerProfiles.ClipVerticalOffset1000(ViewerProfiles.PROFILE_ARIN, "Death", 118) = 42)
+Call Check(ViewerProfiles.ClipVerticalOffset1000(ViewerProfiles.PROFILE_ARIN_V57, "Death", 118) = 42)
 Call Check(ViewerProfiles.EpicGlowAvailable(ViewerProfiles.PROFILE_ORIN))
 Call Check(ViewerProfiles.EpicGlowVisibleByDefault(ViewerProfiles.PROFILE_ORIN))
 Call Check(ViewerProfiles.CalibrationKey(ViewerProfiles.PROFILE_ORIN) <> ViewerProfiles.CalibrationKey(ViewerProfiles.PROFILE_ARIN))
@@ -3476,7 +3476,7 @@ Sub TestEquipmentIntensityBounds()
 
     Call ViewerEffects.ResetEquipmentDefaults(Value)
 
-    For Target = 0 To 7
+    For Target = 0 To 9
 
         For Index = 0 To 24
             Call ViewerEffects.AdjustIntensity(Value, Target, False)
