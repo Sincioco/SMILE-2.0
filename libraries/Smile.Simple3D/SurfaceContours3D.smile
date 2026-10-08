@@ -55,6 +55,20 @@ Private Function Boundary(ByRef Surface As Grid.State, PointA As P.Vector3,
     Dim Index As Number
     Dim Middle As P.Vector3
 
+    ' An inclusive brush edge can coincide exactly with a cell corner. Keep
+    ' that shared endpoint instead of bisecting a hairline strip into its neighbor.
+    Middle = Blend(PointA, PointB, 0.000001)
+
+    If Min(3, Kind(Surface, Middle, Base)) <> FirstKind Then
+        Return PointA
+    End If
+
+    Middle = Blend(PointA, PointB, 0.999999)
+
+    If Min(3, Kind(Surface, Middle, Base)) = FirstKind Then
+        Return PointB
+    End If
+
     For Index = 0 To 11
 
         Middle = Blend(PointA, PointB, 0.5)
@@ -144,6 +158,13 @@ End Function
 
 Private Sub Face(ByRef Result As Slice, PointA As P.Vector3, PointB As P.Vector3,
     PointC As P.Vector3, Surface As Number, IncludeWater As Boolean)
+
+    ' Endpoint clipping can collapse a partition; it owns no area or curb.
+
+    If Abs((PointB.X - PointA.X) * (PointC.Z - PointA.Z) -
+        (PointB.Z - PointA.Z) * (PointC.X - PointA.X)) < 0.000000000001 Then
+        Return
+    End If
 
     If (Surface <> 1 And
         Surface <> 3 And

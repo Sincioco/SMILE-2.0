@@ -81,12 +81,12 @@ Public Sub Run(ByRef Failures As Number)
     Call Check(Document.Dirty(Loaded), "Recovery Restores Dirty Snapshot", Failures)
 
     Ok = Derived.BindBundle(Loaded, "Terrain.Save.A")
-    Key = Derived.ReadKey(Loaded, "Terrain10", False)
+    Key = Derived.ReadKey(Loaded, "Terrain11", False)
     Ok = Cache.LoadBatch(Recipe, Key, 0) And Ok
 
     Call Check(Ok And Text_Length(Key) > 0 And Recipe.PatchCount > 0,
         "Prepared Terrain5 Is Bound To Saved Heights And Flow", Failures)
-    Call Check(Derived.ReadKey(Current, "Terrain10", False) = "",
+    Call Check(Derived.ReadKey(Current, "Terrain11", False) = "",
         "B Cannot Reuse A Geometry", Failures)
 
     Loaded.Name = "Terrain Save As"
@@ -122,7 +122,7 @@ Public Sub Run(ByRef Failures As Number)
 
     Ok = Derived.WriteNumber(5, "Terrain.Save.A.PreparedVersion")
 
-    Call Check(Ok And Derived.ReadKey(Snapshot, "Terrain10", False) = "",
+    Call Check(Ok And Derived.ReadKey(Snapshot, "Terrain11", False) = "",
         "Old Prepared Recipe Rejected", Failures)
 
     Ok = Document.Blank(Current, "Legacy After Terrain", 8, 8, 20.0)

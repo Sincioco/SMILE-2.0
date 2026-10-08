@@ -543,6 +543,9 @@ Public Sub Draw(ByRef Town As Document.State, Position As P.Vector3,
                 Shape.Label = "Comm Tower" Or
                 Shape.Label = "Old Castle" Or
                 Shape.Label = "Royal Castle" Or
+                Shape.Label = "Weapon Shop" Or
+                Shape.Label = "Armor Shop" Or
+                Shape.Label = "Item Shop" Or
                 Shape.Label = "Military HQ") Then
                 Draw Text Shape.Label At MapLeft + X * 4 - 24, 259 + (63 - Z) * 4 Size 9 Color WHITE
             End If

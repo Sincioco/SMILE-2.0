@@ -255,6 +255,7 @@ Private Sub CheckFlatRoadSides(ByRef Failures As Number)
     Dim Z As Number
     Dim Index As Number
     Dim Walls As Number
+    Dim Slivers As Number
     Dim Brush As Paint.Brush
     Dim Part As Cache.Patch
     Dim Ok As Boolean
@@ -281,6 +282,7 @@ Private Sub CheckFlatRoadSides(ByRef Failures As Number)
 
         Ok = Grid.PaintBrush(Town.Surface, Brush) And Ok
         Walls = 0
+        Slivers = 0
 
         Call Builder.Begin(Recipe, Town)
 
@@ -294,6 +296,10 @@ Private Sub CheckFlatRoadSides(ByRef Failures As Number)
 
             Part = Recipe.Buffer.Patches[Index]
 
+            If Shape = 1 And Part.Kind = Grid.SURFACE_ROAD And Part.Plane = 3 Then
+                Slivers = Slivers + 1
+            End If
+
             If (Part.Kind = Grid.SURFACE_ROAD And
                 Part.Plane = 4 And
                 Abs(Part.Y0 - Layers.GROUND_Y) < 0.000001 And
@@ -305,6 +311,8 @@ Private Sub CheckFlatRoadSides(ByRef Failures As Number)
 
         Call Check(Ok And Not Recipe.Failed And Walls >= 8,
             "Flat Curved And Cell-Aligned Roads Seal Blue Underlay At Ground Edges", Failures)
+        Call Check(Slivers = 0,
+            "New Cell-Aligned Road Has No Boundary Slivers Or Competing Curbs", Failures)
     End For
 
 End Sub

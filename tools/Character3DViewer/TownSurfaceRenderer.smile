@@ -165,7 +165,7 @@ Public Sub BeginBuild(ByRef Value As State, ByRef Town As Document.State,
     Value.CacheTown = Town
     Value.CacheBatch = 0
     Value.CacheBatches = 0
-    Value.CacheKey = Derived.ReadKey(Town, "Terrain10", False)
+    Value.CacheKey = Derived.ReadKey(Town, "Terrain11", False)
     Value.RequestCache = Text_Length(PreparedKey) > 0
 
     If Value.RequestCache Then
@@ -185,7 +185,7 @@ Public Sub BeginBuild(ByRef Value As State, ByRef Town As Document.State,
         If Value.RequestCache Then
             Ok = False
         Else
-            Value.CacheKey = Derived.WriteKey(Town.Name, "Terrain10")
+            Value.CacheKey = Derived.WriteKey(Town.Name, "Terrain11")
         End If
 
     End If
@@ -243,7 +243,7 @@ Private Sub ReadCachedBatch(ByRef Value As State)
         Value.CacheRead = False
         Value.CacheOk = True
         Value.CacheBatch = 0
-        Value.CacheKey = Derived.WriteKey(Value.CacheTown.Name, "Terrain10")
+        Value.CacheKey = Derived.WriteKey(Value.CacheTown.Name, "Terrain11")
         Value.Recipe.Row = 0
         Value.Recipe.Buffer.PatchCount = 0
         Value.Stage = 1
@@ -793,7 +793,7 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
                 Ok = Derived.WriteNumber(Value.CacheBatch, Value.CacheKey + ".Batches")
 
                 If Ok Then
-                    Ok = Derived.Commit(Value.CacheTown, "Terrain10", Value.CacheKey)
+                    Ok = Derived.Commit(Value.CacheTown, "Terrain11", Value.CacheKey)
                 End If
 
             End If

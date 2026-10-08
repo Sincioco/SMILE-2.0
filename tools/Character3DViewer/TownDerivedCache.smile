@@ -115,7 +115,7 @@ Public Function ReadKey(ByRef Town As Document.State, Category As Text,
         Return ""
     End If
 
-    If Category = "Terrain10" Then
+    If Category = "Terrain11" Then
         Key = Key + ".Terrain"
     Else If Category = "Roads1" Then
         Key = Key + ".Roads"
@@ -152,7 +152,7 @@ Private Function BundleKey(Name As Text) As Text
         Key = Key + Text_From_Code(Reference[Index])
     End For
 
-    If ReadNumber(Key + ".PreparedVersion") <> 10 Then
+    If ReadNumber(Key + ".PreparedVersion") <> 11 Then
         Return ""
     End If
 
@@ -241,7 +241,7 @@ Public Function BindBundle(ByRef Town As Document.State, Key As Text) As Boolean
     Dim Status As Number
     Dim Ok As Boolean
 
-    If ReadNumber(Key + ".PreparedVersion") <> 10 Then
+    If ReadNumber(Key + ".PreparedVersion") <> 11 Then
         Return True
     End If
 

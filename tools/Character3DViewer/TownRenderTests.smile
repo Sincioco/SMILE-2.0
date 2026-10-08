@@ -712,7 +712,7 @@ Sub CheckLandscape(Name As Text)
     End If
 
     Town.Name = "Fresh Water Regression " + Name
-    Ok = Derived.WriteNumber(0, "TownPrepared.Terrain10." + Town.Name) And Ok
+    Ok = Derived.WriteNumber(0, "TownPrepared.Terrain11." + Town.Name) And Ok
     Ok = Terrain.Create(Ground)
 
     Call Terrain.BeginBuild(Ground, Town)

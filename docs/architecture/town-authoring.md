@@ -42,6 +42,17 @@ road connectivity travel in portable `.town` bundles; GPU handles and an active
 journey's search state do not. Legacy documents with missing derived preparation
 rebuild incrementally; a new save writes the prepared version.
 
+Terrain preparation now uses generation 11. `SurfaceContours3D` preserves exact
+shared endpoints when a new brush lands on a cell boundary, and drops collapsed
+partitions before emitting their faces or curbs. This prevents the narrow duplicate
+edges that flickered on newly painted Neris roads. Earlier prepared recipes rebuild
+from the preserved authored document; the `.town` document format is unchanged.
+The endpoint regression fails before the fix and passes after it. The saved
+454-by-493-cell Neris reproduction rebuilds with zero new-road slivers; elevation,
+curve, preparation and terrain-persistence checks also pass. Ownership remains in
+the existing contour and derived-cache modules (+21 contour lines, +8 test lines).
+Shop labels reuse `TownDocumentMap` (+3 lines), with authored building positions.
+
 `Data_BundleStart(Saving, Key, Path, Records)` uses the native data-file status,
 progress and message queries. `Records` lists relative checked Save Data companions
 separated by pipes. Imports require a fresh staging key. Whole-file verification
