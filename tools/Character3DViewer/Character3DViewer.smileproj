@@ -56,6 +56,10 @@
     <SmileSource Include="TownResidentInteraction.smile" />
     <SmileSource Include="TownResidentMovement.smile" />
     <SmileSource Include="TownResidentDialogue.smile" />
+    <SmileSource Include="TownArmory.smile" />
+    <SmileSource Include="TownArmoryRoom.smile" />
+    <SmileSource Include="TownArmoryPanel.smile" />
+    <SmileSource Include="TownArmoryCatalog.smile" />
     <SmileSource Include="TownDemo.smile" />
     <SmileSource Include="TownStartingCamera.smile" />
     <SmileSource Include="TownSurfaceTools.smile" />
@@ -563,6 +567,9 @@
     <Asset Include="Assets\Neris\Snow-Slope-Tile.png" />
     <Asset Include="Assets\Neris\Town-Palette.png" />
     <Asset Include="Assets/Neris/Residents/Cast-Preview.png" />
+    <Asset Include="Assets\Neris\Armory\Armory-Background.png" />
+    <Model3DAsset Include="BuildAssets\Neris\Armory\Garran.glb" Descriptor="BuildAssets\Neris\Armory\garran.sm3d.json" LogicalPath="Assets\Neris\Armory\Garran.sm3d" TextureOutputDirectory="Assets\Neris\Armory\Textures" Profile="Character" Identity="sin-star-i.garran-v1" ProductionState="Prototype" />
+    <Model3DAsset Include="BuildAssets\Neris\Armory\Armory-Room.glb" Descriptor="BuildAssets\Neris\Armory\room.sm3d.json" LogicalPath="Assets\Neris\Armory\Armory-Room.sm3d" TextureOutputDirectory="Assets\Neris\Armory\RoomTextures" Profile="Static" Identity="sin-star-i.neris-armory-v2" ProductionState="Prototype" />
     <Model3DAsset Include="BuildAssets\Neris\CastleV2\castle-00.glb" Descriptor="BuildAssets\Neris\CastleV2\Castle.sm3d.json" LogicalPath="Assets/Neris/CastleV2/Castle-00.sm3d" Profile="Static" Identity="sin-star-i.neris-castle.m06-r006.part-00" ProductionState="Prototype" />
     <Model3DAsset Include="BuildAssets\Neris\CastleV2\castle-01.glb" Descriptor="BuildAssets\Neris\CastleV2\Castle.sm3d.json" LogicalPath="Assets/Neris/CastleV2/Castle-01.sm3d" Profile="Static" Identity="sin-star-i.neris-castle.m06-r006.part-01" ProductionState="Prototype" />
     <Model3DAsset Include="BuildAssets\Neris\CastleV2\castle-02.glb" Descriptor="BuildAssets\Neris\CastleV2\Castle.sm3d.json" LogicalPath="Assets/Neris/CastleV2/Castle-02.sm3d" Profile="Static" Identity="sin-star-i.neris-castle.m06-r006.part-02" ProductionState="Prototype" />

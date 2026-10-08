@@ -143,6 +143,46 @@ Public Function Approach(Item As Document.Item, Point As P.Vector3, Optional Hei
 
 End Function
 
+''' Resolve an actual authored doorway in world coordinates, including scale and rotation.
+Public Function EnteredTemplate(ByRef Value As State, Position As P.Vector3, Template As Number) As Number
+
+    Dim Index As Number
+    Dim Part As Number
+    Dim Item As Document.Item
+    Dim Door As Features.Door
+    Dim Point As P.Vector3
+    Dim Relative As P.Vector3
+
+    For Index = 0 To Value.ItemCount - 1
+
+        Item = Value.Items[Index]
+
+        If Item.Active And Item.Template = Template Then
+
+            Point = Geometry.ToLocal(Item, Position)
+
+            For Part = 0 To Value.Shapes[Template].DoorCount - 1
+
+                Door = Features.DoorAt(Template, Part)
+                Relative = M.Rotate(M.Subtract(Point, Door.Position), P.Vector(0.0, -Door.Yaw, 0.0))
+
+                If (Abs(Relative.X) < Max(0.1, Door.Width / 2.0 - 3000.0 / Item.Scale.X) And
+                    Relative.Z * Item.Scale.Z / 1000.0 >= -5.0 And
+                    Relative.Z * Item.Scale.Z / 1000.0 <= 4.0 And
+                    Abs(Relative.Y * Item.Scale.Y / 1000.0) < 18.0) Then
+                    Return Index
+                End If
+
+            End For
+
+        End If
+
+    End For
+
+    Return -1
+
+End Function
+
 Public Function CanStand(ByRef Value As State, X As Double, Z As Double) As Boolean
 
     Dim Index As Number

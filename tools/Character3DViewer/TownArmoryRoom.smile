@@ -1,0 +1,151 @@
+''' Static 3D armory, bounded floor navigation and room camera. No party or purchase state.
+Module Smile.Tools.TownArmoryRoom
+
+Option Explicit
+
+Import Smile.Simple3D.Core As Core
+Import Smile.Simple3D.Graphics3D As G
+Import Smile.Simple3D.Precision3D As P
+Import Smile.Simple3D.PrecisionMath3D As M
+
+Public Type State
+    Model As Core.Model3D
+    Objects[16] As Core.Object3D
+    Loaded As Number
+    Ready As Boolean
+End Type
+
+Public Function LoadRoom(ByRef Value As State) As Boolean
+
+    Dim Index As Number
+    Dim Ok As Boolean
+
+    Value.Model = G.LoadModelGeometry3D("Assets/Neris/Armory/Armory-Room.sm3d")
+    Ok = Value.Model.GeometryReady And Value.Model.PartCount <= 16
+
+    If Ok Then
+        Ok = G.PrepareModelPbr3D(Value.Model, 1, 1, Value.Model.PartCount)
+    End If
+
+    If Ok Then
+
+        For Index = 0 To Value.Model.PartCount - 1
+            Value.Objects[Index] = G.CreateModelPart3D(Value.Model, Index)
+            Value.Loaded = Value.Loaded + 1
+            Ok = P.SetScale(Value.Objects[Index], 1000.0, 1000.0, 1000.0) And Ok
+        End For
+
+    End If
+
+    Value.Ready = Ok
+
+    Return Ok
+
+End Function
+
+Public Function CanStand(Position As P.Vector3) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Abs(Position.X) <= 62.0 And Position.Z >= -68.0 And Position.Z <= 24.0
+
+    ' Leave body clearance around the central Dawnstar display.
+    Result = Result And Position.X * Position.X + (Position.Z + 4.2) * (Position.Z + 4.2) >= 210.25
+
+    Return Result
+
+End Function
+
+Public Function Move(Position As P.Vector3, Delta As P.Vector3) As P.Vector3
+
+    Dim Candidate As P.Vector3
+    Dim Result As P.Vector3
+
+    Result = Position
+    Candidate = P.Vector(Position.X + Delta.X, 0.0, Position.Z)
+
+    If CanStand(Candidate) Then
+        Result = Candidate
+    End If
+
+    Candidate = P.Vector(Result.X, 0.0, Position.Z + Delta.Z)
+
+    If CanStand(Candidate) Then
+        Result = Candidate
+    End If
+
+    Return Result
+
+End Function
+
+Public Function AtExit(Position As P.Vector3) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Abs(Position.X) < 12.0 And Position.Z < -61.0
+
+    Return Result
+
+End Function
+
+Public Function CanTalk(Position As P.Vector3) As Boolean
+
+    Dim Result As Boolean
+
+    Result = Abs(Position.X) < 38.0 And Position.Z > 8.0
+
+    Return Result
+
+End Function
+
+Public Function Camera(Leader As P.Vector3, Zoom As Double, Talking As Boolean) As P.Camera3D
+
+    Dim Result As P.Camera3D
+
+    Result.Target = P.Vector(Leader.X * 0.25, 9.0, 8.0 + Leader.Z * 0.25)
+    Result.Position = M.Add(Result.Target, P.Vector(95.0 * Zoom, 100.0 * Zoom, -145.0 * Zoom))
+    Result.UpDirection = P.Vector(0.0, 1.0, 0.0)
+    Result.FovDegrees = 42.0
+    Result.NearPlane = 1.0
+    Result.FarPlane = 600.0
+
+    If Talking Then
+        Result.Target = P.Vector(12.0, 13.0, 42.0)
+        Result.Position = P.Vector(45.0, 43.0, -45.0)
+    End If
+
+    Return Result
+
+End Function
+
+Public Function Draw(ByRef Value As State) As Boolean
+
+    Dim Index As Number
+    Dim Ok As Boolean
+
+    Ok = Value.Ready
+
+    For Index = 0 To Value.Loaded - 1
+        Ok = G.DrawObject3D(Value.Objects[Index]) And Ok
+    End For
+
+    Return Ok
+
+End Function
+
+Public Sub Destroy(ByRef Value As State)
+
+    Dim Index As Number
+
+    For Index = 0 To Value.Loaded - 1
+        Call G.DestroyObject3D(Value.Objects[Index])
+    End For
+
+    Call G.DestroyModel3D(Value.Model)
+
+    Value.Ready = False
+    Value.Loaded = 0
+
+End Sub
+
+End Module

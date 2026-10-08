@@ -200,6 +200,25 @@ $copies += @{
     Destination = Join-Path $buildAssets 'Neris\Residents\residents.sm3d.json'
 }
 
+$armoryRoot = Join-Path $repositoryRoot 'games\SinStarI\SourceAssets\Characters\Civilians\GarranV1'
+foreach ($armoryFile in @('Garran.glb', 'garran.sm3d.json')) {
+    $copies += @{
+        Source = Join-Path $armoryRoot $armoryFile
+        Destination = Join-Path $buildAssets "Neris\Armory\$armoryFile"
+    }
+}
+$shopRoot = Join-Path $repositoryRoot 'games\SinStarI\SourceAssets\Towns\Neris\NerisWeaponShopV2'
+foreach ($roomFile in @('Armory-Room.glb', 'room.sm3d.json')) {
+    $copies += @{
+        Source = Join-Path $shopRoot $roomFile
+        Destination = Join-Path $buildAssets "Neris\Armory\$roomFile"
+    }
+}
+$copies += @{
+    Source = Join-Path $armoryRoot 'Armory-Background.png'
+    Destination = Join-Path $toolRoot 'Assets\Neris\Armory\Armory-Background.png'
+}
+
 foreach ($copy in $copies) {
     if (-not (Test-Path -LiteralPath $copy.Source -PathType Leaf)) {
         throw "Character Viewer build asset is missing: $($copy.Source)"

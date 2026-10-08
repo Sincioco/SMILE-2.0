@@ -42,8 +42,10 @@ Import Smile.Tools.TownRoadTravel As RoadTravel
 Import Smile.Tools.TownResidents As Residents
 Import Smile.Tools.TownResidentInteraction As Conversation
 Import Smile.Tools.TownDocumentMap As DocumentMap
+Import Smile.Tools.TownArmory As Armory
 
 Public Type State
+    Armory As Armory.State
     Residents As Residents.State
     ConversationFramed As Boolean
     PointOfView As Inset.State
@@ -256,6 +258,10 @@ Public Sub Input(ByRef Value As State, Key As Number, Blocked As Boolean,
     Dim RequestedView As Number
     Dim ResidentIndex As Number
     Dim Started As Boolean
+
+    If Armory.Input(Value.Armory, Value.People, Key) Then
+        Return
+    End If
 
     If Not Value.Ready Then
 
@@ -1168,6 +1174,11 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
     Dim MapCenter As P.Vector3
     Dim CenterOffset As P.Vector3
 
+    If Value.Armory.Active Then
+        Call Armory.Update(Value.Armory, Value.People, Elapsed)
+        Return
+    End If
+
     If (Value.Edited And
         (Value.Landmarks.Town <> Authoring.TownName() Or
         (Authoring.CourtExists() And Not Value.Comparison.Ready))) Then
@@ -1279,6 +1290,12 @@ Public Sub Update(ByRef Value As State, Elapsed As Number)
         (Value.Map.Opacity > 0.0 And Authoring.MapHovered()), Elapsed)
     Call Inset.Update(Value.PointOfView, Party.IsMoving(Value.People), Elapsed)
     Call Residents.Update(Value.Residents, Authoring.TownName(), Authoring.ResidentPlacement(), Authoring.Editing(), Leader, Elapsed)
+    Call Armory.Observe(Value.Armory, Value.People, Authoring.TownName() = "Neris Town" And Not Authoring.Editing())
+
+    If Value.Armory.Active Then
+        Call RoadTravel.Cancel()
+        Call Keyboard.StopTravel(Value.Keys)
+    End If
 
     If Value.Cinematic And Not Value.OrbitPaused Then
         Value.View.Controls.OrbitYaw = Camera.NormalizeAngle(Value.View.Controls.OrbitYaw + ToDouble(Elapsed) * 0.0025)
@@ -1353,6 +1370,11 @@ Public Sub Draw(ByRef Value As State)
 
     Dim Ok As Boolean
     Dim FrameStarted As Boolean
+
+    If Value.Armory.Active Then
+        Call Armory.Draw(Value.Armory, Value.People)
+        Return
+    End If
 
     If (Value.Edited And
         (Value.Landmarks.Town <> Authoring.TownName() Or
@@ -1493,6 +1515,11 @@ Public Sub Overlay(ByRef Value As State, Optional PlayOnly As Boolean = False)
 
     Dim MapStatusY As Number
 
+    If Value.Armory.Active Then
+        Call Armory.Overlay(Value.Armory, Value.People)
+        Return
+    End If
+
     MapStatusY = 533
 
     If Inset.Visible(Value.PointOfView, Authoring.Editing()) Then
@@ -1591,6 +1618,8 @@ Public Sub Overlay(ByRef Value As State, Optional PlayOnly As Boolean = False)
 End Sub
 
 Public Sub Destroy(ByRef Value As State)
+
+    Call Armory.Destroy(Value.Armory)
 
     Call Residents.Destroy(Value.Residents)
 

@@ -140,6 +140,37 @@ and [evidence/remaining checks](docs/status.md#viewer-export-r04).
 
 ## Change review and validation
 
+`TownArmory` owns the full-screen shop visit, staged loading, outdoor party-trail
+snapshot, stationary keeper facing, conversation and session-only purchases.
+`TownArmoryRoom` owns thirteen static draw parts, bounded customer-floor navigation
+and room cameras. `TownArmoryPanel` owns dialogue layout/hit regions and
+`TownArmoryCatalog` owns six provisional weapons/prices. The existing party owner
+has an explicit Interior flag for flat grounding and visible followers; it reuses
+the same actor, animation and trail presentation. Outdoor behavior is unchanged.
+`TownCollisionWorld.EnteredTemplate` reads transformed doors from the committed
+navigation snapshot. `NerisTown` delegates input/update/draw/overlay/cleanup;
+outdoor simulation pauses during the visit. Leaving restores the outdoor trail,
+facing, opacity, speed and run mode. No reverse dependency into the game exists.
+
+The canonical `Civilians/GarranV1` package owns the approved 2K runtime material,
+4K-reference provenance, skinned mesh, Idle/Walk source and grounding report.
+`Towns/Neris/NerisWeaponShopV2` owns the replacement room: a complete editable
+Blender model and a 49,769-triangle cutaway export with five unique baked finishes.
+Its floor has no repeated image tiles. `TownArmoryRoom` reserves clearance around
+the central pedestal. The approved ImageGen backdrop is retained as a reference;
+gameplay is fully 3D. Existing lighting/backdrop APIs are reused.
+No renderer, language, saved-town format or inventory persistence changed.
+Game `Maps/Test-Armory.ps1` checks the real authored doorway and full town resource
+coexistence, four indoor actors, movement/collision, proximity interaction,
+keeper facing/visibility, all demo purchases, nested Escape, exit and re-entry
+under a separate application identity. `-Inspect` holds an interactive review.
+
+Manual growth review for this feature: the four focused armory owners contain
+421/151/130/62 physical lines (session/room/panel/catalog). Existing source grows
+by 29 lines in `NerisTown`, 16 in party presentation, 40 in the collision query,
+and 14 in its navigation wrapper. The game map host adds eight delegation lines;
+neither entry point grows. No numeric budget, exclusion or exception changed.
+The large existing town coordinator remains legacy debt, not a new feature owner.
 `ViewerWorkflow` retains the reviewed coordinator-size exception because its ordered
 frame story is shared once. Actor, calibration, camera, effects and persistence
 algorithms stay with their focused owners. `NerisTown`, `TownEditorSession` and other

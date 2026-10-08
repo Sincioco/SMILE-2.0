@@ -55,6 +55,20 @@ Public Function Active() As Boolean
 
 End Function
 
+Public Function EnteredTemplate(Position As P.Vector3, Template As Number) As Number
+
+    Dim Result As Number
+
+    Result = -1
+
+    If Enabled Then
+        Result = Collision.EnteredTemplate(Snapshot, Position, Template)
+    End If
+
+    Return Result
+
+End Function
+
 Public Function Elevated() As Boolean
 
     Dim Result As Boolean

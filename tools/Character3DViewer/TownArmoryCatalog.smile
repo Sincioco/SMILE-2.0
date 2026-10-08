@@ -1,0 +1,62 @@
+''' Garran's demonstration stock. Prices are gold; no persistent inventory is changed.
+Module Smile.Tools.TownArmoryCatalog
+
+Option Explicit
+
+Public Const ITEM_COUNT = 6
+
+Public Type Weapon
+    Name As Text
+    Kind As Text
+    Price As Number
+    Attack As Number
+End Type
+
+Public Function ItemAt(Index As Number) As Weapon
+
+    Dim Result As Weapon
+
+    Select Case Index
+        Case 0
+            Result.Name = "Wayfarer Blade"
+            Result.Kind = "A balanced steel sword for a new journey."
+            Result.Price = 120
+            Result.Attack = 12
+
+        Case 1
+            Result.Name = "Twinfang Daggers"
+            Result.Kind = "Quick twin blades with a sure grip."
+            Result.Price = 180
+            Result.Attack = 16
+
+        Case 2
+            Result.Name = "Neris Guard Spear"
+            Result.Kind = "A long reach and a hardened steel point."
+            Result.Price = 240
+            Result.Attack = 21
+
+        Case 3
+            Result.Name = "Ironwood Longbow"
+            Result.Kind = "A sturdy bow for a patient marksman."
+            Result.Price = 300
+            Result.Attack = 25
+
+        Case 4
+            Result.Name = "Embercrest Axe"
+            Result.Kind = "A heavy edge forged over bright coals."
+            Result.Price = 450
+            Result.Attack = 34
+
+        Case 5
+            Result.Name = "Starfall Saber"
+            Result.Kind = "Garran's finest star-steel dueling blade."
+            Result.Price = 800
+            Result.Attack = 48
+
+    End Select
+
+    Return Result
+
+End Function
+
+End Module

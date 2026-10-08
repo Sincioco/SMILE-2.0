@@ -34,6 +34,7 @@ Public Type Member
 End Type
 
 Public Type State
+    Interior As Boolean
     Members[5] As Member
     Keys As Calibration.State
     Path As Trail.State
@@ -360,7 +361,7 @@ End Sub
 
 Private Sub Present(ByRef Value As Member, ByRef Keys As Calibration.State,
     Position As P.Vector3, Moving As Boolean, Opacity As Number, Elapsed As Number,
-    SpeedPercent As Number)
+    SpeedPercent As Number, Optional FlatGround As Boolean = False)
 
     Dim Delta As P.Vector3
     Dim Grounded As P.Vector3
@@ -382,8 +383,14 @@ Private Sub Present(ByRef Value As Member, ByRef Keys As Calibration.State,
     Ok = Actors.ApplyPresentationOffset(Value.Body.Actor, Value.Body.Profile,
         Value.Body.Clip, Value.Body.Frame)
     Ok = Character.TryPosition(Value.Body.Actor, Grounded) And Ok
-    Ok = Character.PlacePrecise(Value.Body.Actor, Grounded.X,
-        Grounded.Y + Navigation.GroundHeight(Position.X, Position.Z), Grounded.Z) And Ok
+
+    If FlatGround Then
+        Ok = Character.PlacePrecise(Value.Body.Actor, Grounded.X, Grounded.Y, Grounded.Z) And Ok
+    Else
+        Ok = Character.PlacePrecise(Value.Body.Actor, Grounded.X,
+            Grounded.Y + Navigation.GroundHeight(Position.X, Position.Z), Grounded.Z) And Ok
+    End If
+
     Ok = Character.RotatePrecise(Value.Body.Actor, 0.0, Value.Yaw, 0.0) And Ok
 
     If Value.Body.CalibrationAvailable And Not Value.Walking Then
@@ -438,7 +445,7 @@ Public Sub Stand(ByRef Value As State, Elapsed As Number, Optional HideFollowers
         End If
 
         Call Present(Value.Members[Index], Value.Keys, Value.Path.Positions[Index],
-            False, Opacity, Elapsed, Value.SpeedPercent)
+            False, Opacity, Elapsed, Value.SpeedPercent, Value.Interior)
 
         Value.Ready = Value.Ready And Value.Members[Index].Body.Ready
     End For
@@ -453,16 +460,25 @@ Public Sub Update(ByRef Value As State, Leader As P.Vector3, Elapsed As Number)
     Dim PreviousSeparation As Double
     Dim Before[8] As P.Vector3
     Dim Destination As P.Vector3
+    Dim Gather As Double
 
     For Index = 0 To Value.MemberCount - 1
         Before[Index] = Value.Path.Positions[Index]
     End For
 
-    Call Trail.Advance(Value.Path, Leader, Elapsed, WalkingSpeed(Value) * 1.2, 14.0)
+    Gather = 14.0
+
+    If Value.Interior Then
+        Gather = Value.Path.Spacing * ToDouble(Value.MemberCount - 1)
+    End If
+
+    Call Trail.Advance(Value.Path, Leader, Elapsed, WalkingSpeed(Value) * 1.2, Gather)
 
     For Index = 0 To Value.MemberCount - 1
 
-        If Index > 0 And Navigation.Elevated() Then
+        If (Index > 0 And
+            Not Value.Interior And
+            Navigation.Elevated()) Then
 
             Destination = Value.Path.Positions[Index]
             Value.Path.Positions[Index] = Navigation.Move(Before[Index], Destination.X - Before[Index].X,
@@ -476,7 +492,7 @@ Public Sub Update(ByRef Value As State, Leader As P.Vector3, Elapsed As Number)
             Value.Path.Positions[Max(0, Index - 1)]))
         TargetOpacity = 0.0
 
-        If Index = 0 Then
+        If Index = 0 Or Value.Interior Then
             Value.Members[Index].Opacity = 100.0
             TargetOpacity = 100.0
         Else If (Separation > 14.0 And
@@ -494,7 +510,7 @@ Public Sub Update(ByRef Value As State, Leader As P.Vector3, Elapsed As Number)
         End If
 
         Call Present(Value.Members[Index], Value.Keys, Value.Path.Positions[Index],
-            Value.Path.Moving[Index], ToNumber(Round(Value.Members[Index].Opacity)), Elapsed, Value.SpeedPercent)
+            Value.Path.Moving[Index], ToNumber(Round(Value.Members[Index].Opacity)), Elapsed, Value.SpeedPercent, Value.Interior)
 
         Value.Ready = Value.Ready And Value.Members[Index].Body.Ready
     End For
