@@ -143,7 +143,9 @@ and [evidence/remaining checks](docs/status.md#viewer-export-r04).
 `TownArmory` owns the full-screen shop visit, staged loading, outdoor party-trail
 snapshot, stationary keeper facing, conversation and session-only purchases.
 `TownArmoryRoom` owns thirteen static draw parts, bounded customer-floor navigation
-and room cameras. `TownArmoryPanel` owns dialogue layout/hit regions and
+and room cameras. `TownArmoryPanel` owns unboxed captions and compact stock-control
+hit regions, keeping the conversation in the 3D scene without a framed dialog.
+The controls browse one weapon at a time with keyboard or pointer input, and
 `TownArmoryCatalog` owns six provisional weapons/prices. The existing party owner
 has an explicit Interior flag for flat grounding and visible followers; it reuses
 the same actor, animation and trail presentation. Outdoor behavior is unchanged.
@@ -166,7 +168,9 @@ keeper facing/visibility, all demo purchases, nested Escape, exit and re-entry
 under a separate application identity. `-Inspect` holds an interactive review.
 
 Manual growth review for this feature: the four focused armory owners contain
-421/151/130/62 physical lines (session/room/panel/catalog). Existing source grows
+417/151/90/62 physical lines (session/room/captions/catalog). Removing the framed
+conversation dialog reduces session/caption code by 44 lines; ownership stays
+with the same modules. Existing source grows
 by 29 lines in `NerisTown`, 16 in party presentation, 40 in the collision query,
 and 14 in its navigation wrapper. The game map host adds eight delegation lines;
 neither entry point grows. No numeric budget, exclusion or exception changed.

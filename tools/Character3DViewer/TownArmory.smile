@@ -224,7 +224,7 @@ Public Function Talk(ByRef Value As State, ByRef People As Party.State) As Boole
     End If
 
     Value.Menu = True
-    Value.Message = "Gold is not required for demonstration purchases."
+    Value.Message = "Welcome to my armory shop. What can I get you?"
 
     Return True
 
@@ -269,22 +269,18 @@ Public Function Input(ByRef Value As State, ByRef People As Party.State, Key As 
 
         If (Key = KEY_ESCAPE Or
             Key = KEY_E Or
-            Action = 7) Then
+            Action = Panel.END_CONVERSATION) Then
             Value.Menu = False
             Return True
         End If
 
-        If Key = KEY_DOWN Or Key = KEY_S Then
+        If Key = KEY_DOWN Or Key = KEY_S Or Action = Panel.NEXT_ITEM Then
             Value.Selected = (Value.Selected + 1) Mod Catalog.ITEM_COUNT
-        Else If Key = KEY_UP Or Key = KEY_W Then
+        Else If Key = KEY_UP Or Key = KEY_W Or Action = Panel.PREVIOUS_ITEM Then
             Value.Selected = (Value.Selected + Catalog.ITEM_COUNT - 1) Mod Catalog.ITEM_COUNT
         End If
 
-        If Action >= 0 And Action < Catalog.ITEM_COUNT Then
-            Value.Selected = Action
-        End If
-
-        If Key = KEY_ENTER Or Action = 6 Then
+        If Key = KEY_ENTER Or Action = Panel.BUY Then
             Call Buy(Value)
         End If
 
@@ -353,7 +349,7 @@ End Sub
 Public Sub Overlay(ByRef Value As State, ByRef People As Party.State)
 
     If Value.Menu Then
-        Call Panel.Draw(Panel.Layout(), Value.Selected, Value.Message, Value.Purchases)
+        Call Panel.Draw(Panel.Layout(), Value.Selected, Value.Message)
 
         Return
     End If
